@@ -1,8 +1,8 @@
-import Terminalfees from './pages/Terminalfees.jsx'
+import TenantLease from './pages/TenantLease.jsx'
 
 function App() {
   return (
- < Terminalfees  />
+    <TenantLease />
   )
 }
 
