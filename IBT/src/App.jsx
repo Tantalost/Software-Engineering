@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import Terminalfees from './pages/Terminalfees.jsx'
 
 function App() {
-  return
+  return (
+ < Terminalfees  />
+  )
 }
 
 export default App
