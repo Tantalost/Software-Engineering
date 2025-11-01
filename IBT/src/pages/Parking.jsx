@@ -33,7 +33,7 @@ const ParkingTicketSystem = () => {
     : tickets.filter(t => t.type === 'Motorcycle');
 
   const menuItems = [
-    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'home', icon: Home, label: 'Dashboard' },
     { id: 'Bus Trips', icon: MapPin, label: 'Bus Trips' },
     { id: 'tickets', icon: Ticket, label: 'Tickets' },
     { id: 'Lease', icon: Store, label: 'Tenants/Lease' },
