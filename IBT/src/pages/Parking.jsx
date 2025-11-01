@@ -145,17 +145,15 @@ const ParkingTicketSystem = () => {
           <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Ticket className="text-white" size={24} />
-                </div>
+                <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                  <ArrowLeftFromLine  size={24} className="text-gray-600" />
+                </button>
                 <div>
                   <h1 className="text-lg font-bold text-gray-900">IBT</h1>
                   <p className="text-xs text-gray-500">Management System</p>
                 </div>
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <ArrowLeftFromLine  size={24} className="text-gray-600" />
-              </button>
+              
             </div>
 
             <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
