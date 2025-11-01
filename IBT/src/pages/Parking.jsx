@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, Home, Lock, Ticket, HelpCircle, MapPin, Headphones, Filter, Calendar, Upload, Search, SearchCheck, Bell, ChevronDown, TrendingUp, Edit2, Trash2, Plus,PhilippinePeso, ArrowLeftFromLine, Eye, Settings, Store, BarChart3, Users, FileText, LogOut, MoreVertical } from 'lucide-react';
+import { Menu, Home, Lock, Ticket, HelpCircle, MapPin, Headphones, Filter, Calendar, Upload, Search, SearchCheck, Bell, ChevronDown, Download, TrendingUp, Edit2, Trash2, Plus,PhilippinePeso, ArrowLeftFromLine, Eye, Settings, Store, BarChart3, Users, FileText, LogOut, MoreVertical } from 'lucide-react';
 
 const ParkingTicketSystem = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -246,24 +246,6 @@ const ParkingTicketSystem = () => {
 
         <div className="p-4 lg:p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-            <div className="group bg-gradient-to-br from-white to-yellow-50 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 border border-yellow-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-200 rounded-full -mr-16 -mt-16 opacity-20 group-hover:scale-150 transition-transform duration-700"></div>
-              <div className="relative z-10">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="bg-blue-100 p-3 rounded-2xl">
-                    <Ticket className="text-blue-600" size={24} />
-                  </div>
-                  <div className="flex items-center space-x-1 text-green-600 text-sm font-semibold">
-                    <TrendingUp size={16} />
-                    <span>+12%</span>
-                  </div>
-                </div>
-                <h3 className="text-gray-600 text-sm font-medium mb-2">Motorcycles</h3>
-                <p className="text-5xl font-extrabold text-gray-900 mb-2">{motorcycleCount}</p>
-                <p className="text-gray-400 text-xs">Active today</p>
-              </div>
-            </div>
-
             <div className="group bg-gradient-to-br from-white to-red-50 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 border border-red-100 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-200 rounded-full -mr-16 -mt-16 opacity-20 group-hover:scale-150 transition-transform duration-700"></div>
               <div className="relative z-10">
@@ -277,6 +259,24 @@ const ParkingTicketSystem = () => {
                   </div>
                 </div>
                 <h3 className="text-gray-600 text-sm font-medium mb-2">Cars</h3>
+                <p className="text-5xl font-extrabold text-gray-900 mb-2">{motorcycleCount}</p>
+                <p className="text-gray-400 text-xs">Active today</p>
+              </div>
+            </div>
+
+            <div className="group bg-gradient-to-br from-white to-blue-50 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 border border-blue-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200 rounded-full -mr-16 -mt-16 opacity-20 group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="bg-blue-100 p-3 rounded-2xl">
+                    <Ticket className="text-blue-600" size={24} />
+                  </div>
+                  <div className="flex items-center space-x-1 text-green-600 text-sm font-semibold">
+                    <TrendingUp size={16} />
+                    <span>+12%</span>
+                  </div>
+                </div>
+                <h3 className="text-gray-600 text-sm font-medium mb-2">Motorcycles</h3>
                 <p className="text-5xl font-extrabold text-gray-900 mb-2">{carCount}</p>
                 <p className="text-gray-400 text-xs">Active today</p>
               </div>
@@ -372,6 +372,10 @@ const ParkingTicketSystem = () => {
                   <span className="text-gray-700 font-medium hidden sm:inline">Date</span>
                 </button>
                 <button className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <Download size={20} />
+                  <span className="font-medium">Export</span>
+                </button>
+                <button className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                   <Plus size={20} />
                   <span className="font-medium">New Ticket</span>
                 </button>
@@ -379,8 +383,8 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          <div className="hidden md:block bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="hidden md:block bg-white rounded-2xl shadow-lg overflow-visible">
+            <div className="overflow-x-auto relative">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gradient-to-r from-emerald-100 to-teal-100">
@@ -431,7 +435,7 @@ const ParkingTicketSystem = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center justify-center">
-                          <div className="relative">
+                          <div className="relative overflow-visible">
                             <button 
                               onClick={() => setActionMenuOpen(actionMenuOpen === ticket.id ? null : ticket.id)}
                               className="p-2 hover:bg-gray-100 rounded-lg transition-all"
@@ -445,7 +449,7 @@ const ParkingTicketSystem = () => {
                                   className="fixed inset-0 z-10" 
                                   onClick={() => setActionMenuOpen(null)}
                                 ></div>
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className={`absolute right-0 ${ticket.id > tickets.length - 2 ? 'bottom-full mb-2' : 'mt-2'} w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200`}>
                                   <button 
                                     className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-blue-50 transition-all group/item"
                                     onClick={() => {
@@ -499,9 +503,9 @@ const ParkingTicketSystem = () => {
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                       ticket.type === 'Car' 
                         ? 'bg-gradient-to-br from-red-100 to-rose-100' 
-                        : 'bg-gradient-to-br from-yellow-100 to-orange-100'
+                        : 'bg-gradient-to-br from-blue-100 to-blue-100'
                     }`}>
-                      <Ticket className={ticket.type === 'Car' ? 'text-red-600' : 'text-yellow-600'} size={22} />
+                      <Ticket className={ticket.type === 'Car' ? 'text-red-600' : 'text-blue-600'} size={22} />
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 font-medium">Ticket No.</p>
