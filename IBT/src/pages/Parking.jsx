@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Menu, Home, Lock, Ticket, HelpCircle, MapPin, Headphones, Filter, Calendar, Upload, Search, SearchCheck, Bell, ChevronDown, Download, TrendingUp, Edit2, Trash2, Plus,PhilippinePeso, ArrowLeftFromLine, Eye, Settings, Store, BarChart3, Users, FileText, LogOut, MoreVertical } from 'lucide-react';
+import { Menu, Home, Lock, Ticket, HelpCircle, MapPin, Headphones, CircleParking,  Calendar, Upload, Search, SearchCheck, Bell, ChevronDown, Download, TrendingUp, Edit2, Trash2, Plus,PhilippinePeso, ArrowLeftFromLine, Eye, Settings, Store, BarChart3, Users, FileText, LogOut, MoreVertical } from 'lucide-react';
 
 const ParkingTicketSystem = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
-  const [activeMenu, setActiveMenu] = useState('tickets');
+  const [activeMenu, setActiveMenu] = useState('parking');
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
   
   const tickets = [
@@ -37,9 +37,9 @@ const ParkingTicketSystem = () => {
     { id: 'Bus Trips', icon: MapPin, label: 'Bus Trips' },
     { id: 'tickets', icon: Ticket, label: 'Tickets' },
     { id: 'Lease', icon: Store, label: 'Tenants/Lease' },
+    { id: 'parking', icon: CircleParking, label: 'Parking' },
     { id: 'Lost and Found', icon: SearchCheck, label: 'Lost and Found' },
     { id: 'reports', icon: FileText, label: 'Reports' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics' }
    
   ];
 
