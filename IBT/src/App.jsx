@@ -1,8 +1,8 @@
-import Dashboard from './pages/Dashboard.jsx'
+import Parking from './pages/Parking.jsx'
 
 function App() {
   return (
-    <Dashboard />
+    <Parking />
   )
 }
 
