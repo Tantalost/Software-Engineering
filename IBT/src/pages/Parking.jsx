@@ -358,20 +358,17 @@ const ParkingTicketSystem = () => {
                   <input 
                     type="text" 
                     placeholder="Search tickets..." 
-                    className="w-full lg:w-64 pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full lg:w-75 pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   />
                 </div>
-                <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
-                  <Filter size={20} className="text-gray-600" />
-                  <span className="text-gray-700 font-medium">Filter</span>
-                </button>
+              
                 <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
                   <Calendar size={20} className="text-gray-600" />
                   <span className="text-gray-700 font-medium hidden sm:inline">Date</span>
                 </button>
-                <button className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                <button className="flex items-center  px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                   <Download size={20} />
-                  <span className="font-medium">Export</span>
+                  <span className="font-medium"></span>
                 </button>
                 <button className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                   <Plus size={20} />
