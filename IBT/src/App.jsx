@@ -1,8 +1,8 @@
-import TenantLease from './pages/TenantLease.jsx'
+import Dashboard from './pages/Dashboard.jsx'
 
 function App() {
   return (
-    <TenantLease />
+    <Dashboard />
   )
 }
 
