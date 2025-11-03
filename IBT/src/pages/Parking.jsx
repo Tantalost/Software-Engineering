@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, Home, Lock, Ticket, Bus, MapPin, Headphones, CircleParking,  Calendar, Upload, Search, SearchCheck, Bell, ChevronDown, Download, TrendingUp, Edit2, Trash2, Plus,PhilippinePeso, ArrowLeftFromLine, Eye, Settings, Store, BarChart3, Users, FileText, LogOut, MoreVertical } from 'lucide-react';
 
-const ParkingTicketSystem = () => {
+const Parking = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
@@ -593,4 +593,4 @@ const ParkingTicketSystem = () => {
   );
 };
 
-export default ParkingTicketSystem;
+export default Parking;
