@@ -1,196 +1,375 @@
 import React, { useState } from 'react';
-import { Menu, Search, Filter, Calendar, Upload, Home, Bell, CreditCard, Bus, Ticket, HelpCircle, MapPin, ChevronDown } from 'lucide-react';
+import { Menu, Home, DollarSign, Lock, Ticket, HelpCircle, MapPin, Headphones, Bell, ChevronDown, TrendingUp, LogOut, Settings, BarChart3, Users, FileText, Activity, X, CheckCircle, AlertCircle, UserPlus, CreditCard, FileCheck, Download, RefreshCw, Search, Filter, Calendar, Upload, MoreVertical, Edit2, Trash2, Eye, Bus, Clock } from 'lucide-react';
 
-export default function IBTSlotManagement() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Permanent');
+const ParkingTicketSystem = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [activeMenu, setActiveMenu] = useState('routes');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMenuItem, setSelectedMenuItem] = useState('Bus and Trips');
+  const [actionMenuOpen, setActionMenuOpen] = useState(null);
+  const [selectedCompany, setSelectedCompany] = useState('All Companies');
 
-  const slots = [
-    { busTemplateNo: 'AA102-123', route: 'Dipolog', time: '1:00 pm - 6:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Pagadian', time: '1:00 pm - 6:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Dipolog', time: '1:00 pm - 6:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Ipil', time: '1:00 pm - 6:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Dipolog', time: '10:00 am - 5:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Pagadian', time: '7:00 am - 12:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Pagadian', time: '1:00 pm - 6:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Dipolog', time: '1:00 pm - 6:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Dipolog', time: '1:00 pm - 6:00 pm' },
-    { busTemplateNo: 'AA102-123', route: 'Dipolog', time: '1:00 pm - 6:00 pm' }
+  const busSchedules = [
+    { id: 1, templateNo: 'BT-2024-001', route: 'Manila - Baguio Express', time: '6:00 AM - 12:00 PM', status: 'Active', capacity: 45, company: 'Victory Liner' },
+    { id: 2, templateNo: 'BT-2024-002', route: 'Quezon City - Clark', time: '7:30 AM - 10:00 AM', status: 'Active', capacity: 40, company: 'Genesis Transport' },
+    { id: 3, templateNo: 'BT-2024-003', route: 'Manila - Baguio Standard', time: '8:00 AM - 2:30 PM', status: 'Active', capacity: 45, company: 'Victory Liner' },
+    { id: 4, templateNo: 'BT-2024-004', route: 'Pasay - Tagaytay', time: '9:00 AM - 11:30 AM', status: 'Active', capacity: 35, company: 'Shuttle Express' },
+    { id: 5, templateNo: 'BT-2024-005', route: 'Manila - Baguio Deluxe', time: '10:00 AM - 4:00 PM', status: 'Delayed', capacity: 45, company: 'Victory Liner' },
+    { id: 6, templateNo: 'BT-2024-006', route: 'Cubao - Banaue', time: '7:00 AM - 3:00 PM', status: 'Active', capacity: 42, company: 'Ohayami Trans' },
+    { id: 7, templateNo: 'BT-2024-007', route: 'Quezon City - Subic', time: '1:00 PM - 4:00 PM', status: 'Active', capacity: 40, company: 'Genesis Transport' },
+    { id: 8, templateNo: 'BT-2024-008', route: 'Manila - Batangas Port', time: '5:00 AM - 8:00 AM', status: 'Active', capacity: 38, company: 'Shuttle Express' },
+    { id: 9, templateNo: 'BT-2024-009', route: 'Manila - Sagada', time: '8:00 PM - 6:00 AM', status: 'Active', capacity: 45, company: 'Coda Lines' },
+    { id: 10, templateNo: 'BT-2024-010', route: 'Pasay - Boracay (Caticlan)', time: '6:30 AM - 4:30 PM', status: 'Active', capacity: 44, company: 'Ceres Liner' },
   ];
 
-  const menuItems = [
-    { icon: Bell, label: 'Notifications', path: 'notifications' },
-    { icon: Home, label: 'Dashboard', path: 'dashboard' },
-    { icon: CreditCard, label: 'Payments', path: 'payments' },
-    { icon: Bus, label: 'Bus and Trips', path: 'bus-trips' },
-    { icon: Ticket, label: 'Terminal Fees', path: 'terminal-fees' },
-    { icon: HelpCircle, label: 'Lost and Found', path: 'lost-found' },
-    { icon: MapPin, label: 'Parking', path: 'parking' },
-    { icon: HelpCircle, label: 'Support', path: 'support' },
-  ];
-
-  const filteredSlots = slots.filter(slot =>
-    slot.busTemplateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    slot.route.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredSchedules = busSchedules.filter(schedule => 
+    (schedule.templateNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
+     schedule.route.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (selectedCompany === 'All Companies' || schedule.company === selectedCompany)
   );
 
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <div
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-green-400 to-green-500 transform ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
-      >
-        <div className="flex flex-col h-full">
-     
-          <div className="flex items-center justify-between p-6">
-            <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold text-gray-800">IBT</div>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden text-gray-800 hover:text-gray-900"
-            >
-            </button>
-          </div>
+  const companies = ['All Companies', 'Victory Liner', 'Genesis Transport', 'Shuttle Express', 'Ohayami Trans', 'Coda Lines', 'Ceres Liner'];
 
-          <nav className="flex-1 px-3 space-y-1">
+  const menuItems = [
+    { id: 'home', icon: Home, label: 'Dashboard' },
+    { id: 'routes', icon: Bus, label: 'Bus Routes' },
+    { id: 'schedules', icon: Clock, label: 'Schedules' },
+    { id: 'tickets', icon: Ticket, label: 'Tickets' },
+    { id: 'passengers', icon: Users, label: 'Passengers' },
+    { id: 'revenue', icon: DollarSign, label: 'Revenue' },
+    { id: 'reports', icon: FileText, label: 'Reports' },
+  ];
+
+  const bottomMenuItems = [
+    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
+  ];
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'Active': return 'bg-emerald-100 text-emerald-700';
+      case 'Delayed': return 'bg-red-100 text-red-700';
+      case 'Cancelled': return 'bg-gray-100 text-gray-700';
+      default: return 'bg-blue-100 text-blue-700';
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
+      {/* Desktop Sidebar */}
+      <div 
+        className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${
+          sidebarExpanded ? 'lg:w-64' : 'lg:w-20'
+        }`}
+      >
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setSidebarExpanded(!sidebarExpanded)}
+              className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            >
+              <Menu className="text-white" size={24} />
+            </button>
+            {sidebarExpanded && (
+              <div className="overflow-hidden">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">BusFleet Pro</h1>
+                <p className="text-xs text-gray-500 whitespace-nowrap">Route Management</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-4 px-3">
+          <div className="space-y-1">
             {menuItems.map((item) => (
               <button
-                key={item.path}
-                onClick={() => setSelectedMenuItem(item.label)}
-                className={`flex items-center w-full px-4 py-3 text-left rounded-lg transition-colors ${
-                  selectedMenuItem === item.label
-                    ? 'bg-green-600 text-white'
-                    : 'text-gray-800 hover:bg-green-600 hover:text-white'
+                key={item.id}
+                onClick={() => setActiveMenu(item.id)}
+                className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl transition-all duration-200 group ${
+                  activeMenu === item.id
+                    ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
+                title={!sidebarExpanded ? item.label : ''}
               >
-                <item.icon className="w-5 h-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <item.icon 
+                  size={20} 
+                  className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500 group-hover:text-gray-700'}
+                />
+                {sidebarExpanded && (
+                  <>
+                    <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                    {activeMenu === item.id && (
+                      <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full"></div>
+                    )}
+                  </>
+                )}
               </button>
             ))}
-          </nav>
-
-          <div className="p-4 border-t border-green-600">
-            <button className="flex items-center w-full px-4 py-3 text-gray-800 hover:bg-green-600 hover:text-white rounded-lg transition-colors">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mr-3">
-                <span className="text-gray-800 font-semibold">A</span>
-              </div>
-              <span className="font-medium flex-1 text-left">Admin User</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
           </div>
+        </div>
+
+        <div className="border-t border-gray-200 p-3 space-y-1">
+          {bottomMenuItems.map((item) => (
+            <button
+              key={item.id}
+              className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 group`}
+              title={!sidebarExpanded ? item.label : ''}
+            >
+              <item.icon size={20} className="text-gray-500 group-hover:text-gray-700" />
+              {sidebarExpanded && <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>}
+            </button>
+          ))}
+          
+          {sidebarExpanded && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                  A
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                  <p className="text-xs text-gray-500 truncate">admin@busfleet.com</p>
+                </div>
+                <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                  <LogOut size={16} className="text-gray-600" />
+                </button>
+              </div>
+            </div>
+          )}
+          {!sidebarExpanded && (
+            <div className="mt-4 flex justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md cursor-pointer hover:shadow-lg transition-all hover:scale-105">
+                A
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+      {/* Mobile Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
+          <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Bus className="text-white" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">BusFleet Pro</h1>
+                  <p className="text-xs text-gray-500">Route Management</p>
+                </div>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
+              <div className="space-y-1">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveMenu(item.id);
+                      setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      activeMenu === item.id
+                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <item.icon size={20} className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500'} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200 space-y-1">
+                {bottomMenuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                  >
+                    <item.icon size={20} className="text-gray-500" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 p-4">
+              <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                    A
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                    <p className="text-xs text-gray-500 truncate">admin@busfleet.com</p>
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                    <LogOut size={16} className="text-gray-600" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-    
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="text-xl font-bold text-gray-800">IBT</div>
-          <div className="w-6" /> 
-        </div>
-
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6 hidden">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          </div>
-        </div>
-
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search Bus Route..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Calendar className="w-4 h-4 mr-2" />
-                Date
-              </button>
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <ChevronDown className="w-4 h-4 mr-2" />
-                Bus Company
-              </button>
-              <button className="flex items-center justify-center p-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors">
-                <Upload className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto p-4 lg:p-6">
-    
-          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-green-400">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Bus Template No.
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Route
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Time
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSlots.map((slot, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.busTemplateNo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.route}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.time}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="md:hidden space-y-4">
-            {filteredSlots.map((slot, index) => (
-              <div key={index} className="bg-white rounded-lg shadow p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900">
-                    {slot.busTemplateNo}
-                  </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="bg-white/90 border-b border-gray-200 shadow-sm sticky top-0 z-40 backdrop-blur-lg">
+          <div className="p-4 lg:px-8 lg:py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all">
+                  <Menu size={24} className="text-gray-700" />
+                </button>
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                    Bus Route Management
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-0.5">Manage and monitor all bus schedules and routes</p>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Route:</span>
-                    <span className="text-gray-900 font-medium">{slot.route}</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button className="hidden sm:flex p-2.5 hover:bg-gray-100 rounded-xl transition-all relative">
+                  <Bell size={22} className="text-gray-600" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                <div className="hidden md:flex items-center space-x-3 bg-gray-100 rounded-xl px-4 py-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">
+                    A
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Time:</span>
-                    <span className="text-gray-900 font-medium">{slot.time}</span>
+                  <span className="text-sm font-medium text-gray-700">Admin</span>
+                  <ChevronDown size={18} className="text-gray-500" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 lg:p-8">
+          {/* Search and Filters */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                  type="text" 
+                  placeholder="Search Bus Template No..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button className="flex items-center space-x-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                  <Calendar size={20} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">Date</span>
+                </button>
+                
+                <div className="relative">
+                  <select
+                    value={selectedCompany}
+                    onChange={(e) => setSelectedCompany(e.target.value)}
+                    className="appearance-none px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all text-gray-700 font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {companies.map(company => (
+                      <option key={company} value={company}>{company}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none" size={18} />
+                </div>
+
+                <button className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <Upload size={20} />
+                  <span className="font-medium">Export</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100">
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Bus Template No.</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Route</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredSchedules.map((schedule, index) => (
+                    <tr key={schedule.id} className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-emerald-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className="px-6 py-5">
+                        <span className="font-semibold text-gray-900">{schedule.templateNo}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center space-x-2">
+                          <Bus size={18} className="text-emerald-600" />
+                          <span className="font-medium text-gray-800">{schedule.route}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center space-x-2">
+                          <Clock size={18} className="text-gray-500" />
+                          <span className="text-gray-700 font-medium">{schedule.time}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards View */}
+          <div className="lg:hidden mt-6 space-y-4">
+            {filteredSchedules.map((schedule) => (
+              <div key={schedule.id} className="bg-white rounded-2xl p-5 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Bus Template No.</p>
+                    <p className="text-lg font-bold text-gray-900">{schedule.templateNo}</p>
+                  </div>
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${getStatusColor(schedule.status)}`}>
+                    {schedule.status}
+                  </span>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Route</p>
+                    <div className="flex items-center space-x-2">
+                      <Bus size={18} className="text-emerald-600" />
+                      <p className="text-base font-semibold text-gray-800">{schedule.route}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Schedule Time</p>
+                    <div className="flex items-center space-x-2">
+                      <Clock size={18} className="text-gray-500" />
+                      <p className="text-sm font-medium text-gray-700">{schedule.time}</p>
+                    </div>
+                  </div>
+                  <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Company</p>
+                      <p className="text-sm font-semibold text-gray-800">{schedule.company}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Capacity</p>
+                      <p className="text-sm font-semibold text-gray-800">{schedule.capacity} seats</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -200,4 +379,6 @@ export default function IBTSlotManagement() {
       </div>
     </div>
   );
-}
+};
+
+export default ParkingTicketSystem;

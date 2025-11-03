@@ -1,306 +1,557 @@
 import React, { useState } from 'react';
-import { Menu, Search, Filter, Calendar, Upload, Home, Bell, CreditCard, Bus, Ticket, HelpCircle, MapPin, ChevronDown } from 'lucide-react';
+import { Menu, Home, DollarSign, Lock, Ticket, HelpCircle, MapPin, Headphones, Bell, ChevronDown, TrendingUp, LogOut, Settings, BarChart3, Users, FileText, Activity, X, CheckCircle, AlertCircle, UserPlus, CreditCard, FileCheck, Download, RefreshCw, Search, Filter, Calendar, Upload, MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
 
-export default function IBTSlotManagement() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Permanent');
+const ParkingTicketSystem = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [activeMenu, setActiveMenu] = useState('slots');
+  const [activeTab, setActiveTab] = useState('permanent');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMenuItem, setSelectedMenuItem] = useState('Payments');
+  const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
-  
-  const slots = Array.from({ length: 13 }, (_, i) => ({
-    slotNo: i + 1,
-    referenceNo: 'RB12345790',
-    name: 'Juan Dela Cruz',
-    email: 'juandelacruz@gmail.com',
-    contactNo: '09346785432',
-    status: 'Paid'
-  }));
-
-  const menuItems = [
-    { icon: Bell, label: 'Notifications', path: 'notifications' },
-    { icon: Home, label: 'Dashboard', path: 'dashboard' },
-    { icon: CreditCard, label: 'Payments', path: 'payments' },
-    { icon: Bus, label: 'Bus and Trips', path: 'bus-trips' },
-    { icon: Ticket, label: 'Terminal Fees', path: 'terminal-fees' },
-    { icon: HelpCircle, label: 'Lost and Found', path: 'lost-found' },
-    { icon: MapPin, label: 'Parking', path: 'parking' },
-    { icon: HelpCircle, label: 'Support', path: 'support' },
+  const slots = [
+    { id: 1, slotNo: 1, referenceNo: 'PKG2024001', name: 'Sarah Johnson', email: 'sarah.johnson@email.com', contact: '09171234567', status: 'Paid', type: 'permanent' },
+    { id: 2, slotNo: 2, referenceNo: 'PKG2024002', name: 'Michael Chen', email: 'michael.chen@email.com', contact: '09182345678', status: 'Paid', type: 'permanent' },
+    { id: 3, slotNo: 3, referenceNo: 'PKG2024003', name: 'Emma Williams', email: 'emma.williams@email.com', contact: '09193456789', status: 'Pending', type: 'permanent' },
+    { id: 4, slotNo: 4, referenceNo: 'PKG2024004', name: 'James Rodriguez', email: 'james.rod@email.com', contact: '09204567890', status: 'Paid', type: 'permanent' },
+    { id: 5, slotNo: 5, referenceNo: 'PKG2024005', name: 'Olivia Martinez', email: 'olivia.martinez@email.com', contact: '09215678901', status: 'Paid', type: 'permanent' },
+    { id: 6, slotNo: 6, referenceNo: 'PKG2024006', name: 'David Thompson', email: 'david.thompson@email.com', contact: '09226789012', status: 'Overdue', type: 'permanent' },
+    { id: 7, slotNo: 7, referenceNo: 'PKG2024007', name: 'Sophia Garcia', email: 'sophia.garcia@email.com', contact: '09237890123', status: 'Paid', type: 'night' },
+    { id: 8, slotNo: 8, referenceNo: 'PKG2024008', name: 'Daniel Lee', email: 'daniel.lee@email.com', contact: '09248901234', status: 'Paid', type: 'night' },
+    { id: 9, slotNo: 9, referenceNo: 'PKG2024009', name: 'Isabella Brown', email: 'isabella.brown@email.com', contact: '09259012345', status: 'Paid', type: 'permanent' },
+    { id: 10, slotNo: 10, referenceNo: 'PKG2024010', name: 'William Davis', email: 'william.davis@email.com', contact: '09260123456', status: 'Pending', type: 'permanent' },
+    { id: 11, slotNo: 11, referenceNo: 'PKG2024011', name: 'Mia Anderson', email: 'mia.anderson@email.com', contact: '09271234567', status: 'Paid', type: 'night' },
+    { id: 12, slotNo: 12, referenceNo: 'PKG2024012', name: 'Alexander Wilson', email: 'alex.wilson@email.com', contact: '09282345678', status: 'Paid', type: 'permanent' },
   ];
 
-  const filteredSlots = slots.filter(slot =>
-    slot.referenceNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    slot.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSlots = slots.filter(slot => {
+    const matchesSearch = slot.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         slot.referenceNo.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = activeTab === 'permanent' ? slot.type === 'permanent' : slot.type === 'night';
+    return matchesSearch && matchesTab;
+  });
+
+  const totalSlots = 60;
+  const availableSlots = 40;
+  const nonAvailableSlots = 20;
+
+  const menuItems = [
+    { id: 'home', icon: Home, label: 'Dashboard' },
+    { id: 'slots', icon: MapPin, label: 'Parking Slots' },
+    { id: 'tenants', icon: Users, label: 'Tenants' },
+    { id: 'payments', icon: CreditCard, label: 'Payments' },
+    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'reports', icon: FileText, label: 'Reports' },
+    { id: 'maintenance', icon: Settings, label: 'Maintenance' },
+  ];
+
+  const bottomMenuItems = [
+    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
+  ];
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'Paid': return 'bg-emerald-100 text-emerald-700';
+      case 'Pending': return 'bg-yellow-100 text-yellow-700';
+      case 'Overdue': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-    
-      <div
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-green-400 to-green-500 transform ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
+      {/* Desktop Sidebar */}
+      <div 
+        className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${
+          sidebarExpanded ? 'lg:w-64' : 'lg:w-20'
+        }`}
       >
-        <div className="flex flex-col h-full">
-       
-          <div className="flex items-center justify-between p-6">
-            <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold text-gray-800">IBT</div>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden text-gray-800 hover:text-gray-900"
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setSidebarExpanded(!sidebarExpanded)}
+              className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
             >
-             
+              <Menu className="text-white" size={24} />
             </button>
+            {sidebarExpanded && (
+              <div className="overflow-hidden">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">ParkSpace</h1>
+                <p className="text-xs text-gray-500 whitespace-nowrap">Slot Management</p>
+              </div>
+            )}
           </div>
+        </div>
 
-        
-          <nav className="flex-1 px-3 space-y-1">
+        <div className="flex-1 overflow-y-auto py-4 px-3">
+          <div className="space-y-1">
             {menuItems.map((item) => (
               <button
-                key={item.path}
-                onClick={() => setSelectedMenuItem(item.label)}
-                className={`flex items-center w-full px-4 py-3 text-left rounded-lg transition-colors ${
-                  selectedMenuItem === item.label
-                    ? 'bg-green-600 text-white'
-                    : 'text-gray-800 hover:bg-green-600 hover:text-white'
+                key={item.id}
+                onClick={() => setActiveMenu(item.id)}
+                className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl transition-all duration-200 group ${
+                  activeMenu === item.id
+                    ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
+                title={!sidebarExpanded ? item.label : ''}
               >
-                <item.icon className="w-5 h-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <item.icon 
+                  size={20} 
+                  className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500 group-hover:text-gray-700'}
+                />
+                {sidebarExpanded && (
+                  <>
+                    <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                    {activeMenu === item.id && (
+                      <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full"></div>
+                    )}
+                  </>
+                )}
               </button>
             ))}
-          </nav>
-
-         
-          <div className="p-4 border-t border-green-600">
-            <button className="flex items-center w-full px-4 py-3 text-gray-800 hover:bg-green-600 hover:text-white rounded-lg transition-colors">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mr-3">
-                <span className="text-gray-800 font-semibold">A</span>
-              </div>
-              <span className="font-medium flex-1 text-left">Admin User</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
           </div>
+        </div>
+
+        <div className="border-t border-gray-200 p-3 space-y-1">
+          {bottomMenuItems.map((item) => (
+            <button
+              key={item.id}
+              className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 group`}
+              title={!sidebarExpanded ? item.label : ''}
+            >
+              <item.icon size={20} className="text-gray-500 group-hover:text-gray-700" />
+              {sidebarExpanded && <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>}
+            </button>
+          ))}
+          
+          {sidebarExpanded && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                  A
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                  <p className="text-xs text-gray-500 truncate">admin@parkspace.com</p>
+                </div>
+                <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                  <LogOut size={16} className="text-gray-600" />
+                </button>
+              </div>
+            </div>
+          )}
+          {!sidebarExpanded && (
+            <div className="mt-4 flex justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md cursor-pointer hover:shadow-lg transition-all hover:scale-105">
+                A
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-    
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+      {/* Mobile Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
+          <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <MapPin className="text-white" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">ParkSpace</h1>
+                  <p className="text-xs text-gray-500">Slot Management</p>
+                </div>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
+              <div className="space-y-1">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveMenu(item.id);
+                      setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      activeMenu === item.id
+                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <item.icon size={20} className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500'} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200 space-y-1">
+                {bottomMenuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                  >
+                    <item.icon size={20} className="text-gray-500" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 p-4">
+              <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                    A
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                    <p className="text-xs text-gray-500 truncate">admin@parkspace.com</p>
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                    <LogOut size={16} className="text-gray-600" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-     
-      <div className="flex-1 flex flex-col overflow-hidden">
-    
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="text-xl font-bold text-gray-800">IBT</div>
-          <div className="w-6" /> {/* Spacer */}
-        </div>
-
-       
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="bg-white/90 border-b border-gray-200 shadow-sm sticky top-0 z-40 backdrop-blur-lg">
+          <div className="p-4 lg:px-8 lg:py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all">
+                  <Menu size={24} className="text-gray-700" />
+                </button>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Total Slots</div>
-                  <div className="text-4xl font-bold text-gray-900">60</div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      10%
-                    </span>
-                    <span className="text-sm text-gray-600">Today</span>
-                  </div>
+                  <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                    Parking Slot Management
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-0.5">Monitor and manage all parking allocations</p>
                 </div>
-                <div className="w-3 h-3 bg-green-500 rounded-full mt-1"></div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Available Slots</div>
-                  <div className="text-4xl font-bold text-gray-900">40</div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      10%
-                    </span>
-                    <span className="text-sm text-gray-600">Today</span>
+              <div className="flex items-center space-x-3">
+                <button className="hidden sm:flex p-2.5 hover:bg-gray-100 rounded-xl transition-all relative">
+                  <Bell size={22} className="text-gray-600" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                <div className="hidden md:flex items-center space-x-3 bg-gray-100 rounded-xl px-4 py-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">
+                    A
                   </div>
+                  <span className="text-sm font-medium text-gray-700">Admin</span>
+                  <ChevronDown size={18} className="text-gray-500" />
                 </div>
-                <div className="w-3 h-3 bg-yellow-400 rounded-full mt-1"></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Non - Available Slots</div>
-                  <div className="text-4xl font-bold text-gray-900">20</div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      10%
-                    </span>
-                    <span className="text-sm text-gray-600">Today</span>
-                  </div>
-                </div>
-                <div className="w-3 h-3 bg-red-400 rounded-full mt-1"></div>
               </div>
             </div>
           </div>
         </div>
 
-       
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-         
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search Reference No..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+        <div className="p-4 lg:p-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-200 to-teal-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Total Slots</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{totalSlots}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-emerald-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg">10%</span>
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
             </div>
 
-           
-            <div className="flex flex-wrap items-center gap-2">
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </button>
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Calendar className="w-4 h-4 mr-2" />
-                Date
-              </button>
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setActiveTab('Permanent')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === 'Permanent'
-                      ? 'bg-white text-gray-900 shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Permanent
-                </button>
-                <button
-                  onClick={() => setActiveTab('Night Market')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === 'Night Market'
-                      ? 'bg-white text-gray-900 shadow'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Night Market
-                </button>
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-yellow-200 to-amber-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Available Slots</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{availableSlots}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-yellow-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1.5 bg-yellow-100 text-yellow-700 text-sm font-bold rounded-lg">10%</span>
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
               </div>
-              <button className="flex items-center justify-center p-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors">
-                <Upload className="w-5 h-5" />
-              </button>
+            </div>
+
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-red-200 to-rose-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Non-Available Slots</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{nonAvailableSlots}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-red-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-bold rounded-lg">10%</span>
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-   
-        <div className="flex-1 overflow-auto p-4 lg:p-6">
-         
-          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-green-400">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Slot No.
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Reference No.
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Contact No.
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSlots.map((slot) => (
-                  <tr key={slot.slotNo} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.slotNo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.referenceNo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.contactNo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-4 py-2 inline-flex text-sm font-medium rounded-md bg-green-100 text-green-800">
-                        {slot.status}
-                      </span>
-                    </td>
+          {/* Search and Filters */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                  type="text" 
+                  placeholder="Search Reference No..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button className="flex items-center space-x-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                  <Filter size={20} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">Filter</span>
+                </button>
+                <button className="flex items-center space-x-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                  <Calendar size={20} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">Date</span>
+                </button>
+                <div className="flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
+                  <button 
+                    onClick={() => setActiveTab('permanent')}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                      activeTab === 'permanent' 
+                        ? 'bg-white text-emerald-700 shadow-md' 
+                        : 'text-emerald-600 hover:text-emerald-700'
+                    }`}
+                  >
+                    Permanent
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('night')}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                      activeTab === 'night' 
+                        ? 'bg-white text-emerald-700 shadow-md' 
+                        : 'text-emerald-600 hover:text-emerald-700'
+                    }`}
+                  >
+                    Night Market
+                  </button>
+                </div>
+                <button className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <Upload size={20} />
+                  <span className="font-medium">Export</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100">
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Slot No.</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Reference No.</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Contact No.</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-5 text-center text-sm font-bold text-gray-800 uppercase tracking-wider">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredSlots.map((slot, index) => (
+                    <tr key={slot.id} className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-emerald-50 transition-all duration-200 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className="px-6 py-5">
+                        <span className="font-semibold text-gray-900">{slot.slotNo}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="font-medium text-gray-700">{slot.referenceNo}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="font-medium text-gray-800">{slot.name}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-gray-600 text-sm">{slot.email}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-gray-700 font-medium">{slot.contact}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`px-4 py-2 rounded-full text-xs font-bold ${getStatusColor(slot.status)}`}>
+                          {slot.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-center">
+                          <div className="relative">
+                            <button 
+                              onClick={() => setActionMenuOpen(actionMenuOpen === slot.id ? null : slot.id)}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition-all"
+                            >
+                              <MoreVertical size={18} className="text-gray-600" />
+                            </button>
+                            
+                            {actionMenuOpen === slot.id && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-10" 
+                                  onClick={() => setActionMenuOpen(null)}
+                                ></div>
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                                  <button 
+                                    className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-blue-50 transition-all group/item"
+                                    onClick={() => {
+                                      alert('View details for ' + slot.name);
+                                      setActionMenuOpen(null);
+                                    }}
+                                  >
+                                    <Eye size={18} className="text-gray-500 group-hover/item:text-blue-600" />
+                                    <span className="text-sm font-medium text-gray-700 group-hover/item:text-blue-600">View Details</span>
+                                  </button>
+                                  <button 
+                                    className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-emerald-50 transition-all group/item"
+                                    onClick={() => {
+                                      alert('Edit slot #' + slot.slotNo);
+                                      setActionMenuOpen(null);
+                                    }}
+                                  >
+                                    <Edit2 size={18} className="text-gray-500 group-hover/item:text-emerald-600" />
+                                    <span className="text-sm font-medium text-gray-700 group-hover/item:text-emerald-600">Edit Slot</span>
+                                  </button>
+                                  <button 
+                                    className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-red-50 transition-all group/item"
+                                    onClick={() => {
+                                      if (confirm('Are you sure you want to delete slot #' + slot.slotNo + '?')) {
+                                        alert('Deleted slot #' + slot.slotNo);
+                                      }
+                                      setActionMenuOpen(null);
+                                    }}
+                                  >
+                                    <Trash2 size={18} className="text-gray-500 group-hover/item:text-red-600" />
+                                    <span className="text-sm font-medium text-gray-700 group-hover/item:text-red-600">Delete Slot</span>
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-         
-          <div className="md:hidden space-y-4">
+          {/* Mobile Cards View */}
+          <div className="lg:hidden mt-6 space-y-4">
             {filteredSlots.map((slot) => (
-              <div key={slot.slotNo} className="bg-white rounded-lg shadow p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900">
-                    Slot #{slot.slotNo}
+              <div key={slot.id} className="bg-white rounded-2xl p-5 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Slot No.</p>
+                    <p className="text-2xl font-bold text-gray-900">#{slot.slotNo}</p>
                   </div>
-                  <span className="px-3 py-1 text-sm font-medium rounded-md bg-green-100 text-green-800">
-                    {slot.status}
-                  </span>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Reference:</span>
-                    <span className="text-gray-900 font-medium">{slot.referenceNo}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Name:</span>
-                    <span className="text-gray-900 font-medium">{slot.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Email:</span>
-                    <span className="text-gray-900 font-medium text-right break-all">
-                      {slot.email}
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${getStatusColor(slot.status)}`}>
+                      {slot.status}
                     </span>
+                    <div className="relative">
+                      <button 
+                        onClick={() => setActionMenuOpen(actionMenuOpen === slot.id ? null : slot.id)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-all"
+                      >
+                        <MoreVertical size={18} className="text-gray-600" />
+                      </button>
+                      
+                      {actionMenuOpen === slot.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setActionMenuOpen(null)}
+                          ></div>
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-20">
+                            <button 
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-blue-50 transition-all group/item"
+                              onClick={() => {
+                                alert('View details for ' + slot.name);
+                                setActionMenuOpen(null);
+                              }}
+                            >
+                              <Eye size={18} className="text-gray-500 group-hover/item:text-blue-600" />
+                              <span className="text-sm font-medium text-gray-700 group-hover/item:text-blue-600">View Details</span>
+                            </button>
+                            <button 
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-emerald-50 transition-all group/item"
+                              onClick={() => {
+                                alert('Edit slot #' + slot.slotNo);
+                                setActionMenuOpen(null);
+                              }}
+                            >
+                              <Edit2 size={18} className="text-gray-500 group-hover/item:text-emerald-600" />
+                              <span className="text-sm font-medium text-gray-700 group-hover/item:text-emerald-600">Edit Slot</span>
+                            </button>
+                            <button 
+                              className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-red-50 transition-all group/item"
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete slot #' + slot.slotNo + '?')) {
+                                  alert('Deleted slot #' + slot.slotNo);
+                                }
+                                setActionMenuOpen(null);
+                              }}
+                            >
+                              <Trash2 size={18} className="text-gray-500 group-hover/item:text-red-600" />
+                              <span className="text-sm font-medium text-gray-700 group-hover/item:text-red-600">Delete Slot</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Contact:</span>
-                    <span className="text-gray-900 font-medium">{slot.contactNo}</span>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Reference No.</p>
+                    <p className="text-sm font-semibold text-gray-900">{slot.referenceNo}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Name</p>
+                    <p className="text-base font-semibold text-gray-800">{slot.name}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1">Email</p>
+                      <p className="text-sm text-gray-700 truncate">{slot.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1">Contact</p>
+                      <p className="text-sm font-medium text-gray-800">{slot.contact}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -310,4 +561,6 @@ export default function IBTSlotManagement() {
       </div>
     </div>
   );
-}
+};
+
+export default ParkingTicketSystem;

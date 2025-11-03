@@ -1,267 +1,400 @@
 import React, { useState } from 'react';
-import { Menu, Search, Filter, Calendar, Upload, Home, Bell, CreditCard, Bus, Ticket, HelpCircle, MapPin, ChevronDown } from 'lucide-react';
+import { Menu, Home, DollarSign, Lock, Ticket, HelpCircle, MapPin, Headphones, Bell, ChevronDown, TrendingUp, LogOut, Settings, BarChart3, Users, FileText, Activity, X, CheckCircle, AlertCircle, UserPlus, CreditCard, FileCheck, Download, RefreshCw, Search, Filter, Calendar, Upload, MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
 
-export default function IBTSlotManagement() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Permanent');
+const ParkingTicketSystem = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [activeMenu, setActiveMenu] = useState('tickets');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMenuItem, setSelectedMenuItem] = useState('Terminal Fees');
+  const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
-  const slots = [
-    { ticketNo: 1, passengerType: 'Student', price: '10.00' },
-    { ticketNo: 2, passengerType: 'Student', price: '10.00' },
-    { ticketNo: 3, passengerType: 'Student', price: '10.00' },
-    { ticketNo: 4, passengerType: 'Student', price: '10.00' },
-    { ticketNo: 5, passengerType: 'Student', price: '10.00' },
-    { ticketNo: 6, passengerType: 'Senior Citizen / PWD', price: '10.00' },
-    { ticketNo: 7, passengerType: 'Senior Citizen / PWD', price: '10.00' },
-    { ticketNo: 8, passengerType: 'Regular', price: '15.00' },
-    { ticketNo: 9, passengerType: 'Regular', price: '15.00' },
-    { ticketNo: 10, passengerType: 'Student', price: '10.00' }
+  const tickets = [
+    { id: 1, ticketNo: 1, passengerType: 'Student', price: 10.00, time: '08:30 AM', date: '2024-11-15' },
+    { id: 2, ticketNo: 2, passengerType: 'Student', price: 10.00, time: '08:35 AM', date: '2024-11-15' },
+    { id: 3, ticketNo: 3, passengerType: 'Student', price: 10.00, time: '08:42 AM', date: '2024-11-15' },
+    { id: 4, ticketNo: 4, passengerType: 'Student', price: 10.00, time: '09:15 AM', date: '2024-11-15' },
+    { id: 5, ticketNo: 5, passengerType: 'Student', price: 10.00, time: '09:28 AM', date: '2024-11-15' },
+    { id: 6, ticketNo: 6, passengerType: 'Senior Citizen / PWD', price: 10.00, time: '09:45 AM', date: '2024-11-15' },
+    { id: 7, ticketNo: 7, passengerType: 'Senior Citizen / PWD', price: 10.00, time: '10:10 AM', date: '2024-11-15' },
+    { id: 8, ticketNo: 8, passengerType: 'Regular', price: 15.00, time: '10:25 AM', date: '2024-11-15' },
+    { id: 9, ticketNo: 9, passengerType: 'Regular', price: 15.00, time: '10:50 AM', date: '2024-11-15' },
+    { id: 10, ticketNo: 10, passengerType: 'Student', price: 10.00, time: '11:15 AM', date: '2024-11-15' },
   ];
 
-  const menuItems = [
-    { icon: Bell, label: 'Notifications', path: 'notifications' },
-    { icon: Home, label: 'Dashboard', path: 'dashboard' },
-    { icon: CreditCard, label: 'Payments', path: 'payments' },
-    { icon: Bus, label: 'Bus and Trips', path: 'bus-trips' },
-    { icon: Ticket, label: 'Terminal Fees', path: 'terminal-fees' },
-    { icon: HelpCircle, label: 'Lost and Found', path: 'lost-found' },
-    { icon: MapPin, label: 'Parking', path: 'parking' },
-    { icon: HelpCircle, label: 'Support', path: 'support' },
-  ];
-
-  const filteredSlots = slots.filter(slot =>
-    slot.ticketNo.toString().includes(searchQuery.toLowerCase()) ||
-    slot.passengerType.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTickets = tickets.filter(ticket => 
+    ticket.ticketNo.toString().includes(searchQuery) || 
+    ticket.passengerType.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const regular = slots.filter(s => s.passengerType === 'Regular').length;
-  const student = slots.filter(s => s.passengerType === 'Student').length;
-  const seniorPwd = slots.filter(s => s.passengerType === 'Senior Citizen / PWD').length;
-  const overall = slots.length;
+  const regularCount = 5768;
+  const studentCount = 5768;
+  const seniorCount = 5768;
+  const overallCount = 5768;
+
+  const menuItems = [
+    { id: 'home', icon: Home, label: 'Dashboard' },
+    { id: 'tickets', icon: Ticket, label: 'Tickets' },
+    { id: 'passengers', icon: Users, label: 'Passengers' },
+    { id: 'revenue', icon: DollarSign, label: 'Revenue' },
+    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'reports', icon: FileText, label: 'Reports' },
+    { id: 'routes', icon: MapPin, label: 'Routes' },
+  ];
+
+  const bottomMenuItems = [
+    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
+  ];
+
+  const getPassengerTypeColor = (type) => {
+    switch(type) {
+      case 'Student': return 'text-blue-600 bg-blue-50';
+      case 'Senior Citizen / PWD': return 'text-yellow-600 bg-yellow-50';
+      case 'Regular': return 'text-red-600 bg-red-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      
-      <div
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-green-400 to-green-500 transform ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
+      {/* Desktop Sidebar */}
+      <div 
+        className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${
+          sidebarExpanded ? 'lg:w-64' : 'lg:w-20'
+        }`}
       >
-        <div className="flex flex-col h-full">
-          
-          <div className="flex items-center justify-between p-6">
-            <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold text-gray-800">IBT</div>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden text-gray-800 hover:text-gray-900"
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setSidebarExpanded(!sidebarExpanded)}
+              className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
             >
+              <Menu className="text-white" size={24} />
             </button>
+            {sidebarExpanded && (
+              <div className="overflow-hidden">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">TransitHub</h1>
+                <p className="text-xs text-gray-500 whitespace-nowrap">Ticketing System</p>
+              </div>
+            )}
           </div>
+        </div>
 
-          <nav className="flex-1 px-3 space-y-1">
+        <div className="flex-1 overflow-y-auto py-4 px-3">
+          <div className="space-y-1">
             {menuItems.map((item) => (
               <button
-                key={item.path}
-                onClick={() => setSelectedMenuItem(item.label)}
-                className={`flex items-center w-full px-4 py-3 text-left rounded-lg transition-colors ${
-                  selectedMenuItem === item.label
-                    ? 'bg-green-600 text-white'
-                    : 'text-gray-800 hover:bg-green-600 hover:text-white'
+                key={item.id}
+                onClick={() => setActiveMenu(item.id)}
+                className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl transition-all duration-200 group ${
+                  activeMenu === item.id
+                    ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
+                title={!sidebarExpanded ? item.label : ''}
               >
-                <item.icon className="w-5 h-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <item.icon 
+                  size={20} 
+                  className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500 group-hover:text-gray-700'}
+                />
+                {sidebarExpanded && (
+                  <>
+                    <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                    {activeMenu === item.id && (
+                      <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full"></div>
+                    )}
+                  </>
+                )}
               </button>
             ))}
-          </nav>
-
-          <div className="p-4 border-t border-green-600">
-            <button className="flex items-center w-full px-4 py-3 text-gray-800 hover:bg-green-600 hover:text-white rounded-lg transition-colors">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mr-3">
-                <span className="text-gray-800 font-semibold">A</span>
-              </div>
-              <span className="font-medium flex-1 text-left">Admin User</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
           </div>
+        </div>
+
+        <div className="border-t border-gray-200 p-3 space-y-1">
+          {bottomMenuItems.map((item) => (
+            <button
+              key={item.id}
+              className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 group`}
+              title={!sidebarExpanded ? item.label : ''}
+            >
+              <item.icon size={20} className="text-gray-500 group-hover:text-gray-700" />
+              {sidebarExpanded && <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>}
+            </button>
+          ))}
+          
+          {sidebarExpanded && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                  A
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                  <p className="text-xs text-gray-500 truncate">admin@transithub.com</p>
+                </div>
+                <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                  <LogOut size={16} className="text-gray-600" />
+                </button>
+              </div>
+            </div>
+          )}
+          {!sidebarExpanded && (
+            <div className="mt-4 flex justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md cursor-pointer hover:shadow-lg transition-all hover:scale-105">
+                A
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+      {/* Mobile Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
+          <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Ticket className="text-white" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">TransitHub</h1>
+                  <p className="text-xs text-gray-500">Ticketing System</p>
+                </div>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
+              <div className="space-y-1">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveMenu(item.id);
+                      setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      activeMenu === item.id
+                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <item.icon size={20} className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500'} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200 space-y-1">
+                {bottomMenuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                  >
+                    <item.icon size={20} className="text-gray-500" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 p-4">
+              <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                    A
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                    <p className="text-xs text-gray-500 truncate">admin@transithub.com</p>
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                    <LogOut size={16} className="text-gray-600" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-      
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="text-xl font-bold text-gray-800">IBT</div>
-          <div className="w-6" /> 
-        </div>
-
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="bg-white/90 border-b border-gray-200 shadow-sm sticky top-0 z-40 backdrop-blur-lg">
+          <div className="p-4 lg:px-8 lg:py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all">
+                  <Menu size={24} className="text-gray-700" />
+                </button>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Regular</div>
-                  <div className="text-4xl font-bold text-gray-900">5,768</div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      10%
-                    </span>
-                    <span className="text-sm text-gray-600">Today</span>
-                  </div>
+                  <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                    Transit Ticket Management
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-0.5">Track and manage passenger tickets in real-time</p>
                 </div>
-                <div className="w-3 h-3 bg-red-400 rounded-full mt-1"></div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Student</div>
-                  <div className="text-4xl font-bold text-gray-900">5,768</div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      10%
-                    </span>
-                    <span className="text-sm text-gray-600">Today</span>
+              <div className="flex items-center space-x-3">
+                <button className="hidden sm:flex p-2.5 hover:bg-gray-100 rounded-xl transition-all relative">
+                  <Bell size={22} className="text-gray-600" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                <div className="hidden md:flex items-center space-x-3 bg-gray-100 rounded-xl px-4 py-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">
+                    A
                   </div>
+                  <span className="text-sm font-medium text-gray-700">Admin</span>
+                  <ChevronDown size={18} className="text-gray-500" />
                 </div>
-                <div className="w-3 h-3 bg-cyan-400 rounded-full mt-1"></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Senior Citizen / PWD</div>
-                  <div className="text-4xl font-bold text-gray-900">5,768</div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      10%
-                    </span>
-                    <span className="text-sm text-gray-600">Today</span>
-                  </div>
-                </div>
-                <div className="w-3 h-3 bg-yellow-400 rounded-full mt-1"></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Overall</div>
-                  <div className="text-4xl font-bold text-gray-900">5,768</div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                      10%
-                    </span>
-                    <span className="text-sm text-gray-600">Today</span>
-                  </div>
-                </div>
-                <div className="w-3 h-3 bg-green-500 rounded-full mt-1"></div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-           
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search Ticket No..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+        <div className="p-4 lg:p-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-red-200 to-rose-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Regular</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{regularCount.toLocaleString()}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-red-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg">10%</span>
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
             </div>
 
-          
-            <div className="flex flex-wrap items-center gap-2">
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Calendar className="w-4 h-4 mr-2" />
-                Date
-              </button>
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </button>
-              <button className="flex items-center justify-center px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors">
-                <Upload className="w-4 h-4 mr-2" />
-                Export
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-200 to-cyan-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Student</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{studentCount.toLocaleString()}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-blue-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg">10%</span>
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-yellow-200 to-amber-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Senior Citizen / PWD</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{seniorCount.toLocaleString()}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-yellow-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg">10%</span>
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-200 to-teal-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Overall</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{overallCount.toLocaleString()}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-emerald-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg">10%</span>
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 gap-4">
+              <div className="flex flex-wrap gap-3">
+                <button className="flex items-center space-x-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                  <Calendar size={20} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">Date</span>
+                </button>
+                <button className="flex items-center space-x-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                  <Filter size={20} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">Filter</span>
+                </button>
+              </div>
+              <button className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                <Upload size={20} />
+                <span className="font-medium">Export</span>
               </button>
             </div>
           </div>
-        </div>
-       
-        <div className="flex-1 overflow-auto p-4 lg:p-6">
 
-          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-green-400">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Ticket No.
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Passenger Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Price
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSlots.map((slot) => (
-                  <tr key={slot.ticketNo} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.ticketNo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.passengerType}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.price}
-                    </td>
+          {/* Table */}
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100">
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Ticket No.</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Passenger Type</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Price</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredTickets.map((ticket, index) => (
+                    <tr key={ticket.id} className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-emerald-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className="px-6 py-5">
+                        <span className="font-semibold text-gray-900">{ticket.ticketNo}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getPassengerTypeColor(ticket.passengerType)}`}>
+                          {ticket.passengerType}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-gray-900 font-bold">₱{ticket.price.toFixed(2)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="md:hidden space-y-4">
-            {filteredSlots.map((slot) => (
-              <div key={slot.ticketNo} className="bg-white rounded-lg shadow p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900">
-                    Ticket #{slot.ticketNo}
+          {/* Mobile Cards View */}
+          <div className="lg:hidden mt-6 space-y-4">
+            {filteredTickets.map((ticket) => (
+              <div key={ticket.id} className="bg-white rounded-2xl p-5 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Ticket No.</p>
+                    <p className="text-2xl font-bold text-gray-900">#{ticket.ticketNo}</p>
                   </div>
-                  <span className="text-gray-900 font-bold">
-                    ₱{slot.price}
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getPassengerTypeColor(ticket.passengerType)}`}>
+                    {ticket.passengerType}
                   </span>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Passenger Type:</span>
-                    <span className="text-gray-900 font-medium">{slot.passengerType}</span>
-                  </div>
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <p className="text-gray-500 text-sm font-medium">Price</p>
+                  <p className="text-2xl font-bold text-gray-900">₱{ticket.price.toFixed(2)}</p>
                 </div>
               </div>
             ))}
@@ -270,4 +403,6 @@ export default function IBTSlotManagement() {
       </div>
     </div>
   );
-}
+};
+
+export default ParkingTicketSystem;

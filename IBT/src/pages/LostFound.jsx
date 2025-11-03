@@ -1,266 +1,394 @@
 import React, { useState } from 'react';
-import { Menu, Search, Filter, Calendar, Upload, Home, Bell, CreditCard, Bus, Ticket, HelpCircle, MapPin, ChevronDown } from 'lucide-react';
+import { Menu, Home, DollarSign, Lock, Ticket, HelpCircle, MapPin, Headphones, Bell, ChevronDown, LogOut, Settings, BarChart3, Users, FileText, Activity, X, CheckCircle, AlertCircle, Package, Search, Filter, Calendar, Upload } from 'lucide-react';
 
-export default function IBTSlotManagement() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Permanent');
+const ParkingTicketSystem = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [activeMenu, setActiveMenu] = useState('lost-found');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMenuItem, setSelectedMenuItem] = useState('Lost and Found');
-
-  // Sample data - Lost and Found items
-  const slots = [
-    { trackingNo: '2025-0001', description: 'Aqua Flask', dateTime: '2025-09-25 : 01:45 am', status: 'Unclaimed' },
-    { trackingNo: '2025-0002', description: 'Bag', dateTime: '2025-09-25 : 05:00 pm', status: 'Unclaimed' },
-    { trackingNo: '2025-0003', description: 'Headphone', dateTime: '2025-09-25 : 03:00 pm', status: 'Unclaimed' },
-    { trackingNo: '2025-0004', description: 'Iphone 6 plus', dateTime: '2025-09-25 : 12:28 pm', status: 'Unclaimed' },
-    { trackingNo: '2025-0005', description: 'Wallet', dateTime: '2025-09-25 : 11:58 am', status: 'Claimed' },
-    { trackingNo: '2025-0006', description: 'Tumbler', dateTime: '2025-09-25 : 9:58 am', status: 'Claimed' },
-    { trackingNo: '2025-0007', description: 'Pouch - Pink', dateTime: '2025-09-25 : 8:46 am', status: 'Claimed' },
-    { trackingNo: '2025-0008', description: 'Shoes - Nike', dateTime: '2025-09-25 : 8:06 am', status: 'Unclaimed' }
+  
+  const lostFoundItems = [
+    { id: 1, trackingNo: '2025-0001', description: 'Aqua Flask', dateTime: '2025-09-25 : 01:45 am', status: 'Unclaimed' },
+    { id: 2, trackingNo: '2025-0002', description: 'Bag', dateTime: '2025-09-25 : 05:00 pm', status: 'Unclaimed' },
+    { id: 3, trackingNo: '2025-0003', description: 'Headphone', dateTime: '2025-09-25 : 03:00 pm', status: 'Unclaimed' },
+    { id: 4, trackingNo: '2025-0004', description: 'Iphone 6 plus', dateTime: '2025-09-25 : 12:28 pm', status: 'Unclaimed' },
+    { id: 5, trackingNo: '2025-0005', description: 'Wallet', dateTime: '2025-09-25 : 11:58 am', status: 'Claimed' },
+    { id: 6, trackingNo: '2025-0006', description: 'Tumbler', dateTime: '2025-09-25 : 9:58 am', status: 'Claimed' },
+    { id: 7, trackingNo: '2025-0007', description: 'Pouch - Pink', dateTime: '2025-09-25 : 8:46 am', status: 'Claimed' },
+    { id: 8, trackingNo: '2025-0008', description: 'Shoes - Nike', dateTime: '2025-09-25 : 8:06 am', status: 'Unclaimed' },
   ];
 
-  const menuItems = [
-    { icon: Bell, label: 'Notifications', path: 'notifications' },
-    { icon: Home, label: 'Dashboard', path: 'dashboard' },
-    { icon: CreditCard, label: 'Payments', path: 'payments' },
-    { icon: Bus, label: 'Bus and Trips', path: 'bus-trips' },
-    { icon: Ticket, label: 'Terminal Fees', path: 'terminal-fees' },
-    { icon: HelpCircle, label: 'Lost and Found', path: 'lost-found' },
-    { icon: MapPin, label: 'Parking', path: 'parking' },
-    { icon: HelpCircle, label: 'Support', path: 'support' },
-  ];
-
-  const filteredSlots = slots.filter(slot =>
-    slot.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    slot.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredItems = lostFoundItems.filter(item => 
+    item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    item.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const lostItems = slots.filter(s => s.status === 'Unclaimed').length;
-  const foundItems = slots.filter(s => s.status === 'Claimed').length;
-  const totalItems = slots.length;
+  const lostItems = 5;
+  const foundItems = 3;
+  const totalItems = 8;
+
+  const menuItems = [
+    { id: 'home', icon: Home, label: 'Dashboard' },
+    { id: 'lost-found', icon: Package, label: 'Lost & Found' },
+    { id: 'claimed', icon: CheckCircle, label: 'Claimed Items' },
+    { id: 'unclaimed', icon: AlertCircle, label: 'Unclaimed Items' },
+    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'reports', icon: FileText, label: 'Reports' },
+    { id: 'locations', icon: MapPin, label: 'Locations' },
+  ];
+
+  const bottomMenuItems = [
+    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
+  ];
+
+  const getStatusColor = (status) => {
+    return status === 'Claimed' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      
-      <div
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-green-400 to-green-500 transform ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 transition-transform duration-300 ease-in-out`}
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
+      {/* Desktop Sidebar */}
+      <div 
+        className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${
+          sidebarExpanded ? 'lg:w-64' : 'lg:w-20'
+        }`}
       >
-        <div className="flex flex-col h-full">
-     
-          <div className="flex items-center justify-between p-6">
-            <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold text-gray-800">IBT</div>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden text-gray-800 hover:text-gray-900"
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setSidebarExpanded(!sidebarExpanded)}
+              className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
             >
-             
+              <Menu className="text-white" size={24} />
             </button>
+            {sidebarExpanded && (
+              <div className="overflow-hidden">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">Lost & Found</h1>
+                <p className="text-xs text-gray-500 whitespace-nowrap">Tracking System</p>
+              </div>
+            )}
           </div>
+        </div>
 
-          <nav className="flex-1 px-3 space-y-1">
+        <div className="flex-1 overflow-y-auto py-4 px-3">
+          <div className="space-y-1">
             {menuItems.map((item) => (
               <button
-                key={item.path}
-                onClick={() => setSelectedMenuItem(item.label)}
-                className={`flex items-center w-full px-4 py-3 text-left rounded-lg transition-colors ${
-                  selectedMenuItem === item.label
-                    ? 'bg-green-600 text-white'
-                    : 'text-gray-800 hover:bg-green-600 hover:text-white'
+                key={item.id}
+                onClick={() => setActiveMenu(item.id)}
+                className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl transition-all duration-200 group ${
+                  activeMenu === item.id
+                    ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
+                title={!sidebarExpanded ? item.label : ''}
               >
-                <item.icon className="w-5 h-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <item.icon 
+                  size={20} 
+                  className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500 group-hover:text-gray-700'}
+                />
+                {sidebarExpanded && (
+                  <>
+                    <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                    {activeMenu === item.id && (
+                      <div className="ml-auto w-1.5 h-1.5 bg-emerald-600 rounded-full"></div>
+                    )}
+                  </>
+                )}
               </button>
             ))}
-          </nav>
-
-          <div className="p-4 border-t border-green-600">
-            <button className="flex items-center w-full px-4 py-3 text-gray-800 hover:bg-green-600 hover:text-white rounded-lg transition-colors">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mr-3">
-                <span className="text-gray-800 font-semibold">A</span>
-              </div>
-              <span className="font-medium flex-1 text-left">Admin User</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
           </div>
+        </div>
+
+        <div className="border-t border-gray-200 p-3 space-y-1">
+          {bottomMenuItems.map((item) => (
+            <button
+              key={item.id}
+              className={`w-full flex items-center ${sidebarExpanded ? 'space-x-3' : 'justify-center'} px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 group`}
+              title={!sidebarExpanded ? item.label : ''}
+            >
+              <item.icon size={20} className="text-gray-500 group-hover:text-gray-700" />
+              {sidebarExpanded && <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>}
+            </button>
+          ))}
+          
+          {sidebarExpanded && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                  A
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                  <p className="text-xs text-gray-500 truncate">admin@system.com</p>
+                </div>
+                <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                  <LogOut size={16} className="text-gray-600" />
+                </button>
+              </div>
+            </div>
+          )}
+          {!sidebarExpanded && (
+            <div className="mt-4 flex justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md cursor-pointer hover:shadow-lg transition-all hover:scale-105">
+                A
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+      {/* Mobile Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
+          <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Package className="text-white" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">Lost & Found</h1>
+                  <p className="text-xs text-gray-500">Tracking System</p>
+                </div>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                <X size={24} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
+              <div className="space-y-1">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveMenu(item.id);
+                      setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      activeMenu === item.id
+                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <item.icon size={20} className={activeMenu === item.id ? 'text-emerald-600' : 'text-gray-500'} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200 space-y-1">
+                {bottomMenuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                  >
+                    <item.icon size={20} className="text-gray-500" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 p-4">
+              <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
+                    A
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
+                    <p className="text-xs text-gray-500 truncate">admin@system.com</p>
+                  </div>
+                  <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
+                    <LogOut size={16} className="text-gray-600" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-    
-      <div className="flex-1 flex flex-col overflow-hidden">
-       
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="text-xl font-bold text-gray-800">IBT</div>
-          <div className="w-6" /> 
-        </div>
-
-       
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <div className="bg-white/90 border-b border-gray-200 shadow-sm sticky top-0 z-40 backdrop-blur-lg">
+          <div className="p-4 lg:px-8 lg:py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all">
+                  <Menu size={24} className="text-gray-700" />
+                </button>
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Lost Items</div>
-                  <div className="text-4xl font-bold text-gray-900">{lostItems}</div>
-                  <div className="mt-2">
-                    <span className="text-sm text-gray-600">Today</span>
-                  </div>
+                  <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                    Lost & Found Items
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-0.5">Track all lost and found items</p>
                 </div>
-                <div className="w-3 h-3 bg-red-400 rounded-full mt-1"></div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Found Items</div>
-                  <div className="text-4xl font-bold text-gray-900">{foundItems}</div>
-                  <div className="mt-2">
-                    <span className="text-sm text-gray-600">Today</span>
+              <div className="flex items-center space-x-3">
+                <button className="hidden sm:flex p-2.5 hover:bg-gray-100 rounded-xl transition-all relative">
+                  <Bell size={22} className="text-gray-600" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                <div className="hidden md:flex items-center space-x-3 bg-gray-100 rounded-xl px-4 py-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">
+                    A
                   </div>
+                  <span className="text-sm font-medium text-gray-700">Admin</span>
+                  <ChevronDown size={18} className="text-gray-500" />
                 </div>
-                <div className="w-3 h-3 bg-green-400 rounded-full mt-1"></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Total Items</div>
-                  <div className="text-4xl font-bold text-gray-900">{totalItems}</div>
-                  <div className="mt-2">
-                    <span className="text-sm text-gray-600">Today</span>
-                  </div>
-                </div>
-                <div className="w-3 h-3 bg-green-600 rounded-full mt-1"></div>
               </div>
             </div>
           </div>
         </div>
 
-        
-        <div className="bg-white border-b border-gray-200 p-4 lg:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-           
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search Tracking No..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+        <div className="p-4 lg:p-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-red-200 to-rose-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Lost Items</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{lostItems}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-red-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </button>
-              <button className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Calendar className="w-4 h-4 mr-2" />
-                Date
-              </button>
-              <button className="flex items-center justify-center p-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors">
-                <Upload className="w-5 h-5" />
-              </button>
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-200 to-teal-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Found Items</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{foundItems}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-emerald-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-200 to-cyan-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-gray-600 text-base font-semibold mb-3">Total Items</p>
+                    <p className="text-6xl font-extrabold text-gray-900 mb-4">{totalItems}</p>
+                  </div>
+                  <div className="w-6 h-6 bg-blue-400 rounded-full shadow-lg"></div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="text-gray-500 text-sm font-medium">Today</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        
-        <div className="flex-1 overflow-auto p-4 lg:p-6">
-         
-          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-green-400">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Tracking No.
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Date & Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredSlots.map((slot) => (
-                  <tr key={slot.trackingNo} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.trackingNo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {slot.dateTime}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-4 py-2 inline-flex text-sm font-medium rounded-md ${
-                        slot.status === 'Claimed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {slot.status}
-                      </span>
-                    </td>
+          {/* Search and Filters */}
+          <div className="bg-white rounded-3xl shadow-lg p-6 mb-6 border-4 border-emerald-400">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                  type="text" 
+                  placeholder="Search Tracking No..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button className="flex items-center space-x-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                  <Filter size={20} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">Filter</span>
+                </button>
+                
+                <button className="flex items-center space-x-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all">
+                  <Calendar size={20} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">Date</span>
+                </button>
+
+                <button className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <Upload size={20} />
+                  <span className="font-medium">Export</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100">
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Tracking No.</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Date & Time</th>
+                    <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredItems.map((item, index) => (
+                    <tr key={item.id} className={`hover:bg-gradient-to-r hover:from-gray-50 hover:to-emerald-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                      <td className="px-6 py-5">
+                        <span className="font-semibold text-gray-900">{item.trackingNo}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="font-medium text-gray-800">{item.description}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-gray-700 font-medium">{item.dateTime}</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`px-4 py-2 rounded-full text-xs font-bold ${getStatusColor(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-        
-          <div className="md:hidden space-y-4">
-            {filteredSlots.map((slot) => (
-              <div key={slot.trackingNo} className="bg-white rounded-lg shadow p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900">
-                    {slot.trackingNo}
+          {/* Mobile Cards View */}
+          <div className="lg:hidden mt-6 space-y-4">
+            {filteredItems.map((item) => (
+              <div key={item.id} className="bg-white rounded-2xl p-5 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Tracking No.</p>
+                    <p className="text-lg font-bold text-gray-900">{item.trackingNo}</p>
                   </div>
-                  <span className={`px-3 py-1 text-sm font-medium rounded-md ${
-                    slot.status === 'Claimed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {slot.status}
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${getStatusColor(item.status)}`}>
+                    {item.status}
                   </span>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Description:</span>
-                    <span className="text-gray-900 font-medium">{slot.description}</span>
+                
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Description</p>
+                    <p className="text-base font-semibold text-gray-800">{item.description}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Date & Time:</span>
-                    <span className="text-gray-900 font-medium text-right">
-                      {slot.dateTime}
-                    </span>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Date & Time</p>
+                    <p className="text-sm font-medium text-gray-700">{item.dateTime}</p>
                   </div>
                 </div>
               </div>
@@ -270,4 +398,6 @@ export default function IBTSlotManagement() {
       </div>
     </div>
   );
-}
+};
+
+export default ParkingTicketSystem;
