@@ -221,7 +221,6 @@ const ParkingTicketSystem = () => {
                   <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                     Parking Management
                   </h1>
-                  <p className="text-sm text-gray-500 mt-0.5">Saturday, November 01, 2025</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
