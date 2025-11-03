@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, Home, Lock, Ticket, HelpCircle, MapPin, Headphones, CircleParking,  Calendar, Upload, Search, SearchCheck, Bell, ChevronDown, Download, TrendingUp, Edit2, Trash2, Plus,PhilippinePeso, ArrowLeftFromLine, Eye, Settings, Store, BarChart3, Users, FileText, LogOut, MoreVertical } from 'lucide-react';
+import { Menu, Home, Lock, Ticket, Bus, MapPin, Headphones, CircleParking,  Calendar, Upload, Search, SearchCheck, Bell, ChevronDown, Download, TrendingUp, Edit2, Trash2, Plus,PhilippinePeso, ArrowLeftFromLine, Eye, Settings, Store, BarChart3, Users, FileText, LogOut, MoreVertical } from 'lucide-react';
 
 const ParkingTicketSystem = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -34,7 +34,7 @@ const ParkingTicketSystem = () => {
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Dashboard' },
-    { id: 'Bus Trips', icon: MapPin, label: 'Bus Trips' },
+    { id: 'Bus Trips', icon: Bus, label: 'Bus Trips' },
     { id: 'tickets', icon: Ticket, label: 'Tickets' },
     { id: 'Lease', icon: Store, label: 'Tenants/Lease' },
     { id: 'parking', icon: CircleParking, label: 'Parking' },
@@ -45,7 +45,6 @@ const ParkingTicketSystem = () => {
 
   const bottomMenuItems = [
     { id: 'settings', icon: Settings, label: 'Settings' },
-    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
   ];
 
   return (
