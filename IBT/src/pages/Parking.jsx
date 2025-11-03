@@ -197,7 +197,7 @@ const ParkingTicketSystem = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
-                    <p className="text-xs text-gray-500 truncate">admin@parkflow.com</p>
+                    <p className="text-xs text-gray-500 truncate">admin@gmail.com</p>
                   </div>
                   <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
                     <LogOut size={16} className="text-gray-600" />
