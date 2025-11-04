@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Menu, Home, Bus, Lock, Ticket, Store, CircleParking, SearchCheck, Headphones, Bell, ChevronDown, TrendingUp, LogOut, Settings, BarChart3, Users, FileText, Activity,  ArrowLeftFromLine, CheckCircle, AlertCircle, UserPlus, CreditCard, FileCheck, Download, RefreshCw } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart } from 'recharts';
+import { Menu, Home, Bus, Ticket, Store, CircleParking, SearchCheck, Bell, ChevronDown, LogOut, Settings, FileText, ArrowLeftFromLine, CreditCard, FileCheck, Download, RefreshCw } from 'lucide-react';
+import {  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -21,8 +21,6 @@ const Dashboard = () => {
     { month: 'Nov', tickets: 290, bus: 320, tenants: 220, parking: 210, lostFound: 240, revenue: 64000 },
     { month: 'Dec', tickets: 320, bus: 350, tenants: 260, parking: 240, lostFound: 270, revenue: 75000 },
   ];
-
-  const options = ['Weekly', 'Monthly', 'Yearly'];
 
   const activities = [
     { 
@@ -121,7 +119,6 @@ const Dashboard = () => {
     text: "text-blue-700",
   },
 };
-
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Dashboard' },
