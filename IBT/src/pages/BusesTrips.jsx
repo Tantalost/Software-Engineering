@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
-import { Menu, Home, DollarSign, Lock, Ticket, HelpCircle, MapPin, Headphones, Bell, ChevronDown, TrendingUp, LogOut, Settings, BarChart3, Users, FileText, Activity, X, CheckCircle, AlertCircle, UserPlus, CreditCard, FileCheck, Download, RefreshCw, Search, Filter, Calendar, Upload, MoreVertical, Edit2, Trash2, Eye, Bus, Clock } from 'lucide-react';
+import { Menu, Home, Ticket, CircleParking, Store, SearchCheck, Bell, ChevronDown, LogOut, Settings, FileText, Bus, Clock, ArrowLeftFromLine, Search, Calendar, Upload, Eye, Edit, Trash2, Plus } from 'lucide-react';
 
-const ParkingTicketSystem = () => {
+const BusManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeMenu, setActiveMenu] = useState('routes');
   const [searchQuery, setSearchQuery] = useState('');
-  const [actionMenuOpen, setActionMenuOpen] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState('All Companies');
 
   const busSchedules = [
-    { id: 1, templateNo: 'BT-2024-001', route: 'Manila - Baguio Express', time: '6:00 AM - 12:00 PM', status: 'Active', capacity: 45, company: 'Victory Liner' },
-    { id: 2, templateNo: 'BT-2024-002', route: 'Quezon City - Clark', time: '7:30 AM - 10:00 AM', status: 'Active', capacity: 40, company: 'Genesis Transport' },
-    { id: 3, templateNo: 'BT-2024-003', route: 'Manila - Baguio Standard', time: '8:00 AM - 2:30 PM', status: 'Active', capacity: 45, company: 'Victory Liner' },
-    { id: 4, templateNo: 'BT-2024-004', route: 'Pasay - Tagaytay', time: '9:00 AM - 11:30 AM', status: 'Active', capacity: 35, company: 'Shuttle Express' },
-    { id: 5, templateNo: 'BT-2024-005', route: 'Manila - Baguio Deluxe', time: '10:00 AM - 4:00 PM', status: 'Delayed', capacity: 45, company: 'Victory Liner' },
-    { id: 6, templateNo: 'BT-2024-006', route: 'Cubao - Banaue', time: '7:00 AM - 3:00 PM', status: 'Active', capacity: 42, company: 'Ohayami Trans' },
-    { id: 7, templateNo: 'BT-2024-007', route: 'Quezon City - Subic', time: '1:00 PM - 4:00 PM', status: 'Active', capacity: 40, company: 'Genesis Transport' },
-    { id: 8, templateNo: 'BT-2024-008', route: 'Manila - Batangas Port', time: '5:00 AM - 8:00 AM', status: 'Active', capacity: 38, company: 'Shuttle Express' },
-    { id: 9, templateNo: 'BT-2024-009', route: 'Manila - Sagada', time: '8:00 PM - 6:00 AM', status: 'Active', capacity: 45, company: 'Coda Lines' },
-    { id: 10, templateNo: 'BT-2024-010', route: 'Pasay - Boracay (Caticlan)', time: '6:30 AM - 4:30 PM', status: 'Active', capacity: 44, company: 'Ceres Liner' },
+    { id: 1, templateNo: 'BT-2024-001', route: 'Pagadian', time: '6:00 AM - 12:00 PM', status: 'Active', paymentStatus: 'Paid', capacity: 45, company: 'Dindo' },
+    { id: 2, templateNo: 'BT-2024-002', route: 'Dipolog', time: '7:30 AM - 10:00 AM', status: 'Active', paymentStatus: 'Pending', capacity: 45, company: 'Dindo' },
+    { id: 3, templateNo: 'BT-2024-003', route: 'Pagadian', time: '8:00 AM - 2:30 PM', status: 'Active', paymentStatus: 'Paid', capacity: 40, company: 'Alga' },
+    { id: 4, templateNo: 'BT-2024-004', route: 'Dipolog', time: '9:00 AM - 11:30 AM', status: 'Active', paymentStatus: 'Paid', capacity: 40, company: 'Alga' },
+    { id: 5, templateNo: 'BT-2024-005', route: 'Dipolog', time: '10:00 AM - 4:00 PM', status: 'Delayed', paymentStatus: 'Pending', capacity: 45, company: 'Dindo' },
+    { id: 6, templateNo: 'BT-2024-006', route: 'Pagadian', time: '7:00 AM - 3:00 PM', status: 'Active', paymentStatus: 'Paid', capacity: 40, company: 'Alga' },
+    { id: 7, templateNo: 'BT-2024-007', route: 'Cagayan', time: '1:00 PM - 4:00 PM', status: 'Active', paymentStatus: 'Pending', capacity: 40, company: 'Ceres' },
+    { id: 8, templateNo: 'BT-2024-008', route: 'Siocon', time: '5:00 AM - 8:00 AM', status: 'Active', paymentStatus: 'Paid', capacity: 35, company: 'Lizamae' },
+    { id: 9, templateNo: 'BT-2024-009', route: 'Bukidnon', time: '8:00 PM - 6:00 AM', status: 'Active', paymentStatus: 'Paid', capacity: 40, company: 'Ceres' },
+    { id: 10, templateNo: 'BT-2024-010', route: 'Pagadian', time: '6:30 AM - 4:30 PM', status: 'Active', paymentStatus: 'Pending', capacity: 45, company: 'Dindo' },
   ];
 
   const filteredSchedules = busSchedules.filter(schedule => 
@@ -28,21 +27,20 @@ const ParkingTicketSystem = () => {
     (selectedCompany === 'All Companies' || schedule.company === selectedCompany)
   );
 
-  const companies = ['All Companies', 'Victory Liner', 'Genesis Transport', 'Shuttle Express', 'Ohayami Trans', 'Coda Lines', 'Ceres Liner'];
+  const companies = ['All Companies', 'Alga', 'Ceres', 'Dindo', 'Lizamae'];
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Dashboard' },
-    { id: 'routes', icon: Bus, label: 'Bus Routes' },
-    { id: 'schedules', icon: Clock, label: 'Schedules' },
+    { id: 'Bus Trips', icon: Bus, label: 'Bus Trips' },
     { id: 'tickets', icon: Ticket, label: 'Tickets' },
-    { id: 'passengers', icon: Users, label: 'Passengers' },
-    { id: 'revenue', icon: DollarSign, label: 'Revenue' },
+    { id: 'Lease', icon: Store, label: 'Tenants/Lease' },
+    { id: 'parking', icon: CircleParking, label: 'Parking' },
+    { id: 'Lost and Found', icon: SearchCheck, label: 'Lost and Found' },
     { id: 'reports', icon: FileText, label: 'Reports' },
   ];
 
   const bottomMenuItems = [
-    { id: 'settings', icon: Settings, label: 'Settings' },
-    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
+    { id: 'settings', icon: Settings, label: 'Settings' }
   ];
 
   const getStatusColor = (status) => {
@@ -54,9 +52,16 @@ const ParkingTicketSystem = () => {
     }
   };
 
+  const getPaymentStatusColor = (paymentStatus) => {
+    switch(paymentStatus) {
+      case 'Paid': return 'bg-green-100 text-green-700';
+      case 'Pending': return 'bg-yellow-100 text-yellow-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-      {/* Desktop Sidebar */}
       <div 
         className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${
           sidebarExpanded ? 'lg:w-64' : 'lg:w-20'
@@ -72,8 +77,8 @@ const ParkingTicketSystem = () => {
             </button>
             {sidebarExpanded && (
               <div className="overflow-hidden">
-                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">BusFleet Pro</h1>
-                <p className="text-xs text-gray-500 whitespace-nowrap">Route Management</p>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">IBT</h1>
+                <p className="text-xs text-gray-500 whitespace-nowrap">Management System</p>
               </div>
             )}
           </div>
@@ -129,7 +134,7 @@ const ParkingTicketSystem = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
-                  <p className="text-xs text-gray-500 truncate">admin@busfleet.com</p>
+                  <p className="text-xs text-gray-500 truncate">admin@gmail.com</p>
                 </div>
                 <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
                   <LogOut size={16} className="text-gray-600" />
@@ -147,23 +152,19 @@ const ParkingTicketSystem = () => {
         </div>
       </div>
 
-      {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
           <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Bus className="text-white" size={24} />
-                </div>
+                <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                    <ArrowLeftFromLine size={24} className="text-gray-600" />
+                  </button>
                 <div>
-                  <h1 className="text-lg font-bold text-gray-900">BusFleet Pro</h1>
-                  <p className="text-xs text-gray-500">Route Management</p>
+                  <h1 className="text-lg font-bold text-gray-900">IBT</h1>
+                  <p className="text-xs text-gray-500">Management System</p>
                 </div>
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <X size={24} className="text-gray-600" />
-              </button>
             </div>
 
             <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
@@ -208,7 +209,7 @@ const ParkingTicketSystem = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
-                    <p className="text-xs text-gray-500 truncate">admin@busfleet.com</p>
+                    <p className="text-xs text-gray-500 truncate">admin@gmail.com</p>
                   </div>
                   <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
                     <LogOut size={16} className="text-gray-600" />
@@ -220,9 +221,7 @@ const ParkingTicketSystem = () => {
         </div>
       )}
 
-      {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        {/* Header */}
         <div className="bg-white/90 border-b border-gray-200 shadow-sm sticky top-0 z-40 backdrop-blur-lg">
           <div className="p-4 lg:px-8 lg:py-5">
             <div className="flex items-center justify-between">
@@ -232,9 +231,8 @@ const ParkingTicketSystem = () => {
                 </button>
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                    Bus Route Management
+                    Bus Management
                   </h1>
-                  <p className="text-sm text-gray-500 mt-0.5">Manage and monitor all bus schedules and routes</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
@@ -255,7 +253,6 @@ const ParkingTicketSystem = () => {
         </div>
 
         <div className="p-4 lg:p-8">
-          {/* Search and Filters */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4">
               <div className="relative flex-1">
@@ -289,6 +286,11 @@ const ParkingTicketSystem = () => {
                 </div>
 
                 <button className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <Plus size={20} />
+                  <span className="font-medium">Add New</span>
+                </button>
+
+                <button className="flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                   <Upload size={20} />
                   <span className="font-medium">Export</span>
                 </button>
@@ -296,7 +298,6 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          {/* Table */}
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -305,6 +306,8 @@ const ParkingTicketSystem = () => {
                     <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Bus Template No.</th>
                     <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Route</th>
                     <th className="px-6 py-5 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">Time</th>
+                    <th className="px-6 py-5 text-center text-sm font-bold text-gray-800 uppercase tracking-wider">Payment Status</th>
+                    <th className="px-6 py-5 text-center text-sm font-bold text-gray-800 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -325,6 +328,35 @@ const ParkingTicketSystem = () => {
                           <span className="text-gray-700 font-medium">{schedule.time}</span>
                         </div>
                       </td>
+                      <td className="px-6 py-5">
+                        <div className="flex justify-center">
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${getPaymentStatusColor(schedule.paymentStatus)}`}>
+                            {schedule.paymentStatus}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-center space-x-2">
+                          <button 
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-all group"
+                            title="View Details"
+                          >
+                            <Eye size={18} className="text-blue-600 group-hover:scale-110 transition-transform" />
+                          </button>
+                          <button 
+                            className="p-2 hover:bg-emerald-50 rounded-lg transition-all group"
+                            title="Edit"
+                          >
+                            <Edit size={18} className="text-emerald-600 group-hover:scale-110 transition-transform" />
+                          </button>
+                          <button 
+                            className="p-2 hover:bg-red-50 rounded-lg transition-all group"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} className="text-red-600 group-hover:scale-110 transition-transform" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -332,7 +364,6 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          {/* Mobile Cards View */}
           <div className="lg:hidden mt-6 space-y-4">
             {filteredSchedules.map((schedule) => (
               <div key={schedule.id} className="bg-white rounded-2xl p-5 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
@@ -341,9 +372,14 @@ const ParkingTicketSystem = () => {
                     <p className="text-xs text-gray-500 font-medium mb-1">Bus Template No.</p>
                     <p className="text-lg font-bold text-gray-900">{schedule.templateNo}</p>
                   </div>
-                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${getStatusColor(schedule.status)}`}>
-                    {schedule.status}
-                  </span>
+                  <div className="flex flex-col gap-2">
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${getStatusColor(schedule.status)}`}>
+                      {schedule.status}
+                    </span>
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${getPaymentStatusColor(schedule.paymentStatus)}`}>
+                      {schedule.paymentStatus}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="space-y-3">
@@ -371,6 +407,27 @@ const ParkingTicketSystem = () => {
                       <p className="text-sm font-semibold text-gray-800">{schedule.capacity} seats</p>
                     </div>
                   </div>
+                  
+                  <div className="pt-3 border-t border-gray-200 flex items-center justify-end space-x-2">
+                    <button 
+                      className="p-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                      title="View"
+                    >
+                      <Eye size={18} className="text-blue-600" />
+                    </button>
+                    <button 
+                      className="p-2.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+                      title="Edit"
+                    >
+                      <Edit size={18} className="text-emerald-600" />
+                    </button>
+                    <button 
+                      className="p-2.5 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                      title="Delete"
+                    >
+                      <Trash2 size={18} className="text-red-600" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -381,4 +438,4 @@ const ParkingTicketSystem = () => {
   );
 };
 
-export default ParkingTicketSystem;
+export default BusManagement;
