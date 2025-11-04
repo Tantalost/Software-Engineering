@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Menu, Home, DollarSign, Lock, Ticket, HelpCircle, MapPin, Headphones, Bell, ChevronDown, TrendingUp, LogOut, Settings, BarChart3, Users, FileText, Activity, X, CheckCircle, AlertCircle, UserPlus, CreditCard, FileCheck, Download, RefreshCw, Search, Filter, Calendar, Upload, MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
+import { ArrowLeftFromLine, Menu, Home, Ticket, Bus, Bell, CircleParking, ChevronDown, LogOut, Settings, SearchCheck, Store, FileText, X, Filter, Calendar, Upload} from 'lucide-react';
 
-const ParkingTicketSystem = () => {
+const TicketManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeMenu, setActiveMenu] = useState('tickets');
   const [searchQuery, setSearchQuery] = useState('');
-  const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
   const tickets = [
     { id: 1, ticketNo: 1, passengerType: 'Student', price: 10.00, time: '08:30 AM', date: '2024-11-15' },
@@ -26,24 +25,24 @@ const ParkingTicketSystem = () => {
     ticket.passengerType.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const regularCount = 5768;
-  const studentCount = 5768;
-  const seniorCount = 5768;
-  const overallCount = 5768;
+  const regularCount = 2;
+  const studentCount = 6;
+  const seniorCount = 2;
+  const overallCount = 10;
 
-  const menuItems = [
+ const menuItems = [
     { id: 'home', icon: Home, label: 'Dashboard' },
+    { id: 'Bus Trips', icon: Bus, label: 'Bus Trips' },
     { id: 'tickets', icon: Ticket, label: 'Tickets' },
-    { id: 'passengers', icon: Users, label: 'Passengers' },
-    { id: 'revenue', icon: DollarSign, label: 'Revenue' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'Lease', icon: Store, label: 'Tenants/Lease' },
+    { id: 'parking', icon: CircleParking, label: 'Parking' },
+    { id: 'Lost and Found', icon: SearchCheck, label: 'Lost and Found' },
     { id: 'reports', icon: FileText, label: 'Reports' },
-    { id: 'routes', icon: MapPin, label: 'Routes' },
+   
   ];
 
   const bottomMenuItems = [
     { id: 'settings', icon: Settings, label: 'Settings' },
-    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
   ];
 
   const getPassengerTypeColor = (type) => {
@@ -57,7 +56,6 @@ const ParkingTicketSystem = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-      {/* Desktop Sidebar */}
       <div 
         className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${
           sidebarExpanded ? 'lg:w-64' : 'lg:w-20'
@@ -73,8 +71,8 @@ const ParkingTicketSystem = () => {
             </button>
             {sidebarExpanded && (
               <div className="overflow-hidden">
-                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">TransitHub</h1>
-                <p className="text-xs text-gray-500 whitespace-nowrap">Ticketing System</p>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">IBT</h1>
+                <p className="text-xs text-gray-500 whitespace-nowrap">Management System</p>
               </div>
             )}
           </div>
@@ -130,7 +128,7 @@ const ParkingTicketSystem = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
-                  <p className="text-xs text-gray-500 truncate">admin@transithub.com</p>
+                  <p className="text-xs text-gray-500 truncate">admin@gmail.com</p>
                 </div>
                 <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
                   <LogOut size={16} className="text-gray-600" />
@@ -148,23 +146,19 @@ const ParkingTicketSystem = () => {
         </div>
       </div>
 
-      {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
           <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Ticket className="text-white" size={24} />
-                </div>
+             <div className="flex items-center space-x-3">
+                <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                  <ArrowLeftFromLine  size={24} className="text-gray-600" />
+                </button>
                 <div>
-                  <h1 className="text-lg font-bold text-gray-900">TransitHub</h1>
-                  <p className="text-xs text-gray-500">Ticketing System</p>
+                  <h1 className="text-lg font-bold text-gray-900">IBT</h1>
+                  <p className="text-xs text-gray-500">Management System</p>
                 </div>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <X size={24} className="text-gray-600" />
-              </button>
+              </div>     
             </div>
 
             <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
@@ -209,7 +203,7 @@ const ParkingTicketSystem = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
-                    <p className="text-xs text-gray-500 truncate">admin@transithub.com</p>
+                    <p className="text-xs text-gray-500 truncate">admin@gmail.com</p>
                   </div>
                   <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
                     <LogOut size={16} className="text-gray-600" />
@@ -221,9 +215,7 @@ const ParkingTicketSystem = () => {
         </div>
       )}
 
-      {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        {/* Header */}
         <div className="bg-white/90 border-b border-gray-200 shadow-sm sticky top-0 z-40 backdrop-blur-lg">
           <div className="p-4 lg:px-8 lg:py-5">
             <div className="flex items-center justify-between">
@@ -233,9 +225,8 @@ const ParkingTicketSystem = () => {
                 </button>
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                    Transit Ticket Management
+                   Ticket Management
                   </h1>
-                  <p className="text-sm text-gray-500 mt-0.5">Track and manage passenger tickets in real-time</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
@@ -256,7 +247,6 @@ const ParkingTicketSystem = () => {
         </div>
 
         <div className="p-4 lg:p-8">
-          {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
             <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-red-200 to-rose-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
@@ -327,7 +317,6 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          {/* Filters */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 gap-4">
               <div className="flex flex-wrap gap-3">
@@ -347,7 +336,6 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          {/* Table */}
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -379,7 +367,6 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          {/* Mobile Cards View */}
           <div className="lg:hidden mt-6 space-y-4">
             {filteredTickets.map((ticket) => (
               <div key={ticket.id} className="bg-white rounded-2xl p-5 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
@@ -405,4 +392,4 @@ const ParkingTicketSystem = () => {
   );
 };
 
-export default ParkingTicketSystem;
+export default TicketManagement;
