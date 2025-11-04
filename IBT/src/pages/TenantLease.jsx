@@ -1,32 +1,32 @@
 import React, { useState } from 'react';
-import { Menu, Home, DollarSign, Lock, Ticket, HelpCircle, MapPin, Headphones, Bell, ChevronDown, TrendingUp, LogOut, Settings, BarChart3, Users, FileText, Activity, X, CheckCircle, AlertCircle, UserPlus, CreditCard, FileCheck, Download, RefreshCw, Search, Filter, Calendar, Upload, MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
+import { Menu, Home, Ticket, Plus, Bell,  Bus, ChevronDown,SearchCheck, LogOut, Settings, FileText,  ArrowLeftFromLine,  Search, Store, CircleParking, Filter, Calendar, Upload, MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
 
-const ParkingTicketSystem = () => {
+const TenantManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [activeMenu, setActiveMenu] = useState('slots');
+  const [activeMenu, setActiveMenu] = useState('Lease');
   const [activeTab, setActiveTab] = useState('permanent');
   const [searchQuery, setSearchQuery] = useState('');
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
   const slots = [
-    { id: 1, slotNo: 1, referenceNo: 'PKG2024001', name: 'Sarah Johnson', email: 'sarah.johnson@email.com', contact: '09171234567', status: 'Paid', type: 'permanent' },
-    { id: 2, slotNo: 2, referenceNo: 'PKG2024002', name: 'Michael Chen', email: 'michael.chen@email.com', contact: '09182345678', status: 'Paid', type: 'permanent' },
-    { id: 3, slotNo: 3, referenceNo: 'PKG2024003', name: 'Emma Williams', email: 'emma.williams@email.com', contact: '09193456789', status: 'Pending', type: 'permanent' },
-    { id: 4, slotNo: 4, referenceNo: 'PKG2024004', name: 'James Rodriguez', email: 'james.rod@email.com', contact: '09204567890', status: 'Paid', type: 'permanent' },
-    { id: 5, slotNo: 5, referenceNo: 'PKG2024005', name: 'Olivia Martinez', email: 'olivia.martinez@email.com', contact: '09215678901', status: 'Paid', type: 'permanent' },
-    { id: 6, slotNo: 6, referenceNo: 'PKG2024006', name: 'David Thompson', email: 'david.thompson@email.com', contact: '09226789012', status: 'Overdue', type: 'permanent' },
-    { id: 7, slotNo: 7, referenceNo: 'PKG2024007', name: 'Sophia Garcia', email: 'sophia.garcia@email.com', contact: '09237890123', status: 'Paid', type: 'night' },
-    { id: 8, slotNo: 8, referenceNo: 'PKG2024008', name: 'Daniel Lee', email: 'daniel.lee@email.com', contact: '09248901234', status: 'Paid', type: 'night' },
-    { id: 9, slotNo: 9, referenceNo: 'PKG2024009', name: 'Isabella Brown', email: 'isabella.brown@email.com', contact: '09259012345', status: 'Paid', type: 'permanent' },
-    { id: 10, slotNo: 10, referenceNo: 'PKG2024010', name: 'William Davis', email: 'william.davis@email.com', contact: '09260123456', status: 'Pending', type: 'permanent' },
-    { id: 11, slotNo: 11, referenceNo: 'PKG2024011', name: 'Mia Anderson', email: 'mia.anderson@email.com', contact: '09271234567', status: 'Paid', type: 'night' },
-    { id: 12, slotNo: 12, referenceNo: 'PKG2024012', name: 'Alexander Wilson', email: 'alex.wilson@email.com', contact: '09282345678', status: 'Paid', type: 'permanent' },
+    { id: 1, slotNo: 1, referenceNo: 'PKG2024001', name: 'Sarah Johnson', email: 'sarah.johnson@gmail.com', contact: '09171234567', status: 'Paid', type: 'permanent' },
+    { id: 2, slotNo: 2, referenceNo: 'PKG2024002', name: 'Michael Chen', email: 'michael.chen@gmail.com', contact: '09182345678', status: 'Paid', type: 'permanent' },
+    { id: 3, slotNo: 3, referenceNo: 'PKG2024003', name: 'Emma Williams', email: 'emma.williams@gmail.com', contact: '09193456789', status: 'Pending', type: 'permanent' },
+    { id: 4, slotNo: 4, referenceNo: 'PKG2024004', name: 'James Rodriguez', email: 'james.rod@gmail.com', contact: '09204567890', status: 'Paid', type: 'permanent' },
+    { id: 5, slotNo: 5, referenceNo: 'PKG2024005', name: 'Olivia Martinez', email: 'olivia.martinez@gmail.com', contact: '09215678901', status: 'Paid', type: 'permanent' },
+    { id: 6, slotNo: 6, referenceNo: 'PKG2024006', name: 'David Thompson', email: 'david.thompson@gmail.com', contact: '09226789012', status: 'Overdue', type: 'permanent' },
+    { id: 7, slotNo: 7, referenceNo: 'PKG2024007', name: 'Sophia Garcia', email: 'sophia.garcia@gmail.com', contact: '09237890123', status: 'Paid', type: 'night' },
+    { id: 8, slotNo: 8, referenceNo: 'PKG2024008', name: 'Daniel Lee', email: 'daniel.lee@gmail.com', contact: '09248901234', status: 'Paid', type: 'night' },
+    { id: 9, slotNo: 9, referenceNo: 'PKG2024009', name: 'Isabella Brown', email: 'isabella.brown@gmail.com', contact: '09259012345', status: 'Paid', type: 'permanent' },
+    { id: 10, slotNo: 10, referenceNo: 'PKG2024010', name: 'William Davis', email: 'william.davis@gmail.com', contact: '09260123456', status: 'Pending', type: 'permanent' },
+    { id: 11, slotNo: 11, referenceNo: 'PKG2024011', name: 'Mia Anderson', email: 'mia.anderson@gmail.com', contact: '09271234567', status: 'Paid', type: 'night' },
+    { id: 12, slotNo: 12, referenceNo: 'PKG2024012', name: 'Alexander Wilson', email: 'alex.wilson@gmail.com', contact: '09282345678', status: 'Paid', type: 'permanent' },
   ];
 
   const filteredSlots = slots.filter(slot => {
     const matchesSearch = slot.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         slot.referenceNo.toLowerCase().includes(searchQuery.toLowerCase());
+    slot.referenceNo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === 'permanent' ? slot.type === 'permanent' : slot.type === 'night';
     return matchesSearch && matchesTab;
   });
@@ -35,19 +35,19 @@ const ParkingTicketSystem = () => {
   const availableSlots = 40;
   const nonAvailableSlots = 20;
 
-  const menuItems = [
+   const menuItems = [
     { id: 'home', icon: Home, label: 'Dashboard' },
-    { id: 'slots', icon: MapPin, label: 'Parking Slots' },
-    { id: 'tenants', icon: Users, label: 'Tenants' },
-    { id: 'payments', icon: CreditCard, label: 'Payments' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+    { id: 'Bus Trips', icon: Bus, label: 'Bus Trips' },
+    { id: 'tickets', icon: Ticket, label: 'Tickets' },
+    { id: 'Lease', icon: Store, label: 'Tenants/Lease' },
+    { id: 'parking', icon: CircleParking, label: 'Parking' },
+    { id: 'Lost and Found', icon: SearchCheck, label: 'Lost and Found' },
     { id: 'reports', icon: FileText, label: 'Reports' },
-    { id: 'maintenance', icon: Settings, label: 'Maintenance' },
+   
   ];
 
   const bottomMenuItems = [
     { id: 'settings', icon: Settings, label: 'Settings' },
-    { id: 'help', icon: HelpCircle, label: 'Help & Support' },
   ];
 
   const getStatusColor = (status) => {
@@ -61,7 +61,6 @@ const ParkingTicketSystem = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-      {/* Desktop Sidebar */}
       <div 
         className={`hidden lg:flex lg:flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${
           sidebarExpanded ? 'lg:w-64' : 'lg:w-20'
@@ -77,8 +76,8 @@ const ParkingTicketSystem = () => {
             </button>
             {sidebarExpanded && (
               <div className="overflow-hidden">
-                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">ParkSpace</h1>
-                <p className="text-xs text-gray-500 whitespace-nowrap">Slot Management</p>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">IBT</h1>
+                <p className="text-xs text-gray-500 whitespace-nowrap">Management System</p>
               </div>
             )}
           </div>
@@ -134,7 +133,7 @@ const ParkingTicketSystem = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
-                  <p className="text-xs text-gray-500 truncate">admin@parkspace.com</p>
+                  <p className="text-xs text-gray-500 truncate">admin@gmail.com</p>
                 </div>
                 <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
                   <LogOut size={16} className="text-gray-600" />
@@ -152,23 +151,19 @@ const ParkingTicketSystem = () => {
         </div>
       </div>
 
-      {/* Mobile Sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
           <div className="w-80 h-full bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <MapPin className="text-white" size={24} />
-                </div>
+             <div className="flex items-center space-x-3">
+                <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                    <ArrowLeftFromLine  size={24} className="text-gray-600" />
+                </button>
                 <div>
-                  <h1 className="text-lg font-bold text-gray-900">ParkSpace</h1>
-                  <p className="text-xs text-gray-500">Slot Management</p>
+                  <h1 className="text-lg font-bold text-gray-900">IBT</h1>
+                  <p className="text-xs text-gray-500">Management System</p>
                 </div>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <X size={24} className="text-gray-600" />
-              </button>
+              </div>      
             </div>
 
             <div className="overflow-y-auto py-4 px-3" style={{height: 'calc(100vh - 200px)'}}>
@@ -213,7 +208,7 @@ const ParkingTicketSystem = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">Admin User</p>
-                    <p className="text-xs text-gray-500 truncate">admin@parkspace.com</p>
+                    <p className="text-xs text-gray-500 truncate">admin@gmail.com</p>
                   </div>
                   <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-all">
                     <LogOut size={16} className="text-gray-600" />
@@ -225,9 +220,7 @@ const ParkingTicketSystem = () => {
         </div>
       )}
 
-      {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        {/* Header */}
         <div className="bg-white/90 border-b border-gray-200 shadow-sm sticky top-0 z-40 backdrop-blur-lg">
           <div className="p-4 lg:px-8 lg:py-5">
             <div className="flex items-center justify-between">
@@ -237,9 +230,8 @@ const ParkingTicketSystem = () => {
                 </button>
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                    Parking Slot Management
+                   Tenants/Lease Management
                   </h1>
-                  <p className="text-sm text-gray-500 mt-0.5">Monitor and manage all parking allocations</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
@@ -260,7 +252,6 @@ const ParkingTicketSystem = () => {
         </div>
 
         <div className="p-4 lg:p-8">
-          {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
             <div className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-200 to-teal-200 rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700"></div>
@@ -314,7 +305,6 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          {/* Search and Filters */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 gap-4">
               <div className="relative flex-1 max-w-md">
@@ -363,11 +353,14 @@ const ParkingTicketSystem = () => {
                   <Upload size={20} />
                   <span className="font-medium">Export</span>
                 </button>
+                 <button className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <Plus size={20} />
+                  <span className="font-medium">New Slot</span>
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Table */}
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -407,7 +400,7 @@ const ParkingTicketSystem = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center justify-center">
-                          <div className="relative">
+                          <div className="relative overflow-visible">
                             <button 
                               onClick={() => setActionMenuOpen(actionMenuOpen === slot.id ? null : slot.id)}
                               className="p-2 hover:bg-gray-100 rounded-lg transition-all"
@@ -421,7 +414,7 @@ const ParkingTicketSystem = () => {
                                   className="fixed inset-0 z-10" 
                                   onClick={() => setActionMenuOpen(null)}
                                 ></div>
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className={`absolute right-0 ${slot.id > filteredSlots.length - 2 ? 'bottom-full mb-2' : 'mt-2'} w-48 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200`}>
                                   <button 
                                     className="w-full flex items-center space-x-3 px-4 py-2.5 hover:bg-blue-50 transition-all group/item"
                                     onClick={() => {
@@ -467,7 +460,6 @@ const ParkingTicketSystem = () => {
             </div>
           </div>
 
-          {/* Mobile Cards View */}
           <div className="lg:hidden mt-6 space-y-4">
             {filteredSlots.map((slot) => (
               <div key={slot.id} className="bg-white rounded-2xl p-5 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300">
@@ -563,4 +555,4 @@ const ParkingTicketSystem = () => {
   );
 };
 
-export default ParkingTicketSystem;
+export default TenantManagement;
