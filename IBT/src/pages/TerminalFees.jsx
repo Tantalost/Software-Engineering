@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftFromLine, Menu, Home, Ticket, Bus, Bell, CircleParking, ChevronDown, LogOut, Settings, SearchCheck, Store, FileText, X, Filter, Calendar, Upload} from 'lucide-react';
+import { ArrowLeftFromLine, Menu, Home, Ticket, Bus, Bell, CircleParking, ChevronDown, LogOut, Settings, SearchCheck, Store, FileText, Filter, Calendar, Upload} from 'lucide-react';
 
 const TicketManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
