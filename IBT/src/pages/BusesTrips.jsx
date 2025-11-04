@@ -4,7 +4,7 @@ import { Menu, Home, Ticket, CircleParking, Store, SearchCheck, Bell, ChevronDow
 const BusManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [activeMenu, setActiveMenu] = useState('routes');
+  const [activeMenu, setActiveMenu] = useState('Bus Trips');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('All Companies');
 
