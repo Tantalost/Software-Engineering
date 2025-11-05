@@ -8,7 +8,6 @@ import { busSchedules } from "../data/assets";
 const BusTrips = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
 
   const uniqueCompanies = [...new Set(busSchedules.map((bus) => bus.company))];
