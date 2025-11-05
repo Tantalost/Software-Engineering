@@ -1,16 +1,23 @@
 import React, { useState } from "react";
 import Layout from "../components/layout/Layout";
-import FilterBar from "../components/common/FilterBar";
+import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import { tickets } from "../data/assets";
 
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
 
-  const filtered = tickets.filter((fee) =>
-    fee.passengerType.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = tickets.filter((fee) => {
+    const matchesSearch = fee.passengerType
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesDate = selectedDate
+      ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString()
+      : true;
+    return matchesSearch && matchesDate;
+  });
 
   return (
     <Layout title="Terminal Fees Management">
@@ -18,13 +25,17 @@ const TerminalFees = () => {
         <FilterBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
         />
-        <ExportMenu
-          onExportCSV={() => alert("Exporting to CSV...")}
-          onExportExcel={() => alert("Exporting to Excel...")}
-          onExportPDF={() => alert("Exporting to PDF...")}
-          onPrint={() => window.print()}
-        />
+        <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
+          <ExportMenu
+            onExportCSV={() => alert("Exporting to CSV...")}
+            onExportExcel={() => alert("Exporting to Excel...")}
+            onExportPDF={() => alert("Exporting to PDF...")}
+            onPrint={() => window.print()}
+          />
+        </div>
       </div>
 
       <Table

@@ -7,7 +7,7 @@ import { busSchedules } from "../data/assets";
 
 const BusTrips = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
 
   const uniqueCompanies = [...new Set(busSchedules.map((bus) => bus.company))];
@@ -20,32 +20,35 @@ const BusTrips = () => {
     const matchesCompany =
       selectedCompany === "" || bus.company === selectedCompany;
 
-    const busDate = new Date(bus.date);
-    const inDateRange =
-      (!startDate || busDate >= new Date(startDate)) 
-    return matchesSearch && matchesCompany && inDateRange;
+    const matchesDate =
+      !selectedDate ||
+      new Date(bus.date).toDateString() === new Date(selectedDate).toDateString();
+
+    return matchesSearch && matchesCompany && matchesDate;
   });
+
   const handleExportCSV = () => console.log("Exported Bus Trips to CSV");
   const handleExportExcel = () => console.log("Exported Bus Trips to Excel");
   const handleExportPDF = () => console.log("Exported Bus Trips to PDF");
   const handlePrint = () => window.print();
-  
+
   return (
     <Layout title="Bus Trips Management">
       <div className="px-4 lg:px-8 mt-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col gap-4 w-full">
           <BusTripFilters
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            startDate={startDate}
-            setStartDate={setStartDate}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
             selectedCompany={selectedCompany}
             setSelectedCompany={setSelectedCompany}
             uniqueCompanies={uniqueCompanies}
-            onFilterClick={() => console.log("Filter applied")}
+
           />
-          <div className="flex items-center space-x-3">
-            <button className="flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+
+          <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
+            <button className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
               + Add New
             </button>
             <ExportMenu
@@ -57,6 +60,7 @@ const BusTrips = () => {
           </div>
         </div>
       </div>
+
       <div className="p-4 lg:p-8">
         <Table
           columns={["Template No", "Route", "Time", "Date", "Company", "Status"]}
@@ -74,4 +78,5 @@ const BusTrips = () => {
     </Layout>
   );
 };
+
 export default BusTrips;
