@@ -1,8 +1,8 @@
-import Dashboard from './pages/Dashboard.jsx'
+import Reports from './pages/Reports.jsx'
 
 function App() {
   return (
-    <Dashboard />
+    <Reports />
   )
 }
 
