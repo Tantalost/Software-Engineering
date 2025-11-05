@@ -49,13 +49,8 @@ const Reports = () => {
       </div>
 
       <Table
-        columns={["Report ID", "Type", "Status", "Author", "Date"]}
-        data={filtered.map((report) => ({
-          reportid: report.id,
-          type: report.type,
-          status: report.status,
-          author: report.author,
-          date: report.date,
+        columns={["Report ID", "Type",  "Author", "Date", "Status"]}
+        data={filtered.map((report) => ({reportid: report.id, type: report.type, author: report.author, date: report.date, status: report.status,
         }))}
       />
     </Layout>
