@@ -17,7 +17,6 @@ const Dashboard = () => {
     <Layout title="Dashboard">
       <div className="p-4 lg:p-2 space-y-8">
         <StatCards statsData={liveStats} />
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <OperationsAnalytics />
           <SummaryDonut />

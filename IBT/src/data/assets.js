@@ -47,3 +47,27 @@ export const tenants = [
   { id: 9, slotNo: 9, referenceNo: "PKG2024009", name: "Isabella Brown", email: "isabella.brown@gmail.com", contact: "09259012345", status: "Paid", type: "permanent" },
   { id: 10, slotNo: 10, referenceNo: "PKG2024010", name: "William Davis", email: "william.davis@gmail.com", contact: "09260123456", status: "Pending", type: "permanent" },
 ];
+
+export const tickets = [
+    { id: 1, ticketNo: 1, passengerType: 'Student', price: 10.00, time: '08:30 AM', date: '2024-11-15' },
+    { id: 2, ticketNo: 2, passengerType: 'Student', price: 10.00, time: '08:35 AM', date: '2024-11-15' },
+    { id: 3, ticketNo: 3, passengerType: 'Student', price: 10.00, time: '08:42 AM', date: '2024-11-15' },
+    { id: 4, ticketNo: 4, passengerType: 'Student', price: 10.00, time: '09:15 AM', date: '2024-11-15' },
+    { id: 5, ticketNo: 5, passengerType: 'Student', price: 10.00, time: '09:28 AM', date: '2024-11-15' },
+    { id: 6, ticketNo: 6, passengerType: 'Senior Citizen / PWD', price: 10.00, time: '09:45 AM', date: '2024-11-15' },
+    { id: 7, ticketNo: 7, passengerType: 'Senior Citizen / PWD', price: 10.00, time: '10:10 AM', date: '2024-11-15' },
+    { id: 8, ticketNo: 8, passengerType: 'Regular', price: 15.00, time: '10:25 AM', date: '2024-11-15' },
+    { id: 9, ticketNo: 9, passengerType: 'Regular', price: 15.00, time: '10:50 AM', date: '2024-11-15' },
+    { id: 10, ticketNo: 10, passengerType: 'Student', price: 10.00, time: '11:15 AM', date: '2024-11-15' },
+  ];
+
+export const reports = [
+    { id: 'RPT-001', type: 'Bus Fee Report', status: 'Completed', date: '2025-11-01', author: 'Robert Tan' },
+    { id: 'RPT-002', type: 'PUJ Parking Report', status: 'Pending', date: '2025-11-02', author: 'Alan Smith' },
+    { id: 'RPT-003', type: 'Terminal Fee Report', status: 'Completed', date: '2025-11-03', author: 'Analyn Cruz' },
+    { id: 'RPT-004', type: 'PUJ Parking Report', status: 'Pending', date: '2025-11-04', author: 'Bryan Garcia' },
+    { id: 'RPT-005', type: 'Bus Trip Report', status: 'Completed', date: '2025-11-05', author: 'Analyn Cruz' },
+    { id: 'RPT-006', type: 'Lease Report', status: 'Pending', date: '2025-10-28', author: 'Emma Grhams' },
+    { id: 'RPT-007', type: 'Terminal Fee Report', status: 'Completed', date: '2025-11-01', author: 'Ricky Dickson' },
+    { id: 'RPT-008', type: 'Bus Fee Report', status: 'Completed', date: '2025-11-02', author: 'Robert Tan' },
+  ];

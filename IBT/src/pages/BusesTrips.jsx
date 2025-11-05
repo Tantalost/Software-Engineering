@@ -23,9 +23,7 @@ const BusTrips = () => {
 
     const busDate = new Date(bus.date);
     const inDateRange =
-      (!startDate || busDate >= new Date(startDate)) &&
-      (!endDate || busDate <= new Date(endDate));
-
+      (!startDate || busDate >= new Date(startDate)) 
     return matchesSearch && matchesCompany && inDateRange;
   });
   const handleExportCSV = () => console.log("Exported Bus Trips to CSV");
@@ -42,8 +40,6 @@ const BusTrips = () => {
             setSearchQuery={setSearchQuery}
             startDate={startDate}
             setStartDate={setStartDate}
-            endDate={endDate}
-            setEndDate={setEndDate}
             selectedCompany={selectedCompany}
             setSelectedCompany={setSelectedCompany}
             uniqueCompanies={uniqueCompanies}
