@@ -18,7 +18,6 @@ const Parking = () => {
         <FilterBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          onFilterClick={() => alert("Filter clicked")}
         />
         <div className="flex items-center justify-end gap-3">
           <button className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center">

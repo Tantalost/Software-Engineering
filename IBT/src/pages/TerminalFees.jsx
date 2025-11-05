@@ -18,7 +18,6 @@ const TerminalFees = () => {
         <FilterBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          onFilterClick={() => alert("Filter clicked")}
         />
         <ExportMenu
           onExportCSV={() => alert("Exporting to CSV...")}

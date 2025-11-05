@@ -14,14 +14,6 @@ const FilterBar = ({ searchQuery, setSearchQuery, onFilterClick }) => {
         />
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
       </div>
-
-      <button
-        onClick={onFilterClick}
-        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium rounded-xl hover:shadow-md hover:scale-[1.02] transition-all"
-      >
-        <Filter size={18} />
-        <span>Filter</span>
-      </button>
     </div>
   );
 };

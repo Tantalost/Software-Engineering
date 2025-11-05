@@ -1,14 +1,14 @@
 export const busSchedules = [
-  { id: 1, templateNo: "BT-2024-001", route: "Pagadian", time: "6:00 AM - 12:00 PM",  company: "Dindo", status: "Paid", capacity: 45 },
-  { id: 2, templateNo: "BT-2024-002", route: "Dipolog", time: "7:30 AM - 10:00 AM", company: "Dindo", status: "Pending", capacity: 45 },
-  { id: 3, templateNo: "BT-2024-003", route: "Pagadian", time: "8:00 AM - 2:30 PM", company: "Alga", status: "Paid", capacity: 40 },
-  { id: 4, templateNo: "BT-2024-004", route: "Dipolog", time: "9:00 AM - 11:30 AM", company: "Alga", status: "Paid", capacity: 40 },
-  { id: 5, templateNo: "BT-2024-005", route: "Dipolog", time: "10:00 AM - 4:00 PM", company: "Dindo", status: "Pending", capacity: 45 },
-  { id: 6, templateNo: "BT-2024-006", route: "Pagadian", time: "7:00 AM - 3:00 PM", company: "Alga", status: "Paid", capacity: 40 },
-  { id: 7, templateNo: "BT-2024-007", route: "Cagayan", time: "1:00 PM - 4:00 PM", company: "Ceres", status: "Pending", capacity: 40 },
-  { id: 8, templateNo: "BT-2024-008", route: "Siocon", time: "5:00 AM - 8:00 AM", company: "Lizamae", status: "Paid", capacity: 35 },
-  { id: 9, templateNo: "BT-2024-009", route: "Bukidnon", time: "8:00 PM - 6:00 AM", company: "Ceres", status: "Paid", capacity: 40 },
-  { id: 10, templateNo: "BT-2024-010", route: "Pagadian", time: "6:30 AM - 4:30 PM", company: "Dindo", status: "Pending", capacity: 45 },
+  { id: 1, templateNo: "BT-2024-001", route: "Pagadian", time: "6:00 AM - 12:00 PM", date: "2025-01-01", company: "Dindo", status: "Paid", capacity: 45 },
+  { id: 2, templateNo: "BT-2024-002", route: "Dipolog", time: "7:30 AM - 10:00 AM", date: "2025-01-01", company: "Dindo", status: "Pending", capacity: 45 },
+  { id: 3, templateNo: "BT-2024-003", route: "Pagadian", time: "8:00 AM - 2:30 PM", date: "2025-01-01", company: "Alga", status: "Paid", capacity: 40 },
+  { id: 4, templateNo: "BT-2024-004", route: "Dipolog", time: "9:00 AM - 11:30 AM", date: "2025-01-04", company: "Alga", status: "Paid", capacity: 40 },
+  { id: 5, templateNo: "BT-2024-005", route: "Dipolog", time: "10:00 AM - 4:00 PM", date: "2025-01-05", company: "Dindo", status: "Pending", capacity: 45 },
+  { id: 6, templateNo: "BT-2024-006", route: "Pagadian", time: "7:00 AM - 3:00 PM", date: "2025-01-06", company: "Alga", status: "Paid", capacity: 40 },
+  { id: 7, templateNo: "BT-2024-007", route: "Cagayan", time: "1:00 PM - 4:00 PM", date: "2025-01-07", company: "Ceres", status: "Pending", capacity: 40 },
+  { id: 8, templateNo: "BT-2024-008", route: "Siocon", time: "5:00 AM - 8:00 AM", date: "2025-01-09", company: "Lizamae", status: "Paid", capacity: 35 },
+  { id: 9, templateNo: "BT-2024-009", route: "Bukidnon", time: "8:00 PM - 6:00 AM", date: "2025-01-09", company: "Ceres", status: "Paid", capacity: 40 },
+  { id: 10, templateNo: "BT-2024-010", route: "Pagadian", time: "6:30 AM - 4:30 PM", date: "2025-01-10", company: "Dindo", status: "Pending", capacity: 45 },
 ];
 
 export const lostFoundItems = [
