@@ -63,13 +63,14 @@ const BusTrips = () => {
       </div>
       <div className="p-4 lg:p-8">
         <Table
-          columns={["Template No", "Route", "Time", "Status", "Company"]}
+          columns={["Template No", "Route", "Time", "Company", "Status"]}
           data={filtered.map((bus) => ({
             templateno: bus.templateNo,
             route: bus.route,
             time: bus.time,
-            status: bus.status,
             company: bus.company,
+            status: bus.status,
+           
           }))}
         />
       </div>
