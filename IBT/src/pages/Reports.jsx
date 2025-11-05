@@ -14,13 +14,13 @@ const Reports = () => {
     <Layout title="Reports Management">
       <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} onFilterClick={() => alert("Filter clicked")} />
       <Table
-        columns={["Report ID", "Type", "Status", "Date", "Author"]}
+        columns={["Report ID", "Type", "Status", "Author", "Date"]}
         data={filtered.map((report) => ({
           reportid: report.id,
           type: report.type,
           status: report.status,
-          date: report.date,
           author: report.author,
+          date: report.date,
         }))}
       />
     </Layout>
