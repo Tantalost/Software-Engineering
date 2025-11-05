@@ -1,6 +1,5 @@
 import React from "react";
 import Layout from "../components/layout/Layout";
-
 import StatCards from "../components/dashboard/StatCards";
 import OperationsAnalytics from "../components/dashboard/OperationsAnalytics";
 import SummaryDonut from "../components/dashboard/SummaryDonut";
@@ -23,7 +22,6 @@ const Dashboard = () => {
           <OperationsAnalytics />
           <SummaryDonut />
         </div>
-
         <RecentActivity />
       </div>
     </Layout>
