@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/FilterBar";
 import Table from "../components/common/Table";
-import { parkingTickets } from "../data/ParkingData";
+import { parkingTickets } from "../data/assets";
 
 const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");

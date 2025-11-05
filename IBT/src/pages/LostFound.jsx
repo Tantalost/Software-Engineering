@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/FilterBar";
 import Table from "../components/common/Table";
-import { lostFoundItems } from "../data/LostFoundData";
+import { lostFoundItems } from "../data/assets";
 
 const LostFound = () => {
   const [searchQuery, setSearchQuery] = useState("");

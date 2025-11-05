@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/FilterBar";
 import Table from "../components/common/Table";
-import { tenants } from "../data/TenantsData";
+import { tenants } from "../data/assets";
 
 const TenantLease = () => {
   const [searchQuery, setSearchQuery] = useState("");

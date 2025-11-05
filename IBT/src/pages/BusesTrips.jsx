@@ -3,7 +3,7 @@ import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
-import { busSchedules } from "../data/BusData";
+import { busSchedules } from "../data/assets";
 
 const BusTrips = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +32,7 @@ const BusTrips = () => {
   const handleExportExcel = () => console.log("Exported Bus Trips to Excel");
   const handleExportPDF = () => console.log("Exported Bus Trips to PDF");
   const handlePrint = () => window.print();
+  
   return (
     <Layout title="Bus Trips Management">
       <div className="px-4 lg:px-8 mt-4">
@@ -70,7 +71,7 @@ const BusTrips = () => {
             time: bus.time,
             company: bus.company,
             status: bus.status,
-           
+
           }))}
         />
       </div>
