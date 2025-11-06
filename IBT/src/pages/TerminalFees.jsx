@@ -5,6 +5,7 @@ import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import { tickets } from "../data/assets";
 
+
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
