@@ -1,16 +1,20 @@
 import React from "react";
 
-const BusTripFilters = ({
-  searchQuery, setSearchQuery,
-  selectedCompany, selectedDate, setSelectedDate, setSelectedCompany, uniqueCompanies,
-  
+const BusParkingFilters = ({
+  searchQuery,
+  setSearchQuery,
+  selectedCompany,
+  selectedDate,
+  setSelectedDate,
+  setSelectedCompany,
+  uniqueCompanies,
 }) => {
   return (
     <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full">
       <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="Search parking..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="outline-none text-gray-700 text-sm w-full"
@@ -41,7 +45,7 @@ const BusTripFilters = ({
 
       <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
         <label htmlFor="date" className="text-gray-500 text-sm mr-2">
-          Date
+          Date:
         </label>
         <input
           type="date"
@@ -51,9 +55,8 @@ const BusTripFilters = ({
           className="outline-none text-gray-700 text-sm w-full sm:w-auto"
         />
       </div>
-      
     </div>
   );
 };
 
-export default BusTripFilters;
+export default BusParkingFilters;

@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLogin from "./pages/AdminLogIn";
 import Dashboard from "./pages/Dashboard";
-import BusesTrips from "./pages/BusesTrips";
+import BusesParking from "./pages/BusesParking";
 import TerminalFees from "./pages/TerminalFees";
 import TenantLease from "./pages/TenantLease";
 import Parking from "./pages/Parking";
@@ -22,7 +22,7 @@ export default function App() {
       <Route path="/login" element={<AdminLogin />} />
 
       <Route path="/dashboard" element={<PrivateRoute> <Dashboard /> </PrivateRoute>} />
-      <Route path="/buses-trips" element={ <PrivateRoute> <BusesTrips /> </PrivateRoute>} />
+      <Route path="/buses-parking" element={ <PrivateRoute> <BusesParking /> </PrivateRoute>} />
       <Route path="/tickets" element={ <PrivateRoute> <TerminalFees /> </PrivateRoute>} />
       <Route path="/tenant-lease" element={ <PrivateRoute> <TenantLease /> </PrivateRoute>} />
       <Route path="/parking" element={ <PrivateRoute> <Parking /> </PrivateRoute>} />
