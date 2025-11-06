@@ -3,6 +3,7 @@ import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
+import StatCardGroup from "../components/tenants/StatCardGroup";
 import { tenants } from "../data/assets";
 
 const TenantLease = () => {
@@ -25,8 +26,18 @@ const TenantLease = () => {
     return matchesSearch && matchesTab && matchesDate;
   });
 
+  const totalSlots = filtered.length;
+  const availableSlots = filtered.filter((t) => t.status === "available").length;
+  const nonAvailableSlots = filtered.filter((t) => t.status !== "available").length;
+
   return (
     <Layout title="Tenants/Lease Management">
+      <StatCardGroup
+        availableSlots={availableSlots}
+        nonAvailableSlots={nonAvailableSlots}
+        totalSlots={totalSlots}
+      />
+
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
@@ -59,7 +70,7 @@ const TenantLease = () => {
             </button>
           </div>
 
-          <button className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-3 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center w-full sm:w-auto">
+          <button className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-3 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
             + Add New
           </button>
 
@@ -76,7 +87,14 @@ const TenantLease = () => {
 
       <Table
         columns={["Slot No", "Reference No", "Name", "Email", "Contact", "Date", "Status",]}
-        data={filtered.map((t) => ({slotno: t.slotNo, referenceno: t.referenceNo, name: t.name, email: t.email, contact: t.contact, date: t.date, status: t.status,
+        data={filtered.map((t) => ({
+          slotno: t.slotNo,
+          referenceno: t.referenceNo,
+          name: t.name,
+          email: t.email,
+          contact: t.contact,
+          date: t.date,
+          status: t.status,
         }))}
       />
     </Layout>
