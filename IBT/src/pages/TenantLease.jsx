@@ -4,9 +4,9 @@ import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import StatCardGroup from "../components/tenants/StatCardGroup";
-import { tenants } from "../data/assets";
-import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
+import Form from "../components/common/Form";
+import { tenants } from "../data/assets";
 
 const TenantLease = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,16 +49,20 @@ const TenantLease = () => {
   });
 
   const totalSlots = filtered.length;
-  const availableSlots = filtered.filter((t) => t.status === "available").length;
-  const nonAvailableSlots = filtered.filter((t) => t.status !== "available").length;
+  const availableSlots = filtered.filter(
+    (t) => t.status.toLowerCase() === "available"
+  ).length;
+  const nonAvailableSlots = totalSlots - availableSlots;
 
   return (
     <Layout title="Tenants/Lease Management">
-      <StatCardGroup
-        availableSlots={availableSlots}
-        nonAvailableSlots={nonAvailableSlots}
-        totalSlots={totalSlots}
-      />
+      <div className="mb-6">
+        <StatCardGroup
+          availableSlots={availableSlots}
+          nonAvailableSlots={nonAvailableSlots}
+          totalSlots={totalSlots}
+        />
+      </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
@@ -72,20 +76,20 @@ const TenantLease = () => {
           <div className="flex flex-col sm:flex-row bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200 w-full sm:w-auto">
             <button
               onClick={() => setActiveTab("permanent")}
-              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 transform active:scale-95 ${
+              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 ${
                 activeTab === "permanent"
                   ? "bg-white text-emerald-700 shadow-md"
-                  : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
+                  : "text-emerald-600 hover:text-emerald-700"
               }`}
             >
               Permanent
             </button>
             <button
               onClick={() => setActiveTab("night")}
-              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 transform active:scale-95 ${
+              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 ${
                 activeTab === "night"
                   ? "bg-white text-emerald-700 shadow-md"
-                  : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
+                  : "text-emerald-600 hover:text-emerald-700"
               }`}
             >
               Night Market
@@ -98,8 +102,7 @@ const TenantLease = () => {
           >
             + Add New
           </button>
-
-          <div className="flex items-center justify-end w-full sm:w-auto transition-transform duration-300 active:scale-95 hover:scale-105">
+          <div className="flex items-center justify-end w-full sm:w-auto">
             <ExportMenu
               onExportCSV={() => alert("Exporting to CSV...")}
               onExportExcel={() => alert("Exporting to Excel...")}
@@ -142,8 +145,8 @@ const TenantLease = () => {
       {viewRow && (
         <Modal onClose={() => setViewRow(null)} title="View Tenant/Lease">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
-            <Field label="Slot NO" value={viewRow.slotno} />
-            <Field label="Reference NO" value={viewRow.referenceNo} />
+            <Field label="Slot No" value={viewRow.slotno} />
+            <Field label="Reference No" value={viewRow.referenceNo} />
             <Field label="Name" value={viewRow.name} />
             <Field label="Email" value={viewRow.email} />
             <Field label="Contact" value={viewRow.contact} />
@@ -153,53 +156,13 @@ const TenantLease = () => {
         </Modal>
       )}
 
-      {editRow && (
-        <EditTenantLease
-          row={editRow}
-          onClose={() => setEditRow(null)}
-          onSave={(updated) => {
-            const next = records.map((r) =>
-              r.id === updated.id ? updated : r
-            );
-            persist(next);
-            setEditRow(null);
-          }}
-        />
-      )}
-
-      {deleteRow && (
-        <Modal onClose={() => setDeleteRow(null)} title="Delete Tenant/Lease" hideDefaultClose>
-          <p className="mt-2 text-sm text-slate-600">
-            Delete slot {deleteRow.slotno}?
-          </p>
-          <div className="mt-4 flex justify-end gap-2">
-            <button
-              onClick={() => setDeleteRow(null)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                const next = records.filter((r) => r.id !== deleteRow.id);
-                persist(next);
-                setDeleteRow(null);
-              }}
-              className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700"
-            >
-              Delete
-            </button>
-          </div>
-        </Modal>
-      )}
-
       {showPreview && (
         <Modal onClose={() => setShowPreview(false)} title="Add Tenant/Lease">
           <Form
             title="Tenants/Lease Management"
             fields={[
-              { label: "Slot NO", type: "text" },
-              { label: "Reference NO", type: "text" },
+              { label: "Slot No", type: "text" },
+              { label: "Reference No", type: "text" },
               { label: "Name", type: "text" },
               { label: "Email", type: "email" },
               { label: "Contact", type: "number" },
@@ -244,82 +207,5 @@ const Field = ({ label, value }) => (
     <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
       {value || "-"}
     </div>
-  </div>
-);
-
-const EditTenantLease = ({ row, onClose, onSave }) => {
-  const [form, setForm] = useState({
-    id: row.id,
-    slotno: row.slotno,
-    referenceNo: row.referenceNo,
-    name: row.name,
-    email: row.email,
-    contact: row.contact,
-    date: row.date,
-    status: row.status,
-  });
-
-  const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-
-  return (
-    <Modal title="Edit Record" onClose={onClose} hideDefaultClose>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <Input label="Slot No" value={form.slotno} onChange={(e) => set("slotno", e.target.value)} />
-        <Input label="Reference No" value={form.referenceNo} onChange={(e) => set("referenceNo", e.target.value)} />
-        <Input label="Name" value={form.name} onChange={(e) => set("name", e.target.value)} />
-        <Input label="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
-        <Input label="Contact" value={form.contact} onChange={(e) => set("contact", e.target.value)} />
-        <Input label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
-        <Select
-          label="Status"
-          value={form.status}
-          onChange={(e) => set("status", e.target.value)}
-          options={["Unclaimed", "Paid", "Overdue"]}
-        />
-      </div>
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          onClick={onClose}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => onSave(form)}
-          className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700"
-        >
-          Save
-        </button>
-      </div>
-    </Modal>
-  );
-};
-
-const Input = ({ label, value, onChange, type = "text" }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <input
-      value={value}
-      onChange={onChange}
-      type={type}
-      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
-    />
-  </div>
-);
-
-const Select = ({ label, value, onChange, options = [] }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <select
-      value={value}
-      onChange={onChange}
-      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
-    >
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {opt}
-        </option>
-      ))}
-    </select>
   </div>
 );
