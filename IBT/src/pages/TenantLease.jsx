@@ -54,14 +54,12 @@ const TenantLease = () => {
 
   return (
     <Layout title="Tenants/Lease Management">
-      {/* Stat Cards */}
       <StatCardGroup
         availableSlots={availableSlots}
         nonAvailableSlots={nonAvailableSlots}
         totalSlots={totalSlots}
       />
 
-      {/* Filter and Actions */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
@@ -71,7 +69,6 @@ const TenantLease = () => {
         />
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
-          {/* Tabs */}
           <div className="flex flex-col sm:flex-row bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200 w-full sm:w-auto">
             <button
               onClick={() => setActiveTab("permanent")}
@@ -95,7 +92,6 @@ const TenantLease = () => {
             </button>
           </div>
 
-          {/* Add New Button */}
           <button
             onClick={() => setShowPreview(true)}
             className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-3 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center w-full sm:w-auto"
@@ -103,7 +99,6 @@ const TenantLease = () => {
             + Add New
           </button>
 
-          {/* Export */}
           <div className="flex items-center justify-end w-full sm:w-auto transition-transform duration-300 active:scale-95 hover:scale-105">
             <ExportMenu
               onExportCSV={() => alert("Exporting to CSV...")}
@@ -115,7 +110,6 @@ const TenantLease = () => {
         </div>
       </div>
 
-      {/* Table */}
       <Table
         columns={[
           "Slot No",
@@ -145,7 +139,6 @@ const TenantLease = () => {
         )}
       />
 
-      {/* View Modal */}
       {viewRow && (
         <Modal onClose={() => setViewRow(null)} title="View Tenant/Lease">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
@@ -160,7 +153,6 @@ const TenantLease = () => {
         </Modal>
       )}
 
-      {/* Edit Modal */}
       {editRow && (
         <EditTenantLease
           row={editRow}
@@ -175,7 +167,6 @@ const TenantLease = () => {
         />
       )}
 
-      {/* Delete Modal */}
       {deleteRow && (
         <Modal onClose={() => setDeleteRow(null)} title="Delete Tenant/Lease" hideDefaultClose>
           <p className="mt-2 text-sm text-slate-600">
@@ -202,7 +193,6 @@ const TenantLease = () => {
         </Modal>
       )}
 
-      {/* Add New Form */}
       {showPreview && (
         <Modal onClose={() => setShowPreview(false)} title="Add Tenant/Lease">
           <Form
@@ -228,8 +218,6 @@ const TenantLease = () => {
 };
 
 export default TenantLease;
-
-/* ---------------------- Subcomponents ---------------------- */
 
 const Modal = ({ title, children, onClose, hideDefaultClose = false }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
