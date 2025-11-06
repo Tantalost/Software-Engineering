@@ -8,7 +8,7 @@ export default function LoginInput({
 
   return (
     <div>
-      <label className="block text-xs sm:text-sm font-medium text-gray-500 mb-2">
+      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-2">
         {label}
       </label>
       <div className="relative">
@@ -19,14 +19,18 @@ export default function LoginInput({
           type={type === "password" && showPassword ? "text" : type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full pl-10 sm:pl-11 pr-10 py-2 sm:py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0 text-sm sm:text-base"
+          className="w-full pl-10 sm:pl-11 pr-10 py-2 sm:py-3 
+            bg-white border border-gray-300 rounded-xl 
+            text-black placeholder-gray-500 
+            focus:outline-none focus:ring-2 focus:ring-emerald-500 
+            text-sm sm:text-base"
           placeholder={placeholder}
         />
         {type === "password" && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-white transition-colors"
+            className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
           >
             {showPassword ? (
               <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
