@@ -39,9 +39,6 @@ const RecentActivity = () => {
     <div className="bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500">
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-3xl font-bold text-gray-900">Recent Activity</h2>
-        <button className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-all">
-          View all
-        </button>
       </div>
 
       <div className="space-y-3">

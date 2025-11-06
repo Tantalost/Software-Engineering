@@ -3,6 +3,7 @@ import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
+import StatCardGroup from "../components/tenants/StatCardGroup";
 import { tenants } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
@@ -46,8 +47,18 @@ const TenantLease = () => {
     return matchesSearch && matchesTab && matchesDate;
   });
 
+  const totalSlots = filtered.length;
+  const availableSlots = filtered.filter((t) => t.status === "available").length;
+  const nonAvailableSlots = filtered.filter((t) => t.status !== "available").length;
+
   return (
     <Layout title="Tenants/Lease Management">
+      <StatCardGroup
+        availableSlots={availableSlots}
+        nonAvailableSlots={nonAvailableSlots}
+        totalSlots={totalSlots}
+      />
+
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
