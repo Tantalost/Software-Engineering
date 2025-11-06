@@ -32,11 +32,6 @@ export default function LoginInput({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
           >
-            {showPassword ? (
-              <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
-            ) : (
-              <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
-            )}
           </button>
         )}
       </div>
