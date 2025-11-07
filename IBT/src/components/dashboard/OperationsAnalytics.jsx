@@ -43,7 +43,7 @@ const OperationsAnalytics = () => {
         </div>
         <div className="flex items-center space-x-3">
           <select
-            className="border border-gray-300 text-gray-700 text-sm rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+            className="border border-gray-300 text-gray-700 text-sm rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all cursor-pointer"
             defaultValue="week"
           >
             <option value="week">Week</option>
@@ -51,10 +51,10 @@ const OperationsAnalytics = () => {
             <option value="year">Year</option>
           </select>
           <button className="p-2 hover:bg-gray-100 rounded-lg transition-all" title="Refresh">
-            <RefreshCw size={18} className="text-gray-600" />
+            <RefreshCw size={18} className="text-gray-600 cursor-pointer" />
           </button>
           <button className="p-2 hover:bg-gray-100 rounded-lg transition-all" title="Download">
-            <Download size={18} className="text-gray-600" />
+            <Download size={18} className="text-gray-600 cursor-pointer" />
           </button>
         </div>
       </div>

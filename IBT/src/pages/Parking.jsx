@@ -77,6 +77,14 @@ const Parking = () => {
               Notify
             </button>
           )}
+          {role === "parking" && (
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+            >
+              Submit Report
+            </button>
+          )}
           <div className="h-[44px] flex items-center">
             <ExportMenu
               onExportCSV={() => alert("Exporting to CSV...")}
@@ -119,16 +127,6 @@ const Parking = () => {
         }}
       />
 
-      {role === "parking" && (
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={() => setShowSubmitModal(true)}
-            className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
-          >
-            Submit Report
-          </button>
-        </div>
-      )}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">

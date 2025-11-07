@@ -31,10 +31,10 @@ const BusTripFilters = ({
                 />
             </div>
 
-            <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
+            <div className="cursor-pointer flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
                 <label
                     htmlFor="company"
-                    className="text-gray-500 text-sm mr-2 whitespace-nowrap"
+                    className="text-gray-500 text-sm mr-2 whitespace-nowrap cursor-pointer "
                 >
                     Company:
                 </label>
