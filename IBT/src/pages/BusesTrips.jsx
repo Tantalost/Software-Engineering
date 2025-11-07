@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
@@ -7,6 +7,7 @@ import { busSchedules } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import DatePickerInput from "../components/common/DatePickerInput";
+import Pagination from "../components/common/Pagination";
 
 const BusTrips = () => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -18,6 +19,8 @@ const BusTrips = () => {
     const [deleteRow, setDeleteRow] = useState(null);
     const [showNotify, setShowNotify] = useState(false);
     const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const role = localStorage.getItem("authRole") || "superadmin";
 
     const uniqueCompanies = [...new Set(busSchedules.map((bus) => bus.company))];
@@ -52,6 +55,14 @@ const BusTrips = () => {
 
         return matchesSearch && matchesCompany && matchesDate;
     });
+
+    const paginatedData = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return filtered.slice(startIndex, endIndex);
+    }, [filtered, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
     const handleExportCSV = () => console.log("Exported Bus Trips to CSV");
     const handleExportExcel = () => console.log("Exported Bus Trips to Excel");
@@ -95,7 +106,7 @@ const BusTrips = () => {
             <div className="p-4 lg:p-8">
                 <Table
                     columns={["Template No", "Route", "Time", "Date", "Company", "Status"]}
-                    data={filtered.map((bus) => ({
+                    data={paginatedData.map((bus) => ({
                         id: bus.id,
                         templateno: bus.templateNo,
                         route: bus.route,
@@ -111,6 +122,17 @@ const BusTrips = () => {
                             onDelete={() => setDeleteRow(row)}
                         />
                     )}
+                />
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={filtered.length}
+                    onItemsPerPageChange={(newItemsPerPage) => {
+                        setItemsPerPage(newItemsPerPage);
+                        setCurrentPage(1);
+                    }}
                 />
             </div>
 

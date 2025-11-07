@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -11,6 +11,7 @@ import DeleteModal from "../components/common/DeleteModal";
 import InputField from "../components/common/InputField";
 import SelectField from "../components/common/SelectField";
 import DatePickerInput from "../components/common/DatePickerInput";
+import Pagination from "../components/common/Pagination";
 import { tickets } from "../data/assets";
 import {
   User,
@@ -26,6 +27,8 @@ const TerminalFees = () => {
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const filtered = tickets.filter((fee) => {
     const matchesSearch = fee.passengerType
@@ -37,6 +40,14 @@ const TerminalFees = () => {
       : true;
     return matchesSearch && matchesDate;
   });
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
   const regularCount = filtered.filter(
     (f) => f.passengerType.toLowerCase() === "regular"
@@ -103,7 +114,7 @@ const TerminalFees = () => {
 
       <Table
         columns={["Ticket No", "Passenger Type", "Time", "Date", "Price"]}
-        data={filtered.map((fee) => ({
+        data={paginatedData.map((fee) => ({
           id: fee.id,
           ticketno: fee.ticketNo,
           passengertype: fee.passengerType,
@@ -118,6 +129,17 @@ const TerminalFees = () => {
             onDelete={() => setDeleteRow(row)}
           />
         )}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        totalItems={filtered.length}
+        onItemsPerPageChange={(newItemsPerPage) => {
+          setItemsPerPage(newItemsPerPage);
+          setCurrentPage(1);
+        }}
       />
 
       {viewRow && (

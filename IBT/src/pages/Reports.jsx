@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -7,6 +7,7 @@ import TableActions from "../components/common/TableActions";
 import { reports } from "../data/assets";
 import Form from "../components/common/Form";
 import DatePickerInput from "../components/common/DatePickerInput";
+import Pagination from "../components/common/Pagination";
 
 const Reports = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,6 +18,8 @@ const Reports = () => {
   const [deleteRow, setDeleteRow] = useState(null);
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const role = localStorage.getItem("authRole") || "superadmin";
 
   const loadStored = () => {
@@ -46,6 +49,14 @@ const Reports = () => {
 
     return matchesSearch && matchesDate;
   });
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
   return (
     <Layout title="Reports Management">
@@ -79,7 +90,7 @@ const Reports = () => {
 
       <Table
         columns={["Report ID", "Type", "Author", "Date", "Status"]}
-        data={filtered.map((report) => ({ id: report.id, reportid: report.id, type: report.type, author: report.author, date: report.date, status: report.status }))}
+        data={paginatedData.map((report) => ({ id: report.id, reportid: report.id, type: report.type, author: report.author, date: report.date, status: report.status }))}
         actions={(row) => (
           <TableActions
             onView={() => setViewRow(row)}
@@ -87,6 +98,17 @@ const Reports = () => {
             onDelete={() => setDeleteRow(row)}
           />
         )}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        totalItems={filtered.length}
+        onItemsPerPageChange={(newItemsPerPage) => {
+          setItemsPerPage(newItemsPerPage);
+          setCurrentPage(1);
+        }}
       />
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

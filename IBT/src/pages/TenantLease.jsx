@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -7,6 +7,7 @@ import { tenants } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import DatePickerInput from "../components/common/DatePickerInput";
+import Pagination from "../components/common/Pagination";
 
 
 const TenantLease = () => {
@@ -19,6 +20,8 @@ const TenantLease = () => {
   const [deleteRow, setDeleteRow] = useState(null);
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const role = localStorage.getItem("authRole") || "superadmin";
 
   const loadStored = () => {
@@ -51,6 +54,14 @@ const TenantLease = () => {
 
     return matchesSearch && matchesTab && matchesDate;
   });
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
   return (
     <Layout title="Tenants/Lease Management">
@@ -106,7 +117,7 @@ const TenantLease = () => {
 
       <Table
         columns={["Slot No", "Reference No", "Name", "Email", "Contact", "Date", "Status",]}
-        data={filtered.map((t) => ({
+        data={paginatedData.map((t) => ({
           id: t.id,
           slotno: t.slotNo,
           referenceno: t.referenceNo,
@@ -123,6 +134,17 @@ const TenantLease = () => {
             onDelete={() => setDeleteRow(row)}
           />
         )}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        totalItems={filtered.length}
+        onItemsPerPageChange={(newItemsPerPage) => {
+          setItemsPerPage(newItemsPerPage);
+          setCurrentPage(1);
+        }}
       />
 
       {viewRow && (

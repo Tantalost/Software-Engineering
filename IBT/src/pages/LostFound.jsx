@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -6,6 +6,7 @@ import Table from "../components/common/Table";
 import { lostFoundItems } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
+import Pagination from "../components/common/Pagination";
 
 const LostFound = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,6 +17,8 @@ const LostFound = () => {
   const [deleteRow, setDeleteRow] = useState(null);
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const role = localStorage.getItem("authRole") || "superadmin";
 
   const loadStored = () => {
@@ -43,6 +46,14 @@ const LostFound = () => {
 
     return matchesSearch && matchesDate;
   });
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
   return (
     <Layout title="Lost and Found Records">
@@ -76,7 +87,7 @@ const LostFound = () => {
 
       <Table
         columns={["Tracking No", "Description", "DateTime", "Status"]}
-        data={filtered.map((item) => ({
+        data={paginatedData.map((item) => ({
           id: item.id,
           trackingno: item.trackingNo,
           description: item.description,
@@ -90,6 +101,17 @@ const LostFound = () => {
             onDelete={() => setDeleteRow(row)}
           />
         )}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        totalItems={filtered.length}
+        onItemsPerPageChange={(newItemsPerPage) => {
+          setItemsPerPage(newItemsPerPage);
+          setCurrentPage(1);
+        }}
       />
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

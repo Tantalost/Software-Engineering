@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -7,6 +7,7 @@ import { parkingTickets } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import DatePickerInput from "../components/common/DatePickerInput";
+import Pagination from "../components/common/Pagination";
 
 const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,6 +20,8 @@ const Parking = () => {
   const role = localStorage.getItem("authRole") || "superadmin";
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const loadStored = () => {
     try {
@@ -46,6 +49,14 @@ const Parking = () => {
 
     return matchesSearch && matchesDate;
   });
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
   return (
     <Layout title="Bus Parking Management">
@@ -79,7 +90,7 @@ const Parking = () => {
 
       <Table
         columns={["Type", "Price", "Time", "Duration", "Date", "Status"]}
-        data={filtered.map((ticket) => ({
+        data={paginatedData.map((ticket) => ({
           id: ticket.id,
           type: ticket.type,
           price: `₱${ticket.price.toFixed(2)}`,
@@ -95,6 +106,17 @@ const Parking = () => {
             onDelete={() => setDeleteRow(row)}
           />
         )}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        totalItems={filtered.length}
+        onItemsPerPageChange={(newItemsPerPage) => {
+          setItemsPerPage(newItemsPerPage);
+          setCurrentPage(1);
+        }}
       />
 
       {role === "parking" && (
