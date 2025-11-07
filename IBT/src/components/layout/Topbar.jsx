@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Menu, Bell, ChevronDown } from "lucide-react";
+import { Menu, Bell, ChevronDown, X, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Topbar = ({ title, onMenuClick }) => {
   const navigate = useNavigate();
   const [showBell, setShowBell] = useState(false);
   const [showUser, setShowUser] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const role = (typeof window !== "undefined" && localStorage.getItem("authRole")) || "superadmin";
   const userLabel = role === "parking" ? "Parking Admin" : "Admin";
@@ -16,7 +17,6 @@ const Topbar = ({ title, onMenuClick }) => {
     try {
       const raw = localStorage.getItem("ibt_notifications");
       const list = raw ? JSON.parse(raw) : [];
-      // sort by id/date descending best-effort
       const sorted = [...list].sort((a, b) => (b.id || 0) - (a.id || 0));
       setNotifications(sorted.slice(0, 3));
     } catch {
@@ -33,69 +33,155 @@ const Topbar = ({ title, onMenuClick }) => {
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  const logout = () => {
+  const handleLogout = () => {
+    setShowLogoutModal(false);
     localStorage.removeItem("isAdminLoggedIn");
     localStorage.removeItem("authRole");
     navigate("/login");
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-      <div className="p-4 lg:px-8 lg:py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button onClick={onMenuClick} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all">
-              <Menu size={24} className="text-gray-700" />
-            </button>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">{title}</h1>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="hidden sm:block relative" ref={bellRef}>
-              <button onClick={() => setShowBell((s) => !s)} className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative">
-                <Bell size={22} className="text-gray-600" />
-                {notifications.length > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
+    <>
+      {/* 🌟 Topbar UI */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+        <div className="p-4 lg:px-8 lg:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button onClick={onMenuClick} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all">
+                <Menu size={24} className="text-gray-700" />
               </button>
-              {showBell && (
-                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
-                  <div className="max-h-80 overflow-auto">
-                    {notifications.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-600">No new notifications.</div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div key={n.id} className="p-4 border-b last:border-b-0 hover:bg-gray-50">
-                          <div className="text-sm font-semibold text-slate-800">{n.title}</div>
-                          <div className="mt-1 text-sm text-slate-600 line-clamp-2">{n.message}</div>
-                          <div className="mt-1 text-xs text-slate-400">{n.date} {n.source ? `• ${n.source}` : ""}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <button onClick={() => { setShowBell(false); navigate("/notifications"); }} className="w-full text-center text-sm font-medium text-emerald-700 hover:bg-emerald-50 py-2 border-t">
-                    View All
-                  </button>
-                </div>
-              )}
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">{title}</h1>
             </div>
-            <div className="hidden md:block relative" ref={userRef}>
-              <button onClick={() => setShowUser((s) => !s)} className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 shadow-sm">
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">A</div>
-                <span className="text-sm font-medium text-gray-700">{userLabel}</span>
-                <ChevronDown size={18} className="text-gray-500" />
-              </button>
-              {showUser && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
-                  <button onClick={() => { setShowUser(false); navigate("/notifications"); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50">Notifications</button>
-                  {role === "superadmin" && (
-                    <button onClick={() => { setShowUser(false); navigate("/settings"); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50">Settings</button>
+
+            <div className="flex items-center space-x-3">
+              {/* 🔔 Notifications */}
+              <div className="hidden sm:block relative" ref={bellRef}>
+                <button
+                  onClick={() => setShowBell((s) => !s)}
+                  className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative"
+                >
+                  <Bell size={22} className="text-gray-600" />
+                  {notifications.length > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                   )}
-                  <button onClick={() => { setShowUser(false); logout(); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50">Logout</button>
-                </div>
-              )}
+                </button>
+                {showBell && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
+                    <div className="max-h-80 overflow-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-sm text-slate-600">No new notifications.</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div key={n.id} className="p-4 border-b last:border-b-0 hover:bg-gray-50">
+                            <div className="text-sm font-semibold text-slate-800">{n.title}</div>
+                            <div className="mt-1 text-sm text-slate-600 line-clamp-2">{n.message}</div>
+                            <div className="mt-1 text-xs text-slate-400">
+                              {n.date} {n.source ? `• ${n.source}` : ""}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowBell(false);
+                        navigate("/notifications");
+                      }}
+                      className="w-full text-center text-sm font-medium text-emerald-700 hover:bg-emerald-50 py-2 border-t"
+                    >
+                      View All
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 👤 User Dropdown */}
+              <div className="hidden md:block relative" ref={userRef}>
+                <button
+                  onClick={() => setShowUser((s) => !s)}
+                  className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 shadow-sm"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">
+                    A
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{userLabel}</span>
+                  <ChevronDown size={18} className="text-gray-500" />
+                </button>
+
+                {showUser && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
+                    <button
+                      onClick={() => {
+                        setShowUser(false);
+                        navigate("/notifications");
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                    >
+                      Notifications
+                    </button>
+
+                    {role === "superadmin" && (
+                      <button
+                        onClick={() => {
+                          setShowUser(false);
+                          navigate("/settings");
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                      >
+                        Settings
+                      </button>
+                    )}
+
+                    {/* 🚪 Logout Button */}
+                    <button
+                      onClick={() => setShowLogoutModal(true)}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* 🔐 Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-80 p-6 relative">
+            <button
+              onClick={() => setShowLogoutModal(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+            >
+              <X size={18} />
+            </button>
+            <div className="flex flex-col items-center text-center">
+              <AlertTriangle className="text-amber-500 mb-3" size={40} />
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">Confirm Logout</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Are you sure you want to log out of your account?
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-600 text-white hover:opacity-90 transition-all"
+                >
+                  Yes, Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

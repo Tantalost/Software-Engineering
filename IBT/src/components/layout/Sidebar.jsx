@@ -9,20 +9,11 @@ import {
 const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
-
     const handleMenuClick = () => {
         setSidebarExpanded(!sidebarExpanded);
         if (window.innerWidth < 1024 && onMobileClose) {
             onMobileClose();
         }
-    };
-
-    const handleLogout = () => {
-        setShowLogoutModal(false);
-        localStorage.removeItem("isAdminLoggedIn");
-        localStorage.removeItem("authRole");
-        navigate("/login");
     };
 
     const role = localStorage.getItem("authRole") || "superadmin";
@@ -36,12 +27,9 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
         { path: "/lost-found", icon: SearchCheck, label: "Lost and Found", roles: ["superadmin"] },
         { path: "/reports", icon: FileText, label: "Reports", roles: ["superadmin"] },
         { path: "/notifications", icon: AlertTriangle, label: "Notifications", roles: ["parking", "superadmin"] },
+        { path: "/settings", icon: Manage, label: "Manage Employee", roles: ["superadmin"] },
     ];
     const menuItems = allMenus.filter((m) => m.roles.includes(role));
-
-    const bottomMenuItems = [
-        { path: "/settings", icon: Settings, label: "Settings", roles: ["superadmin"] },
-    ].filter((m) => (m.roles ? m.roles.includes(role) : true));
 
     return (
         <>
@@ -131,79 +119,8 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
                             )}
                         </NavLink>
                     ))}
-
-                    {sidebarExpanded ? (
-                        <div className="mt-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md">
-                                    A
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 truncate">
-                                        {role === "parking" ? "Parking Admin" : "Admin User"}
-                                    </p>
-                                    <p className="text-xs text-gray-500 truncate">
-                                        {role === "parking" ? "parkingadmin@example.com" : "admin@gmail.com"}
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => setShowLogoutModal(true)}
-                                    className="p-1.5 hover:bg-gray-200 rounded-lg transition-all"
-                                    title="Logout"
-                                >
-                                    <LogOut size={16} className="text-gray-600" />
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="mt-4 flex justify-center">
-                            <div
-                                className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md cursor-pointer hover:shadow-lg transition-all hover:scale-105"
-                                onClick={() => setShowLogoutModal(true)}
-                                title="Logout"
-                            >
-                                <LogOut size={18} />
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
-
-            {showLogoutModal && (
-                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
-                    <div className="bg-white rounded-2xl shadow-xl w-80 p-6 relative">
-                        <button
-                            onClick={() => setShowLogoutModal(false)}
-                            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-                        >
-                            <X size={18} />
-                        </button>
-                        <div className="flex flex-col items-center text-center">
-                            <AlertTriangle className="text-amber-500 mb-3" size={40} />
-                            <h2 className="text-lg font-semibold text-gray-800 mb-2">
-                                Confirm Logout
-                            </h2>
-                            <p className="text-sm text-gray-500 mb-5">
-                                Are you sure you want to log out of your account?
-                            </p>
-                            <div className="flex space-x-3">
-                                <button
-                                    onClick={() => setShowLogoutModal(false)}
-                                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleLogout}
-                                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-600 text-white hover:opacity-90 transition-all"
-                                >
-                                    Yes, Logout
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 };

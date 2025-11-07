@@ -60,7 +60,7 @@ export default function Settings() {
     };
 
     return (
-        <Layout title="Settings">
+        <Layout title="Manage Employees">
             {!isSuperAdmin ? (
                 <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">Only Super Admin can access settings.</div>
             ) : (

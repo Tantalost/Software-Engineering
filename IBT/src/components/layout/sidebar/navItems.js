@@ -6,7 +6,7 @@ import {
   SearchCheck,
   FileText,
   Bus,
-  Settings,
+  Manage,
 } from "lucide-react";
 
 export const menuItems = [
