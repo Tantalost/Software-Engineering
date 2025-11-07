@@ -18,7 +18,7 @@ const BusParkingFilters = ({
 
   return (
     <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full">
-      {/* 🔍 Search */}
+      
       <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
         <input
           type="text"
@@ -29,7 +29,7 @@ const BusParkingFilters = ({
         />
       </div>
 
-      {/* 🏢 Company Filter */}
+     
       {showCompany && (
         <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
           <label className="text-gray-500 text-sm mr-2 whitespace-nowrap">
@@ -50,7 +50,7 @@ const BusParkingFilters = ({
         </div>
       )}
 
-      {/* 📅 Date Picker */}
+     
       {showDate && (
         <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
           <label className="text-gray-500 text-sm mr-2">Date:</label>
@@ -63,7 +63,7 @@ const BusParkingFilters = ({
         </div>
       )}
 
-      {/* 🕒 Period Buttons */}
+     
       {showPeriod && (
         <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm gap-2 flex-grow sm:flex-none w-full sm:w-auto">
           <label className="text-gray-500 text-sm mr-2 whitespace-nowrap">
