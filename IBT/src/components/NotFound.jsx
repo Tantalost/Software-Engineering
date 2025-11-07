@@ -1,6 +1,10 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 const NotFound = () => {
+    useEffect(() => {
+        document.title = "404 - Page Not Found";
+    }, []);
+
     return (
         <div class="mt-50 flex flex-col items-center justify-center text-sm max-md:px-4">
             <h1 class="text-8xl md:text-9xl font-bold text-indigo-500">404</h1>

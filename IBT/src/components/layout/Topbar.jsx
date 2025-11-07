@@ -145,7 +145,6 @@ const Topbar = ({ title, onMenuClick }) => {
         </div>
       </div>
 
-      {/* 🔐 Logout Confirmation Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
           <div className="bg-white rounded-2xl shadow-xl w-80 p-6 relative">

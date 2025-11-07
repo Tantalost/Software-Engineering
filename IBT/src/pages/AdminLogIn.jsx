@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield } from "lucide-react";
 import LoginBackground from "../components/login/LoginBackground";
@@ -11,6 +11,10 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = "Login";
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();

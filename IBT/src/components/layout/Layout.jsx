@@ -1,10 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../layout/sidebar/Sidebar";
 import Topbar from "./Topbar";
 
 const Layout = ({ title, children }) => {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true); 
-  const [mobileOpen, setMobileOpen] = useState(false); 
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (title) {
+      document.title = `${title}`;
+    } else {
+      document.title = "IBT Management";
+    }
+  }, [title]);
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 relative overflow-hidden">

@@ -22,7 +22,7 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
           <p className="text-sm text-gray-500 mb-5">
             Are you sure you want to log out of your account?
           </p>
-          <div className="flex space-x-3">
+          <div className="flex space-x-3" >
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-all"
