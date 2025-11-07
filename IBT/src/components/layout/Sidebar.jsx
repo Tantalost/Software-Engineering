@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
     Menu, Home, Ticket, CircleParking, Store,
-    SearchCheck, Users, FileText, Bus,
-    X, AlertTriangle
+    SearchCheck, FileText, Bus,
+    AlertTriangle
 } from "lucide-react";
 
 const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
