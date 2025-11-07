@@ -5,7 +5,7 @@ const PeriodFilter = ({ selectedPeriod, setSelectedPeriod }) => {
 
   return (
     <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-2 w-full mt-2">
-      <label className="text-gray-600 text-sm font-medium">Period:</label>
+      <label className="text-gray-600 text-sm font-medium">Timeline:</label>
       <div className="flex gap-2">
         {periods.map((p) => (
           <button
@@ -13,7 +13,7 @@ const PeriodFilter = ({ selectedPeriod, setSelectedPeriod }) => {
             onClick={() => setSelectedPeriod(selectedPeriod === p ? "" : p)}
             className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${
               selectedPeriod === p
-                ? "bg-emerald-500 text-white border-emerald-500"
+                ? "text-white bg-gradient-to-r from-emerald-500 to-cyan-500"
                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
             }`}
           >

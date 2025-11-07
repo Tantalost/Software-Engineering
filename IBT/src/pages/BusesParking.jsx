@@ -99,37 +99,35 @@ const BusesParking = () => {
             uniqueCompanies={uniqueCompanies}
           />
 
-         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 w-full">
-         <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-3">
-         <div className="w-full sm:w-auto">
-         <PeriodFilter
-            selectedPeriod={selectedPeriod}
-            setSelectedPeriod={setSelectedPeriod}
-         />
-  </div>
-    <button
-      onClick={() => setShowPreview(true)}
-      className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
-    >
-      <MessageSquareText />
-    </button>
-    <button
-      onClick={() => setShowPreview(true)}
-      className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
-    >
-      + Add New
-    </button>
-    <ExportMenu
-      onExportCSV={handleExportCSV}
-      onExportExcel={handleExportExcel}
-      onExportPDF={handleExportPDF}
-      onPrint={handlePrint}
-    />
-  </div>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 w-full">
+            <div className="w-full sm:w-auto">
+              <PeriodFilter
+                selectedPeriod={selectedPeriod}
+                setSelectedPeriod={setSelectedPeriod}
+              />
+            </div>
 
-  {/* Right side - Period Filter */}
- 
-</div>
+            <div className="flex justify-end w-full sm:w-auto gap-3">
+              <button
+                onClick={() => setShowPreview(true)}
+                 className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto" >
+                  <MessageSquareText />
+              </button>
+
+              <button
+                onClick={() => setShowPreview(true)}
+                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
+                + Add New
+              </button>
+
+              <ExportMenu
+                onExportCSV={handleExportCSV}
+                onExportExcel={handleExportExcel}
+                onExportPDF={handleExportPDF}
+                onPrint={handlePrint}
+              />
+            </div>
+          </div>
 
         </div>
       </div>
