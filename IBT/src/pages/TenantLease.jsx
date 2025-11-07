@@ -76,21 +76,19 @@ const TenantLease = () => {
           <div className="flex flex-col sm:flex-row bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200 w-full sm:w-auto">
             <button
               onClick={() => setActiveTab("permanent")}
-              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 ${
-                activeTab === "permanent"
+              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 ${activeTab === "permanent"
                   ? "bg-white text-emerald-700 shadow-md"
                   : "text-emerald-600 hover:text-emerald-700"
-              }`}
+                }`}
             >
               Permanent
             </button>
             <button
               onClick={() => setActiveTab("night")}
-              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 ${
-                activeTab === "night"
+              className={`w-full sm:w-auto px-5 sm:px-6 py-3 sm:py-2 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 ${activeTab === "night"
                   ? "bg-white text-emerald-700 shadow-md"
                   : "text-emerald-600 hover:text-emerald-700"
-              }`}
+                }`}
             >
               Night Market
             </button>
@@ -211,12 +209,12 @@ const Field = ({ label, value }) => (
 const EditTenantLease = ({ row, onClose, onSave }) => {
   const [form, setForm] = React.useState({
     id: row.id,
-    slotno: row.slotno, 
-    referenceno: row.referenceNo, 
-    name: row.name, 
-    email: row.email, 
-    contact: row.contact, 
-    date: row.date, 
+    slotno: row.slotno,
+    referenceno: row.referenceNo,
+    name: row.name,
+    email: row.email,
+    contact: row.contact,
+    date: row.date,
     status: row.status,
   });
 
@@ -236,9 +234,28 @@ const EditTenantLease = ({ row, onClose, onSave }) => {
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({ id: form.id, slotno: form.slotno, referenceno: form.referenceNo, name: form.name, email: form.email, contact: form.contact, date: form.date, status: form .status, })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
+          <button onClick={() => onSave({ id: form.id, slotno: form.slotno, referenceno: form.referenceNo, name: form.name, email: form.email, contact: form.contact, date: form.date, status: form.status, })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
         </div>
       </div>
     </div>
+  );
+};
+
+
+const Input = ({ label, value, onChange, type = "text" }) => (
+  <div>
+    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
+  </div>
+);
+
+const Select = ({ label, value, onChange, options = [] }) => (
+  <div>
+    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+    <select value={value} onChange={onChange} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none">
+      {options.map((opt) => (
+        <option key={opt} value={opt}>{opt}</option>
+      ))}
+    </select>
   </div>
 );
