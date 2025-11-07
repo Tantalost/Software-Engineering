@@ -11,7 +11,7 @@ import {
 
 export const menuItems = [
   { path: "/dashboard", icon: Home, label: "Dashboard" },
-  { path: "/buses-trips", icon: Bus, label: "Bus Trips" },
+  { path: "/buses-parking", icon: Bus, label: "Buses" },
   { path: "/tickets", icon: Ticket, label: "Tickets" },
   { path: "/tenant-lease", icon: Store, label: "Tenants/Lease" },
   { path: "/parking", icon: CircleParking, label: "Parking" },

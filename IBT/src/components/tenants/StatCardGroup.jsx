@@ -1,5 +1,5 @@
 import React from "react";
-import StatCard from "../common/StatCard";
+import StatCard from "./StatCard";
 import { CheckCircle, XCircle, Grid } from "lucide-react";
 
 const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots }) => {
