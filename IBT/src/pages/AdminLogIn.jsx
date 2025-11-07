@@ -18,11 +18,29 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     setTimeout(() => {
-      if (email === "admin@example.com" && password === "admin123") {
-        localStorage.setItem("isAdminLoggedIn", "true");
-        navigate("/dashboard");
-      } else {
-        setError("Invalid credentials. Please try again.");
+      try {
+        const key = "ibt_admins";
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          localStorage.setItem(key, JSON.stringify([
+            { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin" },
+            { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking" },
+          ]));
+        }
+      } catch { }
+
+      try {
+        const admins = JSON.parse(localStorage.getItem("ibt_admins")) || [];
+        const found = admins.find((a) => a.email === email && a.password === password);
+        if (found) {
+          localStorage.setItem("isAdminLoggedIn", "true");
+          localStorage.setItem("authRole", found.role);
+          navigate(found.role === "parking" ? "/parking" : "/dashboard");
+        } else {
+          setError("Invalid credentials. Please try again.");
+        }
+      } catch {
+        setError("Login system error. Please try again.");
       }
       setIsLoading(false);
     }, 1500);

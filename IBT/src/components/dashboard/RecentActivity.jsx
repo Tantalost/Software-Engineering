@@ -13,7 +13,7 @@ const RecentActivity = () => {
       icon: FileCheck,
       type: "success",
       user: "Inspector Lee",
-      link: "/buses-parking", 
+      link: "/buses-trips", 
     },
     {
       id: 2,

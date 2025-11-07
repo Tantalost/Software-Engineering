@@ -3,9 +3,8 @@ import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusParkingFilters from "../components/common/BusParkingFilters";
-import PeriodFilter from "../components/common/PeriodFilter";
 import { busSchedules } from "../data/assets";
-import {MessageSquareText} from "lucide-react";
+import { MessageSquareText } from "lucide-react";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 
@@ -13,7 +12,6 @@ const BusesParking = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
-  const [selectedPeriod, setSelectedPeriod] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
@@ -37,33 +35,7 @@ const BusesParking = () => {
     localStorage.setItem("ibt_busesParking", JSON.stringify(next));
   };
 
-   const isInPeriod = (busDate, period) => {
-    const date = new Date(busDate);
-    const now = new Date();
-
-    if (period === "This Week") {
-      const start = new Date(now);
-      start.setDate(now.getDate() - now.getDay()); 
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6); 
-      return date >= start && date <= end;
-    }
-
-    if (period === "This Month") {
-      return (
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-      );
-    }
-
-    if (period === "This Year") {
-      return date.getFullYear() === now.getFullYear();
-    }
-
-    return true;
-   };
-
-   const filtered = busSchedules.filter((bus) => {
+  const filtered = busSchedules.filter((bus) => {
     const matchesSearch =
       bus.templateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bus.route.toLowerCase().includes(searchQuery.toLowerCase());
@@ -75,9 +47,7 @@ const BusesParking = () => {
       !selectedDate ||
       new Date(bus.date).toDateString() === new Date(selectedDate).toDateString();
 
-    const matchesPeriod = !selectedPeriod || isInPeriod(bus.date, selectedPeriod);
-
-    return matchesSearch && matchesCompany && matchesDate && matchesPeriod;
+    return matchesSearch && matchesCompany && matchesDate;
   });
 
   const handleExportCSV = () => console.log("Exported Buses Parking to CSV");
@@ -99,36 +69,25 @@ const BusesParking = () => {
             uniqueCompanies={uniqueCompanies}
           />
 
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 w-full">
-            <div className="w-full sm:w-auto">
-              <PeriodFilter
-                selectedPeriod={selectedPeriod}
-                setSelectedPeriod={setSelectedPeriod}
-              />
-            </div>
-
-            <div className="flex justify-end w-full sm:w-auto gap-3">
-              <button
-                onClick={() => setShowPreview(true)}
-                 className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto" >
-                  <MessageSquareText />
-              </button>
-
-              <button
-                onClick={() => setShowPreview(true)}
-                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
-                + Add New
-              </button>
-
-              <ExportMenu
-                onExportCSV={handleExportCSV}
-                onExportExcel={handleExportExcel}
-                onExportPDF={handleExportPDF}
-                onPrint={handlePrint}
-              />
-            </div>
+          <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-3">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
+              <MessageSquareText></MessageSquareText>
+            </button>
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+            >
+              + Add New
+            </button>
+            <ExportMenu
+              onExportCSV={handleExportCSV}
+              onExportExcel={handleExportExcel}
+              onExportPDF={handleExportPDF}
+              onPrint={handlePrint}
+            />
           </div>
-
         </div>
       </div>
 

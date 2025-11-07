@@ -57,7 +57,7 @@ function FieldPreview({ field, onEdit }) {
     );
 }
 
-export default function FormPreview({ title = "Form Preview", fields = [], onEdit }) {
+export default function Form({ title = "Form Preview", fields = [], onEdit }) {
     return (
         <div className="w-full rounded-xl border border-slate-200 bg-white shadow">
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
