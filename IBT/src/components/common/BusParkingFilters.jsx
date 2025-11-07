@@ -1,5 +1,4 @@
 import React from "react";
-import PeriodFilter from "./PeriodFilter"; 
 
 const BusParkingFilters = ({
   searchQuery,
@@ -9,15 +8,13 @@ const BusParkingFilters = ({
   uniqueCompanies = [],
   selectedDate,
   setSelectedDate,
-  selectedPeriod,
-  setSelectedPeriod,
   showCompany = true,
   showDate = true,
-  showPeriod = true,
+
 }) => {
   return (
     <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full">
-      <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
+      <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm w-full sm:w-auto">
         <input
           type="text"
           placeholder="Search..."
@@ -28,7 +25,7 @@ const BusParkingFilters = ({
       </div>
 
       {showCompany && (
-        <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
+        <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm w-full sm:w-auto">
           <label className="text-gray-500 text-sm mr-2 whitespace-nowrap">
             Company:
           </label>
@@ -48,7 +45,7 @@ const BusParkingFilters = ({
       )}
 
       {showDate && (
-        <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
+        <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm w-full sm:w-auto">
           <label className="text-gray-500 text-sm mr-2">Date:</label>
           <input
             type="date"
@@ -59,12 +56,6 @@ const BusParkingFilters = ({
         </div>
       )}
 
-      {showPeriod && (
-        <PeriodFilter
-          selectedPeriod={selectedPeriod}
-          setSelectedPeriod={setSelectedPeriod}
-        />
-      )}
     </div>
   );
 };
