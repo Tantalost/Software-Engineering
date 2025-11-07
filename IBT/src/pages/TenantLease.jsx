@@ -6,6 +6,7 @@ import Table from "../components/common/Table";
 import { tenants } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
+import DatePickerInput from "../components/common/DatePickerInput";
 
 
 const TenantLease = () => {
@@ -106,13 +107,13 @@ const TenantLease = () => {
       <Table
         columns={["Slot No", "Reference No", "Name", "Email", "Contact", "Date", "Status",]}
         data={filtered.map((t) => ({
-          id: t.id , 
-          slotno: t.slotNo, 
-          referenceno: t.referenceNo, 
-          name: t.name, 
-          email: t.email, 
-          contact: t.contact, 
-          date: t.date, 
+          id: t.id,
+          slotno: t.slotNo,
+          referenceno: t.referenceNo,
+          name: t.name,
+          email: t.email,
+          contact: t.contact,
+          date: t.date,
           status: t.status,
         }))}
         actions={(row) => (
@@ -224,13 +225,13 @@ const Field = ({ label, value }) => (
 
 const EditTerminalFees = ({ row, onClose, onSave }) => {
   const [form, setForm] = useState({
-    id: row.id , 
-    slotno: row.slotNo, 
-    referenceno: row.referenceNo, 
-    name: row.name, 
-    email: row.email, 
-    contact: row.contact, 
-    date: row.date, 
+    id: row.id,
+    slotno: row.slotNo,
+    referenceno: row.referenceNo,
+    name: row.name,
+    email: row.email,
+    contact: row.contact,
+    date: row.date,
     status: row.status,
   });
 
@@ -246,19 +247,19 @@ const EditTerminalFees = ({ row, onClose, onSave }) => {
           <Input label="Name" value={form.name} onChange={(e) => set("name", e.target.value)} />
           <Input label="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
           <Input label="Contact" value={form.contact} onChange={(e) => set("contact", e.target.value)} />
-          <Input label="Date" type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+          <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
           <Input label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} />
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
           <button onClick={() => onSave({
             id: form.id,
-            slotno: form.slotNo, 
-            referenceno: form.referenceNo, 
-            name: form.name, 
-            email: form.email, 
-            contact: form.contact, 
-            date: form.date, 
+            slotno: form.slotNo,
+            referenceno: form.referenceNo,
+            name: form.name,
+            email: form.email,
+            contact: form.contact,
+            date: form.date,
             status: form.status,
           })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
         </div>

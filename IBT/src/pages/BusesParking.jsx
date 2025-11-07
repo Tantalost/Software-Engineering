@@ -7,6 +7,7 @@ import { busSchedules } from "../data/assets";
 import { MessageSquareText } from "lucide-react";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
+import DatePickerInput from "../components/common/DatePickerInput";
 
 const BusesParking = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -268,9 +269,8 @@ const EditBusParking = ({ row, onClose, onSave }) => {
             value={form.time}
             onChange={(e) => set("time", e.target.value)}
           />
-          <Input
+          <DatePickerInput
             label="Date"
-            type="date"
             value={form.date}
             onChange={(e) => set("date", e.target.value)}
           />

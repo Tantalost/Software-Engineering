@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Layout from "../components/layout/Layout";
-import FilterBar from "../components/common/FilterBar";
-import ExportMenu from "../components/common/ExportMenu";
+import FilterBar from "../components/common/Filterbar";
+import ExportMenu from "../components/common/exportMenu";
 import StatCards from "../components/common/StatCards";
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
@@ -10,6 +10,7 @@ import EditModal from "../components/common/EditModal";
 import DeleteModal from "../components/common/DeleteModal";
 import InputField from "../components/common/InputField";
 import SelectField from "../components/common/SelectField";
+import DatePickerInput from "../components/common/DatePickerInput";
 import { tickets } from "../data/assets";
 import {
   User,
@@ -32,7 +33,7 @@ const TerminalFees = () => {
       .includes(searchQuery.toLowerCase());
     const matchesDate = selectedDate
       ? new Date(fee.date).toDateString() ===
-        new Date(selectedDate).toDateString()
+      new Date(selectedDate).toDateString()
       : true;
     return matchesSearch && matchesDate;
   });
@@ -156,9 +157,8 @@ const TerminalFees = () => {
                 value={form.time}
                 onChange={(e) => set("time", e.target.value)}
               />
-              <InputField
+              <DatePickerInput
                 label="Date"
-                type="date"
                 value={form.date}
                 onChange={(e) => set("date", e.target.value)}
               />

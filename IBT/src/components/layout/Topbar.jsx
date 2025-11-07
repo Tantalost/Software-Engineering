@@ -54,11 +54,10 @@ const Topbar = ({ title, onMenuClick }) => {
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* 🔔 Notifications */}
               <div className="hidden sm:block relative" ref={bellRef}>
                 <button
                   onClick={() => setShowBell((s) => !s)}
-                  className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative"
+                  className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative cursor-pointer"
                 >
                   <Bell size={22} className="text-gray-600" />
                   {notifications.length > 0 && (
@@ -87,7 +86,7 @@ const Topbar = ({ title, onMenuClick }) => {
                         setShowBell(false);
                         navigate("/notifications");
                       }}
-                      className="w-full text-center text-sm font-medium text-emerald-700 hover:bg-emerald-50 py-2 border-t"
+                      className="w-full text-center text-sm font-medium text-emerald-700 hover:bg-emerald-50 py-2 border-t cursor-pointer"
                     >
                       View All
                     </button>
@@ -95,11 +94,10 @@ const Topbar = ({ title, onMenuClick }) => {
                 )}
               </div>
 
-              {/* 👤 User Dropdown */}
               <div className="hidden md:block relative" ref={userRef}>
                 <button
                   onClick={() => setShowUser((s) => !s)}
-                  className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 shadow-sm"
+                  className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 shadow-sm cursor-pointer"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">
                     A

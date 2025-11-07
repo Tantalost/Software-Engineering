@@ -6,6 +6,7 @@ import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import { reports } from "../data/assets";
 import Form from "../components/common/Form";
+import DatePickerInput from "../components/common/DatePickerInput";
 
 const Reports = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -193,7 +194,7 @@ const EditReport = ({ row, onClose, onSave }) => {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Input label="Type" value={form.type} onChange={(e) => set("type", e.target.value)} />
           <Input label="Author" value={form.author} onChange={(e) => set("author", e.target.value)} />
-          <Input label="Date" type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+          <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
           <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Pending", "Completed", "Draft", "Submitted"]} />
         </div>
         <div className="mt-4 flex justify-end gap-2">

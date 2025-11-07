@@ -6,6 +6,7 @@ import Table from "../components/common/Table";
 import { parkingTickets } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
+import DatePickerInput from "../components/common/DatePickerInput";
 
 const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +42,7 @@ const Parking = () => {
     const matchesDate =
       !selectedDate ||
       new Date(ticket.date).toDateString() ===
-        new Date(selectedDate).toDateString();
+      new Date(selectedDate).toDateString();
 
     return matchesSearch && matchesDate;
   });
@@ -169,7 +170,7 @@ const Parking = () => {
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0,10), source: "Parking" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
+              <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Parking" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
             </div>
           </div>
         </div>
@@ -229,7 +230,7 @@ const EditParking = ({ row, onClose, onSave }) => {
           <Input label="Price" type="number" value={form.price} onChange={(e) => set("price", Number(e.target.value))} />
           <Input label="Time" value={form.time} onChange={(e) => set("time", e.target.value)} />
           <Input label="Duration" value={form.duration} onChange={(e) => set("duration", e.target.value)} />
-          <Input label="Date" type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+          <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
           <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Active", "Completed", "Inactive"]} />
         </div>
         <div className="mt-4 flex justify-end gap-2">

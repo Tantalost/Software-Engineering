@@ -6,6 +6,7 @@ import BusTripFilters from "../components/common/BusTripFilters";
 import { busSchedules } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
+import DatePickerInput from "../components/common/DatePickerInput";
 
 const BusTrips = () => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -227,7 +228,7 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                     <Input label="Template No" value={form.templateNo} onChange={(e) => set("templateNo", e.target.value)} />
                     <Input label="Route" value={form.route} onChange={(e) => set("route", e.target.value)} />
                     <Input label="Time" value={form.time} onChange={(e) => set("time", e.target.value)} />
-                    <Input label="Date" type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
+                    <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
                     <Input label="Company" value={form.company} onChange={(e) => set("company", e.target.value)} />
                     <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Paid", "Pending", "Inactive", "Active"]} />
                 </div>
