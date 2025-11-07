@@ -226,7 +226,7 @@ const EditTenantLease = ({ row, onClose, onSave }) => {
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({ id: t.id, slotno: t.slotNo, referenceno: t.referenceNo, name: t.name, email: t.email, contact: t.contact, date: t.date, status: t.status, })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
+          <button onClick={() => onSave({ id: form.id, slotno: form.slotno, referenceno: form.referenceNo, name: form.name, email: form.email, contact: form.contact, date: form.date, status: form .status, })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
         </div>
       </div>
     </div>
