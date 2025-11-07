@@ -3,7 +3,7 @@ import Sidebar from "../layout/sidebar/Sidebar";
 import Topbar from "./Topbar";
 
 const Layout = ({ title, children }) => {
-  const [sidebarExpanded, setSidebarExpanded] = useState(false); 
+  const [sidebarExpanded, setSidebarExpanded] = useState(true); 
   const [mobileOpen, setMobileOpen] = useState(false); 
 
   return (
