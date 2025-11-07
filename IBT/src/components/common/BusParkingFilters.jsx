@@ -1,4 +1,5 @@
 import React from "react";
+import PeriodFilter from "./PeriodFilter"; 
 
 const BusParkingFilters = ({
   searchQuery,
@@ -10,6 +11,7 @@ const BusParkingFilters = ({
   setSelectedDate,
   showCompany = true,
   showDate = true,
+  showPeriod = true,
 
 }) => {
   return (
@@ -56,6 +58,12 @@ const BusParkingFilters = ({
         </div>
       )}
 
+      {showPeriod && (
+        <PeriodFilter
+          selectedPeriod={selectedPeriod}
+          setSelectedPeriod={setSelectedPeriod}
+        />
+      )}
     </div>
   );
 };
