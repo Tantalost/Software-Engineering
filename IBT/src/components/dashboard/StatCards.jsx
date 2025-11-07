@@ -1,11 +1,12 @@
 import React from "react";
+import { TrendingUp, TrendingDown } from "lucide-react"; 
 
 const StatCards = ({ statsData }) => {
   const defaultStats = [
-    { label: "Tickets", value: "5,768", change: "+10%", subtitle: "From last month", color: "red" },
-    { label: "Bus", value: "5,768", change: "+10%", subtitle: "From last month", color: "yellow" },
-    { label: "Tenants/Lease", value: "5,768", change: "+10%", subtitle: "From last month", color: "green" },
-    { label: "Parking", value: "5,768", change: "+10%", subtitle: "From last month", color: "blue" },
+    { label: "Tickets", value: "5,768", change: "10%", subtitle: "From last month", color: "red" },
+    { label: "Bus", value: "5,768", change: "5%", subtitle: "From last month", color: "yellow" },
+    { label: "Tenants/Lease", value: "5,768", change: "8%", subtitle: "From last month", color: "green" },
+    { label: "Parking", value: "5,768", change: "2%", subtitle: "From last month", color: "blue" },
   ];
 
   const stats = statsData && statsData.length > 0 ? statsData : defaultStats;
@@ -16,35 +17,34 @@ const StatCards = ({ statsData }) => {
       bgMedium: "bg-red-200",
       bgStrong: "bg-red-300",
       bgCircle: "bg-red-400",
-      text: "text-red-700",
     },
     yellow: {
       bgLight: "bg-yellow-100",
       bgMedium: "bg-yellow-200",
       bgStrong: "bg-yellow-300",
       bgCircle: "bg-yellow-400",
-      text: "text-yellow-700",
     },
     green: {
       bgLight: "bg-green-100",
       bgMedium: "bg-green-200",
       bgStrong: "bg-green-300",
       bgCircle: "bg-green-400",
-      text: "text-green-700",
     },
     blue: {
       bgLight: "bg-blue-100",
       bgMedium: "bg-blue-200",
       bgStrong: "bg-blue-300",
       bgCircle: "bg-blue-400",
-      text: "text-blue-700",
     },
   };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
       {stats.map((stat, idx) => {
-        const color = colorMap[stat.color] || colorMap.red; 
+        const color = colorMap[stat.color] || colorMap.red;
+        const isPositive = stat.change.startsWith("+");
+        const cleanChange = stat.change.replace("+", "").replace("-", "");
+
         return (
           <div
             key={idx}
@@ -64,8 +64,24 @@ const StatCards = ({ statsData }) => {
               </div>
 
               <div className="flex items-center space-x-3">
-                <span className={`px-3 py-1.5 ${color.bgLight} ${color.text} text-sm font-bold rounded-lg`}>
-                  {stat.change}
+                <span
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-bold ${
+                    isPositive
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {isPositive ? (
+                    <>
+                      <TrendingUp size={16} />
+                      {cleanChange}
+                    </>
+                  ) : (
+                    <>
+                      <TrendingDown size={16} />
+                       {cleanChange}
+                    </>
+                  )}
                 </span>
                 <span className="text-gray-500 text-sm font-medium">{stat.subtitle}</span>
               </div>
