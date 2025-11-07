@@ -8,6 +8,7 @@ import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
+import { MessageSquare } from "lucide-react";
 
 
 const TenantLease = () => {
@@ -22,6 +23,8 @@ const TenantLease = () => {
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [remarksRow, setRemarksRow] = useState(null);
+  const [remarksText, setRemarksText] = useState("");
   const role = localStorage.getItem("authRole") || "superadmin";
 
   const loadStored = () => {
@@ -128,11 +131,27 @@ const TenantLease = () => {
           status: t.status,
         }))}
         actions={(row) => (
-          <TableActions
-            onView={() => setViewRow(row)}
-            onEdit={() => setEditRow(row)}
-            onDelete={() => setDeleteRow(row)}
-          />
+          <div className="flex justify-end items-center space-x-2">
+            <TableActions
+              onView={() => setViewRow(row)}
+              onEdit={() => setEditRow(row)}
+              onDelete={() => setDeleteRow(row)}
+            />
+            {role === "superadmin" && (
+              <button
+                onClick={() => {
+                  const storedRemarks = localStorage.getItem("ibt_tenantRemarks");
+                  const remarks = storedRemarks ? JSON.parse(storedRemarks) : {};
+                  setRemarksText(remarks[row.id] || "");
+                  setRemarksRow(row);
+                }}
+                title="Remarks"
+                className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"
+              >
+                <MessageSquare size={16} />
+              </button>
+            )}
+          </div>
         )}
       />
       <Pagination
@@ -229,6 +248,49 @@ const TenantLease = () => {
             <div className="mt-3 flex justify-end">
               <button onClick={() => setShowPreview(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {remarksRow && role === "superadmin" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
+            <h3 className="mb-4 text-base font-semibold text-slate-800">Add Remarks</h3>
+            <div className="mb-4">
+              <div className="text-xs text-slate-500 mb-2">Tenant: {remarksRow.name} ({remarksRow.referenceno})</div>
+            </div>
+            <div className="space-y-3">
+              <Textarea
+                label="Remarks"
+                value={remarksText}
+                onChange={(e) => setRemarksText(e.target.value)}
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setRemarksRow(null);
+                  setRemarksText("");
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const storedRemarks = localStorage.getItem("ibt_tenantRemarks");
+                  const remarks = storedRemarks ? JSON.parse(storedRemarks) : {};
+                  remarks[remarksRow.id] = remarksText;
+                  localStorage.setItem("ibt_tenantRemarks", JSON.stringify(remarks));
+                  setRemarksRow(null);
+                  setRemarksText("");
+                  alert("Remarks saved successfully!");
+                }}
+                className="rounded-lg bg-amber-600 px-3 py-2 text-sm text-white shadow hover:bg-amber-700"
+              >
+                Save Remarks
               </button>
             </div>
           </div>
