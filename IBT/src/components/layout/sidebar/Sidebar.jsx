@@ -12,6 +12,8 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  const role = localStorage.getItem("authRole") || "superadmin";
+
   const handleMenuClick = () => {
     setSidebarExpanded(!sidebarExpanded);
     if (window.innerWidth < 1024 && onMobileClose) {
@@ -23,6 +25,14 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
     setShowLogoutModal(false);
     navigate("/login");
   };
+
+  const filteredMenuItems = menuItems.filter((item) => 
+    !item.roles || item.roles.includes(role)
+  );
+  
+  const filteredBottomMenuItems = bottomMenuItems.filter((item) => 
+    !item.roles || item.roles.includes(role)
+  );
 
   return (
     <>
@@ -38,7 +48,7 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
 
         <div className="flex-1 overflow-y-auto py-4 px-3">
           <SidebarNav
-            items={menuItems}
+            items={filteredMenuItems}
             sidebarExpanded={sidebarExpanded}
             location={location}
             onLinkClick={onMobileClose}
@@ -46,11 +56,13 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
         </div>
 
         <div className="border-t border-gray-200 p-3 space-y-1">
-          <SidebarFooterNav
-            items={bottomMenuItems}
-            sidebarExpanded={sidebarExpanded}
-            onLinkClick={onMobileClose}
-          />
+          {filteredBottomMenuItems.length > 0 && (
+            <SidebarFooterNav
+              items={filteredBottomMenuItems}
+              sidebarExpanded={sidebarExpanded}
+              onLinkClick={onMobileClose}
+            />
+          )}
           <UserProfile
             sidebarExpanded={sidebarExpanded}
             onLogoutClick={() => setShowLogoutModal(true)}

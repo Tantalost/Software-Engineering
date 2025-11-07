@@ -20,7 +20,7 @@ const ensureDefaultAdmins = () => {
     }
 };
 
-export default function Settings() {
+export default function EmployeeManage() {
     const [admins, setAdmins] = useState(() => ensureDefaultAdmins());
     const [showCreate, setShowCreate] = useState(false);
     const [createForm, setCreateForm] = useState({ email: "", password: "", role: "parking" });
@@ -62,7 +62,7 @@ export default function Settings() {
     return (
         <Layout title="Manage Employees">
             {!isSuperAdmin ? (
-                <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">Only Super Admin can access settings.</div>
+                <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">Only Super Admin can access this.</div>
             ) : (
                 <div className="space-y-8">
                     <section className="space-y-4">

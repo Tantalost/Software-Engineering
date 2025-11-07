@@ -124,7 +124,7 @@ const Topbar = ({ title, onMenuClick }) => {
                       <button
                         onClick={() => {
                           setShowUser(false);
-                          navigate("/settings");
+                          navigate("/employee-management");
                         }}
                         className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
                       >

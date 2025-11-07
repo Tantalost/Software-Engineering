@@ -10,7 +10,7 @@ import LostFound from "./pages/LostFound";
 import Reports from "./pages/Reports";
 import NotFound from "./components/NotFound";
 import Notifications from "./pages/Notifications";
-import Settings from "./pages/Settings";
+import EmployeeManage from "./pages/EmployeeManage";
 
 const PrivateRoute = ({ children, allowedRoles }) => {
   const isLoggedIn = localStorage.getItem("isAdminLoggedIn") === "true";
@@ -33,7 +33,7 @@ export default function App() {
       <Route path="/tenant-lease" element={<PrivateRoute allowedRoles={["superadmin"]}> <TenantLease /> </PrivateRoute>} />
       <Route path="/lost-found" element={<PrivateRoute allowedRoles={["superadmin"]}> <LostFound /> </PrivateRoute>} />
       <Route path="/reports" element={<PrivateRoute allowedRoles={["superadmin"]}> <Reports /> </PrivateRoute>} />
-      <Route path="/settings" element={<PrivateRoute allowedRoles={["superadmin"]}> <Settings /> </PrivateRoute>} />
+      <Route path="/employee-management" element={<PrivateRoute allowedRoles={["superadmin"]}> <EmployeeManage /> </PrivateRoute>} />
 
       {/* Parking admin restricted access */}
       <Route path="/parking" element={<PrivateRoute allowedRoles={["superadmin", "parking"]}> <Parking /> </PrivateRoute>} />

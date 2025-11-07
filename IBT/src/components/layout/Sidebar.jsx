@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
     Menu, Home, Ticket, CircleParking, Store,
-    SearchCheck, LogOut, Settings, FileText, Bus,
+    SearchCheck, Users, FileText, Bus,
     X, AlertTriangle
 } from "lucide-react";
 
@@ -27,7 +27,7 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
         { path: "/lost-found", icon: SearchCheck, label: "Lost and Found", roles: ["superadmin"] },
         { path: "/reports", icon: FileText, label: "Reports", roles: ["superadmin"] },
         { path: "/notifications", icon: AlertTriangle, label: "Notifications", roles: ["parking", "superadmin"] },
-        { path: "/settings", icon: Manage, label: "Manage Employee", roles: ["superadmin"] },
+        { path: "/employee-management", icon: Manage, label: "Manage Employee", roles: ["superadmin"] },
     ];
     const menuItems = allMenus.filter((m) => m.roles.includes(role));
 
