@@ -5,7 +5,10 @@ import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import StatCards from "../components/common/StatCards";
 import { tickets } from "../data/assets";
-import { User, GraduationCap, HeartPulse, Users } from "lucide-react";
+import { User, GraduationCap, HeartPulse, Users,  } from "lucide-react";
+import {MessageSquareText} from "lucide-react";
+import TableActions from "../components/common/TableActions";
+
 
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,9 +21,9 @@ const TerminalFees = () => {
   const loadStored = () => {
     try {
       const raw = localStorage.getItem("ibt_lostFound");
-      return raw ? JSON.parse(raw) : lostFoundItems;
+      return raw ? JSON.parse(raw) : tickets;
     } catch (e) {
-      return lostFoundItems;
+      return tickets;
     }
   };
   const [records, setRecords] = useState(loadStored());
