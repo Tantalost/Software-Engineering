@@ -31,9 +31,65 @@ const OperationsAnalytics = () => {
     { label: "Tickets", value: "3,380", color: "red", trend: "+12%" },
     { label: "Bus", value: "1,200", color: "orange", trend: "+5%" },
     { label: "Tenants", value: "2,630", color: "green", trend: "+8%" },
-    { label: "Parking", value: "2,390", color: "cyan", trend: "+15%" },
+    { label: "Parking", value: "2,390", color: "#22d3ee", trend: "+15%" },
     { label: "Lost & Found", value: "2,730", color: "yellow", trend: "+10%" },
   ];
+
+  const renderCustomLegend = (props) => {
+    const { payload } = props;
+    return (
+      <ul className="flex flex-wrap justify-center gap-5 mt-6">
+        {payload.map((entry, index) => (
+          <li
+            key={`item-${index}`}
+            className="flex items-center gap-2"
+            style={{ fontWeight: 600, fontSize: "13px", color: "black" }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                backgroundColor: entry.color,
+              }}
+            ></span>
+            {entry.value}
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
+  const renderCustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          className="rounded-xl shadow-lg border border-gray-200 bg-white p-4"
+          style={{ minWidth: "160px" }}
+        >
+          <p className="font-semibold text-gray-800 mb-2">{label}</p>
+          {payload.map((entry, index) => (
+            <div key={`tooltip-${index}`} className="flex items-center gap-2 mb-1">
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  backgroundColor: entry.color,
+                }}
+              ></span>
+              <span className="text-sm text-gray-900 font-semibold">
+                {entry.name}: <span className="font-bold">{entry.value}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="lg:col-span-2 bg-white rounded-3xl p-8 shadow-xl border-2 border-emerald-400 hover:shadow-2xl transition-all duration-500">
@@ -64,22 +120,14 @@ const OperationsAnalytics = () => {
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280", fontWeight: 500 }} />
           <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontWeight: 500 }} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "rgba(255,255,255,0.98)",
-              border: "1px solid #e5e7eb",
-              borderRadius: "16px",
-              boxShadow:
-                "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)",
-              padding: "12px 16px",
-            }}
-          />
-          <Legend wrapperStyle={{ paddingTop: "24px" }} iconType="circle" />
-          <Area type="monotone" dataKey="tickets" stroke="red" strokeWidth={3} fillOpacity={0.3}  />
-          <Area type="monotone" dataKey="bus" stroke="orange" strokeWidth={3} fillOpacity={0.3} />
-          <Area type="monotone" dataKey="tenants" stroke="green" strokeWidth={3} fillOpacity={0.3} />
-          <Area type="monotone" dataKey="parking" stroke="#22d3ee" strokeWidth={3} fillOpacity={0.3} />
-          <Area type="monotone" dataKey="lostFound" stroke="yellow" strokeWidth={3} fillOpacity={0.3} />
+          <Tooltip content={renderCustomTooltip} />
+          <Legend content={renderCustomLegend} />
+
+          <Area type="monotone" dataKey="tickets" stroke="red" strokeWidth={3} fill="transparent" />
+          <Area type="monotone" dataKey="bus" stroke="orange" strokeWidth={3} fill="transparent" />
+          <Area type="monotone" dataKey="tenants" stroke="green" strokeWidth={3} fill="transparent" />
+          <Area type="monotone" dataKey="parking" stroke="#22d3ee" strokeWidth={3} fill="transparent" />
+          <Area type="monotone" dataKey="lostFound" stroke="yellow" strokeWidth={3} fill="transparent" />
         </ComposedChart>
       </ResponsiveContainer>
 
