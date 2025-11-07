@@ -1,7 +1,10 @@
 import React from "react";
-import { FileCheck, Ticket, CreditCard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { FileCheck } from "lucide-react";
 
 const RecentActivity = () => {
+  const navigate = useNavigate(); 
+
   const activities = [
     {
       id: 1,
@@ -10,22 +13,25 @@ const RecentActivity = () => {
       icon: FileCheck,
       type: "success",
       user: "Inspector Lee",
+      link: "/buses-parking", 
     },
     {
       id: 2,
-      message: "Parking ticket issued for vehicle XYZ-1234",
+      message: "New updates for Parking Fees Report",
       time: "12 mins ago",
-      icon: Ticket,
+      icon: FileCheck,
       type: "warning",
       user: "Parking Attendant",
+      link: "/parking",
     },
     {
       id: 3,
-      message: "Monthly payment received - Slot #1",
+      message: "New Tenants/Lease Report",
       time: "28 mins ago",
-      icon: CreditCard,
+      icon: FileCheck,
       type: "success",
-      user: "Admin",
+      user: "Manager Kim",
+      link: "/tenant-lease",
     },
   ];
 
@@ -45,6 +51,7 @@ const RecentActivity = () => {
         {activities.map((activity, idx) => (
           <div
             key={activity.id}
+            onClick={() => navigate(activity.link)} 
             className="flex items-center justify-between py-5 px-6 bg-gradient-to-r from-gray-50 to-white border border-gray-200 hover:border-emerald-300 rounded-2xl hover:shadow-md transition-all duration-300 cursor-pointer group"
             style={{ opacity: 0.4 + idx * 0.15 }}
           >

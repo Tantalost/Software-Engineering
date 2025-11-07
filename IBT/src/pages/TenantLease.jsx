@@ -7,6 +7,7 @@ import StatCardGroup from "../components/tenants/StatCardGroup";
 import TableActions from "../components/common/TableActions";
 import Form from "../components/common/Form";
 import { tenants } from "../data/assets";
+import {MessageSquareText} from "lucide-react";
 
 const TenantLease = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,7 +96,10 @@ const TenantLease = () => {
               Night Market
             </button>
           </div>
-
+    
+          <button onClick={() => setShowPreview(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center">
+           <MessageSquareText></MessageSquareText>
+          </button>      
           <button
             onClick={() => setShowPreview(true)}
             className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-3 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center w-full sm:w-auto"
@@ -126,7 +130,7 @@ const TenantLease = () => {
         data={filtered.map((t) => ({
           id: t.id,
           slotno: t.slotNo,
-          referenceNo: t.referenceNo,
+          referenceno: t.referenceNo,
           name: t.name,
           email: t.email,
           contact: t.contact,

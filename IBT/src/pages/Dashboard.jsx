@@ -12,7 +12,7 @@ const Dashboard = () => {
     { label: "Tenants/Lease", value: "4,830", change: "+5%", subtitle: "From last month", color: "green" },
     { label: "Parking", value: "7,120", change: "+9%", subtitle: "From last month", color: "blue" },
   ];
-
+  
   return (
     <Layout title="Dashboard">
       <div className="p-4 lg:p-2 space-y-8">

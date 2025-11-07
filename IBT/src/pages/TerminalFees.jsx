@@ -5,7 +5,7 @@ import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import StatCards from "../components/common/StatCards";
 import { tickets } from "../data/assets";
-import { User, GraduationCap, HeartPulse, Users } from "lucide-react";
+import { User, GraduationCap, HeartPulse, Users, MessageSquareText } from "lucide-react";
 
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,6 +90,10 @@ const TerminalFees = () => {
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
         />
+        <div className="flex items-center justify-end gap-3">
+          <button className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center">
+          <MessageSquareText></MessageSquareText>
+        </button>
         <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
           <ExportMenu
             onExportCSV={() => alert("Exporting to CSV...")}
@@ -98,6 +102,8 @@ const TerminalFees = () => {
             onPrint={() => window.print()}
           />
         </div>
+        </div>
+        
       </div>
 
       <Table

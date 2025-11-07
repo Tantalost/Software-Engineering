@@ -75,11 +75,11 @@ const OperationsAnalytics = () => {
             }}
           />
           <Legend wrapperStyle={{ paddingTop: "24px" }} iconType="circle" />
-          <Area type="monotone" dataKey="tickets" stroke="red" strokeWidth={3} fillOpacity={0.3} fill="red" />
-          <Area type="monotone" dataKey="bus" stroke="orange" strokeWidth={3} fillOpacity={0.3} fill="orange" />
-          <Area type="monotone" dataKey="tenants" stroke="green" strokeWidth={3} fillOpacity={0.3} fill="green" />
-          <Area type="monotone" dataKey="parking" stroke="#22d3ee" strokeWidth={3} fillOpacity={0.3} fill="#22d3ee" />
-          <Area type="monotone" dataKey="lostFound" stroke="yellow" strokeWidth={3} fillOpacity={0.3} fill="yellow" />
+          <Area type="monotone" dataKey="tickets" stroke="red" strokeWidth={3} fillOpacity={0.3}  />
+          <Area type="monotone" dataKey="bus" stroke="orange" strokeWidth={3} fillOpacity={0.3} />
+          <Area type="monotone" dataKey="tenants" stroke="green" strokeWidth={3} fillOpacity={0.3} />
+          <Area type="monotone" dataKey="parking" stroke="#22d3ee" strokeWidth={3} fillOpacity={0.3} />
+          <Area type="monotone" dataKey="lostFound" stroke="yellow" strokeWidth={3} fillOpacity={0.3} />
         </ComposedChart>
       </ResponsiveContainer>
 

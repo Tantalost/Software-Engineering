@@ -4,6 +4,7 @@ import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusParkingFilters from "../components/common/BusParkingFilters";
 import { busSchedules } from "../data/assets";
+import {MessageSquareText} from "lucide-react";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 
@@ -68,7 +69,12 @@ const BusesParking = () => {
             uniqueCompanies={uniqueCompanies}
           />
 
-          <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
+          <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-3">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
+              <MessageSquareText></MessageSquareText>
+            </button>
             <button
               onClick={() => setShowPreview(true)}
               className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
