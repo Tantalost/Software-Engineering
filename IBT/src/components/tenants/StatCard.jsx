@@ -26,6 +26,15 @@ const StatCard = ({ icon: Icon, title, value, color = "emerald" }) => {
       icon: "text-cyan-600",
       value: "text-cyan-800",
     },
+
+      orange: {
+      bg: "bg-orange-50",
+      border: "border-orange-200",
+      text: "text-orange-700",
+      iconBg: "bg-orange-100",
+      icon: "text-orange-600",
+      value: "text-orange-800",
+    },
   };
 
   const style = colorStyles[color] || colorStyles.emerald;

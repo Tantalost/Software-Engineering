@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
+import StatCardGroup from "../components/tenants/StatCardGroup";
 import Table from "../components/common/Table";
 import { tenants } from "../data/assets";
 import Form from "../components/common/Form";
@@ -37,6 +38,10 @@ const TenantLease = () => {
   };
 
   const [records, setRecords] = useState(loadStored());
+  const availableSlots = records.filter(t => t.status === "Available").length; 
+  const nonAvailableSlots = records.filter(t => t.status !== "Available").length; 
+  const totalSlots = records.length;
+
 
   const persist = (next) => {
     setRecords(next);
@@ -68,6 +73,13 @@ const TenantLease = () => {
 
   return (
     <Layout title="Tenants/Lease Management">
+      <div className="mb-6">
+        <StatCardGroup
+          availableSlots={availableSlots}
+          nonAvailableSlots={nonAvailableSlots}
+          totalSlots={totalSlots}
+        />
+      </div>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
