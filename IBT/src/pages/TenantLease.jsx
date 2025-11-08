@@ -368,6 +368,4 @@ const Textarea = ({ label, value, onChange }) => (
   </div>
 );
 
-
-
 export default TenantLease;
