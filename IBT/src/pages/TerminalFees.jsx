@@ -48,15 +48,13 @@ const studentCount = filtered.filter(
 const seniorCount = filtered.filter(
   (f) => {
     const type = (f.passengerType || "").trim().toLowerCase();
-    return type === "Senior Citizen" || type === "PWD";
+    return type === "senior citizen / pwd";
   }
 ).length;
 
 const totalPassengers = filtered.length;
 
 const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
-
-
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
