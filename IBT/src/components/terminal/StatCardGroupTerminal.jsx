@@ -29,7 +29,7 @@ const StatCardGroupTerminal = ({ regular, student, senior, totalPassengers, tota
 
       <StatCard
         icon={PhilippinePesoIcon}
-        value={`₱${totalRevenue.toFixed(2)}`}
+        value={`${totalRevenue.toFixed(2)}`}
         title="Total Revenue"
         color="orange"
       />
