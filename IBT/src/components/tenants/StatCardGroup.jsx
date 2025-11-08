@@ -2,7 +2,9 @@ import React from "react";
 import StatCard from "./StatCard";
 import { Store, Grid, PhilippinePesoIcon } from "lucide-react";
 
+
 const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots }) => {
+  const totalRevenue = 30000;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
       <StatCard
@@ -21,6 +23,7 @@ const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots }) => {
 
       <StatCard
         icon={PhilippinePesoIcon}
+        value= {totalRevenue}
         title="Revenue"
         color="orange"
       />
