@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
-import StatCards from "../components/common/StatCards";
+import StatCardGroupTerminal from "../components/terminal/StatCardGroupTerminal";
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import ViewModal from "../components/common/ViewModal";
@@ -13,13 +13,6 @@ import SelectField from "../components/common/SelectField";
 import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
 import { tickets } from "../data/assets";
-import {
-  User,
-  GraduationCap,
-  HeartPulse,
-  Users,
-  MessageSquareText,
-} from "lucide-react";
 
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,6 +34,27 @@ const TerminalFees = () => {
     return matchesSearch && matchesDate;
   });
 
+  const regularCount = filtered.filter(
+  (f) => (f.passengerType || "").trim().toLowerCase() === "regular"
+).length;
+
+const studentCount = filtered.filter(
+  (f) => (f.passengerType || "").trim().toLowerCase() === "student"
+).length;
+
+const seniorCount = filtered.filter(
+  (f) => {
+    const type = (f.passengerType || "").trim().toLowerCase();
+    return type === "Senior Citizen" || type === "PWD";
+  }
+).length;
+
+const totalPassengers = filtered.length;
+
+const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
+
+
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -49,48 +63,20 @@ const TerminalFees = () => {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
-  const regularCount = filtered.filter(
-    (f) => f.passengerType.toLowerCase() === "regular"
-  ).length;
-  const studentCount = filtered.filter(
-    (f) => f.passengerType.toLowerCase() === "student"
-  ).length;
-  const seniorCount = filtered.filter(
-    (f) =>
-      f.passengerType.toLowerCase() === "senior citizen" ||
-      f.passengerType.toLowerCase() === "pwd"
-  ).length;
-
-  const stats = [
-    {
-      label: "Regular Passengers",
-      value: regularCount,
-      icon: <User className="text-emerald-600 w-6 h-6" />,
-      bgColor: "bg-emerald-50",
-    },
-    {
-      label: "Students",
-      value: studentCount,
-      icon: <GraduationCap className="text-blue-600 w-6 h-6" />,
-      bgColor: "bg-blue-50",
-    },
-    {
-      label: "Senior Citizen / PWD",
-      value: seniorCount,
-      icon: <HeartPulse className="text-rose-600 w-6 h-6" />,
-      bgColor: "bg-rose-50",
-    },
-    {
-      label: "Total Passengers",
-      value: filtered.length,
-      icon: <Users className="text-cyan-600 w-6 h-6" />,
-      bgColor: "bg-cyan-50",
-    },
-  ];
+  
+ 
 
   return (
     <Layout title="Terminal Fees Management">
-      <StatCards stats={stats} />
+      <div className="mb-6">
+         <StatCardGroupTerminal
+            regular={regularCount}
+            student={studentCount}
+            senior={seniorCount}
+            totalPassengers={totalPassengers}
+            totalRevenue={totalRevenue}
+          />
+       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
