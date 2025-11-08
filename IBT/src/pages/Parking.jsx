@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
+import StatCardGroupPark from "../components/parking/StatCardGroupPark";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import { parkingTickets } from "../data/assets";
@@ -50,6 +51,15 @@ const Parking = () => {
     return matchesSearch && matchesDate;
   });
 
+  const carCount = filtered.filter((t) =>
+  t.type.toLowerCase().includes("car")
+  ).length;
+  const motorcycleCount = filtered.filter((t) =>
+  t.type.toLowerCase().includes("motorcycle")
+  ).length;
+  const totalVehicles = filtered.length;
+  const totalRevenue = filtered.reduce((sum, t) => sum + (t.price || 0), 0);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -60,6 +70,14 @@ const Parking = () => {
 
   return (
     <Layout title="Bus Parking Management">
+      <div className="mb-6">
+         <StatCardGroupPark
+            cars={carCount}
+            motorcycles={motorcycleCount}
+            totalVehicles={totalVehicles}
+            totalRevenue={totalRevenue}
+          />
+       </div>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
