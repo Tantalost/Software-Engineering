@@ -53,7 +53,7 @@ const RecentActivity = () => {
             key={activity.id}
             onClick={() => navigate(activity.link)} 
             className="flex items-center justify-between py-5 px-6 bg-gradient-to-r from-gray-50 to-white border border-gray-200 hover:border-emerald-300 rounded-2xl hover:shadow-md transition-all duration-300 cursor-pointer group"
-            style={{ opacity: 0.4 + idx * 0.15 }}
+            style={{}}
           >
             <div className="flex items-center space-x-5 flex-1">
               <div
