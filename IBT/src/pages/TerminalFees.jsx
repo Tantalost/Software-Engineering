@@ -20,6 +20,9 @@ const TerminalFees = () => {
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
+  const [showNotify, setShowNotify] = useState(false);
+  const role = localStorage.getItem("authRole") || "superadmin";
+  const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -86,6 +89,12 @@ const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
           setSelectedDate={setSelectedDate}
         />
         <div className="flex items-center justify-end gap-3">
+        {role === "superadmin" && (
+          <button onClick={() => setShowNotify(true)} className="flex items-center justify-center space-x-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all w-full sm:w-auto">
+            Notify
+          </button>
+        )}
+        <div className="flex items-center justify-end gap-3">
           <ExportMenu
             onExportCSV={() => alert("Exporting to CSV...")}
             onExportExcel={() => alert("Exporting to Excel...")}
@@ -93,6 +102,7 @@ const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
             onPrint={() => window.print()}
           />
         </div>
+      </div>
       </div>
 
       <Table
@@ -190,8 +200,38 @@ const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
           onClose={() => setDeleteRow(null)}
         />
       )}
+
+      {role === "superadmin" && showNotify && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
+                        <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
+                        <div className="space-y-3">
+                            <Input label="Title" value={notifyDraft.title} onChange={(e) => setNotifyDraft({ ...notifyDraft, title: e.target.value })} />
+                            <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.target.value })} />
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+                            <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Bus Trips" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
+                        </div>
+                    </div>
+                </div>
+            )}
     </Layout>
   );
 };
+
+const Input = ({ label, value, onChange, type = "text" }) => (
+  <div>
+    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
+  </div>
+);
+
+const Textarea = ({ label, value, onChange }) => (
+  <div className="md:col-span-2">
+    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+    <textarea value={value} onChange={onChange} rows={4} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
+  </div>
+);
 
 export default TerminalFees;
