@@ -72,11 +72,6 @@ const Reports = () => {
           <button onClick={() => setShowPreview(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center">
             + Add New
           </button>
-          {role === "superadmin" && (
-            <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-sm hover:border-slate-300 transition-all flex items-center justify-center">
-              Notify
-            </button>
-          )}
           <div className="h-[44px] flex items-center">
             <ExportMenu
               onExportCSV={() => alert("Exporting to CSV...")}
@@ -151,21 +146,6 @@ const Reports = () => {
         </div>
       )}
 
-      {role === "superadmin" && showNotify && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
-            <div className="space-y-3">
-              <Input label="Title" value={notifyDraft.title} onChange={(e) => setNotifyDraft({ ...notifyDraft, title: e.target.value })} />
-              <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.target.value })} />
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Reports" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
-            </div>
-          </div>
-        </div>
-      )}
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-3xl">
@@ -227,20 +207,6 @@ const EditReport = ({ row, onClose, onSave }) => {
     </div>
   );
 };
-
-const Input = ({ label, value, onChange, type = "text" }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
-
-const Textarea = ({ label, value, onChange }) => (
-  <div className="md:col-span-2">
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <textarea value={value} onChange={onChange} rows={4} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
 
 const Select = ({ label, value, onChange, options = [] }) => (
   <div>
