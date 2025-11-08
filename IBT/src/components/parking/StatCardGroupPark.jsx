@@ -18,13 +18,14 @@ const StatCardGroupPark = ({ cars, motorcycles, totalVehicles, totalRevenue }) =
         color="red"
       />
 
+       <StatCard icon={CarFront} title="Total Vehicles" value={totalVehicles}  color="emerald" />
+
       <StatCard
         icon={PhilippinePesoIcon}
-        value={totalVehicles}
-        title="Revenue"
+        value={`₱${totalRevenue.toFixed(2)}`}
+        title="Total Revenue"
         color="orange"
       />
-      <StatCard icon={CarFront} title="Total Vehicles" value={`₱${totalRevenue.toFixed(2)}`} color="emerald" />
     </div>
   );
 };
