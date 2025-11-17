@@ -11,9 +11,10 @@ import InputField from "../components/common/InputField";
 import SelectField from "../components/common/SelectField";
 import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
-import { tickets } from "../data/assets";
+import { tickets } from "../data/assets"; 
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
+import { Archive } from "lucide-react"; 
 
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,7 +27,50 @@ const TerminalFees = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const filtered = tickets.filter((fee) => {
+  const loadStored = () => {
+    try {
+      const raw = localStorage.getItem("ibt_terminalFees");
+      return raw ? JSON.parse(raw) : tickets;
+    } catch (e) {
+      return tickets;
+    }
+  };
+
+  const [records, setRecords] = useState(loadStored());
+
+  const persist = (next) => {
+    setRecords(next);
+    localStorage.setItem("ibt_terminalFees", JSON.stringify(next));
+  };
+
+  const handleArchive = (rowToArchive) => {
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Terminal Fee",
+        description: `Ticket #${rowToArchive.ticketno} - ${rowToArchive.passengertype}`, // Customized
+        dateArchived: new Date().toISOString(),
+        originalData: rowToArchive 
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+
+    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+    persist(nextActiveList);
+    
+    console.log("Item archived successfully!");
+  };
+
+  const filtered = records.filter((fee) => {
     const matchesSearch = fee.passengerType
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -53,7 +97,6 @@ const TerminalFees = () => {
   ).length;
 
   const totalPassengers = filtered.length;
-
   const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
 
   const paginatedData = useMemo(() => {
@@ -91,9 +134,9 @@ const TerminalFees = () => {
           )}
           <div className="flex items-center justify-end gap-3">
             <ExportMenu
-              onExportCSV={() => alert("Exporting to CSV...")}
-              onExportExcel={() => alert("Exporting to Excel...")}
-              onExportPDF={() => alert("Exporting to PDF...")}
+              onExportCSV={() => console.log("Exporting to CSV...")} 
+              onExportExcel={() => console.log("Exporting to Excel...")}
+              onExportPDF={() => console.log("Exporting to PDF...")}
               onPrint={() => window.print()}
             />
           </div>
@@ -111,11 +154,19 @@ const TerminalFees = () => {
           price: `₱${fee.price.toFixed(2)}`,
         }))}
         actions={(row) => (
-          <TableActions
-            onView={() => setViewRow(row)}
-            onEdit={() => setEditRow(row)}
-            onDelete={() => setDeleteRow(row)}
-          />
+          <div className="flex justify-end items-center space-x-2">
+            <TableActions
+              onView={() => setViewRow(row)}
+              onEdit={() => setEditRow(row)}
+            />
+            <button
+              onClick={() => handleArchive(row)}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
+          </div>
         )}
       />
       <Pagination
@@ -149,6 +200,11 @@ const TerminalFees = () => {
           title="Edit Terminal Fee"
           initialData={editRow}
           onClose={() => setEditRow(null)}
+          onSave={(updatedData) => {
+            const next = records.map(r => r.id === updatedData.id ? updatedData : r);
+            persist(next);
+            setEditRow(null);
+          }}
           fields={(form, set) => (
             <>
               <InputField
@@ -175,7 +231,7 @@ const TerminalFees = () => {
               <InputField
                 label="Price"
                 type="number"
-                value={form.price}
+                value={form.price} 
                 onChange={(e) => set("price", e.target.value)}
               />
             </>
@@ -194,7 +250,7 @@ const TerminalFees = () => {
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Bus Trips" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
+              <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Terminal Fees" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
             </div>
           </div>
         </div>

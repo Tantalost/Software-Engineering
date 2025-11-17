@@ -4,42 +4,7 @@ import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import FilterBar from "../components/common/Filterbar";
 import Field from "../components/common/Field"; 
-import { Eye, RotateCcw, Trash2 } from "lucide-react";
-
-const mockArchivedData = [
-  {
-    id: 'a1',
-    type: 'Bus Trip',
-    description: 'Template #1001 - Dipolog',
-    dateArchived: '2025-11-15T10:30:00Z',
-    originalStatus: 'Completed',
-    originalData: { id: 'b1', templateNo: '1001', route: 'Dipolog ', time: '08:00', date: '2025-11-01', company: 'Victory Liner', status: 'Completed' }
-  },
-  {
-    id: 'a2',
-    type: 'Parking Ticket',
-    description: 'Car - BGC 123 - ₱30.00',
-    dateArchived: '2025-11-14T14:45:00Z',
-    originalStatus: 'Paid',
-    originalData: { id: 'p1', type: 'Car', price: 30.00, timeIn: '12:00', timeOut: '14:00', duration: '2 hours', date: '2025-11-01', status: 'Paid' }
-  },
-  {
-    id: 'a3',
-    type: 'Report',
-    description: 'Report #2005 - Weekly Revenue',
-    dateArchived: '2025-11-13T09:00:00Z',
-    originalStatus: 'Submitted',
-    originalData: { id: 2005, type: 'Weekly Revenue', author: 'Jane Doe', date: '2025-11-10', status: 'Submitted' }
-  },
-  {
-    id: 'a4',
-    type: 'Tenant',
-    description: 'Slot #5 - Jollibee',
-    dateArchived: '2025-11-12T17:20:00Z',
-    originalStatus: 'Inactive',
-    originalData: { id: 't1', slotNo: 5, referenceNo: 'T-005', name: 'Jollibee', email: 'jollibee@example.com', contact: '12345', date: '2024-01-01', status: 'Inactive' }
-  }
-];
+import { Eye, RotateCcw } from "lucide-react";
 
 const Archive = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,20 +12,16 @@ const Archive = () => {
   const [activeTab, setActiveTab] = useState("All");
   const [viewRow, setViewRow] = useState(null);
   const [restoreRow, setRestoreRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const loadArchived = () => {
     try {
       const raw = localStorage.getItem("ibt_archive");
-      const data = raw ? JSON.parse(raw) : mockArchivedData;
-      if (!raw) {
-        localStorage.setItem("ibt_archive", JSON.stringify(data));
-      }
+      const data = raw ? JSON.parse(raw) : []; 
       return data;
     } catch (e) {
-      return mockArchivedData;
+      return []; 
     }
   };
 
@@ -76,8 +37,8 @@ const Archive = () => {
       const matchesTab = activeTab === "All" || item.type === activeTab;
       
       const matchesSearch =
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.type.toLowerCase().includes(searchQuery.toLowerCase());
+        (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.type || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesDate =
         !selectedDate ||
@@ -105,7 +66,7 @@ const Archive = () => {
     else if (itemType === "Report") storageKey = "ibt_reports";
     else if (itemType === "Tenant") storageKey = "ibt_TenantLease";
     else if (itemType === "Lost & Found") storageKey = "ibt_lostFound";
-    else if (itemType === "Terminal Fee") storageKey = "ibt_terminalFees"; // Assuming key
+    else if (itemType === "Terminal Fee") storageKey = "ibt_terminalFees";
 
     if (storageKey) {
       try {
@@ -122,15 +83,6 @@ const Archive = () => {
     persistArchive(nextArchive);
 
     setRestoreRow(null);
-  };
-
-  const handleDeletePermanently = () => {
-    if (!deleteRow) return;
-
-    const nextArchive = allArchivedItems.filter((item) => item.id !== deleteRow.id);
-    persistArchive(nextArchive);
-
-    setDeleteRow(null);
   };
 
   const tabs = ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
@@ -167,7 +119,7 @@ const Archive = () => {
       </div>
 
       <Table
-        columns={["Type", "Description", "Date Archived", "Original Status", "Actions"]}
+        columns={["Type", "Description", "Date Archived", "Original Status"]}
         data={paginatedData.map((item) => ({
           ...item,
           dateArchived: new Date(item.dateArchived).toLocaleString(),
@@ -187,13 +139,6 @@ const Archive = () => {
               className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all"
             >
               <RotateCcw size={16} />
-            </button>
-            <button
-              onClick={() => setDeleteRow(row)}
-              title="Delete Permanently"
-              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-            >
-              <Trash2 size={16} />
             </button>
           </div>
         )}
@@ -246,21 +191,7 @@ const Archive = () => {
           </div>
         </div>
       )}
-
-      {deleteRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
-            <h3 className="text-base font-semibold text-slate-800">Delete Permanently</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to permanently delete this item? This action cannot be undone.
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={handleDeletePermanently} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </Layout>
   );
 };

@@ -9,6 +9,7 @@ import Form from "../components/common/Form";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditReport from "../components/reports/EditReport";
+import { Archive } from "lucide-react"; 
 
 const Reports = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,6 +17,7 @@ const Reports = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
@@ -31,6 +33,37 @@ const Reports = () => {
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_reports", JSON.stringify(next));
+  };
+
+  const handleArchive = (rowToArchive) => {
+    if (!rowToArchive) return;
+
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Report",
+        description: `Report #${rowToArchive.reportid} - ${rowToArchive.type}`,
+        dateArchived: new Date().toISOString(),
+        originalStatus: rowToArchive.status,
+        originalData: rowToArchive
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+
+    // 2. REMOVE FROM ACTIVE LIST
+    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+    persist(nextActiveList);
+    
+    console.log("Item archived successfully!");
   };
 
   const filtered = records.filter((report) => {
@@ -71,9 +104,9 @@ const Reports = () => {
           </button>
           <div className="h-[44px] flex items-center">
             <ExportMenu
-              onExportCSV={() => alert("Exporting to CSV...")}
-              onExportExcel={() => alert("Exporting to Excel...")}
-              onExportPDF={() => alert("Exporting to PDF...")}
+              onExportCSV={() => console.log("Exporting to CSV...")}
+              onExportExcel={() => console.log("Exporting to Excel...")}
+              onExportPDF={() => console.log("Exporting to PDF...")}
               onPrint={() => window.print()}
             />
           </div>
@@ -84,11 +117,20 @@ const Reports = () => {
         columns={["Report ID", "Type", "Author", "Date", "Status"]}
         data={paginatedData.map((report) => ({ id: report.id, reportid: report.id, type: report.type, author: report.author, date: report.date, status: report.status }))}
         actions={(row) => (
-          <TableActions
-            onView={() => setViewRow(row)}
-            onEdit={() => setEditRow(row)}
-            onDelete={() => setDeleteRow(row)}
-          />
+          <div className="flex justify-end items-center space-x-2">
+            <TableActions
+              onView={() => setViewRow(row)}
+              onEdit={() => setEditRow(row)}
+              onDelete={() => setDeleteRow(row)} 
+            />
+            <button
+              onClick={() => handleArchive(row)}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
+          </div>
         )}
       />
       <Pagination
@@ -131,6 +173,22 @@ const Reports = () => {
         />
       )}
       
+      {deleteRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
+            <h3 className="text-base font-semibold text-slate-800">Archive Report</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive report {deleteRow.reportid}?</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+              <button onClick={() => { 
+                handleArchive(deleteRow); 
+                setDeleteRow(null); 
+              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-3xl">
@@ -141,7 +199,7 @@ const Reports = () => {
                 { label: "Type", type: "text" },
                 { label: "Author", type: "text" },
                 { label: "Date", type: "date" },
-                { label: "Status", type: "select", options: ["Draft", "Submitted", "Approved"] },
+                { label:"Status", type: "select", options: ["Draft", "Submitted", "Approved"] },
               ]}
             />
             <div className="mt-3 flex justify-end">

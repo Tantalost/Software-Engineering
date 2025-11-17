@@ -1,7 +1,7 @@
 import React from "react";
 import { Eye, Edit, } from "lucide-react";
 
-const TableActions = ({ onView, onEdit, onDelete }) => {
+const TableActions = ({ onView, onEdit,}) => {
   return (
     <div className="flex justify-end space-x-2">
       <button

@@ -11,6 +11,7 @@ import Field from "../components/common/Field";
 import EditLostFound from "../components/lostfound/EditLostFound";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
+import { Archive } from "lucide-react"; 
 
 const LostFound = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,6 +19,7 @@ const LostFound = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,6 +38,36 @@ const LostFound = () => {
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_lostFound", JSON.stringify(next));
+  };
+
+  const handleArchive = (rowToArchive) => {
+    if (!rowToArchive) return;
+
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Lost & Found", 
+        description: `Track #${rowToArchive.trackingno} - ${rowToArchive.description.substring(0, 30)}...`, // Customized
+        dateArchived: new Date().toISOString(),
+        originalStatus: rowToArchive.status,
+        originalData: rowToArchive
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+
+    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+    persist(nextActiveList);
+    
+    console.log("Item archived successfully!");
   };
 
   const filtered = records.filter((item) => {
@@ -79,9 +111,9 @@ const LostFound = () => {
           )}
           <div className="h-[44px] flex items-center">
             <ExportMenu
-              onExportCSV={() => alert("Exporting to CSV...")}
-              onExportExcel={() => alert("Exporting to Excel...")}
-              onExportPDF={() => alert("Exporting to PDF...")}
+              onExportCSV={() => console.log("Exporting to CSV...")}
+              onExportExcel={() => console.log("Exporting to Excel...")}
+              onExportPDF={() => console.log("Exporting to PDF...")}
               onPrint={() => window.print()}
             />
           </div>
@@ -98,11 +130,20 @@ const LostFound = () => {
           status: item.status,
         }))}
         actions={(row) => (
-          <TableActions
-            onView={() => setViewRow(row)}
-            onEdit={() => setEditRow(row)}
-            onDelete={() => setDeleteRow(row)}
-          />
+          <div className="flex justify-end items-center space-x-2">
+            <TableActions
+              onView={() => setViewRow(row)}
+              onEdit={() => setEditRow(row)}
+              onDelete={() => setDeleteRow(row)} 
+            />
+            <button
+              onClick={() => handleArchive(row)}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
+          </div>
         )}
       />
       <Pagination
@@ -141,7 +182,23 @@ const LostFound = () => {
           }}
         />
       )}
-     
+      
+      {deleteRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
+            <h3 className="text-base font-semibold text-slate-800">Archive Item</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive this item (Track #{deleteRow.trackingno})?</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+              <button onClick={() => { 
+                handleArchive(deleteRow); 
+                setDeleteRow(null); 
+              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {role === "superadmin" && showNotify && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">

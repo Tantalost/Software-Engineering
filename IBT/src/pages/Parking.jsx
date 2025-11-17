@@ -12,6 +12,7 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
+import { Archive } from "lucide-react"; 
 
 const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,6 +20,7 @@ const Parking = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const role = localStorage.getItem("authRole") || "superadmin";
   const [showNotify, setShowNotify] = useState(false);
@@ -38,6 +40,36 @@ const Parking = () => {
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_parking", JSON.stringify(next));
+  };
+
+  const handleArchive = (rowToArchive) => {
+    if (!rowToArchive) return;
+
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Parking Ticket", 
+        description: `${rowToArchive.type} - ${rowToArchive.price} (${rowToArchive.duration})`, 
+        dateArchived: new Date().toISOString(),
+        originalStatus: rowToArchive.status,
+        originalData: rowToArchive
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+
+    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+    persist(nextActiveList);
+    
+    console.log("Item archived successfully!");
   };
 
   const filtered = records.filter((ticket) => {
@@ -107,9 +139,9 @@ const Parking = () => {
           )}
           <div className="h-[44px] flex items-center">
             <ExportMenu
-              onExportCSV={() => alert("Exporting to CSV...")}
-              onExportExcel={() => alert("Exporting to Excel...")}
-              onExportPDF={() => alert("Exporting to PDF...")}
+              onExportCSV={() => console.log("Exporting to CSV...")}
+              onExportExcel={() => console.log("Exporting to Excel...")}
+              onExportPDF={() => console.log("Exporting to PDF...")}
               onPrint={() => window.print()}
             />
           </div>
@@ -129,11 +161,20 @@ const Parking = () => {
           status: ticket.status,
         }))}
         actions={(row) => (
-          <TableActions
-            onView={() => setViewRow(row)}
-            onEdit={() => setEditRow(row)}
-            onDelete={() => setDeleteRow(row)}
-          />
+          <div className="flex justify-end items-center space-x-2">
+            <TableActions
+              onView={() => setViewRow(row)}
+              onEdit={() => setEditRow(row)}
+              onDelete={() => setDeleteRow(row)}
+            />
+            <button
+              onClick={() => handleArchive(row)}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
+          </div>
         )}
       />
       <Pagination
@@ -155,8 +196,8 @@ const Parking = () => {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
               <Field label="Type" value={viewRow.type} />
               <Field label="Price" value={viewRow.price} />
-              <Field label="Time-in" value={viewRow.timeIn} />
-              <Field label="Time-out" value={viewRow.timeOut} />
+              <Field label="Time-in" value={viewRow.timein} />
+              <Field label="Time-out" value={viewRow.timeout} />
               <Field label="Duration" value={viewRow.duration} />
               <Field label="Date" value={viewRow.date} />
               <Field label="Status" value={viewRow.status} />
@@ -177,6 +218,22 @@ const Parking = () => {
         />
       )}
       
+      {deleteRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
+            <h3 className="text-base font-semibold text-slate-800">Archive Parking Ticket</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive this ticket for {deleteRow.type}?</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+              <button onClick={() => { 
+                handleArchive(deleteRow); 
+                setDeleteRow(null); 
+              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {role === "parking" && showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
@@ -184,7 +241,7 @@ const Parking = () => {
             <p className="mt-2 text-sm text-slate-600">Are you sure you want to submit the current parking report?</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { setShowSubmitModal(false); alert('Parking report submitted.'); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Submit</button>
+              <button onClick={() => { setShowSubmitModal(false); console.log('Parking report submitted.'); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Submit</button>
             </div>
           </div>
         </div>
