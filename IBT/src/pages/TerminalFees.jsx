@@ -13,6 +13,8 @@ import SelectField from "../components/common/SelectField";
 import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
 import { tickets } from "../data/assets";
+import Input from "../components/common/Input";
+import Textarea from "../components/common/Textarea";
 
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,29 +34,29 @@ const TerminalFees = () => {
       .includes(searchQuery.toLowerCase());
     const matchesDate = selectedDate
       ? new Date(fee.date).toDateString() ===
-      new Date(selectedDate).toDateString()
+        new Date(selectedDate).toDateString()
       : true;
     return matchesSearch && matchesDate;
   });
 
   const regularCount = filtered.filter(
-  (f) => (f.passengerType || "").trim().toLowerCase() === "regular"
-).length;
+    (f) => (f.passengerType || "").trim().toLowerCase() === "regular"
+  ).length;
 
-const studentCount = filtered.filter(
-  (f) => (f.passengerType || "").trim().toLowerCase() === "student"
-).length;
+  const studentCount = filtered.filter(
+    (f) => (f.passengerType || "").trim().toLowerCase() === "student"
+  ).length;
 
-const seniorCount = filtered.filter(
-  (f) => {
-    const type = (f.passengerType || "").trim().toLowerCase();
-    return type === "senior citizen / pwd";
-  }
-).length;
+  const seniorCount = filtered.filter(
+    (f) => {
+      const type = (f.passengerType || "").trim().toLowerCase();
+      return type === "senior citizen / pwd";
+    }
+  ).length;
 
-const totalPassengers = filtered.length;
+  const totalPassengers = filtered.length;
 
-const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
+  const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -64,20 +66,17 @@ const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
-  
- 
-
   return (
     <Layout title="Terminal Fees Management">
       <div className="mb-6">
-         <StatCardGroupTerminal
-            regular={regularCount}
-            student={studentCount}
-            senior={seniorCount}
-            totalPassengers={totalPassengers}
-            totalRevenue={totalRevenue}
-          />
-       </div>
+        <StatCardGroupTerminal
+          regular={regularCount}
+          student={studentCount}
+          senior={seniorCount}
+          totalPassengers={totalPassengers}
+          totalRevenue={totalRevenue}
+        />
+      </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
@@ -87,20 +86,20 @@ const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
           setSelectedDate={setSelectedDate}
         />
         <div className="flex items-center justify-end gap-3">
-        {role === "superadmin" && (
-          <button onClick={() => setShowNotify(true)} className="flex items-center justify-center space-x-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all w-full sm:w-auto">
-            Notify
-          </button>
-        )}
-        <div className="flex items-center justify-end gap-3">
-          <ExportMenu
-            onExportCSV={() => alert("Exporting to CSV...")}
-            onExportExcel={() => alert("Exporting to Excel...")}
-            onExportPDF={() => alert("Exporting to PDF...")}
-            onPrint={() => window.print()}
-          />
+          {role === "superadmin" && (
+            <button onClick={() => setShowNotify(true)} className="flex items-center justify-center space-x-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all w-full sm:w-auto">
+              Notify
+            </button>
+          )}
+          <div className="flex items-center justify-end gap-3">
+            <ExportMenu
+              onExportCSV={() => alert("Exporting to CSV...")}
+              onExportExcel={() => alert("Exporting to Excel...")}
+              onExportPDF={() => alert("Exporting to PDF...")}
+              onPrint={() => window.print()}
+            />
+          </div>
         </div>
-      </div>
       </div>
 
       <Table
@@ -200,36 +199,22 @@ const totalRevenue = filtered.reduce((sum, f) => sum + (f.price || 0), 0);
       )}
 
       {role === "superadmin" && showNotify && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
-                        <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
-                        <div className="space-y-3">
-                            <Input label="Title" value={notifyDraft.title} onChange={(e) => setNotifyDraft({ ...notifyDraft, title: e.target.value })} />
-                            <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.target.value })} />
-                        </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-                            <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Bus Trips" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
+            <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
+            <div className="space-y-3">
+              <Input label="Title" value={notifyDraft.title} onChange={(e) => setNotifyDraft({ ...notifyDraft, title: e.target.value })} />
+              <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.target.value })} />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+              <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Bus Trips" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
-
-const Input = ({ label, value, onChange, type = "text" }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
-
-const Textarea = ({ label, value, onChange }) => (
-  <div className="md:col-span-2">
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <textarea value={value} onChange={onChange} rows={4} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
 
 export default TerminalFees;
