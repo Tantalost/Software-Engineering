@@ -155,5 +155,3 @@ const Field = ({ label, value, onChange, type = "text", disabled = false }) => (
         <input disabled={disabled} value={value} onChange={onChange} type={type} className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none ${disabled ? "opacity-70" : ""}`} />
     </div>
 );
-
-

@@ -48,10 +48,7 @@ export default function LoginCard({
           />
 
           <LoginButton handleSubmit={handleSubmit} isLoading={isLoading} />
-
-          <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white border-opacity-10 text-center text-xs sm:text-sm text-gray-400">
-            Demo credentials: admin@example.com / admin123
-          </div>
+          
         </div>
       </div>
     </div>

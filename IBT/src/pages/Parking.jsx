@@ -115,12 +115,13 @@ const Parking = () => {
       </div>
 
       <Table
-        columns={["Type", "Price", "Time", "Duration", "Date", "Status"]}
+        columns={["Type", "Price", "Time-in", "Time-out", "Duration", "Date", "Status"]}
         data={paginatedData.map((ticket) => ({
           id: ticket.id,
           type: ticket.type,
           price: `₱${ticket.price.toFixed(2)}`,
-          time: ticket.time,
+          timein: ticket.timeIn,
+          timeout: ticket.timeOut,
           duration: ticket.duration,
           date: ticket.date,
           status: ticket.status,
@@ -152,7 +153,8 @@ const Parking = () => {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
               <Field label="Type" value={viewRow.type} />
               <Field label="Price" value={viewRow.price} />
-              <Field label="Time" value={viewRow.time} />
+              <Field label="Time-in" value={viewRow.timeIn} />
+              <Field label="Time-out" value={viewRow.timeOut} />
               <Field label="Duration" value={viewRow.duration} />
               <Field label="Date" value={viewRow.date} />
               <Field label="Status" value={viewRow.status} />
@@ -221,7 +223,8 @@ const Parking = () => {
               fields={[
                 { label: "Type", type: "text" },
                 { label: "Price", type: "number", placeholder: "0.00" },
-                { label: "Time", type: "time" },
+                { label: "Time-in", type: "text" },
+                { label: "Time-out", type: "text" },
                 { label: "Duration", type: "text", placeholder: "e.g., 2 hours" },
                 { label: "Date", type: "date" },
                 { label: "Status", type: "select", options: ["Active", "Inactive"] },
@@ -253,7 +256,8 @@ const EditParking = ({ row, onClose, onSave }) => {
     id: row.id,
     type: row.type,
     price: parsePrice(row.price),
-    time: row.time,
+    timein: row.timeIn,
+    timeout: row.timeOut,
     duration: row.duration,
     date: row.date,
     status: row.status,
@@ -266,7 +270,8 @@ const EditParking = ({ row, onClose, onSave }) => {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Input label="Type" value={form.type} onChange={(e) => set("type", e.target.value)} />
           <Input label="Price" type="number" value={form.price} onChange={(e) => set("price", Number(e.target.value))} />
-          <Input label="Time" value={form.time} onChange={(e) => set("time", e.target.value)} />
+          <Input label="Time-in" value={form.timein} onChange={(e) => set("timein", e.target.value)} />
+          <Input label="Time-out" value={form.timeout} onChange={(e) => set("timeout", e.target.value)} />
           <Input label="Duration" value={form.duration} onChange={(e) => set("duration", e.target.value)} />
           <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
           <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Active", "Completed", "Inactive"]} />
