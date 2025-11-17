@@ -4,7 +4,7 @@ import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import FilterBar from "../components/common/Filterbar";
 import Field from "../components/common/Field"; 
-import { Eye, RotateCcw } from "lucide-react";
+import { Eye, RotateCcw, Trash2 } from "lucide-react";
 
 const Archive = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -12,6 +12,7 @@ const Archive = () => {
   const [activeTab, setActiveTab] = useState("All");
   const [viewRow, setViewRow] = useState(null);
   const [restoreRow, setRestoreRow] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -85,6 +86,14 @@ const Archive = () => {
     setRestoreRow(null);
   };
 
+  const handleDeletePermanently = () => {
+    if (!deleteRow) return;
+    const nextArchive = allArchivedItems.filter((item) => item.id !== deleteRow.id);
+    persistArchive(nextArchive);
+
+    setDeleteRow(null);
+  };
+
   const tabs = ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
 
   return (
@@ -140,6 +149,13 @@ const Archive = () => {
             >
               <RotateCcw size={16} />
             </button>
+            <button
+              onClick={() => setDeleteRow(row)}
+              title="Delete Permanently"
+              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
         )}
       />
@@ -187,6 +203,21 @@ const Archive = () => {
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setRestoreRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
               <button onClick={handleRestore} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Restore</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
+            <h3 className="text-base font-semibold text-slate-800">Delete Permanently</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Are you sure you want to permanently delete this item? This action cannot be undone.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+              <button onClick={handleDeletePermanently} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Delete</button>
             </div>
           </div>
         </div>
