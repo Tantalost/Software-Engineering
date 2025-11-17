@@ -7,8 +7,11 @@ import Table from "../components/common/Table";
 import { parkingTickets } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
-import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
+import Field from "../components/common/Field";
+import EditParking from "../components/parking/EditParking";
+import Input from "../components/common/Input";
+import Textarea from "../components/common/Textarea";
 
 const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,16 +49,16 @@ const Parking = () => {
     const matchesDate =
       !selectedDate ||
       new Date(ticket.date).toDateString() ===
-      new Date(selectedDate).toDateString();
+        new Date(selectedDate).toDateString();
 
     return matchesSearch && matchesDate;
   });
 
   const carCount = filtered.filter((t) =>
-  t.type.toLowerCase().includes("car")
+    t.type.toLowerCase().includes("car")
   ).length;
   const motorcycleCount = filtered.filter((t) =>
-  t.type.toLowerCase().includes("motorcycle")
+    t.type.toLowerCase().includes("motorcycle")
   ).length;
   const totalVehicles = filtered.length;
   const totalRevenue = filtered.reduce((sum, t) => sum + (t.price || 0), 0);
@@ -71,13 +74,13 @@ const Parking = () => {
   return (
     <Layout title="Bus Parking Management">
       <div className="mb-6">
-         <StatCardGroupPark
-            cars={carCount}
-            motorcycles={motorcycleCount}
-            totalVehicles={totalVehicles}
-            totalRevenue={totalRevenue}
-          />
-       </div>
+        <StatCardGroupPark
+          cars={carCount}
+          motorcycles={motorcycleCount}
+          totalVehicles={totalVehicles}
+          totalRevenue={totalRevenue}
+        />
+      </div>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
@@ -243,69 +246,3 @@ const Parking = () => {
 };
 
 export default Parking;
-const Field = ({ label, value }) => (
-  <div>
-    <div className="text-xs text-slate-500">{label}</div>
-    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">{value || "-"}</div>
-  </div>
-);
-
-const EditParking = ({ row, onClose, onSave }) => {
-  const parsePrice = (p) => parseFloat(String(p).replace(/[^0-9.]/g, "")) || 0;
-  const [form, setForm] = React.useState({
-    id: row.id,
-    type: row.type,
-    price: parsePrice(row.price),
-    timein: row.timeIn,
-    timeout: row.timeOut,
-    duration: row.duration,
-    date: row.date,
-    status: row.status,
-  });
-  const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Edit Parking Ticket</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Input label="Type" value={form.type} onChange={(e) => set("type", e.target.value)} />
-          <Input label="Price" type="number" value={form.price} onChange={(e) => set("price", Number(e.target.value))} />
-          <Input label="Time-in" value={form.timein} onChange={(e) => set("timein", e.target.value)} />
-          <Input label="Time-out" value={form.timeout} onChange={(e) => set("timeout", e.target.value)} />
-          <Input label="Duration" value={form.duration} onChange={(e) => set("duration", e.target.value)} />
-          <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
-          <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Active", "Completed", "Inactive"]} />
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({ id: form.id, type: form.type, price: form.price, time: form.time, duration: form.duration, date: form.date, status: form.status })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Input = ({ label, value, onChange, type = "text" }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
-
-const Select = ({ label, value, onChange, options = [] }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <select value={value} onChange={onChange} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none">
-      {options.map((opt) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-  </div>
-);
-
-const Textarea = ({ label, value, onChange }) => (
-  <div className="md:col-span-2">
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <textarea value={value} onChange={onChange} rows={4} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
