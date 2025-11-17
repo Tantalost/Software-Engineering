@@ -7,6 +7,7 @@ import { busSchedules } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
+import { Archive } from "lucide-react"; 
 import Field from "../components/common/Field";
 import EditBusTrip from "../components/bustrips/EditBusTrip";
 import Input from "../components/common/Input";
@@ -19,7 +20,6 @@ const BusTrips = () => {
     const [showPreview, setShowPreview] = useState(false);
     const [viewRow, setViewRow] = useState(null);
     const [editRow, setEditRow] = useState(null);
-    const [deleteRow, setDeleteRow] = useState(null);
     const [showNotify, setShowNotify] = useState(false);
     const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
     const [currentPage, setCurrentPage] = useState(1);
@@ -42,6 +42,34 @@ const BusTrips = () => {
     const persist = (next) => {
         setRecords(next);
         localStorage.setItem("ibt_busTrips", JSON.stringify(next));
+    };
+
+    const handleArchive = (rowToArchive) => {
+        try {
+            const rawArchive = localStorage.getItem("ibt_archive");
+            const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+            const archiveItem = {
+                id: `archive-${Date.now()}-${rowToArchive.id}`, 
+                type: "Bus Trip", 
+                description: `Template #${rowToArchive.templateno} - ${rowToArchive.route}`, // For easy searching
+                dateArchived: new Date().toISOString(),
+                originalStatus: rowToArchive.status,
+                originalData: rowToArchive 
+            };
+            
+            archiveList.push(archiveItem);
+            localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+        } catch (e) {
+            console.error("Failed to add to archive:", e);
+            console.error("Error archiving item.");
+            return; 
+        }
+
+        const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+        persist(nextActiveList); 
+        console.log("Item archived successfully!"); 
     };
 
     const filtered = records.filter((bus) => {
@@ -119,11 +147,20 @@ const BusTrips = () => {
                         status: bus.status,
                     }))}
                     actions={(row) => (
-                        <TableActions
-                            onView={() => setViewRow(row)}
-                            onEdit={() => setEditRow(row)}
-                            onDelete={() => setDeleteRow(row)}
-                        />
+                        <div className="flex justify-end items-center space-x-2">
+                            <TableActions
+                                onView={() => setViewRow(row)}
+                                onEdit={() => setEditRow(row)}
+                                onDelete={() => setDeleteRow(row)}
+                            />
+                            <button
+                                onClick={() => handleArchive(row)} // Call your new handler
+                                title="Archive"
+                                className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+                            >
+                                <Archive size={16} />
+                            </button>
+                        </div>
                     )}
                 />
                 <Pagination
@@ -168,19 +205,6 @@ const BusTrips = () => {
                         setEditRow(null);
                     }}
                 />
-            )}
-
-            {deleteRow && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-                        <h3 className="text-base font-semibold text-slate-800">Delete Bus Trip</h3>
-                        <p className="mt-2 text-sm text-slate-600">Are you sure you want to delete template {deleteRow.templateno}?</p>
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-                            <button onClick={() => { const next = records.filter((r) => r.id !== deleteRow.id); persist(next); setDeleteRow(null); }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Delete</button>
-                        </div>
-                    </div>
-                </div>
             )}
 
             {role === "superadmin" && showNotify && (

@@ -21,7 +21,6 @@ const TenantLease = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null);
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
@@ -213,20 +212,6 @@ const TenantLease = () => {
             setEditRow(null);
           }}
         />
-      )
-      }
-
-      {deleteRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Delete Terminal Fee</h3>
-            <p className="mt-2 text-sm text-slate-600">Are you sure you want to delete template {deleteRow.ticketno}?</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const next = records.filter((r) => r.id !== deleteRow.id); persist(next); setDeleteRow(null); }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Delete</button>
-            </div>
-          </div>
-        </div>
       )
       }
 

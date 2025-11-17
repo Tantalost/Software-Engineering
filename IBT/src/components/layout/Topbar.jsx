@@ -42,7 +42,6 @@ const Topbar = ({ title, onMenuClick }) => {
 
   return (
     <>
-      {/* 🌟 Topbar UI */}
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="p-4 lg:px-8 lg:py-4">
           <div className="flex items-center justify-between">
@@ -118,6 +117,16 @@ const Topbar = ({ title, onMenuClick }) => {
                       Notifications
                     </button>
 
+                     <button
+                      onClick={() => {
+                        setShowUser(false);
+                        navigate("/archive");
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                    >
+                      Archive
+                    </button>
+
                     {role === "superadmin" && (
                       <button
                         onClick={() => {
@@ -130,7 +139,6 @@ const Topbar = ({ title, onMenuClick }) => {
                       </button>
                     )}
 
-                    {/* 🚪 Logout Button */}
                     <button
                       onClick={() => setShowLogoutModal(true)}
                       className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"

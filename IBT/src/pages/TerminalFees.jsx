@@ -7,7 +7,6 @@ import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import ViewModal from "../components/common/ViewModal";
 import EditModal from "../components/common/EditModal";
-import DeleteModal from "../components/common/DeleteModal";
 import InputField from "../components/common/InputField";
 import SelectField from "../components/common/SelectField";
 import DatePickerInput from "../components/common/DatePickerInput";
@@ -21,7 +20,6 @@ const TerminalFees = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null);
   const [showNotify, setShowNotify] = useState(false);
   const role = localStorage.getItem("authRole") || "superadmin";
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
@@ -185,18 +183,6 @@ const TerminalFees = () => {
         />
       )
       }
-
-      {deleteRow && (
-        <DeleteModal
-          title="Delete Terminal Fee"
-          message={`Are you sure you want to delete ticket ${deleteRow.ticketno}?`}
-          onConfirm={() => {
-            console.log("Deleted:", deleteRow.ticketno);
-            setDeleteRow(null);
-          }}
-          onClose={() => setDeleteRow(null)}
-        />
-      )}
 
       {role === "superadmin" && showNotify && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
