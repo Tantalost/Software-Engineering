@@ -8,7 +8,7 @@ import TableActions from "../components/common/TableActions";
 import { lostFoundItems } from "../data/assets";
 import ViewModal from "../components/lostfound/ViewModal";
 import EditModal from "../components/lostfound/EditModal";
-import NotifyModal from "../components/lostfound/NotifyModal";
+import NotifyModal from "../components/common/NotifyModal";
 import AddModal from "../components/lostfound/AddModal";
 
 const LostFound = () => {
