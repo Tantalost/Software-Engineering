@@ -7,10 +7,12 @@ import Table from "../components/common/Table";
 import { tenants } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
-import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
 import { MessageSquare } from "lucide-react";
-
+import Field from "../components/common/Field";
+import EditTenantLease from "../components/tenants/EditTenantLease";
+import Input from "../components/common/Input";
+import Textarea from "../components/common/Textarea";
 
 const TenantLease = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,9 +40,9 @@ const TenantLease = () => {
   };
 
   const [records, setRecords] = useState(loadStored());
-  const availableSlots = records.filter(t => t.status === "Available").length; 
-  const nonAvailableSlots = records.filter(t => t.status !== "Available").length; 
-  const totalSlots = records.length;
+  const availableSlots = records.filter(t => t.status === "Available").length;
+  const nonAvailableSlots = records.filter(t => t.status !== "Available").length;
+  const totalSlots = records.length;
 
 
   const persist = (next) => {
@@ -89,7 +91,7 @@ const TenantLease = () => {
         />
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
-         
+
 
           <button onClick={() => setShowPreview(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-3 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center w-full sm:w-auto">
             + Add New
@@ -111,26 +113,26 @@ const TenantLease = () => {
         </div>
       </div>
 
-       <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200 mb-4">
-          <button
-            onClick={() => setActiveTab("permanent")}
-            className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "permanent"
+      <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200 mb-4">
+        <button
+          onClick={() => setActiveTab("permanent")}
+          className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "permanent"
             ? "bg-white text-emerald-700 shadow-md"
             : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
             }`}
-            >
-            Permanent
-          </button>
-          <button
-            onClick={() => setActiveTab("night")}
-            className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "night"
+        >
+          Permanent
+        </button>
+        <button
+          onClick={() => setActiveTab("night")}
+          className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "night"
             ? "bg-white text-emerald-700 shadow-md"
             : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
             }`}
-            >
-            Night Market
-          </button>
-        </div>
+        >
+          Night Market
+        </button>
+      </div>
 
       <Table
         columns={["Slot No", "Reference No", "Name", "Email", "Contact", "Date", "Status",]}
@@ -202,7 +204,7 @@ const TenantLease = () => {
       }
 
       {editRow && (
-        <EditTerminalFees
+        <EditTenantLease
           row={editRow}
           onClose={() => setEditRow(null)}
           onSave={(updated) => {
@@ -279,7 +281,7 @@ const TenantLease = () => {
               <Textarea
                 label="Remarks"
                 value={remarksText}
-                onChange={(e) => setRemarksText(e.target.value)}
+                onChange={(e) => setRemarksText(e.g.target.value)}
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -313,71 +315,5 @@ const TenantLease = () => {
     </Layout>
   );
 };
-
-const Field = ({ label, value }) => (
-  <div>
-    <div className="text-xs text-slate-500">{label}</div>
-    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">{value || "-"}</div>
-  </div>
-);
-
-const EditTerminalFees = ({ row, onClose, onSave }) => {
-  const [form, setForm] = useState({
-    id: row.id,
-    slotno: row.slotNo,
-    referenceno: row.referenceNo,
-    name: row.name,
-    email: row.email,
-    contact: row.contact,
-    date: row.date,
-    status: row.status,
-  });
-
-  const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Edit Tenant Lease</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Input label="Slot No" value={form.slotno} onChange={(e) => set("Slot No", e.target.value)} />
-          <Input label="Reference No" value={form.referenceno} onChange={(e) => set("Reference No", e.target.value)} />
-          <Input label="Name" value={form.name} onChange={(e) => set("name", e.target.value)} />
-          <Input label="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
-          <Input label="Contact" value={form.contact} onChange={(e) => set("contact", e.target.value)} />
-          <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
-          <Input label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} />
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({
-            id: form.id,
-            slotno: form.slotNo,
-            referenceno: form.referenceNo,
-            name: form.name,
-            email: form.email,
-            contact: form.contact,
-            date: form.date,
-            status: form.status,
-          })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Input = ({ label, value, onChange, type = "text" }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
-
-const Textarea = ({ label, value, onChange }) => (
-  <div className="md:col-span-2">
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <textarea value={value} onChange={onChange} rows={4} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
 
 export default TenantLease;
