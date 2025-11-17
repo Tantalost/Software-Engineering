@@ -6,10 +6,10 @@ import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import TableActions from "../components/common/TableActions";
 import { lostFoundItems } from "../data/assets";
-import ViewModal from "../components/lostfound/ViewModal";
-import EditModal from "../components/lostfound/EditModal";
+import ViewModal from "../components/lostfoundd/ViewModal";
+import EditModal from "../components/lostfoundd/EditModal";
 import NotifyModal from "../components/common/NotifyModal";
-import AddModal from "../components/lostfound/AddModal";
+import AddModal from "../components/lostfoundd/AddModal";
 
 const LostFound = () => {
   const [searchQuery, setSearchQuery] = useState("");
