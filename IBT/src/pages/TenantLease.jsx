@@ -13,11 +13,13 @@ import Field from "../components/common/Field";
 import EditTenantLease from "../components/tenants/EditTenantLease";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
+import TenantStatusFilter from "../components/tenants/TenantStatusFilter"; 
 
 const TenantLease = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const [activeTab, setActiveTab] = useState("permanent");
+  const [activeTab, setActiveTab] = useState("permanent"); 
+  const [activeStatus, setActiveStatus] = useState("All"); 
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
@@ -43,7 +45,6 @@ const TenantLease = () => {
   const availableSlots = records.filter(t => t.status === "Available").length;
   const nonAvailableSlots = records.filter(t => t.status !== "Available").length;
   const totalSlots = records.length;
-
 
   const persist = (next) => {
     setRecords(next);
@@ -76,8 +77,6 @@ const TenantLease = () => {
 
     const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
     persist(nextActiveList);
-    
-    console.log("Item archived successfully!");
   };
 
   const filtered = records.filter((t) => {
@@ -91,8 +90,12 @@ const TenantLease = () => {
     const matchesDate =
       !selectedDate ||
       new Date(t.date).toDateString() === new Date(selectedDate).toDateString();
+    
+    const matchesStatus = 
+      activeStatus === "All" || 
+      t.status.toLowerCase() === activeStatus.toLowerCase();
 
-    return matchesSearch && matchesTab && matchesDate;
+    return matchesSearch && matchesTab && matchesDate && matchesStatus;
   });
 
   const paginatedData = useMemo(() => {
@@ -141,25 +144,32 @@ const TenantLease = () => {
         </div>
       </div>
 
-      <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200 mb-4">
-        <button
-          onClick={() => setActiveTab("permanent")}
-          className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "permanent"
-            ? "bg-white text-emerald-700 shadow-md"
-            : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
-            }`}
-        >
-          Permanent
-        </button>
-        <button
-          onClick={() => setActiveTab("night")}
-          className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "night"
-            ? "bg-white text-emerald-700 shadow-md"
-            : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
-            }`}
-        >
-          Night Market
-        </button>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+        <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
+          <button
+            onClick={() => setActiveTab("permanent")}
+            className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "permanent"
+              ? "bg-white text-emerald-700 shadow-md"
+              : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
+              }`}
+          >
+            Permanent
+          </button>
+          <button
+            onClick={() => setActiveTab("night")}
+            className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "night"
+              ? "bg-white text-emerald-700 shadow-md"
+              : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
+              }`}
+          >
+            Night Market
+          </button>
+        </div>
+
+        <TenantStatusFilter 
+          activeStatus={activeStatus} 
+          onStatusChange={setActiveStatus} 
+        />
       </div>
 
       <Table
@@ -274,7 +284,7 @@ const TenantLease = () => {
             <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
             <div className="space-y-3">
               <Input label="Title" value={notifyDraft.title} onChange={(e) => setNotifyDraft({ ...notifyDraft, title: e.target.value })} />
-              <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.g.target.value })} />
+              <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.target.value })} />
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
@@ -296,7 +306,7 @@ const TenantLease = () => {
                 { label: "Email", type: "email" },
                 { label: "Contact", type: "text" },
                 { label: "Date", type: "date" },
-                { label: "Status", type: "select", options: ["Active", "Inactive"] },
+                { label: "Status", type: "select", options: ["Active", "Inactive", "Paid", "Overdue", "Pending"] },
               ]}
             />
             <div className="mt-3 flex justify-end">
