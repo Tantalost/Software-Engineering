@@ -18,7 +18,14 @@ const PrivateRoute = ({ children, allowedRoles }) => {
   const isLoggedIn = localStorage.getItem("isAdminLoggedIn") === "true";
   const role = localStorage.getItem("authRole") || "superadmin";
   if (!isLoggedIn) return <Navigate to="/login" replace />;
-  if (allowedRoles && !allowedRoles.includes(role)) return <Navigate to="/parking" replace />;
+  
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    if (role === "parking") return <Navigate to="/parking" replace />;
+    if (role === "lostfound") return <Navigate to="/lost-found" replace />;
+    
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 };
 
@@ -32,13 +39,13 @@ export default function App() {
       <Route path="/buses-trips" element={<PrivateRoute allowedRoles={["superadmin"]}> <BusesTrips /> </PrivateRoute>} />
       <Route path="/tickets" element={<PrivateRoute allowedRoles={["superadmin"]}> <TerminalFees /> </PrivateRoute>} />
       <Route path="/tenant-lease" element={<PrivateRoute allowedRoles={["superadmin"]}> <TenantLease /> </PrivateRoute>} />
-      <Route path="/lost-found" element={<PrivateRoute allowedRoles={["superadmin"]}> <LostFound /> </PrivateRoute>} />
+      <Route path="/lost-found" element={<PrivateRoute allowedRoles={["superadmin","lostfound"]}> <LostFound /> </PrivateRoute>} />
       <Route path="/reports" element={<PrivateRoute allowedRoles={["superadmin"]}> <Reports /> </PrivateRoute>} />
       <Route path="/deletion-requests" element={<PrivateRoute allowedRoles={["superadmin"]}> <DeletionRequests /> </PrivateRoute>} />
       <Route path="/employee-management" element={<PrivateRoute allowedRoles={["superadmin"]}> <EmployeeManage /> </PrivateRoute>} />
       <Route path="/parking" element={<PrivateRoute allowedRoles={["superadmin", "parking"]}> <Parking /> </PrivateRoute>} />
-      <Route path="/notifications" element={<PrivateRoute allowedRoles={["superadmin", "parking"]}> <Notifications /> </PrivateRoute>} />
-      <Route path="/archive" element={<PrivateRoute allowedRoles={["superadmin"]}> <Archive /> </PrivateRoute>} />
+      <Route path="/notifications" element={<PrivateRoute allowedRoles={["superadmin", "parking", "lostfound"]}> <Notifications /> </PrivateRoute>} />
+      <Route path="/archive" element={<PrivateRoute allowedRoles={["superadmin", "parking", "lostfound"]}> <Archive /> </PrivateRoute>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

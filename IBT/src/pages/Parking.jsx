@@ -149,16 +149,18 @@ const Parking = () => {
       </div>
 
       <Table
-        columns={["Type", "Price", "Time-in", "Time-out", "Duration", "Date", "Status"]}
+        columns={["Ticket", "Type", "Price", "TimeIn", "TimeOut", "Duration", "Date", "Status"]}
         data={paginatedData.map((ticket) => ({
           id: ticket.id,
+          ticket: `#${String(ticket.ticketNo).padStart(4, '0')}`, 
+          
           type: ticket.type,
           price: `₱${ticket.price.toFixed(2)}`,
-          timein: ticket.timeIn,
-          timeout: ticket.timeOut,
+          timein: ticket.timeIn, 
+          timeout: ticket.timeOut, 
           duration: ticket.duration,
           date: ticket.date,
-          status: ticket.status,
+          status: ticket.status, 
         }))}
         actions={(row) => (
           <div className="flex justify-end items-center space-x-2">
@@ -177,6 +179,7 @@ const Parking = () => {
           </div>
         )}
       />
+
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -194,18 +197,24 @@ const Parking = () => {
           <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
             <h3 className="mb-4 text-base font-semibold text-slate-800">View Parking Ticket</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
+              <Field label="Ticket No" value={viewRow.ticket} />
               <Field label="Type" value={viewRow.type} />
               <Field label="Price" value={viewRow.price} />
-              <Field label="Time-in" value={viewRow.timein} />
-              <Field label="Time-out" value={viewRow.timeout} />
+              <Field label="Time In" value={viewRow.timein} />
+              <Field label="Time Out" value={viewRow.timeout} />
               <Field label="Duration" value={viewRow.duration} />
               <Field label="Date" value={viewRow.date} />
               <Field label="Status" value={viewRow.status} />
             </div>
-            <div className="mt-4 flex justify-end"><button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button></div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
+
       {editRow && (
         <EditParking
           row={editRow}

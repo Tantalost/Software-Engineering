@@ -24,10 +24,10 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
         { path: "/tickets", icon: Ticket, label: "Tickets", roles: ["superadmin"] },
         { path: "/tenant-lease", icon: Store, label: "Tenants/Lease", roles: ["superadmin"] },
         { path: "/parking", icon: CircleParking, label: "Parking", roles: ["superadmin", "parking"] },
-        { path: "/lost-found", icon: SearchCheck, label: "Lost and Found", roles: ["superadmin"] },
+        { path: "/lost-found", icon: SearchCheck, label: "Lost and Found", roles: ["lostfound", "superadmin"] },
         { path: "/reports", icon: FileText, label: "Reports", roles: ["superadmin"] },
         { path: "/deletion-requests", icon: AlertTriangle, label: "Deletion Requests", roles: ["superadmin"] },
-        { path: "/notifications", icon: AlertTriangle, label: "Notifications", roles: ["parking", "superadmin"] },
+        { path: "/notifications", icon: AlertTriangle, label: "Notifications", roles: ["parking", "lostfound", "superadmin"] },
         { path: "/employee-management", icon: Manage, label: "Manage Employee", roles: ["superadmin"] },
        
     ];

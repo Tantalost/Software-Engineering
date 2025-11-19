@@ -29,6 +29,7 @@ export default function AdminLogin() {
           localStorage.setItem(key, JSON.stringify([
             { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin" },
             { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking" },
+            { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound" },
           ]));
         }
       } catch { }
@@ -39,7 +40,7 @@ export default function AdminLogin() {
         if (found) {
           localStorage.setItem("isAdminLoggedIn", "true");
           localStorage.setItem("authRole", found.role);
-          navigate(found.role === "parking" ? "/parking" : "/dashboard");
+          navigate(found.role === "parking" ? "/parking" : found.role === "lostfound" ? "/lost-found" : "/dashboard");
         } else {
           setError("Invalid credentials. Please try again.");
         }
