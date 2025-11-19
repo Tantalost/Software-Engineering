@@ -14,6 +14,7 @@ import Pagination from "../components/common/Pagination";
 import { tickets } from "../data/assets"; 
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
+import TerminalFilter from "../components/terminal/TerminalFilter";
 import { Archive } from "lucide-react"; 
 
 const TerminalFees = () => {
@@ -26,6 +27,7 @@ const TerminalFees = () => {
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [activeType, setActiveType] = useState("All");
 
   const loadStored = () => {
     try {
@@ -78,7 +80,12 @@ const TerminalFees = () => {
       ? new Date(fee.date).toDateString() ===
         new Date(selectedDate).toDateString()
       : true;
-    return matchesSearch && matchesDate;
+    
+    const matchesType = 
+      activeType === "All" || 
+      fee.passengerType.toLowerCase().includes(activeType.toLowerCase());
+
+     return matchesSearch && matchesDate && matchesType;
   });
 
   const regularCount = filtered.filter(
@@ -141,6 +148,13 @@ const TerminalFees = () => {
             />
           </div>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <TerminalFilter 
+            activeType={activeType} 
+            onTypeChange={setActiveType} 
+        />
       </div>
 
       <Table

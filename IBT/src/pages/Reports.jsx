@@ -9,6 +9,7 @@ import Form from "../components/common/Form";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditReport from "../components/reports/EditReport";
+import ReportFilter from "../components/reports/ReportFilter";
 import { Archive } from "lucide-react"; 
 
 const Reports = () => {
@@ -20,6 +21,7 @@ const Reports = () => {
   const [deleteRow, setDeleteRow] = useState(null); 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [activeStatus, setActiveStatus] = useState("All");
   
   const loadStored = () => {
     try {
@@ -59,7 +61,6 @@ const Reports = () => {
       return;
     }
 
-    // 2. REMOVE FROM ACTIVE LIST
     const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
     persist(nextActiveList);
     
@@ -76,8 +77,12 @@ const Reports = () => {
       !selectedDate ||
       new Date(report.date).toDateString() ===
       new Date(selectedDate).toDateString();
+    
+    const matchesStatus = 
+      activeStatus === "All" || 
+      report.status.toLowerCase().includes(activeStatus.toLowerCase());
 
-    return matchesSearch && matchesDate;
+    return matchesSearch && matchesDate && matchesStatus;
   });
 
   const paginatedData = useMemo(() => {
@@ -111,6 +116,13 @@ const Reports = () => {
             />
           </div>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <ReportFilter 
+            activeStatus={activeStatus} 
+            onStatusChange={setActiveStatus} 
+        />
       </div>
 
       <Table

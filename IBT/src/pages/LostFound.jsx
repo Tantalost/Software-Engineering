@@ -11,6 +11,7 @@ import Field from "../components/common/Field";
 import EditLostFound from "../components/lostfound/EditLostFound";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
+import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
 import { Archive } from "lucide-react"; 
 
 const LostFound = () => {
@@ -26,6 +27,7 @@ const LostFound = () => {
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [activeStatus, setActiveStatus] = useState("All");
   const role = localStorage.getItem("authRole") || "superadmin";
 
   const loadStored = () => {
@@ -81,7 +83,11 @@ const LostFound = () => {
       !selectedDate ||
       new Date(item.dateTime).toDateString() === new Date(selectedDate).toDateString();
 
-    return matchesSearch && matchesDate;
+    const matchesStatus = 
+      activeStatus === "All" || 
+      item.status.toLowerCase().includes(activeStatus.toLowerCase());
+
+    return matchesSearch && matchesDate && matchesStatus;
   });
 
   const paginatedData = useMemo(() => {
@@ -132,6 +138,13 @@ const LostFound = () => {
         </div>
       </div>
 
+      <div className="mb-4">
+        <LostFoundStatusFilter 
+            activeStatus={activeStatus} 
+            onStatusChange={setActiveStatus} 
+        />
+      </div>
+      
       <Table
         columns={["Tracking No", "Description", "DateTime", "Status"]}
         data={paginatedData.map((item) => ({

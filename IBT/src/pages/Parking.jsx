@@ -12,11 +12,14 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
+import ParkingFilter from "../components/parking/ParkingFilter";
 import { Archive } from "lucide-react"; 
 
 const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [activeType, setActiveType] = useState("All");
+
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
@@ -82,7 +85,11 @@ const Parking = () => {
       new Date(ticket.date).toDateString() ===
         new Date(selectedDate).toDateString();
 
-    return matchesSearch && matchesDate;
+    const matchesType = 
+      activeType === "All" || 
+      ticket.type.toLowerCase().includes(activeType.toLowerCase());
+
+    return matchesSearch && matchesDate && matchesType;
   });
 
   const carCount = filtered.filter((t) =>
@@ -148,6 +155,13 @@ const Parking = () => {
         </div>
       </div>
 
+      <div className="mb-4">
+        <ParkingFilter 
+            activeType={activeType} 
+            onTypeChange={setActiveType} 
+        />
+      </div>
+       
       <Table
         columns={["Ticket", "Type", "Price", "TimeIn", "TimeOut", "Duration", "Date", "Status"]}
         data={paginatedData.map((ticket) => ({
