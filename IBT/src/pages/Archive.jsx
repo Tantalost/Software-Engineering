@@ -4,12 +4,23 @@ import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import FilterBar from "../components/common/Filterbar";
 import Field from "../components/common/Field"; 
-import { Eye, RotateCcw, Trash2 } from "lucide-react";
+import { Eye, RotateCcw, Trash2, CalendarDays } from "lucide-react";
 
 const Archive = () => {
+  const role = localStorage.getItem("authRole");
+  const availableTabs = useMemo(() => {
+    if (role === "ticket") {
+      return ["Terminal Fee"];
+    }
+    return ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
+  }, [role]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const [activeTab, setActiveTab] = useState("All");
+  const [timeRange, setTimeRange] = useState("All");
+  
+  const [activeTab, setActiveTab] = useState(role === "ticket" ? "Terminal Fee" : "All");
+  
   const [viewRow, setViewRow] = useState(null);
   const [restoreRow, setRestoreRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
@@ -33,21 +44,57 @@ const Archive = () => {
     localStorage.setItem("ibt_archive", JSON.stringify(next));
   };
 
+  const checkTimeRange = (itemDate) => {
+    const date = new Date(itemDate);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const itemDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (timeRange === "All") return true;
+    
+    if (timeRange === "Today") {
+      return itemDay.getTime() === today.getTime();
+    }
+    
+    if (timeRange === "This Week") {
+      const firstDayOfWeek = new Date(today);
+      firstDayOfWeek.setDate(today.getDate() - today.getDay()); 
+      return itemDay >= firstDayOfWeek && itemDay <= today;
+    }
+    
+    if (timeRange === "This Month") {
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    }
+    
+    if (timeRange === "This Year") {
+      return date.getFullYear() === now.getFullYear();
+    }
+
+    return true;
+  };
+
   const filteredItems = useMemo(() => {
     return allArchivedItems.filter((item) => {
+      if (role === "ticket" && item.type !== "Terminal Fee") {
+        return false;
+      }
+
       const matchesTab = activeTab === "All" || item.type === activeTab;
       
       const matchesSearch =
         (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.type || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesDate =
-        !selectedDate ||
-        new Date(item.dateArchived).toDateString() === new Date(selectedDate).toDateString();
+      let matchesDate = true;
+      if (selectedDate) {
+        matchesDate = new Date(item.dateArchived).toDateString() === new Date(selectedDate).toDateString();
+      } else {
+        matchesDate = checkTimeRange(item.dateArchived);
+      }
 
       return matchesTab && matchesSearch && matchesDate;
     });
-  }, [allArchivedItems, activeTab, searchQuery, selectedDate]);
+  }, [allArchivedItems, activeTab, searchQuery, selectedDate, timeRange, role]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -82,7 +129,6 @@ const Archive = () => {
 
     const nextArchive = allArchivedItems.filter((item) => item.id !== restoreRow.id);
     persistArchive(nextArchive);
-
     setRestoreRow(null);
   };
 
@@ -90,26 +136,50 @@ const Archive = () => {
     if (!deleteRow) return;
     const nextArchive = allArchivedItems.filter((item) => item.id !== deleteRow.id);
     persistArchive(nextArchive);
-
     setDeleteRow(null);
   };
 
-  const tabs = ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
+  const handleTimeRangeChange = (e) => {
+    setTimeRange(e.target.value);
+    setSelectedDate(""); 
+  };
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    if (date) setTimeRange("All"); 
+  };
 
   return (
     <Layout title="Archive Management">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          placeholder="Search descriptions..."
-        />
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-4 gap-3">
+        <div className="flex-1">
+          <FilterBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedDate={selectedDate}
+            setSelectedDate={handleDateChange} 
+            placeholder="Search descriptions..."
+          />
+        </div>
+        
+        <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm">
+          <CalendarDays size={18} className="text-slate-500" />
+          <select
+            value={timeRange}
+            onChange={handleTimeRangeChange}
+            className="bg-transparent text-sm text-slate-700 font-medium focus:outline-none cursor-pointer"
+          >
+            <option value="All">All Time</option>
+            <option value="Today">Today</option>
+            <option value="This Week">This Week</option>
+            <option value="This Month">This Month</option>
+            <option value="This Year">This Year</option>
+          </select>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 bg-slate-100 rounded-xl p-1 mb-4">
-        {tabs.map((tab) => (
+        {availableTabs.map((tab) => (
           <button
             key={tab}
             onClick={() => {

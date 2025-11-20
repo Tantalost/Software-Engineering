@@ -4,10 +4,22 @@ import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import Textarea from "../components/common/Textarea";
-import { Check, X, Eye } from "lucide-react"; 
+import { Check, X, Eye, AlertCircle, MessageSquare } from "lucide-react"; 
 
 const REQUEST_STORAGE_KEY = "ibt_deletion_requests";
 const LOG_STORAGE_KEY = "ibt_deletion_log";
+
+const Modal = ({ title, onClose, children }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+        <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+      </div>
+      {children}
+    </div>
+  </div>
+);
 
 const DeletionRequests = () => {
   const [allRequests, setAllRequests] = useState([]);
@@ -16,25 +28,32 @@ const DeletionRequests = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
-  const [viewRow, setViewRow] = useState(null);
-  const [approveRow, setApproveRow] = useState(null);
-  const [denyRow, setDenyRow] = useState(null); 
+  const [viewData, setViewData] = useState(null); 
+  const [approveData, setApproveData] = useState(null);
+  const [denyData, setDenyData] = useState(null); 
   const [adminRemarks, setAdminRemarks] = useState("");
 
   useEffect(() => {
-    try {
-      const rawReqs = localStorage.getItem(REQUEST_STORAGE_KEY);
-      setAllRequests(rawReqs ? JSON.parse(rawReqs) : []);
-      
-      const rawLogs = localStorage.getItem(LOG_STORAGE_KEY);
-      setAllLogs(rawLogs ? JSON.parse(rawLogs) : []);
-    } catch (e) {
-      console.error("Failed to load deletion requests", e);
-    }
+    const loadData = () => {
+      try {
+        const rawReqs = localStorage.getItem(REQUEST_STORAGE_KEY);
+        const rawLogs = localStorage.getItem(LOG_STORAGE_KEY);
+        setAllRequests(rawReqs ? JSON.parse(rawReqs) : []);
+        setAllLogs(rawLogs ? JSON.parse(rawLogs) : []);
+      } catch (e) {
+        console.error("Failed to load data", e);
+      }
+    };
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
   }, []);
 
   const pendingRequests = useMemo(() => {
-    return allRequests.filter(req => req.status === "pending");
+    if (!allRequests) return [];
+    return allRequests.filter(req => 
+      req.status && req.status.toLowerCase() === "pending"
+    );
   }, [allRequests]);
 
   const paginatedData = useMemo(() => {
@@ -45,215 +64,218 @@ const DeletionRequests = () => {
 
   const totalPages = Math.ceil(pendingRequests.length / itemsPerPage);
 
+  const getFullRequest = (id) => allRequests.find(r => r.id === id);
+
   const handleApprove = () => {
-    if (!approveRow || !adminRemarks) {
-      console.error("Remarks are required to approve."); 
-      return;
-    }
+    if (!approveData || !adminRemarks) return;
 
     try {
       const logEntry = {
-        ...approveRow,
-        status: "Approved",
+        ...approveData,
+        status: "Approved (Deleted)",
         adminRemarks: adminRemarks,
         processedDate: new Date().toISOString()
       };
-      const nextLogs = [...allLogs, logEntry];
-
-      const nextRequests = allRequests.filter(req => req.id !== approveRow.id);
+      
+      const nextLogs = [logEntry, ...allLogs];
+      const nextRequests = allRequests.filter(req => req.id !== approveData.id);
 
       localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(nextRequests));
       localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(nextLogs));
       
       setAllRequests(nextRequests);
       setAllLogs(nextLogs);
-      
-      setApproveRow(null);
+      setApproveData(null);
       setAdminRemarks("");
     } catch (e) {
-      console.error("Failed to approve request", e);
+      console.error("Approve Error", e);
     }
   };
 
   const handleDeny = () => {
-    if (!denyRow || !adminRemarks) {
-      console.error("Remarks are required to deny.");
-      return;
-    }
+    if (!denyData || !adminRemarks) return;
 
     try {
-      const itemType = denyRow.itemType;
-      const originalData = denyRow.originalData;
+      const { itemType, originalData } = denyData;
       let storageKey = "";
 
-      if (itemType === "Bus Trip") storageKey = "ibt_busTrips";
-      else if (itemType === "Parking Ticket") storageKey = "ibt_parking";
-      else if (itemType === "Report") storageKey = "ibt_reports";
-      else if (itemType === "Tenant") storageKey = "ibt_TenantLease";
-      else if (itemType === "Lost & Found") storageKey = "ibt_lostFound";
-      else if (itemType === "Terminal Fee") storageKey = "ibt_terminalFees";
+      switch(itemType) {
+        case "Bus Trip": storageKey = "ibt_busTrips"; break;
+        case "Parking Ticket": storageKey = "ibt_parking"; break;
+        case "Report": storageKey = "ibt_reports"; break;
+        case "Tenant": storageKey = "ibt_TenantLease"; break;
+        case "Lost & Found": storageKey = "ibt_lostFound"; break;
+        case "Terminal Fee": storageKey = "ibt_terminalFees"; break;
+        default: console.warn("Unknown Item Type", itemType);
+      }
 
-      if (storageKey) {
+      if (storageKey && originalData) {
         const raw = localStorage.getItem(storageKey);
         const activeList = raw ? JSON.parse(raw) : [];
-        activeList.push(originalData);
-        localStorage.setItem(storageKey, JSON.stringify(activeList));
-      } else {
-        console.warn(`No active list key found for item type: ${itemType}`);
+        if (!activeList.some(item => item.id === originalData.id)) {
+          activeList.push(originalData);
+          localStorage.setItem(storageKey, JSON.stringify(activeList));
+        }
       }
 
       const logEntry = {
-        ...denyRow,
-        status: "Denied",
+        ...denyData,
+        status: "Denied (Restored)",
         adminRemarks: adminRemarks,
         processedDate: new Date().toISOString()
       };
-      const nextLogs = [...allLogs, logEntry];
+
+      const nextLogs = [logEntry, ...allLogs];
+      const nextRequests = allRequests.filter(req => req.id !== denyData.id);
+
       localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(nextLogs));
 
-      const nextRequests = allRequests.filter(req => req.id !== denyRow.id);
+
       localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(nextRequests));
       
       setAllRequests(nextRequests);
       setAllLogs(nextLogs);
-      setDenyRow(null);
+      setDenyData(null);
       setAdminRemarks("");
 
     } catch (e) {
-      console.error("Failed to deny request", e);
+      console.error("Deny Error", e);
     }
   };
 
   return (
     <Layout title="Deletion Requests">
-      <p className="mb-4 text-sm text-slate-600">
-        Review and approve deletion requests submitted by staff. Approved items are permanently deleted. Denied items are restored.
-      </p>
+      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r flex items-start gap-3">
+        <AlertCircle className="text-amber-600 mt-0.5" size={20} />
+        <div>
+          <p className="font-semibold text-amber-800">Admin Approval Required</p>
+          <p className="text-sm text-amber-700">Review pending deletion requests.</p>
+        </div>
+      </div>
 
       <Table
-        columns={["Item Type", "Description", "Requested By", "Date Requested"]}
+        columns={["Item Type", "Description", "Requested By", "Reason", "Date"]}
         data={paginatedData.map((req) => ({
-          ...req,
-          dateRequested: new Date(req.requestDate).toLocaleString(),
+          itemtype: req.itemType,           
+          description: req.itemDescription, 
+          requestedby: req.requestedBy,
+          reason: req.reason || "N/A",     
+          date: new Date(req.requestDate).toLocaleString(), 
+          id: req.id 
         }))}
+        emptyMessage="No pending deletion requests."
         actions={(row) => (
-          <div className="flex justify-end items-center space-x-2">
+          <div className="flex justify-end space-x-2">
             <button
-              onClick={() => setViewRow(row)}
+              onClick={() => setViewData(getFullRequest(row.id))}
+              className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600"
               title="View Details"
-              className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+
             >
-              <Eye size={16} />
+              <Eye size={18} />
             </button>
             <button
-              onClick={() => { setApproveRow(row); setAdminRemarks(""); }}
-              title="Approve Deletion"
-              className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all"
+              onClick={() => { setApproveData(getFullRequest(row.id)); setAdminRemarks(""); }}
+              className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200"
+              title="Approve"
             >
-              <Check size={16} />
+              <Check size={18} />
             </button>
 
             <button
-              onClick={() => { setDenyRow(row); setAdminRemarks(""); }}
-              title="Deny Request"
-              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+              onClick={() => { setDenyData(getFullRequest(row.id)); setAdminRemarks(""); }}
+              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+              title="Deny"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
         )}
       />
+      
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
         itemsPerPage={itemsPerPage}
         totalItems={pendingRequests.length}
-        onItemsPerPageChange={(newItemsPerPage) => {
-          setItemsPerPage(newItemsPerPage);
-          setCurrentPage(1);
-        }}
+        onItemsPerPageChange={setItemsPerPage}
       />
 
-      {viewRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">View Request: {viewRow.itemType}</h3>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
-              <Field label="Request ID" value={viewRow.id} />
-              <Field label="Item Type" value={viewRow.itemType} />
-              <Field label="Description" value={viewRow.itemDescription} />
-              <Field label="Requested By" value={viewRow.requestedBy} />
-              <Field label="Date Requested" value={new Date(viewRow.requestDate).toLocaleString()} />
-              <Field label="Status" value={viewRow.status} />
-            </div>
-            <h4 className="mt-4 mb-2 text-sm font-semibold text-slate-600">Original Data</h4>
-            <pre className="bg-slate-50 p-3 rounded-lg text-xs overflow-auto">
-              {JSON.stringify(viewRow.originalData, null, 2)}
-            </pre>
-            <div className="mt-4 flex justify-end">
-              <button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {approveRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-lg">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Approve Deletion</h3>
-            <p className="text-sm text-slate-600 mb-2">
-              You are about to approve the permanent deletion of:
-            </p>
-            <div className="mb-4">
-              <Field label={approveRow.itemType} value={approveRow.itemDescription} />
-            </div>
-            <Textarea
-              label="Admin Remarks (Required)"
-              value={adminRemarks}
-              onChange={(e) => setAdminRemarks(e.target.value)}
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setApproveRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button 
-                onClick={handleApprove} 
-                disabled={!adminRemarks}
-                className="rounded-lg bg-green-600 px-3 py-2 text-sm text-white shadow hover:bg-green-700 disabled:bg-slate-300"
-              >
-                Confirm & Approve Deletion
-              </button>
-            </div>
-          </div>
-        </div>
+      {viewData && (
+        <Modal title={`Details: ${viewData.itemType}`} onClose={() => setViewData(null)}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
+   
+        <Field label="ID" value={viewData.id} />
+        <Field label="Requested By" value={viewData.requestedBy} />
+
+      <div className="col-span-2">
+        <Field label="Date Requested" value={new Date(viewData.requestDate).toLocaleString()} />
+      </div>
+
+     <div className="col-span-2 pt-2 border-t border-slate-100 mt-1">
+        <Field 
+            label="Reason for Request" 
+            value={viewData.reason || "No reason provided."} 
+        />
+       </div>
+    </div>
+             
+             <div className="flex justify-end">
+               <button onClick={() => setViewData(null)} className="px-4 py-2 bg-slate-200 rounded-lg">Close</button>
+             </div>
+           </div>
+        </Modal>
       )}
 
-      {denyRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-lg">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Deny Deletion Request</h3>
-            <p className="text-sm text-slate-600 mb-2">
-              You are about to deny the deletion request for:
-            </p>
-            <div className="mb-4">
-              <Field label={denyRow.itemType} value={denyRow.itemDescription} />
-            </div>
-            <Textarea
-              label="Admin Remarks (Required)"
-              value={adminRemarks}
-              onChange={(e) => setAdminRemarks(e.target.value)}
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDenyRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button 
-                onClick={handleDeny} 
-                disabled={!adminRemarks}
-                className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700 disabled:bg-slate-300"
-              >
-                Confirm & Deny Request
-              </button>
-            </div>
-          </div>
-        </div>
+      {approveData && (
+        <Modal title="Confirm Delete" onClose={() => setApproveData(null)}>
+           <p className="text-sm text-slate-600 mb-4 bg-red-50 p-3 rounded border border-red-100">
+             Permanently delete <strong>{approveData.itemDescription}</strong>?
+           </p>
+
+           <div className="mb-4 bg-amber-50 p-3 rounded border border-amber-100">
+              <div className="flex items-center gap-2 text-amber-800 mb-1">
+                <MessageSquare size={14} />
+                <span className="text-xs font-bold uppercase tracking-wide">Requester's Reason</span>
+              </div>
+              <p className="text-sm text-amber-900 pl-1">
+                {approveData.reason || "No reason provided."}
+              </p>
+           </div>
+
+           <Textarea
+             label="Admin Remarks (for Log)"
+             value={adminRemarks}
+             onChange={(e) => setAdminRemarks(e.target.value)}
+           />
+           <div className="mt-4 flex justify-end gap-3">
+             <button onClick={() => setApproveData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg">Cancel</button>
+             <button onClick={handleApprove} disabled={!adminRemarks} className="px-4 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50">Approve</button>
+           </div>
+        </Modal>
+      )}
+
+      {denyData && (
+        <Modal title="Restore Data" onClose={() => setDenyData(null)}>
+           <p className="text-sm text-slate-600 mb-4 bg-blue-50 p-3 rounded border border-blue-100">
+             Restore <strong>{denyData.itemDescription}</strong>?
+           </p>
+           <div className="mb-4 p-3 rounded bg-slate-50 border border-slate-100 text-xs text-slate-500">
+              <strong>Requester's Reason:</strong> {denyData.reason || "N/A"}
+           </div>
+
+           <Textarea
+             label="Reason for Denial"
+             value={adminRemarks}
+             onChange={(e) => setAdminRemarks(e.target.value)}
+           />
+           <div className="mt-4 flex justify-end gap-3">
+             <button onClick={() => setDenyData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg">Cancel</button>
+             <button onClick={handleDeny} disabled={!adminRemarks} className="px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50">Deny</button>
+           </div>
+        </Modal>
       )}
 
     </Layout>

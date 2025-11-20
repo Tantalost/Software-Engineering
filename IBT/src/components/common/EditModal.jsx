@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 
-const EditModal = ({ title, initialData, fields, onClose }) => {
+const EditModal = ({ title, initialData, fields, onClose, onSave }) => {
   const [form, setForm] = useState(initialData);
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleSave = () => {
-    console.log("Saved:", form);
+    if (onSave) {
+        onSave(form); 
+    }
+    
     onClose();
   };
 
@@ -17,7 +20,7 @@ const EditModal = ({ title, initialData, fields, onClose }) => {
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
           >
             Cancel
           </button>
