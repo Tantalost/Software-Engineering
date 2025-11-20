@@ -9,17 +9,17 @@ import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditLostFound from "../components/lostfound/EditLostFound";
+import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
-import { Archive } from "lucide-react"; 
+import { Archive, Trash2 } from "lucide-react"; 
 
 const LostFound = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
@@ -42,6 +42,16 @@ const LostFound = () => {
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_lostFound", JSON.stringify(next));
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteRow) return;
+
+    const nextList = records.filter((r) => r.id !== deleteRow.id);
+    
+    persist(nextList); 
+    setDeleteRow(null); 
+    console.log("Item deleted successfully");
   };
 
   const handleArchive = (rowToArchive) => {
@@ -168,6 +178,14 @@ const LostFound = () => {
             >
               <Archive size={16} />
             </button>
+
+            <button
+              onClick={() => setDeleteRow(row)}
+              title="Delete"
+              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+              >
+              <Trash2 size={16} />
+            </button>
           </div>
         )}
       />
@@ -223,6 +241,15 @@ const LostFound = () => {
           </div>
         </div>
       )}
+
+      <DeleteModal
+        isOpen={!!deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Record"
+        message="Are you sure you want to remove this lost and found record? This action cannot be undone."
+        itemName={deleteRow ? `Tracking #${deleteRow.trackingno} - ${deleteRow.description} - ${deleteRow.datetime} ` : ""}
+      />
 
       {role === "lostfound" && showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

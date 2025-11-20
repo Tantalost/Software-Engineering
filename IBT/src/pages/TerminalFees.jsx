@@ -7,6 +7,7 @@ import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import ViewModal from "../components/common/ViewModal";
 import EditModal from "../components/common/EditModal";
+import DeleteModal from "../components/common/DeleteModal"; 
 import InputField from "../components/common/InputField";
 import SelectField from "../components/common/SelectField";
 import DatePickerInput from "../components/common/DatePickerInput";
@@ -15,13 +16,14 @@ import { tickets } from "../data/assets";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import TerminalFilter from "../components/terminal/TerminalFilter";
-import { Archive } from "lucide-react"; 
+import { Archive, Trash2 } from "lucide-react"; 
 
 const TerminalFees = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [showNotify, setShowNotify] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const role = localStorage.getItem("authRole") || "superadmin";
@@ -46,6 +48,16 @@ const TerminalFees = () => {
     localStorage.setItem("ibt_terminalFees", JSON.stringify(next));
   };
 
+  const handleDeleteConfirm = () => {
+    if (!deleteRow) return;
+
+    const nextList = records.filter((r) => r.id !== deleteRow.id);
+    
+    persist(nextList); 
+    setDeleteRow(null); 
+    console.log("Item deleted successfully");
+  };
+  
   const handleArchive = (rowToArchive) => {
     try {
       const rawArchive = localStorage.getItem("ibt_archive");
@@ -54,7 +66,7 @@ const TerminalFees = () => {
       const archiveItem = {
         id: `archive-${Date.now()}-${rowToArchive.id}`,
         type: "Terminal Fee",
-        description: `Ticket #${rowToArchive.ticketno} - ${rowToArchive.passengertype}`, // Customized
+        description: `Ticket #${rowToArchive.ticketno} - ${rowToArchive.passengertype}`,
         dateArchived: new Date().toISOString(),
         originalData: rowToArchive 
       };
@@ -191,6 +203,13 @@ const TerminalFees = () => {
             >
               <Archive size={16} />
             </button>
+            <button
+              onClick={() => setDeleteRow(row)}
+              title="Delete"
+              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
         )}
       />
@@ -262,8 +281,16 @@ const TerminalFees = () => {
             </>
           )}
         />
-      )
-      }
+      )}
+
+      <DeleteModal
+        isOpen={!!deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Record"
+        message="Are you sure you want to remove this terminal fee record? This action cannot be undone."
+        itemName={deleteRow ? `Ticket #${deleteRow.ticketno} - ${deleteRow.passengertype}` : ""}
+      />
 
       {role === "ticket" && showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

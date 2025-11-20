@@ -10,10 +10,11 @@ import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
+import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { Archive } from "lucide-react"; 
+import { Archive, Trash2 } from "lucide-react"; 
 
 const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,6 +43,16 @@ const Parking = () => {
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_parking", JSON.stringify(next));
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteRow) return;
+
+    const nextList = records.filter((r) => r.id !== deleteRow.id);
+    
+    persist(nextList); 
+    setDeleteRow(null); 
+    console.log("Item deleted successfully");
   };
 
   const handleArchive = (rowToArchive) => {
@@ -189,6 +200,14 @@ const Parking = () => {
             >
               <Archive size={16} />
             </button>
+
+            <button
+              onClick={() => setDeleteRow(row)}
+              title="Delete"
+              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+              >
+              <Trash2 size={16} />
+            </button>
           </div>
         )}
       />
@@ -255,6 +274,15 @@ const Parking = () => {
           </div>
         </div>
       )}
+
+      <DeleteModal
+        isOpen={!!deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Record"
+        message="Are you sure you want to remove this parking record? This action cannot be undone."
+        itemName={deleteRow ? `Ticket ${deleteRow.ticket} - ${deleteRow.type} - ${deleteRow.price}` : ""}
+      />
 
       {role === "parking" && showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

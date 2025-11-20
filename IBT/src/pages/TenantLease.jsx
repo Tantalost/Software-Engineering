@@ -8,9 +8,10 @@ import { tenants } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
-import { MessageSquare, Archive } from "lucide-react"; 
+import { MessageSquare, Archive, Trash2 } from "lucide-react"; 
 import Field from "../components/common/Field";
 import EditTenantLease from "../components/tenants/EditTenantLease";
+import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import TenantStatusFilter from "../components/tenants/TenantStatusFilter"; 
@@ -50,6 +51,14 @@ const TenantLease = () => {
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_TenantLease", JSON.stringify(next));
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteRow) return;
+    const nextList = records.filter((r) => r.id !== deleteRow.id);
+    persist(nextList); 
+    setDeleteRow(null); 
+    console.log("Item deleted successfully");
   };
 
   const handleArchive = (rowToArchive) => {
@@ -208,6 +217,14 @@ const TenantLease = () => {
             >
               <Archive size={16} />
             </button>
+            <button
+              onClick={() => setDeleteRow(row)}
+              title="Delete"
+              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+              >
+              <Trash2 size={16} />
+            </button>
+
             {role === "superadmin" && (
               <button
                 onClick={() => {
@@ -288,11 +305,21 @@ const TenantLease = () => {
       )
       }
 
+      <DeleteModal
+        isOpen={!!deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Record"
+        message="Are you sure you want to remove this tenant/lease record? This action cannot be undone."
+        itemName={deleteRow ? `Slot #${deleteRow.slotno} - ${deleteRow.referenceno}
+        - ${deleteRow.name}` : ""}
+      />
+
       {role === "lease" && showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Submit Parking Report</h3>
-            <p className="mt-2 text-sm text-slate-600">Are you sure you want to submit the current parking report?</p>
+            <h3 className="text-base font-semibold text-slate-800">Submit Lease Report</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to submit the current lease report?</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
               <button onClick={() => { setShowSubmitModal(false); console.log('Parking report submitted.'); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Submit</button>
