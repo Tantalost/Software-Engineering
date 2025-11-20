@@ -11,6 +11,9 @@ const ensureDefaultAdmins = () => {
                 { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin" },
                 { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking" },
                 { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound" },
+                { id: 4, email: "ticketadmin@example.com", password: "ticket123", role: "ticket" },
+                { id: 5, email: "busadmin@example.com", password: "bus123", role: "bus" },
+                { id: 6, email: "leaseadmin@example.com", password: "lease123", role: "lease" },
             ];
             localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
             return defaults;
@@ -118,8 +121,11 @@ export default function EmployeeManage() {
                                     <div>
                                         <label className="mb-1 block text-xs font-medium text-slate-600">Role</label>
                                         <select value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none">
-                                            <option value="parking">Parking Admin</option>
+                                            <option value="bus">Bus Admin</option>
+                                            <option value="lease">Lease Admin</option>
                                             <option value="lostfound">Lost & Found Admin</option>
+                                            <option value="parking">Parking Admin</option>
+                                            <option value="ticket">Ticket Admin</option>
                                             <option value="superadmin">Super Admin</option>
                                         </select>
                                     </div>

@@ -20,14 +20,14 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
 
     const allMenus = [
         { path: "/dashboard", icon: Home, label: "Dashboard", roles: ["superadmin"] },
-        { path: "/buses-trips", icon: Bus, label: "Bus Trips", roles: ["superadmin"] },
-        { path: "/tickets", icon: Ticket, label: "Tickets", roles: ["superadmin"] },
-        { path: "/tenant-lease", icon: Store, label: "Tenants/Lease", roles: ["superadmin"] },
+        { path: "/buses-trips", icon: Bus, label: "Bus Trips", roles: ["bus","superadmin"] },
+        { path: "/tickets", icon: Ticket, label: "Tickets", roles: ["ticket","superadmin"] },
+        { path: "/tenant-lease", icon: Store, label: "Tenants/Lease", roles: ["lease","superadmin"] },
         { path: "/parking", icon: CircleParking, label: "Parking", roles: ["superadmin", "parking"] },
         { path: "/lost-found", icon: SearchCheck, label: "Lost and Found", roles: ["lostfound", "superadmin"] },
         { path: "/reports", icon: FileText, label: "Reports", roles: ["superadmin"] },
         { path: "/deletion-requests", icon: AlertTriangle, label: "Deletion Requests", roles: ["superadmin"] },
-        { path: "/notifications", icon: AlertTriangle, label: "Notifications", roles: ["parking", "lostfound", "superadmin"] },
+        { path: "/notifications", icon: AlertTriangle, label: "Notifications", roles: ["parking", "lostfound", "bus", "ticket", "lease", "superadmin"] },
         { path: "/employee-management", icon: Manage, label: "Manage Employee", roles: ["superadmin"] },
        
     ];

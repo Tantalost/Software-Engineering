@@ -9,7 +9,11 @@ const Topbar = ({ title, onMenuClick }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const role = (typeof window !== "undefined" && localStorage.getItem("authRole")) || "superadmin";
-  const userLabel = role === "parking" ? "Parking Admin" : role === "lostfound" ? "Lostfound Admin" : "Admin";
+  const userLabel = role === "parking" ? "Parking Admin" : 
+  role === "lostfound" ? "Lostfound Admin" : 
+  role === "bus" ? "Bus Admin" :
+  role === "ticket" ? "Ticket Admin" :
+  role === "lease" ? "Lease Admin" :  "Admin";
   const bellRef = useRef(null);
   const userRef = useRef(null);
 

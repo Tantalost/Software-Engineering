@@ -25,6 +25,7 @@ const TenantLease = () => {
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
   const [showNotify, setShowNotify] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -130,6 +131,15 @@ const TenantLease = () => {
           {role === "superadmin" && (
             <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-3 sm:py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center w-full sm:w-auto">
               Notify
+            </button>
+          )}
+
+          {role === "lease" && (
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+            >
+              Submit Report
             </button>
           )}
 
@@ -277,6 +287,19 @@ const TenantLease = () => {
         </div>
       )
       }
+
+      {role === "lease" && showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
+            <h3 className="text-base font-semibold text-slate-800">Submit Parking Report</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to submit the current parking report?</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+              <button onClick={() => { setShowSubmitModal(false); console.log('Parking report submitted.'); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Submit</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {role === "superadmin" && showNotify && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
