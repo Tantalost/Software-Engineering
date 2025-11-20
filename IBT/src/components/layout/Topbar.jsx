@@ -118,19 +118,6 @@ const Topbar = ({ title, onMenuClick }) => {
                       Notifications
                     </button>
 
-                    {role === "superadmin" && (
-                      <button
-                        onClick={() => {
-                          setShowUser(false);
-                          navigate("/employee-management");
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
-                      >
-                        Settings
-                      </button>
-                    )}
-
-                    {/* 🚪 Logout Button */}
                     <button
                       onClick={() => setShowLogoutModal(true)}
                       className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"

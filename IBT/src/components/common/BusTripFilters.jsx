@@ -9,7 +9,6 @@ const BusTripFilters = ({
 }) => {
     const handleDateChange = (date) => {
         if (date) {
-            // Format date as YYYY-MM-DD for consistency
             const formattedDate = date.toISOString().split('T')[0];
             setSelectedDate(formattedDate);
         } else {
