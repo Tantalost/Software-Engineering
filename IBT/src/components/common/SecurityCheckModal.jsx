@@ -5,7 +5,7 @@ const SecurityCheckModal = ({
   isOpen, 
   onClose, 
   onConfirm, 
-  actionType, // 'delete' or 'edit'
+  actionType, 
   passwordInput, 
   setPasswordInput, 
   error 

@@ -1,12 +1,12 @@
 import React from "react";
 import { MessageSquare } from "lucide-react";
-import Textarea from "./Textarea"; // Assuming you have this in common
+import Textarea from "./Textarea"; 
 
 const RequestDeletionModal = ({ 
   isOpen, 
   onClose, 
   onConfirm, 
-  itemIdentifier, // e.g., "Ticket #123"
+  itemIdentifier,
   remarks, 
   setRemarks 
 }) => {
