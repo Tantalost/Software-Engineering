@@ -85,7 +85,13 @@ const LogModal = ({ isOpen, onClose, storageKey = "ibt_activity_logs", title = "
                 logs.slice().reverse().map((log) => (
                   <tr key={log.id || Math.random()} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleString()}
+                      {new Date(log.timestamp).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${log.user === 'superadmin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>

@@ -151,9 +151,15 @@ const TerminalFees = () => {
   };
 
   const handleFinalizeAction = () => {
-    const storedPassword = localStorage.getItem("authPassword") || "admin123";
+    let requiredPassword = "";
 
-    if (passwordInput === storedPassword) {
+    if (role === "ticket") {
+        requiredPassword = localStorage.getItem("ticketPassword") || "ticket123";
+    } else {
+        requiredPassword = localStorage.getItem("authPassword") || "admin123";
+    }
+
+    if (passwordInput === requiredPassword) {
       if (!pendingEdit || !pendingEdit.id) {
           setPasswordError("System Error: Lost record ID.");
           return;
@@ -180,6 +186,7 @@ const TerminalFees = () => {
       setPasswordError("Incorrect password. Please try again.");
     }
   };
+
 
   const handleOpenAdd = () => {
     const maxTicket = records.length > 0 ? Math.max(...records.map(r => Number(r.ticketNo) || 0)) : 0;
