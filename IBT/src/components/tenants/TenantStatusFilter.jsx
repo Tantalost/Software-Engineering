@@ -1,7 +1,7 @@
 import React from "react";
 
 const TenantStatusFilter = ({ activeStatus, onStatusChange }) => {
-  const statuses = ["All", "Paid", "Pending", "Overdue"];
+  const statuses = ["All", "Paid", "Overdue"];
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto py-1">
