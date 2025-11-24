@@ -1,4 +1,18 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { db } from "../firebaseConfig";
+// FIX 1: Added onSnapshot and writeBatch to imports
+// Update this line at the top of your file
+import { 
+  collection, 
+  updateDoc, 
+  doc, 
+  onSnapshot, 
+  writeBatch, 
+  query,     // <--- Add this
+  where,     // <--- Add this
+  getDocs    // <--- Add this
+} from "firebase/firestore";
+
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -18,11 +32,13 @@ import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList } 
 import emailjs from '@emailjs/browser';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { mockTenants } from "../data/Mockdata";
 import TenantViewModal from "../components/tenants/modals/TenantViewModal";
 import TenantMapModal from "../components/tenants/modals/TenantMapModal";
 import WaitlistModal from "../components/tenants/modals/WaitlistModal";
 import TenantEmailModal from "../components/tenants/modals/TenantEmailModal";
+
+// FIX 2: Defined mockTenants to prevent "mockTenants is not defined" error
+const mockTenants = [];
 
 const TenantLease = () => {
   
@@ -77,17 +93,41 @@ const TenantLease = () => {
     return mockTenants; 
   };
 
-  const [records, setRecords] = useState(loadStored());
+  const [records, setRecords] = useState([]); 
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "tenants"), (snapshot) => {
+      const liveData = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id 
+      }));
+      setRecords(liveData);
+    });
+
+    return () => unsubscribe(); 
+  }, []);
+
+  const calculateGridPosition = (slotName) => {
+    if (!slotName) return { row: 0, col: 0 };
+    
+    const numPart = parseInt(slotName.split('-')[1]); 
+    const index = numPart > 100 ? numPart - 101 : numPart - 1; 
+
+    const row = Math.floor(index / 5) + 1;
+    const col = (index % 5) + 1;
+    
+    return { row, col };
+  };
 
   useEffect(() => {
     if (showWaitlistModal) {
       const savedWaitlist = localStorage.getItem("ibt_waitlist");
-      if (savedWaitlist) setWaitlistData(JSON.parse(savedWaitlist));
+      if (savedWaitlist)  setWaitlistData(JSON.parse(savedWaitlist));
     }
   }, [showWaitlistModal]);
 
   const mapStats = useMemo(() => {
-    let available = 0; let occupied = 0; let revenue = 0;
+    let available = 0; let paid = 0; let revenue = 0;
     const SECTION_CAPACITY = 30; 
 
     for (let i = 0; i < SECTION_CAPACITY; i++) {
@@ -98,7 +138,7 @@ const TenantLease = () => {
       );
 
       if (tenant && tenant.status !== "Available") {
-        occupied++;
+        paid++;
         const rent = parseFloat(tenant.rentAmount) || 0;
         const util = parseFloat(tenant.utilityAmount) || 0;
         revenue += (rent + util);
@@ -106,7 +146,7 @@ const TenantLease = () => {
         available++;
       }
     }
-    return { availableSlots: available, nonAvailableSlots: occupied, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
+    return { availableSlots: available, nonAvailableSlots: paid, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
   }, [records, activeTab]); 
 
   const { availableSlots, nonAvailableSlots, totalSlots, totalRevenue } = mapStats;
@@ -138,7 +178,7 @@ const TenantLease = () => {
         contactNo: applicant.contact,
         email: applicant.email,
         tenantType: applicant.preferredType,
-        status: "Pending", 
+        status: "Paid", 
         StartDateTime: new Date().toISOString(),
         DueDateTime: "", 
         rentAmount: 0,
@@ -178,36 +218,111 @@ const TenantLease = () => {
     setAlerts(newAlerts);
   }, [records]);
 
-  const handleAddTenant = (newTenant) => {
-    persist([newTenant, ...records]);
-    setShowAddModal(false);
+ const handleAddTenant = async (newTenant) => {
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Create Tenant Document with status "Paid"
+      const tenantRef = doc(collection(db, "tenants"));
+      batch.set(tenantRef, {
+        ...newTenant,
+        status: "Paid", // <--- Ensures Admin Table says "Paid"
+        createdAt: new Date().toISOString()
+      });
+
+      // 2. Update Stall Document(s) with status "Paid"
+      // This is CRITICAL for the Mobile App to turn the slot RED
+      const slots = newTenant.slotNo.split(', '); 
+      
+      slots.forEach(slot => {
+        const { row, col } = calculateGridPosition(slot);
+        
+        // Reconstruct ID (e.g., "Permanent-1-1")
+        const stallId = `${newTenant.tenantType}-${row}-${col}`;
+        const stallRef = doc(db, "stalls", stallId);
+        
+        batch.set(stallRef, {
+          row: row,
+          col: col,
+          floor: newTenant.tenantType, 
+          status: "Paid",     // <--- Mobile App specifically looks for "Paid"
+          tenantId: tenantRef.id,
+          slotLabel: slot
+        });
+      });
+
+      await batch.commit();
+      
+      setShowAddModal(false);
+      alert("Tenant marked as PAID and Mobile App updated!");
+    } catch (e) {
+      console.error("Error adding tenant: ", e);
+      alert("Error saving to database");
+    }
   };
 
-  const handleDeleteConfirm = () => {
-    if (!deleteRow) return;
-    persist(records.filter((r) => r.id !== deleteRow.id)); 
-    setDeleteRow(null); 
-
-  };
-
-  const handleArchive = (rowToArchive) => {
-
-    if (!rowToArchive) return;
+ const handleDeleteConfirm = async () => {
+    if (!deleteRow || !deleteRow.id) return;
 
     try {
-      const rawArchive = localStorage.getItem("ibt_archive");
-      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
-      archiveList.push({
-        id: `archive-${Date.now()}-${rowToArchive.id}`,
-        type: "Tenant", 
-        description: `Slot #${rowToArchive.slotNo} - ${rowToArchive.tenantName || rowToArchive.name}`, 
-        dateArchived: new Date().toISOString(),
-        originalStatus: rowToArchive.status,
-        originalData: rowToArchive
+      const batch = writeBatch(db);
+      const tenantId = String(deleteRow.id); 
+      
+      // Tracker to ensure we don't try to delete the same document twice
+      const stallIdsToDelete = new Set();
+
+      // --- STRATEGY 1: Find Stalls linked by ID (The Modern Way) ---
+      const q = query(
+        collection(db, "stalls"), 
+        where("tenantId", "==", tenantId)
+      );
+      const stallSnapshot = await getDocs(q);
+      stallSnapshot.forEach((doc) => {
+        stallIdsToDelete.add(doc.id);
       });
-      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
-    } catch (e) { console.error(e); }
-    persist(records.filter((r) => r.id !== rowToArchive.id));
+
+      // --- STRATEGY 2: Calculate Stall ID manually (The Fallback) ---
+      // This catches cases where the 'tenantId' link is missing in the database
+      const slotString = deleteRow.slotNo || deleteRow.slotno; // Handle case sensitivity
+      const typeString = deleteRow.tenantType; 
+
+      if (slotString && typeString) {
+        const slots = slotString.split(',').map(s => s.trim());
+        slots.forEach(slot => {
+           // Use your existing helper to get row/col
+           const { row, col } = calculateGridPosition(slot);
+           
+           // Reconstruct the ID exactly how handleAddTenant creates it
+           const calculatedId = `${typeString}-${row}-${col}`;
+           stallIdsToDelete.add(calculatedId);
+        });
+      }
+
+      // --- EXECUTE DELETIONS ---
+      
+      // 1. Delete the Tenant
+      batch.delete(doc(db, "tenants", tenantId));
+
+      // 2. Delete every Stall we found (via Link OR Calculation)
+      stallIdsToDelete.forEach(stallId => {
+        const stallRef = doc(db, "stalls", stallId);
+        batch.delete(stallRef);
+      });
+
+      console.log("Deleting Tenant:", tenantId);
+      console.log("Deleting Stalls:", Array.from(stallIdsToDelete));
+
+      await batch.commit();
+      
+      // Update UI
+      setRecords(currentRecords => currentRecords.filter(item => item.id !== deleteRow.id));
+      setDeleteRow(null);
+      alert("Successfully deleted from Database and Mobile App!");
+      
+    } catch (e) {
+      console.error("Error deleting:", e);
+      alert(`Error: ${e.message}`);
+    }
   };
 
   const sendEmailNotification = (mockTenant, messageBody) => {
@@ -351,7 +466,65 @@ const TenantLease = () => {
 
       <AddTenantModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSave={handleAddTenant} tenants={records} />
 
-      {editRow && (<EditTenantLease row={editRow} tenants={records} onClose={() => setEditRow(null)} onSave={(updated) => { persist(records.map((r) => (r.id === updated.id ? updated : r))); setEditRow(null); }} />)}
+      {editRow && (
+        <EditTenantLease 
+          row={editRow} 
+          tenants={records} 
+          onClose={() => setEditRow(null)} 
+          onSave={async (updatedData) => {
+            try {
+              const batch = writeBatch(db);
+              const tenantId = updatedData.id;
+
+              // 1. Update the Tenant Document (Main Data)
+              const tenantRef = doc(db, "tenants", tenantId);
+              batch.update(tenantRef, updatedData);
+
+              // 2. Find and DELETE existing stalls for this tenant
+              // (This cleans up the old slot if you moved the tenant)
+              const q = query(collection(db, "stalls"), where("tenantId", "==", tenantId));
+              const oldStallsSnapshot = await getDocs(q);
+              oldStallsSnapshot.forEach((doc) => {
+                batch.delete(doc.ref);
+              });
+
+              // 3. Create NEW Stall Documents for the updated slots
+              // (This ensures the Mobile App sees the correct new Status and Location)
+              if (updatedData.slotNo) {
+                const slots = updatedData.slotNo.split(', ');
+                
+                slots.forEach(slot => {
+                  // Calculate Row/Col for the Mobile App Grid
+                  const { row, col } = calculateGridPosition(slot);
+                  
+                  // Create the Stall ID (e.g. Permanent-1-1)
+                  const stallId = `${updatedData.tenantType}-${row}-${col}`;
+                  const stallRef = doc(db, "stalls", stallId);
+
+                  batch.set(stallRef, {
+                    row: row,
+                    col: col,
+                    floor: updatedData.tenantType,
+                    status: updatedData.status, // <--- Syncs "Paid" to Mobile App
+                    tenantId: tenantId,
+                    slotLabel: slot
+                  });
+                });
+              }
+
+              // 4. Commit all changes at once
+              await batch.commit();
+              
+              setEditRow(null);
+              alert("Tenant updated! Mobile App synced successfully.");
+              
+            } catch (error) {
+              console.error("Error updating tenant: ", error);
+              alert("Failed to update record.");
+            }
+          }}
+        />
+      )}
       
       <DeleteModal isOpen={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDeleteConfirm} title="Delete Record" message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion." itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} />
 
