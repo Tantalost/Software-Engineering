@@ -6,8 +6,11 @@ import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import { reports } from "../data/assets";
 import Form from "../components/common/Form";
-import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
+import Field from "../components/common/Field";
+import EditReport from "../components/reports/EditReport";
+import ReportFilter from "../components/reports/ReportFilter";
+import { Archive } from "lucide-react"; 
 
 const Reports = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,13 +18,11 @@ const Reports = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null);
-  const [showNotify, setShowNotify] = useState(false);
-  const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const role = localStorage.getItem("authRole") || "superadmin";
-
+  const [activeStatus, setActiveStatus] = useState("All");
+  
   const loadStored = () => {
     try {
       const raw = localStorage.getItem("ibt_reports");
@@ -36,6 +37,36 @@ const Reports = () => {
     localStorage.setItem("ibt_reports", JSON.stringify(next));
   };
 
+  const handleArchive = (rowToArchive) => {
+    if (!rowToArchive) return;
+
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Report",
+        description: `Report #${rowToArchive.reportid} - ${rowToArchive.type}`,
+        dateArchived: new Date().toISOString(),
+        originalStatus: rowToArchive.status,
+        originalData: rowToArchive
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+
+    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+    persist(nextActiveList);
+    
+    console.log("Item archived successfully!");
+  };
+
   const filtered = records.filter((report) => {
     const matchesSearch =
       report.id.toString().includes(searchQuery) ||
@@ -46,8 +77,12 @@ const Reports = () => {
       !selectedDate ||
       new Date(report.date).toDateString() ===
       new Date(selectedDate).toDateString();
+    
+    const matchesStatus = 
+      activeStatus === "All" || 
+      report.status.toLowerCase().includes(activeStatus.toLowerCase());
 
-    return matchesSearch && matchesDate;
+    return matchesSearch && matchesDate && matchesStatus;
   });
 
   const paginatedData = useMemo(() => {
@@ -74,24 +109,40 @@ const Reports = () => {
           </button>
           <div className="h-[44px] flex items-center">
             <ExportMenu
-              onExportCSV={() => alert("Exporting to CSV...")}
-              onExportExcel={() => alert("Exporting to Excel...")}
-              onExportPDF={() => alert("Exporting to PDF...")}
+              onExportCSV={() => console.log("Exporting to CSV...")}
+              onExportExcel={() => console.log("Exporting to Excel...")}
+              onExportPDF={() => console.log("Exporting to PDF...")}
               onPrint={() => window.print()}
             />
           </div>
         </div>
       </div>
 
+      <div className="mb-4">
+        <ReportFilter 
+            activeStatus={activeStatus} 
+            onStatusChange={setActiveStatus} 
+        />
+      </div>
+
       <Table
         columns={["Report ID", "Type", "Author", "Date", "Status"]}
         data={paginatedData.map((report) => ({ id: report.id, reportid: report.id, type: report.type, author: report.author, date: report.date, status: report.status }))}
         actions={(row) => (
-          <TableActions
-            onView={() => setViewRow(row)}
-            onEdit={() => setEditRow(row)}
-            onDelete={() => setDeleteRow(row)}
-          />
+          <div className="flex justify-end items-center space-x-2">
+            <TableActions
+              onView={() => setViewRow(row)}
+              onEdit={() => setEditRow(row)}
+              onDelete={() => setDeleteRow(row)} 
+            />
+            <button
+              onClick={() => handleArchive(row)}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
+          </div>
         )}
       />
       <Pagination
@@ -133,14 +184,18 @@ const Reports = () => {
           }}
         />
       )}
+      
       {deleteRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Delete Report</h3>
-            <p className="mt-2 text-sm text-slate-600">Delete report {deleteRow.reportid}?</p>
+            <h3 className="text-base font-semibold text-slate-800">Archive Report</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive report {deleteRow.reportid}?</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const next = records.filter((r) => r.id !== deleteRow.id); persist(next); setDeleteRow(null); }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Delete</button>
+              <button onClick={() => { 
+                handleArchive(deleteRow); 
+                setDeleteRow(null); 
+              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
             </div>
           </div>
         </div>
@@ -156,7 +211,7 @@ const Reports = () => {
                 { label: "Type", type: "text" },
                 { label: "Author", type: "text" },
                 { label: "Date", type: "date" },
-                { label: "Status", type: "select", options: ["Draft", "Submitted", "Approved"] },
+                { label:"Status", type: "select", options: ["Draft", "Submitted", "Approved"] },
               ]}
             />
             <div className="mt-3 flex justify-end">
@@ -172,49 +227,3 @@ const Reports = () => {
 };
 
 export default Reports;
-
-const Field = ({ label, value }) => (
-  <div>
-    <div className="text-xs text-slate-500">{label}</div>
-    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">{value || "-"}</div>
-  </div>
-);
-
-const EditReport = ({ row, onClose, onSave }) => {
-  const [form, setForm] = React.useState({
-    id: row.id,
-    type: row.type,
-    author: row.author,
-    date: row.date,
-    status: row.status,
-  });
-  const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Edit Report</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Input label="Type" value={form.type} onChange={(e) => set("type", e.target.value)} />
-          <Input label="Author" value={form.author} onChange={(e) => set("author", e.target.value)} />
-          <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
-          <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Pending", "Completed", "Draft", "Submitted"]} />
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({ id: form.id, type: form.type, author: form.author, date: form.date, status: form.status })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Select = ({ label, value, onChange, options = [] }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <select value={value} onChange={onChange} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none">
-      {options.map((opt) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-  </div>
-);

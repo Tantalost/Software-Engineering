@@ -7,19 +7,23 @@ import Table from "../components/common/Table";
 import { tenants } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
-import DatePickerInput from "../components/common/DatePickerInput";
 import Pagination from "../components/common/Pagination";
-import { MessageSquare } from "lucide-react";
-
+import { MessageSquare, Archive } from "lucide-react"; 
+import Field from "../components/common/Field";
+import EditTenantLease from "../components/tenants/EditTenantLease";
+import Input from "../components/common/Input";
+import Textarea from "../components/common/Textarea";
+import TenantStatusFilter from "../components/tenants/TenantStatusFilter"; 
 
 const TenantLease = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const [activeTab, setActiveTab] = useState("permanent");
+  const [activeTab, setActiveTab] = useState("permanent"); 
+  const [activeStatus, setActiveStatus] = useState("All"); 
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,17 +42,44 @@ const TenantLease = () => {
   };
 
   const [records, setRecords] = useState(loadStored());
-  const availableSlots = records.filter(t => t.status === "Available").length; 
-  const nonAvailableSlots = records.filter(t => t.status !== "Available").length; 
-  const totalSlots = records.length;
-
+  const availableSlots = records.filter(t => t.status === "Available").length;
+  const nonAvailableSlots = records.filter(t => t.status !== "Available").length;
+  const totalSlots = records.length;
 
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_TenantLease", JSON.stringify(next));
   };
 
-  const filtered = tenants.filter((t) => {
+  const handleArchive = (rowToArchive) => {
+    if (!rowToArchive) return;
+
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Tenant", 
+        description: `Slot #${rowToArchive.slotno} - ${rowToArchive.name}`, 
+        dateArchived: new Date().toISOString(),
+        originalStatus: rowToArchive.status,
+        originalData: rowToArchive
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+
+    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+    persist(nextActiveList);
+  };
+
+  const filtered = records.filter((t) => {
     const matchesSearch =
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.referenceNo.toLowerCase().includes(searchQuery.toLowerCase());
@@ -59,8 +90,12 @@ const TenantLease = () => {
     const matchesDate =
       !selectedDate ||
       new Date(t.date).toDateString() === new Date(selectedDate).toDateString();
+    
+    const matchesStatus = 
+      activeStatus === "All" || 
+      t.status.toLowerCase() === activeStatus.toLowerCase();
 
-    return matchesSearch && matchesTab && matchesDate;
+    return matchesSearch && matchesTab && matchesDate && matchesStatus;
   });
 
   const paginatedData = useMemo(() => {
@@ -89,8 +124,6 @@ const TenantLease = () => {
         />
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
-         
-
           <button onClick={() => setShowPreview(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-3 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center w-full sm:w-auto">
             + Add New
           </button>
@@ -102,35 +135,42 @@ const TenantLease = () => {
 
           <div className="flex items-center justify-end w-full sm:w-auto transition-transform duration-300 active:scale-95 hover:scale-105">
             <ExportMenu
-              onExportCSV={() => alert("Exporting to CSV...")}
-              onExportExcel={() => alert("Exporting to Excel...")}
-              onExportPDF={() => alert("Exporting to PDF...")}
+              onExportCSV={() => console.log("Exporting to CSV...")}
+              onExportExcel={() => console.log("Exporting to Excel...")}
+              onExportPDF={() => console.log("Exporting to PDF...")}
               onPrint={() => window.print()}
             />
           </div>
         </div>
       </div>
 
-       <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200 mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+        <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
           <button
             onClick={() => setActiveTab("permanent")}
             className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "permanent"
-            ? "bg-white text-emerald-700 shadow-md"
-            : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
-            }`}
-            >
+              ? "bg-white text-emerald-700 shadow-md"
+              : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
+              }`}
+          >
             Permanent
           </button>
           <button
             onClick={() => setActiveTab("night")}
             className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${activeTab === "night"
-            ? "bg-white text-emerald-700 shadow-md"
-            : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
-            }`}
-            >
+              ? "bg-white text-emerald-700 shadow-md"
+              : "text-emerald-600 hover:text-emerald-700 hover:scale-105"
+              }`}
+          >
             Night Market
           </button>
         </div>
+
+        <TenantStatusFilter 
+          activeStatus={activeStatus} 
+          onStatusChange={setActiveStatus} 
+        />
+      </div>
 
       <Table
         columns={["Slot No", "Reference No", "Name", "Email", "Contact", "Date", "Status",]}
@@ -149,8 +189,15 @@ const TenantLease = () => {
             <TableActions
               onView={() => setViewRow(row)}
               onEdit={() => setEditRow(row)}
-              onDelete={() => setDeleteRow(row)}
+              onDelete={() => setDeleteRow(row)} 
             />
+            <button
+              onClick={() => handleArchive(row)}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
             {role === "superadmin" && (
               <button
                 onClick={() => {
@@ -202,7 +249,7 @@ const TenantLease = () => {
       }
 
       {editRow && (
-        <EditTerminalFees
+        <EditTenantLease
           row={editRow}
           onClose={() => setEditRow(null)}
           onSave={(updated) => {
@@ -217,11 +264,14 @@ const TenantLease = () => {
       {deleteRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Delete Terminal Fee</h3>
-            <p className="mt-2 text-sm text-slate-600">Are you sure you want to delete template {deleteRow.ticketno}?</p>
+            <h3 className="text-base font-semibold text-slate-800">Archive Tenant</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive tenant {deleteRow.name} (Slot {deleteRow.slotno})?</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const next = records.filter((r) => r.id !== deleteRow.id); persist(next); setDeleteRow(null); }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Delete</button>
+              <button onClick={() => { 
+                handleArchive(deleteRow); 
+                setDeleteRow(null); 
+              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
             </div>
           </div>
         </div>
@@ -256,7 +306,7 @@ const TenantLease = () => {
                 { label: "Email", type: "email" },
                 { label: "Contact", type: "text" },
                 { label: "Date", type: "date" },
-                { label: "Status", type: "select", options: ["Active", "Inactive"] },
+                { label: "Status", type: "select", options: ["Active", "Inactive", "Paid", "Overdue", "Pending"] },
               ]}
             />
             <div className="mt-3 flex justify-end">
@@ -279,7 +329,7 @@ const TenantLease = () => {
               <Textarea
                 label="Remarks"
                 value={remarksText}
-                onChange={(e) => setRemarksText(e.target.value)}
+                onChange={(e) => setRemarksText(e.target.value)} 
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -300,7 +350,7 @@ const TenantLease = () => {
                   localStorage.setItem("ibt_tenantRemarks", JSON.stringify(remarks));
                   setRemarksRow(null);
                   setRemarksText("");
-                  alert("Remarks saved successfully!");
+                  console.log("Remarks saved successfully!"); 
                 }}
                 className="rounded-lg bg-amber-600 px-3 py-2 text-sm text-white shadow hover:bg-amber-700"
               >
@@ -313,71 +363,5 @@ const TenantLease = () => {
     </Layout>
   );
 };
-
-const Field = ({ label, value }) => (
-  <div>
-    <div className="text-xs text-slate-500">{label}</div>
-    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">{value || "-"}</div>
-  </div>
-);
-
-const EditTerminalFees = ({ row, onClose, onSave }) => {
-  const [form, setForm] = useState({
-    id: row.id,
-    slotno: row.slotNo,
-    referenceno: row.referenceNo,
-    name: row.name,
-    email: row.email,
-    contact: row.contact,
-    date: row.date,
-    status: row.status,
-  });
-
-  const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Edit Tenant Lease</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Input label="Slot No" value={form.slotno} onChange={(e) => set("Slot No", e.target.value)} />
-          <Input label="Reference No" value={form.referenceno} onChange={(e) => set("Reference No", e.target.value)} />
-          <Input label="Name" value={form.name} onChange={(e) => set("name", e.target.value)} />
-          <Input label="Email" value={form.email} onChange={(e) => set("email", e.target.value)} />
-          <Input label="Contact" value={form.contact} onChange={(e) => set("contact", e.target.value)} />
-          <DatePickerInput label="Date" value={form.date} onChange={(e) => set("date", e.target.value)} />
-          <Input label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} />
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({
-            id: form.id,
-            slotno: form.slotNo,
-            referenceno: form.referenceNo,
-            name: form.name,
-            email: form.email,
-            contact: form.contact,
-            date: form.date,
-            status: form.status,
-          })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Input = ({ label, value, onChange, type = "text" }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
-
-const Textarea = ({ label, value, onChange }) => (
-  <div className="md:col-span-2">
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <textarea value={value} onChange={onChange} rows={4} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
 
 export default TenantLease;

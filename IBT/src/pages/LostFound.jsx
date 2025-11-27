@@ -7,18 +7,27 @@ import { lostFoundItems } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
+import Field from "../components/common/Field";
+import EditLostFound from "../components/lostfound/EditLostFound";
+import Input from "../components/common/Input";
+import Textarea from "../components/common/Textarea";
+import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
+import { Archive } from "lucide-react"; 
 
 const LostFound = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null); 
   const [showNotify, setShowNotify] = useState(false);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [activeStatus, setActiveStatus] = useState("All");
   const role = localStorage.getItem("authRole") || "superadmin";
 
   const loadStored = () => {
@@ -35,6 +44,36 @@ const LostFound = () => {
     localStorage.setItem("ibt_lostFound", JSON.stringify(next));
   };
 
+  const handleArchive = (rowToArchive) => {
+    if (!rowToArchive) return;
+
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Lost & Found", 
+        description: `Track #${rowToArchive.trackingno} - ${rowToArchive.description.substring(0, 30)}...`, 
+        dateArchived: new Date().toISOString(),
+        originalStatus: rowToArchive.status,
+        originalData: rowToArchive
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+
+    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
+    persist(nextActiveList);
+    
+    console.log("Item archived successfully!");
+  };
+
   const filtered = records.filter((item) => {
     const matchesSearch = item.description
       .toLowerCase()
@@ -44,7 +83,11 @@ const LostFound = () => {
       !selectedDate ||
       new Date(item.dateTime).toDateString() === new Date(selectedDate).toDateString();
 
-    return matchesSearch && matchesDate;
+    const matchesStatus = 
+      activeStatus === "All" || 
+      item.status.toLowerCase().includes(activeStatus.toLowerCase());
+
+    return matchesSearch && matchesDate && matchesStatus;
   });
 
   const paginatedData = useMemo(() => {
@@ -74,17 +117,34 @@ const LostFound = () => {
               Notify
             </button>
           )}
+
+          {role === "lostfound" && (
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+            >
+              Submit Report
+            </button>
+          )}
+
           <div className="h-[44px] flex items-center">
             <ExportMenu
-              onExportCSV={() => alert("Exporting to CSV...")}
-              onExportExcel={() => alert("Exporting to Excel...")}
-              onExportPDF={() => alert("Exporting to PDF...")}
+              onExportCSV={() => console.log("Exporting to CSV...")}
+              onExportExcel={() => console.log("Exporting to Excel...")}
+              onExportPDF={() => console.log("Exporting to PDF...")}
               onPrint={() => window.print()}
             />
           </div>
         </div>
       </div>
 
+      <div className="mb-4">
+        <LostFoundStatusFilter 
+            activeStatus={activeStatus} 
+            onStatusChange={setActiveStatus} 
+        />
+      </div>
+      
       <Table
         columns={["Tracking No", "Description", "DateTime", "Status"]}
         data={paginatedData.map((item) => ({
@@ -95,11 +155,20 @@ const LostFound = () => {
           status: item.status,
         }))}
         actions={(row) => (
-          <TableActions
-            onView={() => setViewRow(row)}
-            onEdit={() => setEditRow(row)}
-            onDelete={() => setDeleteRow(row)}
-          />
+          <div className="flex justify-end items-center space-x-2">
+            <TableActions
+              onView={() => setViewRow(row)}
+              onEdit={() => setEditRow(row)}
+              onDelete={() => setDeleteRow(row)} 
+            />
+            <button
+              onClick={() => handleArchive(row)}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
+          </div>
         )}
       />
       <Pagination
@@ -138,14 +207,42 @@ const LostFound = () => {
           }}
         />
       )}
+      
       {deleteRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Delete Record</h3>
-            <p className="mt-2 text-sm text-slate-600">Delete tracking {deleteRow.trackingno}?</p>
+            <h3 className="text-base font-semibold text-slate-800">Archive Item</h3>
+            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive this item (Track #{deleteRow.trackingno})?</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const next = records.filter((r) => r.id !== deleteRow.id); persist(next); setDeleteRow(null); }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Delete</button>
+              <button onClick={() => { 
+                handleArchive(deleteRow); 
+                setDeleteRow(null); 
+              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {role === "lostfound" && showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
+            <h3 className="text-base font-semibold text-slate-800">Submit Lost & Found Report</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Are you sure you want to submit the current report?
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                Cancel
+              </button>
+              <button onClick={() => { 
+                setShowSubmitModal(false); 
+                console.log('Lost & Found report submitted.'); 
+                }} 
+                className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700"
+                >
+                Submit
+              </button>
             </div>
           </div>
         </div>
@@ -166,6 +263,7 @@ const LostFound = () => {
           </div>
         </div>
       )}
+
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-3xl">
@@ -191,65 +289,3 @@ const LostFound = () => {
 };
 
 export default LostFound;
-
-const Field = ({ label, value }) => (
-  <div>
-    <div className="text-xs text-slate-500">{label}</div>
-    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">{value || "-"}</div>
-  </div>
-);
-
-const EditLostFound = ({ row, onClose, onSave }) => {
-  const [form, setForm] = React.useState({
-    id: row.id,
-    trackingNo: row.trackingno,
-    description: row.description,
-    dateTime: row.datetime,
-    status: row.status,
-  });
-  const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-        <h3 className="mb-4 text-base font-semibold text-slate-800">Edit Record</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Input label="Tracking No" value={form.trackingNo} onChange={(e) => set("trackingNo", e.target.value)} />
-          <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Unclaimed", "Claimed", "Pending"]} />
-          <Input label="DateTime" value={form.dateTime} onChange={(e) => set("dateTime", e.target.value)} />
-          <div className="md:col-span-2">
-            <Input label="Description" value={form.description} onChange={(e) => set("description", e.target.value)} />
-          </div>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({ id: form.id, trackingNo: form.trackingNo, description: form.description, dateTime: form.dateTime, status: form.status })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Input = ({ label, value, onChange, type = "text" }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <input value={value} onChange={onChange} type={type} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
-
-const Textarea = ({ label, value, onChange }) => (
-  <div className="md:col-span-2">
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <textarea value={value} onChange={onChange} rows={4} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none" />
-  </div>
-);
-
-const Select = ({ label, value, onChange, options = [] }) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-    <select value={value} onChange={onChange} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none">
-      {options.map((opt) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-  </div>
-);

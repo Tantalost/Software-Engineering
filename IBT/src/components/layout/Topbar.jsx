@@ -9,7 +9,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const role = (typeof window !== "undefined" && localStorage.getItem("authRole")) || "superadmin";
-  const userLabel = role === "parking" ? "Parking Admin" : "Admin";
+  const userLabel = role === "parking" ? "Parking Admin" : role === "lostfound" ? "Lostfound Admin" : "Admin";
   const bellRef = useRef(null);
   const userRef = useRef(null);
 
@@ -42,7 +42,6 @@ const Topbar = ({ title, onMenuClick }) => {
 
   return (
     <>
-      {/* 🌟 Topbar UI */}
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="p-4 lg:px-8 lg:py-4">
           <div className="flex items-center justify-between">
@@ -117,6 +116,28 @@ const Topbar = ({ title, onMenuClick }) => {
                     >
                       Notifications
                     </button>
+
+                     <button
+                      onClick={() => {
+                        setShowUser(false);
+                        navigate("/archive");
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                    >
+                      Archive
+                    </button>
+
+                    {role === "superadmin" && (
+                      <button
+                        onClick={() => {
+                          setShowUser(false);
+                          navigate("/employee-management");
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                      >
+                        Settings
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setShowLogoutModal(true)}

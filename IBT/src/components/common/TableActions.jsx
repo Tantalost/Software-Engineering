@@ -1,7 +1,7 @@
 import React from "react";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, } from "lucide-react";
 
-const TableActions = ({ onView, onEdit, onDelete }) => {
+const TableActions = ({ onView, onEdit,}) => {
   return (
     <div className="flex justify-end space-x-2">
       <button
@@ -17,13 +17,6 @@ const TableActions = ({ onView, onEdit, onDelete }) => {
         className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
       >
         <Edit size={16} />
-      </button>
-      <button
-        onClick={onDelete}
-        title="Delete"
-        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-      >
-        <Trash2 size={16} />
       </button>
     </div>
   );
