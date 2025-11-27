@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check } from "lucide-react";
+import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Eye } from "lucide-react";
 
-const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
+const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
 
   const [formData, setFormData] = useState({
     slotNo: "",
@@ -10,10 +10,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
     email: "",
     contactNo: "",
     tenantType: "Permanent", 
+    uid: "",
   });
 
   const [showMapModal, setShowMapModal] = useState(false);
- 
   const [tempSelectedSlots, setTempSelectedSlots] = useState([]); 
 
   const [productCategory, setProductCategory] = useState("Food and Beverages");
@@ -42,29 +42,69 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
 
   useEffect(() => {
     if (isOpen) {
-      setFormData((prev) => ({ 
-        ...prev, 
-        referenceNo: "", 
-        slotNo: "",
-        tenantName: "",
-        email: "",
-        contactNo: ""
-      }));
-      setTempSelectedSlots([]); 
-      
-      setStartDate(formatDateTimeForInput(new Date()));
+      if (initialData) {
+        
+        // 1. POPULATE FORM DATA FROM INITIAL DATA (WAITLIST)
+        setFormData({
+          slotNo: initialData.slotNo || "", 
+          referenceNo: initialData.referenceNo || "", // <--- Mapped Reference No
+          tenantName: initialData.name || "",
+          email: initialData.email || "",
+          contactNo: initialData.contactNo || "",
+          tenantType: initialData.tenantType || "Permanent", 
+          uid: initialData.uid || "",
+        });
 
+        // 2. SYNC SLOTS FOR MAP
+        if (initialData.slotNo) {
+            setTempSelectedSlots(initialData.slotNo.split(', '));
+        }
+
+        // 3. POPULATE DOCUMENTS (Base64 Strings)
+        if (initialData.documents) {
+            setDocuments({
+                businessPermit: initialData.documents.businessPermit || null,
+                validID: initialData.documents.validID || null,
+                barangayClearance: initialData.documents.barangayClearance || null,
+                proofOfReceipt: initialData.documents.proofOfReceipt || null,
+            });
+        }
+
+        // Product Logic
+        const incomingProduct = initialData.products || "Food and Beverages";
+        if (["Food and Beverages", "Clothing"].includes(incomingProduct)) {
+          setProductCategory(incomingProduct);
+          setOtherProductDetails("");
+        } else {
+          setProductCategory("Other");
+          setOtherProductDetails(incomingProduct);
+        }
+
+      } else {
+        // RESET FORM FOR MANUAL ADD
+        setFormData({
+            slotNo: "",
+            tenantName: "",
+            referenceNo: "", 
+            email: "",
+            contactNo: "",
+            tenantType: "Permanent", 
+        });
+        setProductCategory("Food and Beverages");
+        setOtherProductDetails("");
+        setDocuments({
+            businessPermit: null,
+            validID: null,
+            barangayClearance: null,
+            proofOfReceipt: null,
+        });
+        setTempSelectedSlots([]); 
+      }
+
+      setStartDate(formatDateTimeForInput(new Date()));
       setUtilityAmount(0);
-      setProductCategory("Food and Beverages");
-      setOtherProductDetails("");
-      setDocuments({
-        businessPermit: null,
-        validID: null,
-        barangayClearance: null,
-        proofOfReceipt: null,
-      });
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]); 
 
   
   useEffect(() => {
@@ -83,16 +123,13 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
 
     if (formData.tenantType === "Permanent") {
       baseRent = 6000;
-
       if (startDate) {
         const d = new Date(startDate);
         d.setMonth(d.getMonth() + 1); 
         calculatedDueDate = formatDateTimeForInput(d);
       }
-
     } else {
       baseRent = 160 * 7; 
-
       if (startDate) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + 7); 
@@ -121,17 +158,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
     const formatForTable = (dateStr) => {
       if (!dateStr) return "";
       const dateObj = new Date(dateStr);
-      
-      const formattedString = dateObj.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true 
-      });
-
-      return formattedString.replace(',', ''); 
+      return dateObj.toLocaleString('en-US', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: 'numeric', minute: '2-digit', hour12: true 
+      }).replace(',', ''); 
     };
 
     const newTenant = {
@@ -156,7 +186,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
         alert("This slot is already occupied.");
         return;
     }
-
     setTempSelectedSlots((prev) => {
         if (prev.includes(slotLabel)) {
             return prev.filter(s => s !== slotLabel);
@@ -166,11 +195,17 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
     });
   };
 
- 
   const confirmSlotSelection = () => {
     const sortedSlots = [...tempSelectedSlots].sort();
     setFormData({ ...formData, slotNo: sortedSlots.join(', ') });
     setShowMapModal(false);
+  };
+
+  // Helper to get file status text
+  const getFileStatus = (file) => {
+      if (!file) return "Click to upload";
+      if (typeof file === 'string') return "Pre-filled from Application ✅"; // Base64 string
+      return file.name; // File object
   };
 
   if (!isOpen) return null;
@@ -243,7 +278,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
                         <span className="hidden sm:inline">View Map</span>
                     </button>
                    </div>
-                  
                 </div>
 
                 {showMapModal && (
@@ -268,42 +302,14 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
                         </div>
             
                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto flex-1">
-                            
-                            <div className="flex gap-4 mb-6 justify-center flex-wrap">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded bg-slate-300"></div>
-                                    <span className="text-sm font-medium text-slate-600">Occupied</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded bg-white border-2 border-dashed border-slate-300"></div>
-                                    <span className="text-sm font-medium text-slate-600">Available</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-600"></div>
-                                    <span className="text-sm font-medium text-slate-600">Selected</span>
-                                </div>
-                            </div>
-            
                             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                            
                             {Array.from({ length: 30 }).map((_, i) => {
-                                
-                                let slotLabel = "";
-                                
-                                if (formData.tenantType === "Permanent") {
-                                slotLabel = `A-${101 + i}`; 
-                                } else {
-                                const num = i + 1;
-                                slotLabel = `NM-${num.toString().padStart(2, '0')}`;
-                                }
-            
+                                let slotLabel = formData.tenantType === "Permanent" ? `A-${101 + i}` : `NM-${(i + 1).toString().padStart(2, '0')}`;
                                 const tenant = tenants.find(r => 
-                                    
                                     (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) 
                                     && (r.tenantType === formData.tenantType)
                                     && r.status !== "Available" 
                                 );
-
                                 const isSelected = tempSelectedSlots.includes(slotLabel);
             
                                 let statusColor = "bg-white border-2 border-dashed border-slate-300 text-slate-400 hover:border-emerald-500 hover:text-emerald-500";
@@ -321,15 +327,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
                                 <div 
                                     key={slotLabel} 
                                     onClick={() => handleToggleSlot(slotLabel, tenant)}
-                                    className={`
-                                    aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200
-                                    ${statusColor}
-                                    `}
+                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200 ${statusColor}`}
                                 >
                                     <span className="text-lg font-bold opacity-90">{slotLabel}</span>
-                                    <span className="text-[10px] text-center truncate w-full px-1 leading-tight mt-1">
-                                    {statusText}
-                                    </span>
+                                    <span className="text-[10px] text-center truncate w-full px-1 leading-tight mt-1">{statusText}</span>
                                 </div>
                                 );
                             })}
@@ -337,12 +338,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end gap-3">
-                            <button 
-                                onClick={() => setShowMapModal(false)}
-                                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100"
-                            >
-                                Cancel
-                            </button>
+                            <button onClick={() => setShowMapModal(false)} className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100">Cancel</button>
                             <button 
                                 onClick={confirmSlotSelection}
                                 disabled={tempSelectedSlots.length === 0}
@@ -358,142 +354,67 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
                
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Full Name</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    value={formData.tenantName}
-                    onChange={(e) => setFormData({...formData, tenantName: e.target.value})}
-                  />
+                  <input type="text" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.tenantName} onChange={(e) => setFormData({...formData, tenantName: e.target.value})} />
                 </div>
-
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Email Address</label>
-                  <input 
-                    type="email" 
-                    required
-                    className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  />
+                  <input type="email" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                 </div>
-
                 <div className="flex flex-col gap-1 md:col-span-2">
                   <label className="text-xs font-semibold text-slate-600">Contact Number</label>
-                  <input 
-                    type="tel" 
-                    required
-                    className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    value={formData.contactNo}
-                    onChange={(e) => setFormData({...formData, contactNo: e.target.value})}
-                  />
+                  <input type="tel" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.contactNo} onChange={(e) => setFormData({...formData, contactNo: e.target.value})} />
                 </div>
               </div>
             </section>
 
-           
             <section className="pt-4 border-t border-slate-100">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2">
-                <FileText size={16} /> 2. Products to be Sold
-              </h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><FileText size={16} /> 2. Products to be Sold</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Category</label>
-                  <select 
-                    className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    value={productCategory}
-                    onChange={(e) => setProductCategory(e.target.value)}
-                  >
+                  <select className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={productCategory} onChange={(e) => setProductCategory(e.target.value)}>
                     <option value="Food and Beverages">Food and Beverages</option>
                     <option value="Clothing">Clothing</option>
                     <option value="Other">Other (Please specify)</option>
                   </select>
                 </div>
-
                 {productCategory === "Other" && (
                   <div className="flex flex-col gap-1 animate-fadeIn">
                     <label className="text-xs font-semibold text-slate-600">Specify Product</label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="Enter product details..."
-                      className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                      value={otherProductDetails}
-                      onChange={(e) => setOtherProductDetails(e.target.value)}
-                    />
+                    <input type="text" required placeholder="Enter product details..." className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={otherProductDetails} onChange={(e) => setOtherProductDetails(e.target.value)} />
                   </div>
                 )}
               </div>
             </section>
 
             <section className="pt-4 border-t border-slate-100">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2">
-                <Calendar size={16} /> 3. Contract Duration
-              </h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><Calendar size={16} /> 3. Contract Duration</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Start Date & Time</label>
-                  <input 
-                    type="datetime-local" 
-                    required
-                    className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
+                  <input type="datetime-local" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Due Date & Time</label>
-                  <input 
-                    type="datetime-local" 
-                    readOnly
-                    className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-500"
-                    value={dueDate}
-                  />
+                  <input type="datetime-local" readOnly className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-500" value={dueDate} />
                 </div>
               </div>
             </section>
 
             <section className="pt-4 border-t border-slate-100">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2">
-                <PhilippinePeso size={16} /> 4. Financial Setup
-              </h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><PhilippinePeso size={16} /> 4. Financial Setup</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Rent (x{formData.slotNo ? formData.slotNo.split(',').length : 1} Slots)</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">₱</span>
-                    <input 
-                      type="number" 
-                      readOnly
-                      className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700"
-                      value={rentAmount}
-                    />
-                  </div>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={rentAmount} /></div>
                 </div>
-
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Utility Fee</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">₱</span>
-                    <input 
-                      className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                      value={utilityAmount} 
-                      onChange={(e) => setUtilityAmount(e.target.value)}
-                    />
-                  </div>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={utilityAmount} onChange={(e) => setUtilityAmount(e.target.value)} /></div>
                 </div>
-
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Total Amount Due</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">₱</span>
-                    <input 
-                      type="number" 
-                      readOnly
-                      className="pl-8 p-2.5 w-full rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold"
-                      value={totalAmount}
-                    />
-                  </div>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold" value={totalAmount} /></div>
                 </div>
               </div>
             </section>
@@ -507,9 +428,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
                 {['Business Permit', 'Valid ID', 'Barangay Clearance', 'Proof of Receipt'].map((label, idx) => {
                    const keyMap = ['businessPermit', 'validID', 'barangayClearance', 'proofOfReceipt'];
                    const key = keyMap[idx];
-                   
+                   const currentFile = documents[key];
+                   const isBase64 = typeof currentFile === 'string';
+
                    return (
-                    <div key={key} className="border-2 border-dashed border-slate-300 rounded-xl p-4 hover:bg-slate-50 transition-colors">
+                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors ${isBase64 ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
                       <label className="block cursor-pointer">
                         <span className="block text-sm font-medium text-slate-700 mb-1">{label}</span>
                         <input 
@@ -518,10 +441,12 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
                           onChange={(e) => handleFileChange(e, key)}
                         />
                         <div className="flex items-center gap-2 text-slate-400 text-xs">
-                          <div className="p-2 bg-slate-200 rounded-full">
-                            <Upload size={14} />
+                          <div className={`p-2 rounded-full ${isBase64 ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
+                            {isBase64 ? <Eye size={14} /> : <Upload size={14} />}
                           </div>
-                          <span>{documents[key] ? documents[key].name : "Click to upload (Any format)"}</span>
+                          <span className={isBase64 ? "text-emerald-700 font-bold" : ""}>
+                             {getFileStatus(currentFile)}
+                          </span>
                         </div>
                       </label>
                     </div>
@@ -535,20 +460,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [] }) => {
         </div>
 
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
-          <button 
-            onClick={onClose}
-            type="button"
-            className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-white transition-all"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={handleSubmit}
-            type="submit"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg transition-all transform active:scale-95 hover:scale-105"
-          >
-            Save Tenant
-          </button>
+          <button onClick={onClose} type="button" className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-white transition-all">Cancel</button>
+          <button onClick={handleSubmit} type="submit" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg transition-all transform active:scale-95 hover:scale-105">Save Tenant</button>
         </div>
         
       </div>
