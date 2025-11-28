@@ -66,6 +66,54 @@ export const createTenant = async (req, res) => {
     }
 };
 
+export const updateTenant = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        const existingTenant = await Tenant.findById(id);
+        if (!existingTenant) {
+            return res.status(404).json({ error: "Tenant not found" });
+        }
+
+        const updatedTenant = await Tenant.findByIdAndUpdate(id, updateData, { new: true });
+
+        if (updateData.slotNo && updateData.slotNo !== existingTenant.slotNo) {
+            
+            await Stall.updateMany(
+                { tenantId: id }, 
+                { $set: { status: "Available", tenantId: null } }
+            );
+
+            const newSlots = updateData.slotNo.split(', ');
+            for (const slot of newSlots) {
+                const { row, col } = calculateGridPosition(slot);
+                const stallId = `${updatedTenant.tenantType}-${row}-${col}`; 
+                
+                await Stall.findOneAndUpdate(
+                    { stallId: stallId },
+                    {
+                        stallId,
+                        slotNo: slot,
+                        floor: updatedTenant.tenantType,
+                        row, 
+                        col,
+                        status: "Paid", 
+                        tenantId: updatedTenant._id
+                    },
+                    { upsert: true }
+                );
+            }
+        }
+
+        res.json(updatedTenant);
+
+    } catch (err) {
+        console.error("Update error:", err);
+        res.status(500).json({ error: "Failed to update tenant" });
+    }
+};
+
 export const deleteTenant = async (req, res) => {
     try {
         const tenantId = req.params.id;

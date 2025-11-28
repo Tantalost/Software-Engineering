@@ -391,17 +391,25 @@ const TenantLease = () => {
           onSave={async (updatedData) => { 
             try {
               const idToUpdate = updatedData._id || updatedData.id;
-              await fetch(`${API_URL}/tenants/${idToUpdate}`, {
+              if (!idToUpdate) {
+                alert("Error: No Tenant ID found to update.");
+                return;
+              }
+              const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData)
               }); 
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Update failed");
+              }
+              alert("Tenant updated successfully!");
               fetchTenants(); 
               setEditRow(null); 
-              alert("Tenant updated!");
             } catch (error) { 
-              console.error(error); 
-              alert("Failed to update record."); 
+              console.error("Update Error:", error); 
+              alert(`Failed to update record: ${error.message}`); 
             }
           }}
         />
