@@ -9,9 +9,10 @@ import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditBusTrip from "../components/bustrips/EditBusTrip";
+import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
-import { Archive } from "lucide-react"; 
+import { Archive, Trash2 } from "lucide-react";
 
 const BusTrips = () => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -22,6 +23,7 @@ const BusTrips = () => {
     const [editRow, setEditRow] = useState(null);
     const [deleteRow, setDeleteRow] = useState(null); 
     const [showNotify, setShowNotify] = useState(false);
+    const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -44,6 +46,16 @@ const BusTrips = () => {
         setRecords(next);
         localStorage.setItem("ibt_busTrips", JSON.stringify(next));
     };
+
+    const handleDeleteConfirm = () => {
+    if (!deleteRow) return;
+
+    const nextList = records.filter((r) => r.id !== deleteRow.id);
+    
+    persist(nextList); 
+    setDeleteRow(null); 
+    console.log("Item deleted successfully");
+  };
 
     const handleArchive = (rowToArchive) => {
         if (!rowToArchive) return;
@@ -69,7 +81,6 @@ const BusTrips = () => {
             return;
         }
 
-        // 2. REMOVE FROM ACTIVE LIST
         const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
         persist(nextActiveList);
         
@@ -129,6 +140,16 @@ const BusTrips = () => {
                                 Notify
                             </button>
                         )}
+                        
+                        {role === "bus" && (
+                            <button
+                                onClick={() => setShowSubmitModal(true)}
+                                className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+                                >
+                                Submit Report
+                            </button>
+                        )}
+
                         <ExportMenu
                             onExportCSV={handleExportCSV}
                             onExportExcel={handleExportExcel}
@@ -166,6 +187,15 @@ const BusTrips = () => {
                             >
                                 <Archive size={16} />
                             </button>
+                            
+                            <button
+                                onClick={() => setDeleteRow(row)}
+                                title="Delete"
+                                className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                                >
+                                <Trash2 size={16} />
+                            </button>
+                            
                         </div>
                     )}
                 />
@@ -224,6 +254,28 @@ const BusTrips = () => {
                                 handleArchive(deleteRow); 
                                 setDeleteRow(null); 
                             }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <DeleteModal
+                isOpen={!!deleteRow}
+                onClose={() => setDeleteRow(null)}
+                onConfirm={handleDeleteConfirm}
+                title="Delete Record"
+                message="Are you sure you want to remove this bus record? This action cannot be undone."
+                itemName={deleteRow ? `Template No - #${deleteRow.templateno} - ${deleteRow.route} - ${deleteRow.company}` : ""}
+            />
+
+            {role === "bus" && showSubmitModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
+                        <h3 className="text-base font-semibold text-slate-800">Submit Bus Report</h3>
+                        <p className="mt-2 text-sm text-slate-600">Are you sure you want to submit the current bus report?</p>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
+                            <button onClick={() => { setShowSubmitModal(false); console.log('Parking report submitted.'); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Submit</button>
                         </div>
                     </div>
                 </div>

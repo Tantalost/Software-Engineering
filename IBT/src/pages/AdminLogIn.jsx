@@ -30,6 +30,9 @@ export default function AdminLogin() {
             { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin" },
             { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking" },
             { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound" },
+            { id: 4, email: "ticketadmin@example.com", password: "ticket123", role: "ticket" },
+            { id: 5, email: "busadmin@example.com", password: "bus123", role: "bus" },
+            { id: 6, email: "leaseadmin@example.com", password: "lease123", role: "lease" },
           ]));
         }
       } catch { }
@@ -40,7 +43,11 @@ export default function AdminLogin() {
         if (found) {
           localStorage.setItem("isAdminLoggedIn", "true");
           localStorage.setItem("authRole", found.role);
-          navigate(found.role === "parking" ? "/parking" : found.role === "lostfound" ? "/lost-found" : "/dashboard");
+          navigate(found.role === "parking" ? "/parking" : 
+            found.role === "lostfound" ? "/lost-found" : 
+            found.role === "bus" ? "/buses-trips" :
+            found.role === "ticket" ? "/tickets" :
+            found.role === "lease" ? "/tenant-lease" : "/dashboard");
         } else {
           setError("Invalid credentials. Please try again.");
         }

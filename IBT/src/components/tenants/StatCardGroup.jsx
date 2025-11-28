@@ -1,14 +1,17 @@
+
 import React from "react";
 import StatCard from "./StatCard";
-import { Store, Grid, PhilippinePesoIcon } from "lucide-react";
+import { Store, Grid, PhilippinePeso } from "lucide-react"; // Changed PhilippinePesoIcon to PhilippinePeso
 
+const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots, totalRevenue }) => {
+  
+  // Format the passed revenue prop
+  const formattedRevenue = (totalRevenue || 0).toLocaleString("en-PH", {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+  });
 
-const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots }) => {
-  const totalRevenue = 30000;
-  const formattedRevenue = totalRevenue.toLocaleString("en-PH", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
   return (
     <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
       <StatCard
@@ -19,16 +22,20 @@ const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots }) => {
       />
       <StatCard
         icon={Store}
-        title="Non-Available Slots"
+        title="Occupied Slots"
         value={nonAvailableSlots}
         color="red"
       />
-      <StatCard icon={Grid} title="Total Slots" value={totalSlots} color="cyan" />
-
+      <StatCard 
+        icon={Grid} 
+        title="Total Slots" 
+        value={totalSlots} 
+        color="cyan" 
+      />
       <StatCard
-        icon={PhilippinePesoIcon}
-        value= {formattedRevenue}
-        title="Revenue"
+        icon={PhilippinePeso}
+        value={formattedRevenue}
+        title="Total Revenue"
         color="orange"
       />
     </div>

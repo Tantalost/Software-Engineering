@@ -9,8 +9,9 @@ import Form from "../components/common/Form";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditReport from "../components/reports/EditReport";
+import DeleteModal from "../components/common/DeleteModal";
 import ReportFilter from "../components/reports/ReportFilter";
-import { Archive } from "lucide-react"; 
+import { Archive, Trash2 } from "lucide-react"; 
 
 const Reports = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,6 +36,16 @@ const Reports = () => {
   const persist = (next) => {
     setRecords(next);
     localStorage.setItem("ibt_reports", JSON.stringify(next));
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteRow) return;
+
+    const nextList = records.filter((r) => r.id !== deleteRow.id);
+    
+    persist(nextList); 
+    setDeleteRow(null); 
+    console.log("Item deleted successfully");
   };
 
   const handleArchive = (rowToArchive) => {
@@ -142,6 +153,14 @@ const Reports = () => {
             >
               <Archive size={16} />
             </button>
+
+            <button
+              onClick={() => setDeleteRow(row)}
+              title="Delete"
+              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+              >
+              <Trash2 size={16} />
+            </button>
           </div>
         )}
       />
@@ -200,6 +219,16 @@ const Reports = () => {
           </div>
         </div>
       )}
+
+      <DeleteModal
+        isOpen={!!deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Record"
+        message="Are you sure you want to remove report record? This action cannot be undone."
+        itemName={deleteRow ? `${deleteRow.reportid} - ${deleteRow.type}
+        - ${deleteRow.date} - ${deleteRow.author}` : ""}
+      />
 
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
