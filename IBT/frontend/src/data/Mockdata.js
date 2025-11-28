@@ -159,4 +159,37 @@ export const mockTenants = [
         status: "Overdue"
     },
     
-]
+];
+
+export const mockWaitlist = [
+  {
+    id: "w1",
+    name: "Carlos Mendoza",
+    contact: "09172345678",
+    email: "carlos.mendoza@example.com",
+    preferredType: "Permanent",
+    notes: "Looking for a stall near entrance",
+    dateRequested: "2025-11-15T12:00:00Z",
+    status: "Pending"
+  },
+  {
+    id: "w2",
+    name: "Liza Morales",
+    contact: "09173456789",
+    email: "liza.morales@example.com",
+    preferredType: "Night Market",
+    notes: "Requires electricity",
+    dateRequested: "2025-11-16T12:00:00Z",
+    status: "Pending"
+  },
+  {
+    id: "w3",
+    name: "Riza Hontiveros",
+    contact: "09173456123",
+    email: "rizagengs@example.com",
+    preferredType: "Night Market",
+    notes: "Requires electricity",
+    dateRequested: "2025-11-16T12:00:00Z",
+    status: "Pending"
+  }
+];
