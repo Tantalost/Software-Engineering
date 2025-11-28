@@ -3,16 +3,38 @@ import LoginInput from "./LoginInput";
 import LoginButton from "./LoginButton";
 
 export default function LoginCard({
-  icon, title, subtitle, email, setEmail, password, setPassword, showPassword, setShowPassword, handleSubmit, isLoading, error,
+  logo, 
+  icon, 
+  title, 
+  subtitle, 
+  email, 
+  setEmail, 
+  password, 
+  setPassword, 
+  showPassword, 
+  setShowPassword, 
+  handleSubmit, 
+  isLoading, 
+  error,
 }) {
   return (
     <div className="relative w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl transition-all">
       <div className="absolute inset-0 bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl transform rotate-1"></div>
       <div className="relative bg-white bg-opacity-10 backdrop-blur-xl rounded-3xl shadow-2xl p-5 sm:p-8 md:p-10 border border-white border-opacity-20">
         <div className="text-center mb-5 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl mb-3 sm:mb-4 shadow-lg">
-            {icon}
+          
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-full mb-3 sm:mb-4 shadow-lg overflow-hidden">
+            {logo ? (
+              <img 
+                src={logo} 
+                alt="Logo" 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              icon
+            )}
           </div>
+
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-black mb-1 sm:mb-2">
             {title}
           </h1>
@@ -48,7 +70,6 @@ export default function LoginCard({
           />
 
           <LoginButton handleSubmit={handleSubmit} isLoading={isLoading} />
-          
         </div>
       </div>
     </div>
