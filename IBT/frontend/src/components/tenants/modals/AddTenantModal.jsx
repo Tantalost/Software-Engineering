@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Eye } from "lucide-react";
+import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Eye, Loader2 } from "lucide-react";
+
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/ibt_tenants/image/upload";
+const UPLOAD_PRESET = "ibt_upload";
 
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
+
+  const [isSubmitting, setIsSubmitting] = useState(false); // New loading state
 
   const [formData, setFormData] = useState({
     slotNo: "",
@@ -40,14 +45,13 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     return localISOTime;
   };
 
+  // --- INITIALIZATION ---
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        
-        // 1. POPULATE FORM DATA FROM INITIAL DATA (WAITLIST)
         setFormData({
           slotNo: initialData.slotNo || "", 
-          referenceNo: initialData.referenceNo || "", // <--- Mapped Reference No
+          referenceNo: initialData.referenceNo || "", 
           tenantName: initialData.name || "",
           email: initialData.email || "",
           contactNo: initialData.contactNo || "",
@@ -55,12 +59,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
           uid: initialData.uid || "",
         });
 
-        // 2. SYNC SLOTS FOR MAP
         if (initialData.slotNo) {
             setTempSelectedSlots(initialData.slotNo.split(', '));
         }
 
-        // 3. POPULATE DOCUMENTS (Base64 Strings)
         if (initialData.documents) {
             setDocuments({
                 businessPermit: initialData.documents.businessPermit || null,
@@ -70,7 +72,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             });
         }
 
-        // Product Logic
         const incomingProduct = initialData.products || "Food and Beverages";
         if (["Food and Beverages", "Clothing"].includes(incomingProduct)) {
           setProductCategory(incomingProduct);
@@ -81,7 +82,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         }
 
       } else {
-        // RESET FORM FOR MANUAL ADD
+        // Reset
         setFormData({
             slotNo: "",
             tenantName: "",
@@ -89,6 +90,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             email: "",
             contactNo: "",
             tenantType: "Permanent", 
+            uid: "", // Reset UID for manual entry
         });
         setProductCategory("Food and Beverages");
         setOtherProductDetails("");
@@ -103,10 +105,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
       setStartDate(formatDateTimeForInput(new Date()));
       setUtilityAmount(0);
+      setIsSubmitting(false);
     }
   }, [isOpen, initialData]); 
 
-  
+  // --- MAP SYNC ---
   useEffect(() => {
     if (showMapModal) {
       const currentSlots = formData.slotNo ? formData.slotNo.split(', ') : [];
@@ -114,7 +117,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [showMapModal, formData.slotNo]);
 
- 
+  // --- CALCULATIONS ---
   useEffect(() => {
     let baseRent = 0;
     let calculatedDueDate = "";
@@ -152,33 +155,74 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   };
 
- const handleSubmit = (e) => {
+  const uploadToCloudinary = async (file) => {
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", UPLOAD_PRESET);
+  
+    try {
+      const res = await fetch(CLOUDINARY_URL, { 
+      method: "POST",
+      body: data,
+      });
+      const result = await res.json();
+      return result.secure_url;
+    } catch (error) {
+      console.error("Upload failed", error);
+      return null;
+    }
+  };
+
+  // --- SUBMIT HANDLER ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    const formatForTable = (dateStr) => {
-      if (!dateStr) return "";
-      const dateObj = new Date(dateStr);
-      return dateObj.toLocaleString('en-US', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: 'numeric', minute: '2-digit', hour12: true 
-      }).replace(',', ''); 
-    };
+    try {
+        const formatForTable = (dateStr) => {
+            if (!dateStr) return "";
+            const dateObj = new Date(dateStr);
+            return dateObj.toLocaleString('en-US', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: 'numeric', minute: '2-digit', hour12: true 
+            }).replace(',', ''); 
+        };
 
-    const newTenant = {
-      id: Date.now(),
-      ...formData,
-      products: productCategory === "Other" ? otherProductDetails : productCategory,
-      rentAmount,
-      utilityAmount: parseFloat(utilityAmount),
-      totalAmount,
-      StartDateTime: formatForTable(startDate), 
-      DueDateTime: formatForTable(dueDate),    
-      status: "Paid", 
-      documents: { ...documents } 
-    };
+        // 1. Process Documents (Upload new ones, keep existing strings)
+        const processedDocuments = { ...documents };
+        
+        for (const key of Object.keys(processedDocuments)) {
+            const file = processedDocuments[key];
+            // If it's a File object (new upload), upload it. 
+            // If it's a string (URL from waitlist), keep it.
+            if (file && typeof file !== 'string') {
+                const url = await uploadToCloudinary(file);
+                if (url) processedDocuments[key] = url;
+            }
+        }
 
-    onSave(newTenant);
-    onClose();
+        const newTenant = {
+            // Remove ID generation here if relying on MongoDB _id, 
+            // or keep it if you want a custom ID.
+            ...formData,
+            products: productCategory === "Other" ? otherProductDetails : productCategory,
+            rentAmount,
+            utilityAmount: parseFloat(utilityAmount),
+            totalAmount,
+            StartDateTime: formatForTable(startDate), 
+            DueDateTime: formatForTable(dueDate),    
+            status: "Paid", 
+            documents: processedDocuments // Send URLs
+        };
+
+        await onSave(newTenant);
+        onClose();
+    } catch (error) {
+        console.error("Error saving tenant:", error);
+        alert("Failed to save tenant. Check console.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleToggleSlot = (slotLabel, tenant) => {
@@ -201,11 +245,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     setShowMapModal(false);
   };
 
-  // Helper to get file status text
   const getFileStatus = (file) => {
       if (!file) return "Click to upload";
-      if (typeof file === 'string') return "Pre-filled from Application ✅"; // Base64 string
-      return file.name; // File object
+      if (typeof file === 'string') return "Pre-filled from Application ✅";
+      return file.name; 
   };
 
   if (!isOpen) return null;
@@ -216,7 +259,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         
         <div className="flex justify-between items-center p-6 border-b border-slate-100">
           <h2 className="text-xl font-bold text-slate-800">Add New Tenant / Lease</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
+          <button onClick={onClose} disabled={isSubmitting} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -224,6 +267,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         <div className="overflow-y-auto p-6 flex-1">
           <form id="addTenantForm" onSubmit={handleSubmit} className="space-y-8">
             
+            {/* ... SECTION 1 ... */}
             <section>
               <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2">
                 <FileText size={16} /> 1. Tenant Details
@@ -280,6 +324,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                    </div>
                 </div>
 
+                {/* MAP MODAL UI (Unchanged logic, just ensure it renders) */}
                 {showMapModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                         <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -292,13 +337,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                                 Selected: <span className="font-bold text-emerald-600">{tempSelectedSlots.length}</span> slots
                             </p>
                             </div>
-                            <button 
-                            onClick={() => setShowMapModal(false)} 
-                            type="button"
-                            className="p-2 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
-                            >
-                            <X size={20} />
-                            </button>
+                            <button onClick={() => setShowMapModal(false)} type="button" className="p-2 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"><X size={20} /></button>
                         </div>
             
                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto flex-1">
@@ -311,10 +350,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                                     && r.status !== "Available" 
                                 );
                                 const isSelected = tempSelectedSlots.includes(slotLabel);
-            
                                 let statusColor = "bg-white border-2 border-dashed border-slate-300 text-slate-400 hover:border-emerald-500 hover:text-emerald-500";
                                 let statusText = "Available";
-                                
                                 if (tenant) {
                                     statusText = tenant.tenantName || tenant.name;
                                     statusColor = "bg-slate-200 text-slate-500 border-transparent opacity-60 cursor-not-allowed";
@@ -322,13 +359,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                                     statusColor = "bg-blue-500 text-white border-2 border-blue-600 shadow-md transform scale-105";
                                     statusText = "Selected";
                                 }
-            
                                 return (
-                                <div 
-                                    key={slotLabel} 
-                                    onClick={() => handleToggleSlot(slotLabel, tenant)}
-                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200 ${statusColor}`}
-                                >
+                                <div key={slotLabel} onClick={() => handleToggleSlot(slotLabel, tenant)} className={`aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200 ${statusColor}`}>
                                     <span className="text-lg font-bold opacity-90">{slotLabel}</span>
                                     <span className="text-[10px] text-center truncate w-full px-1 leading-tight mt-1">{statusText}</span>
                                 </div>
@@ -339,13 +371,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
                         <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end gap-3">
                             <button onClick={() => setShowMapModal(false)} className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100">Cancel</button>
-                            <button 
-                                onClick={confirmSlotSelection}
-                                disabled={tempSelectedSlots.length === 0}
-                                className="px-6 py-2 rounded-lg bg-emerald-500 text-white font-bold hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                <Check size={18} />
-                                Confirm Selection ({tempSelectedSlots.length})
+                            <button onClick={confirmSlotSelection} disabled={tempSelectedSlots.length === 0} className="px-6 py-2 rounded-lg bg-emerald-500 text-white font-bold hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                <Check size={18} /> Confirm Selection ({tempSelectedSlots.length})
                             </button>
                         </div>
                         </div>
@@ -367,6 +394,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
               </div>
             </section>
 
+            {/* ... SECTIONS 2, 3, 4 (Unchanged) ... */}
             <section className="pt-4 border-t border-slate-100">
               <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><FileText size={16} /> 2. Products to be Sold</h3>
               <div className="grid grid-cols-1 gap-4">
@@ -459,9 +487,29 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
           </form>
         </div>
 
+        {/* --- FOOTER (Disabled when submitting) --- */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
-          <button onClick={onClose} type="button" className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-white transition-all">Cancel</button>
-          <button onClick={handleSubmit} type="submit" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg transition-all transform active:scale-95 hover:scale-105">Save Tenant</button>
+          <button 
+            onClick={onClose} 
+            disabled={isSubmitting}
+            type="button" 
+            className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-white transition-all disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          
+          <button 
+            onClick={handleSubmit} 
+            type="submit" 
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg transition-all transform active:scale-95 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isSubmitting ? (
+                <>
+                    <Loader2 className="animate-spin" size={18} /> Saving...
+                </>
+            ) : "Save Tenant"}
+          </button>
         </div>
         
       </div>

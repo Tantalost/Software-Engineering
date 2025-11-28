@@ -1,5 +1,4 @@
-const mongoose = require("mongoose");
-
+import mongoose from "mongoose"; 
 const BusTripSchema = new mongoose.Schema({
   templateNo: { type: String, required: true },
   route: { type: String, required: true },
@@ -10,4 +9,4 @@ const BusTripSchema = new mongoose.Schema({
   isArchived: { type: Boolean, default: false } 
 }, { timestamps: true });
 
-module.exports = mongoose.model("BusTrip", BusTripSchema);
+export default mongoose.model("BusTrip", BusTripSchema);
