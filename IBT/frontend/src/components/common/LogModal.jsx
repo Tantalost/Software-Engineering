@@ -1,43 +1,42 @@
 import React, { useState, useEffect } from "react";
-import { History, X, Trash2 } from "lucide-react";
+import { History, X, Trash2, Loader2 } from "lucide-react";
 
-const LogModal = ({ isOpen, onClose, storageKey = "ibt_activity_logs", title = "Activity Logs" }) => {
+const API_URL = "http://localhost:3000/api"; 
+
+const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
   const [logs, setLogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      try {
-        const raw = localStorage.getItem(storageKey);
-        if (raw) {
-          const parsedLogs = JSON.parse(raw);
-          
-          const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-          const now = Date.now();
-
-          const validLogs = parsedLogs.filter((log) => {
-            const logTime = new Date(log.timestamp).getTime();
-            return (now - logTime) < ONE_WEEK_MS;
-          });
-
-          if (validLogs.length !== parsedLogs.length) {
-            localStorage.setItem(storageKey, JSON.stringify(validLogs));
-          }
-
-          setLogs(validLogs);
-        } else {
-          setLogs([]);
-        }
-      } catch (e) {
-        console.error("Error loading logs:", e);
-        setLogs([]);
-      }
+      fetchLogs();
     }
-  }, [isOpen, storageKey]);
+  }, [isOpen]);
 
-  const handleClearLogs = () => {
+  const fetchLogs = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/logs`);
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data);
+      }
+    } catch (e) {
+      console.error("Error loading logs:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearLogs = async () => {
     if (window.confirm("Are you sure you want to clear the entire history? This cannot be undone.")) {
-      localStorage.removeItem(storageKey);
-      setLogs([]);
+      try {
+        await fetch(`${API_URL}/logs`, { method: 'DELETE' });
+        setLogs([]); 
+      } catch (e) {
+        console.error("Failed to clear logs", e);
+        alert("Failed to clear history");
+      }
     }
   };
 
@@ -81,16 +80,21 @@ const LogModal = ({ isOpen, onClose, storageKey = "ibt_activity_logs", title = "
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {logs.length > 0 ? (
-                logs.slice().reverse().map((log) => (
-                  <tr key={log.id || Math.random()} className="hover:bg-slate-50">
+              {isLoading ? (
+                 <tr>
+                    <td colSpan="4" className="px-4 py-12 text-center text-slate-400">
+                       <div className="flex justify-center items-center gap-2">
+                          <Loader2 className="animate-spin" size={20} /> Loading records...
+                       </div>
+                    </td>
+                 </tr>
+              ) : logs.length > 0 ? (
+                logs.map((log) => (
+                  <tr key={log._id || log.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleString(undefined, {
-                        year: 'numeric',
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(log.createdAt || log.timestamp).toLocaleString(undefined, {
+                        year: 'numeric', month: 'numeric', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
                       })}
                     </td>
                     <td className="px-4 py-3">

@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import FilterBar from "../components/common/Filterbar";
 import Field from "../components/common/Field"; 
-import { Eye, RotateCcw, Trash2, CalendarDays } from "lucide-react";
+import { Eye, RotateCcw, Trash2, CalendarDays, Loader2 } from "lucide-react";
+import { logActivity } from "../utils/logger"; 
+
+const API_URL = "http://localhost:3000/api"; 
 
 const Archive = () => {
   const role = localStorage.getItem("authRole");
@@ -27,22 +30,27 @@ const Archive = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const loadArchived = () => {
+  const [allArchivedItems, setAllArchivedItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchArchives = async () => {
+    setIsLoading(true);
     try {
-      const raw = localStorage.getItem("ibt_archive");
-      const data = raw ? JSON.parse(raw) : []; 
-      return data;
+      const res = await fetch(`${API_URL}/archives`);
+      if (res.ok) {
+        const data = await res.json();
+        setAllArchivedItems(data);
+      }
     } catch (e) {
-      return []; 
+      console.error("Failed to load archives", e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const [allArchivedItems, setAllArchivedItems] = useState(loadArchived());
-
-  const persistArchive = (next) => {
-    setAllArchivedItems(next);
-    localStorage.setItem("ibt_archive", JSON.stringify(next));
-  };
+  useEffect(() => {
+    fetchArchives();
+  }, []);
 
   const checkTimeRange = (itemDate) => {
     const date = new Date(itemDate);
@@ -51,36 +59,22 @@ const Archive = () => {
     const itemDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
     if (timeRange === "All") return true;
-    
-    if (timeRange === "Today") {
-      return itemDay.getTime() === today.getTime();
-    }
-    
+    if (timeRange === "Today") return itemDay.getTime() === today.getTime();
     if (timeRange === "This Week") {
       const firstDayOfWeek = new Date(today);
       firstDayOfWeek.setDate(today.getDate() - today.getDay()); 
       return itemDay >= firstDayOfWeek && itemDay <= today;
     }
-    
-    if (timeRange === "This Month") {
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }
-    
-    if (timeRange === "This Year") {
-      return date.getFullYear() === now.getFullYear();
-    }
-
+    if (timeRange === "This Month") return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    if (timeRange === "This Year") return date.getFullYear() === now.getFullYear();
     return true;
   };
 
   const filteredItems = useMemo(() => {
     return allArchivedItems.filter((item) => {
-      if (role === "ticket" && item.type !== "Terminal Fee") {
-        return false;
-      }
+      if (role === "ticket" && item.type !== "Terminal Fee") return false;
 
       const matchesTab = activeTab === "All" || item.type === activeTab;
-      
       const matchesSearch =
         (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.type || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -104,39 +98,46 @@ const Archive = () => {
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-  const handleRestore = () => {
+  const handleRestore = async () => {
     if (!restoreRow) return;
 
-    const itemType = restoreRow.type;
-    let storageKey = "";
-    if (itemType === "Bus Trip") storageKey = "ibt_busTrips";
-    else if (itemType === "Parking Ticket") storageKey = "ibt_parking";
-    else if (itemType === "Report") storageKey = "ibt_reports";
-    else if (itemType === "Tenant") storageKey = "ibt_TenantLease";
-    else if (itemType === "Lost & Found") storageKey = "ibt_lostFound";
-    else if (itemType === "Terminal Fee") storageKey = "ibt_terminalFees";
+    try {
+      const res = await fetch(`${API_URL}/archives/restore/${restoreRow._id || restoreRow.id}`, {
+          method: "POST"
+      });
 
-    if (storageKey) {
-      try {
-        const raw = localStorage.getItem(storageKey);
-        const activeList = raw ? JSON.parse(raw) : [];
-        activeList.push(restoreRow.originalData);
-        localStorage.setItem(storageKey, JSON.stringify(activeList));
-      } catch (e) {
-        console.error("Failed to restore item to active list:", e);
-      }
+      if (!res.ok) throw new Error("Restore failed");
+
+      await logActivity(role, "RESTORE_ITEM", `Restored ${restoreRow.description}`, "Archive");
+
+      setRestoreRow(null);
+      fetchArchives(); 
+
+    } catch (e) {
+      console.error("Restore Error", e);
+      alert("Failed to restore item.");
     }
-
-    const nextArchive = allArchivedItems.filter((item) => item.id !== restoreRow.id);
-    persistArchive(nextArchive);
-    setRestoreRow(null);
   };
 
-  const handleDeletePermanently = () => {
+  const handleDeletePermanently = async () => {
     if (!deleteRow) return;
-    const nextArchive = allArchivedItems.filter((item) => item.id !== deleteRow.id);
-    persistArchive(nextArchive);
-    setDeleteRow(null);
+
+    try {
+      const res = await fetch(`${API_URL}/archives/${deleteRow._id || deleteRow.id}`, {
+          method: "DELETE"
+      });
+
+      if (!res.ok) throw new Error("Delete failed");
+
+      await logActivity(role, "DELETE_PERMANENT", `Permanently deleted ${deleteRow.description}`, "Archive");
+
+      setDeleteRow(null);
+      fetchArchives(); 
+
+    } catch (e) {
+      console.error("Delete Error", e);
+      alert("Failed to delete item.");
+    }
   };
 
   const handleTimeRangeChange = (e) => {
@@ -197,38 +198,47 @@ const Archive = () => {
         ))}
       </div>
 
-      <Table
-        columns={["Type", "Description", "Date Archived", "Original Status"]}
-        data={paginatedData.map((item) => ({
-          ...item,
-          dateArchived: new Date(item.dateArchived).toLocaleString(),
-        }))}
-        actions={(row) => (
-          <div className="flex justify-end items-center space-x-2">
-            <button
-              onClick={() => setViewRow(row)}
-              title="View"
-              className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
-            >
-              <Eye size={16} />
-            </button>
-            <button
-              onClick={() => setRestoreRow(row)}
-              title="Restore"
-              className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all"
-            >
-              <RotateCcw size={16} />
-            </button>
-            <button
-              onClick={() => setDeleteRow(row)}
-              title="Delete Permanently"
-              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        )}
-      />
+      {isLoading ? (
+        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" /></div>
+      ) : (
+        <Table
+            columns={["Type", "Description", "Date Archived", "Original Status"]}
+            data={paginatedData.map((item) => ({
+            ...item,
+            id: item._id || item.id,
+            dateArchived: new Date(item.dateArchived).toLocaleString(),
+            originalStatus: item.originalData?.status || "N/A"
+            }))}
+            actions={(row) => {
+             const fullItem = allArchivedItems.find(i => (i._id === row.id) || (i.id === row.id));
+             return (
+                <div className="flex justify-end items-center space-x-2">
+                    <button
+                    onClick={() => setViewRow(fullItem)}
+                    title="View"
+                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+                    >
+                    <Eye size={16} />
+                    </button>
+                    <button
+                    onClick={() => setRestoreRow(fullItem)}
+                    title="Restore"
+                    className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all"
+                    >
+                    <RotateCcw size={16} />
+                    </button>
+                    <button
+                    onClick={() => setDeleteRow(fullItem)}
+                    title="Delete Permanently"
+                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                    >
+                    <Trash2 size={16} />
+                    </button>
+                </div>
+             );
+            }}
+        />
+      )}
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -246,14 +256,13 @@ const Archive = () => {
           <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
             <h3 className="mb-4 text-base font-semibold text-slate-800">View Archived Item: {viewRow.type}</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
-              <Field label="Archive ID" value={viewRow.id} />
+              <Field label="Archive ID" value={viewRow._id || viewRow.id} />
               <Field label="Item Type" value={viewRow.type} />
               <Field label="Description" value={viewRow.description} />
               <Field label="Date Archived" value={new Date(viewRow.dateArchived).toLocaleString()} />
-              <Field label="Original Status" value={viewRow.originalStatus} />
             </div>
             <h4 className="mt-4 mb-2 text-sm font-semibold text-slate-600">Original Data</h4>
-            <pre className="bg-slate-50 p-3 rounded-lg text-xs overflow-auto">
+            <pre className="bg-slate-50 p-3 rounded-lg text-xs overflow-auto h-40">
               {JSON.stringify(viewRow.originalData, null, 2)}
             </pre>
             <div className="mt-4 flex justify-end">

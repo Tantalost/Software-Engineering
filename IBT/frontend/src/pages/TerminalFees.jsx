@@ -22,7 +22,9 @@ import SecurityCheckModal from "../components/common/SecurityCheckModal";
 import RequestDeletionModal from "../components/common/RequestDeletionModal"; 
 import StatCardGroupTerminal from "../components/terminal/StatCardGroupTerminal";
 import TerminalFilter from "../components/terminal/TerminalFilter";
-import { tickets } from "../data/assets"; 
+import { logActivity } from "../utils/logger";
+
+const API_URL = "http://localhost:3000/api";
 
 const TerminalFees = () => {
   const role = localStorage.getItem("authRole") || "superadmin"; 
@@ -57,90 +59,140 @@ const TerminalFees = () => {
     time: ""
   });
 
-  useEffect(() => {
+  const fetchFees = async () => {
     setIsLoading(true);
-    const raw = localStorage.getItem("ibt_terminalFees");
-    setRecords(raw ? JSON.parse(raw) : tickets);
-    
-    const timer = setTimeout(() => setIsLoading(false), 500); 
-    return () => clearTimeout(timer);
-  }, []);
-
-  const persist = (next) => {
-    setRecords(next);
-    localStorage.setItem("ibt_terminalFees", JSON.stringify(next));
+    try {
+      const res = await fetch(`${API_URL}/terminal-fees`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setRecords(data);
+    } catch (err) {
+      console.error("Error fetching fees:", err);
+      showToastMessage("Error loading data from server");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+ useEffect(() => {
+    fetchFees();
+  }, []);
 
   const showToastMessage = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 3000); 
   };
 
-  const logActivity = (action, details) => {
+  const executeUpdate = async (data) => {
     try {
-      const rawLogs = localStorage.getItem("ibt_activity_logs");
-      const logs = rawLogs ? JSON.parse(rawLogs) : [];
+      const idToUpdate = data._id || data.id;
+
+      const res = await fetch(`${API_URL}/terminal-fees/${idToUpdate}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+      });
+
+      if (!res.ok) throw new Error("Update failed");
+
+      await fetchFees(); 
       
-      const newLog = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        user: role,
-        action: action,
-        details: details
-      };
+      await logActivity(
+        role, 
+        "UPDATE_TICKET", 
+        `Updated Ticket #${data.ticketNo}. Changed type to ${data.passengerType}.`, 
+        "TerminalFees"
+      );
       
-      logs.unshift(newLog); 
-      localStorage.setItem("ibt_activity_logs", JSON.stringify(logs));
-    } catch (e) {
-      console.error("Failed to log activity", e);
+      showToastMessage("Record updated successfully!"); 
+    } catch (error) {
+      console.error(error);
+      showToastMessage("Failed to update record.");
     }
   };
 
-  const handleEditSubmit = (updatedData) => {
+ const handleEditSubmit = (updatedData) => {
     if (!editRow) return;
-    const finalData = { ...editRow, ...updatedData };
-    setPendingEdit(finalData); 
-    setEditRow(null); 
-    setConfirmAction("edit");
     
-    setPasswordInput(""); 
-    setPasswordError("");
-    setShowPasswordModal(true); 
+    const finalData = { ...editRow, ...updatedData };
+
+    if (role === "superadmin") {
+        executeUpdate(finalData); 
+        setEditRow(null);        
+    } 
+    
+    else if (role === "ticket") {
+        setPendingEdit(finalData); 
+        setEditRow(null); 
+        setConfirmAction("edit"); 
+        
+        setPasswordInput(""); 
+        setPasswordError("");
+        setShowPasswordModal(true); 
+    }
+  };
+  
+  const executeDelete = async (id, ticketNo) => {
+    try {
+      const res = await fetch(`${API_URL}/terminal-fees/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+
+      await fetchFees();
+      await logActivity(role, "DELETE_TICKET", `Deleted Ticket #${ticketNo}`, "TerminalFees");
+      showToastMessage("Record deleted successfully!"); 
+    } catch (error) {
+       console.error(error);
+       showToastMessage("Failed to delete record.");
+    }
   };
 
-  const handleDeleteProceed = () => {
+  const handleDeleteProceed = async () => {
       if (!deleteRow) return;
 
       if (role === "ticket") {
           try {
-            const reqs = JSON.parse(localStorage.getItem("ibt_deletion_requests") || "[]");
-            const newRequest = {
-              id: `REQ-${Date.now()}`,
-              itemType: "Terminal Fee",
-              itemDescription: `Ticket #${deleteRow.ticketNo} - ${deleteRow.passengerType}`,
-              requestedBy: "Ticket Admin",
-              requestDate: new Date().toISOString(),
-              status: "pending",
-              originalData: deleteRow,
-              reason: deleteRemarks || "No remarks provided." 
-            };
+            const res = await fetch(`${API_URL}/deletion-requests`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    itemType: "Terminal Fee",
+                    itemDescription: `Ticket #${deleteRow.ticketNo} - ${deleteRow.passengerType}`,
+                    requestedBy: "Ticket Admin",
+                    originalData: deleteRow, 
+                    reason: deleteRemarks || "No remarks provided."
+                })
+            });
+
+            if (!res.ok) throw new Error("Failed to send request");
+
+            await logActivity(role, "REQUEST_DELETE", `Requested deletion: Ticket #${deleteRow.ticketNo}`, "TerminalFees");
             
-            reqs.push(newRequest);
-            localStorage.setItem("ibt_deletion_requests", JSON.stringify(reqs));
-
-            const nextList = records.filter((r) => r.id !== deleteRow.id);
-            persist(nextList);
-
-            logActivity("REQUEST_DELETE", `Requested deletion: Ticket #${deleteRow.ticketNo}. Reason: ${deleteRemarks}`);
             showToastMessage("Deletion request sent to Superadmin.");
-            
             setDeleteRow(null);
             setDeleteRemarks(""); 
+
           } catch (e) {
             console.error("Error requesting deletion", e);
+            showToastMessage("Failed to submit deletion request.");
           }
           return; 
       }
+
+     if (role === "superadmin") {
+          const idToDelete = deleteRow._id || deleteRow.id;
+
+          if (!idToDelete) {
+             console.error("Error: Record ID is missing", deleteRow);
+             showToastMessage("System Error: Cannot delete (Missing ID)");
+             return;
+          }
+
+          await executeDelete(idToDelete, deleteRow.ticketNo);
+          
+          setDeleteRow(null);
+          return;
+      }
+      
       setPendingEdit(deleteRow);
       setDeleteRow(null);
       setConfirmAction("delete");
@@ -151,42 +203,35 @@ const TerminalFees = () => {
   };
 
   const handleFinalizeAction = () => {
-    let requiredPassword = "";
-
-    if (role === "ticket") {
-        requiredPassword = localStorage.getItem("ticketPassword") || "ticket123";
-    } else {
-        requiredPassword = localStorage.getItem("authPassword") || "admin123";
-    }
+    const requiredPassword = role === "ticket" 
+        ? (localStorage.getItem("ticketPassword") || "ticket123") 
+        : (localStorage.getItem("authPassword") || "admin123");
 
     if (passwordInput === requiredPassword) {
-      if (!pendingEdit || !pendingEdit.id) {
-          setPasswordError("System Error: Lost record ID.");
+      
+      const recordId = pendingEdit?._id || pendingEdit?.id;
+
+      if (!pendingEdit || !recordId) {
+          setPasswordError("System Error: Lost record ID. Please refresh and try again.");
           return;
       }
 
       if (confirmAction === "edit") {
-          const next = records.map(r => (r.id === pendingEdit.id ? { ...r, ...pendingEdit } : r));
-          persist(next);
-          logActivity("UPDATE_TICKET", `Updated Ticket #${pendingEdit.ticketNo}. Changed type to ${pendingEdit.passengerType}.`);
-          showToastMessage("Record updated successfully!"); 
+          executeUpdate(pendingEdit); 
       } 
       else if (confirmAction === "delete") {
-          const nextList = records.filter((r) => r.id !== pendingEdit.id);
-          persist(nextList); 
-          logActivity("DELETE_TICKET", `Deleted Ticket #${pendingEdit.ticketNo} - ${pendingEdit.passengerType}`);
-          showToastMessage("Record deleted successfully!"); 
+          executeDelete(recordId, pendingEdit.ticketNo); 
       }
 
       setShowPasswordModal(false);
       setPendingEdit(null);
       setConfirmAction(null);
       setPasswordInput("");
+      
     } else {
       setPasswordError("Incorrect password. Please try again.");
     }
   };
-
 
   const handleOpenAdd = () => {
     const maxTicket = records.length > 0 ? Math.max(...records.map(r => Number(r.ticketNo) || 0)) : 0;
@@ -202,38 +247,68 @@ const TerminalFees = () => {
     setShowAddModal(true);
   };
 
-  const handleSaveNew = () => {
-    const newItem = { id: Date.now(), ...newTicket };
-    const nextList = [newItem, ...records]; 
-    persist(nextList);
-    
-    logActivity("CREATE_TICKET", `Created Ticket #${newItem.ticketNo} - ${newItem.passengerType}`);
-    showToastMessage("New ticket added successfully!"); 
-    setShowAddModal(false);
+  const handleSaveNew = async () => {
+    try {
+      const res = await fetch(`${API_URL}/terminal-fees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTicket)
+      });
+
+      if (!res.ok) throw new Error("Failed to save to database");
+      
+      await fetchFees(); 
+
+      await logActivity(
+        role,                                                                       
+        "CREATE_TICKET",                                                            
+        `Created Ticket #${newTicket.ticketNo} - ${newTicket.passengerType}`,       
+        "TerminalFees"                                                             
+      );
+
+      showToastMessage("New ticket added successfully!"); 
+      setShowAddModal(false);
+
+    } catch (error) {
+      console.error("Error saving ticket:", error);
+      showToastMessage("Failed to save ticket. Please check server connection.");
+    }
   };
 
-  const handleArchive = (rowToArchive) => {
+  const handleArchive = async (rowToArchive) => {
     try {
-      const rawArchive = localStorage.getItem("ibt_archive");
-      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+      const archiveRes = await fetch(`${API_URL}/archives`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+             type: "Terminal Fee",
+             description: `Ticket #${rowToArchive.ticketNo} - ${rowToArchive.passengerType}`,
+             originalData: rowToArchive,
+             archivedBy: role
+          })
+      });
 
-      const archiveItem = {
-        id: `archive-${Date.now()}-${rowToArchive.id}`,
-        type: "Terminal Fee",
-        description: `Ticket #${rowToArchive.ticketNo} - ${rowToArchive.passengerType}`,
-        dateArchived: new Date().toISOString(),
-        originalData: rowToArchive 
-      };
-      
-      archiveList.push(archiveItem);
-      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
-      logActivity("ARCHIVE_TICKET", `Archived Ticket #${rowToArchive.ticketNo}`);
+      if (!archiveRes.ok) throw new Error("Failed to archive");
+
+      const idToDelete = rowToArchive._id || rowToArchive.id;
+
+      if (!idToDelete) {
+          throw new Error("System Error: Record ID is missing.");
+      }
+
+      const deleteRes = await fetch(`${API_URL}/terminal-fees/${idToDelete}`, { 
+          method: "DELETE" 
+      });
+
+      if (!deleteRes.ok) throw new Error("Failed to remove from active list");
+
+      await fetchFees(); 
+      await logActivity(role, "ARCHIVE_TICKET", `Archived Ticket #${rowToArchive.ticketNo}`, "TerminalFees");
       showToastMessage("Ticket archived successfully!"); 
 
-      const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
-      persist(nextActiveList);
     } catch (e) {
-      console.error("Failed to add to archive:", e);
+      console.error("Failed to archive:", e);
+      showToastMessage("Failed to archive ticket.");
     }
   };
 
@@ -320,30 +395,52 @@ const TerminalFees = () => {
             <p className="text-sm text-slate-500 font-medium">Loading records...</p>
         </div>
       ) : (
-        <Table
-            columns={["Ticket No", "Passenger Type", "Time", "Date", "Price"]}
-            data={paginatedData.map((fee) => ({
-              id: fee.id,
-              ticketno: fee.ticketNo,
-              passengertype: fee.passengerType, 
-              time: fee.time,
-              date: fee.date,
-              price: `₱${fee.price.toFixed(2)}`,
-            }))}
-            actions={(row) => (
-            <div className="flex justify-end items-center space-x-2">
+      
+      <Table
+        columns={["Ticket No", "Passenger Type", "Time", "Date", "Price"]}
+          data={paginatedData.map((fee) => ({
+            id: fee._id || fee.id,
+            ticketno: fee.ticketNo,
+            passengertype: fee.passengerType, 
+            time: fee.time,
+            date: fee.date,
+            price: `₱${fee.price.toFixed(2)}`,
+          }))}
+
+          actions={(row) => {
+            const selectedRecord = records.find(r => (r._id || r.id) == row.id);
+
+            return (
+              <div className="flex justify-end items-center space-x-2">
                 <TableActions
-                  onView={() => setViewRow(records.find(r => r.id == row.id))}
-                  onEdit={() => setEditRow(records.find(r => r.id == row.id))}
-                />
-                <button onClick={() => handleArchive(records.find(r => r.id == row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100">
+                  onView={() => setViewRow(selectedRecord)}
+                  onEdit={() => setEditRow(selectedRecord)}
+                /> 
+                <button 
+                  onClick={() => {
+                    if (selectedRecord) {
+                        handleArchive(selectedRecord);
+                    } else {
+                      console.error("Error: Could not find record for ID:", row.id);
+                    }
+                  }} 
+                  className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                  title="Archive">
                   <Archive size={16} />
                 </button>
-                <button onClick={() => { setDeleteRow(records.find(r => r.id == row.id)); setDeleteRemarks(""); }} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+
+                <button 
+                  onClick={() => { 
+                    setDeleteRow(selectedRecord); 
+                    setDeleteRemarks(""); 
+                  }} 
+                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                  title="Delete">
                   <Trash2 size={16} />
                 </button>
-            </div>
-            )}
+              </div>
+            );
+          }}
         />
       )}
 
@@ -361,7 +458,6 @@ const TerminalFees = () => {
       <LogModal 
         isOpen={showLogModal} 
         onClose={() => setShowLogModal(false)} 
-        storageKey="ibt_activity_logs" 
       />
 
       <SecurityCheckModal
