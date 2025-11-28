@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
-import { busSchedules } from "../data/assets";
 import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
@@ -15,13 +14,16 @@ import Textarea from "../components/common/Textarea";
 import { Archive, Trash2 } from "lucide-react";
 
 const BusTrips = () => {
+    const [records, setRecords] = useState([]); 
+    const [isLoading, setIsLoading] = useState(true); 
+
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
     const [selectedCompany, setSelectedCompany] = useState("");
     const [showPreview, setShowPreview] = useState(false);
     const [viewRow, setViewRow] = useState(null);
     const [editRow, setEditRow] = useState(null);
-    const [deleteRow, setDeleteRow] = useState(null); 
+    const [deleteRow, setDeleteRow] = useState(null);
     const [showNotify, setShowNotify] = useState(false);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
@@ -29,68 +31,121 @@ const BusTrips = () => {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const role = localStorage.getItem("authRole") || "superadmin";
 
-    const uniqueCompanies = [...new Set(busSchedules.map((bus) => bus.company))];
+    const API_URL = "http://localhost:3000/api/bustrips";
 
-    const loadStored = () => {
+    const fetchBusTrips = async () => {
+        setIsLoading(true);
         try {
-            const raw = localStorage.getItem("ibt_busTrips");
-            return raw ? JSON.parse(raw) : busSchedules;
-        } catch (e) {
-            return busSchedules;
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error("Failed to fetch");
+            const data = await response.json();
+
+            // Map MongoDB _id to id for your frontend components
+            const formattedData = data.map(item => ({
+                ...item,
+                id: item._id, 
+            }));
+
+            setRecords(formattedData);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const [records, setRecords] = useState(loadStored());
+    useEffect(() => {
+        fetchBusTrips();
+    }, []);
 
-    const persist = (next) => {
-        setRecords(next);
-        localStorage.setItem("ibt_busTrips", JSON.stringify(next));
+    const uniqueCompanies = [...new Set(records.map((bus) => bus.company))];
+
+    // --- 2. Handle Delete (API Call) ---
+    const handleDeleteConfirm = async () => {
+        if (!deleteRow) return;
+
+        try {
+            const response = await fetch(`${API_URL}/${deleteRow.id}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                // Remove from local state immediately for UI responsiveness
+                setRecords(prev => prev.filter((r) => r.id !== deleteRow.id));
+                console.log("Item deleted successfully");
+            }
+        } catch (error) {
+            console.error("Error deleting:", error);
+        } finally {
+            setDeleteRow(null);
+        }
     };
 
-    const handleDeleteConfirm = () => {
-    if (!deleteRow) return;
+    // --- 3. Handle Update (Passed to EditBusTrip) ---
+    const handleUpdateRecord = async (updatedData) => {
+        try {
+            const response = await fetch(`${API_URL}/${updatedData.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedData),
+            });
 
-    const nextList = records.filter((r) => r.id !== deleteRow.id);
-    
-    persist(nextList); 
-    setDeleteRow(null); 
-    console.log("Item deleted successfully");
-  };
+            if (response.ok) {
+                const savedItem = await response.json();
+                // Update local state
+                setRecords(prev => prev.map(r => (r.id === savedItem._id ? { ...savedItem, id: savedItem._id } : r)));
+                setEditRow(null);
+            }
+        } catch (error) {
+            console.error("Error updating:", error);
+        }
+    };
 
-    const handleArchive = (rowToArchive) => {
+    const handleCreateRecord = async (newData) => {
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newData),
+            });
+            if (response.ok) {
+                fetchBusTrips(); // Refresh list
+                setShowPreview(false);
+            }
+        } catch (error) {
+            console.error("Error creating:", error);
+        }
+    };
+
+    // --- 5. Handle Archive (Optional Logic) ---
+    // Note: Usually Archive is just an Update Status, but keeping your logic similar:
+    const handleArchive = async (rowToArchive) => {
         if (!rowToArchive) return;
+        // Option A: Delete from Main DB and add to Archive DB
+        // Option B (Recommended): Just update a flag "isArchived: true"
 
+        // Implementing Option B (Update status):
         try {
-            const rawArchive = localStorage.getItem("ibt_archive");
-            const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+            const response = await fetch(`${API_URL}/${rowToArchive.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isArchived: true, status: "Archived" }),
+            });
 
-            const archiveItem = {
-                id: `archive-${Date.now()}-${rowToArchive.id}`,
-                type: "Bus Trip", 
-                description: `Template #${rowToArchive.templateno} - ${rowToArchive.route}`, // Customized
-                dateArchived: new Date().toISOString(),
-                originalStatus: rowToArchive.status,
-                originalData: rowToArchive
-            };
-            
-            archiveList.push(archiveItem);
-            localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
-
-        } catch (e) {
-            console.error("Failed to add to archive:", e);
-            return;
+            if (response.ok) {
+                setRecords(prev => prev.filter((r) => r.id !== rowToArchive.id));
+                console.log("Item archived successfully!");
+            }
+        } catch (error) {
+            console.error("Archive failed:", error);
         }
-
-        const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
-        persist(nextActiveList);
-        
-        console.log("Item archived successfully!");
     };
 
-
+    // --- Filtering Logic (Stays Client-Side for now) ---
     const filtered = records.filter((bus) => {
+        const templateNo = bus.templateNo || bus.templateno || ""; // handle case sensitivity
         const matchesSearch =
-            bus.templateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            templateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
             bus.route.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesCompany =
@@ -111,6 +166,7 @@ const BusTrips = () => {
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
+    // Export Handlers (keep as is)
     const handleExportCSV = () => console.log("Exported Bus Trips to CSV");
     const handleExportExcel = () => console.log("Exported Bus Trips to Excel");
     const handleExportPDF = () => console.log("Exported Bus Trips to PDF");
@@ -118,7 +174,7 @@ const BusTrips = () => {
 
     return (
         <Layout title="Bus Trips Management">
-            <div className="px-4 lg:px-8 mt-4">
+           <div className="px-4 lg:px-8 mt-4">
                 <div className="flex flex-col gap-4 w-full">
                     <BusTripFilters
                         searchQuery={searchQuery}
@@ -128,77 +184,60 @@ const BusTrips = () => {
                         selectedCompany={selectedCompany}
                         setSelectedCompany={setSelectedCompany}
                         uniqueCompanies={uniqueCompanies}
-
                     />
-
                     <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
+                        {/* UPDATE: Ensure Add New triggers your create logic */}
                         <button onClick={() => setShowPreview(true)} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
                             + Add New
                         </button>
+                        {/* ... Rest of buttons ... */}
                         {role === "superadmin" && (
                             <button onClick={() => setShowNotify(true)} className="flex items-center justify-center space-x-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all w-full sm:w-auto">
                                 Notify
                             </button>
                         )}
-                        
-                        {role === "bus" && (
-                            <button
-                                onClick={() => setShowSubmitModal(true)}
-                                className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
-                                >
-                                Submit Report
-                            </button>
-                        )}
-
-                        <ExportMenu
-                            onExportCSV={handleExportCSV}
-                            onExportExcel={handleExportExcel}
-                            onExportPDF={handleExportPDF}
-                            onPrint={handlePrint}
+                         <ExportMenu 
+                            onExportCSV={handleExportCSV} 
+                            onExportExcel={handleExportExcel} 
+                            onExportPDF={handleExportPDF} 
+                            onPrint={handlePrint} 
                         />
                     </div>
                 </div>
             </div>
 
             <div className="p-4 lg:p-8">
-                <Table
-                    columns={["Template No", "Route", "Time", "Date", "Company", "Status"]}
-                    data={paginatedData.map((bus) => ({
-                        id: bus.id,
-                        templateno: bus.templateNo,
-                        route: bus.route,
-                        time: bus.time,
-                        date: bus.date,
-                        company: bus.company,
-                        status: bus.status,
-                    }))}
-                    actions={(row) => (
-                        
-                        <div className="flex justify-end items-center space-x-2">
-                            <TableActions
-                                onView={() => setViewRow(row)}
-                                onEdit={() => setEditRow(row)}
-                                onDelete={() => setDeleteRow(row)} 
-                            />
-                            <button
-                                onClick={() => handleArchive(row)}
-                                title="Archive"
-                                className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
-                            >
-                                <Archive size={16} />
-                            </button>
-                            
-                            <button
-                                onClick={() => setDeleteRow(row)}
-                                title="Delete"
-                                className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-                                >
-                                <Trash2 size={16} />
-                            </button>
-                            
-                        </div>
-                    )}
-                />
+                {isLoading ? (
+                    <div className="text-center py-10">Loading data...</div>
+                ) : (
+                    <Table
+                        columns={["Template No", "Route", "Time", "Date", "Company", "Status"]}
+                        data={paginatedData.map((bus) => ({
+                            id: bus.id,
+                            templateno: bus.templateNo || bus.templateno, // Handle casing
+                            route: bus.route,
+                            time: bus.time,
+                            date: bus.date,
+                            company: bus.company,
+                            status: bus.status,
+                        }))}
+                        actions={(row) => (
+                            <div className="flex justify-end items-center space-x-2">
+                                <TableActions
+                                    onView={() => setViewRow(row)}
+                                    onEdit={() => setEditRow(row)}
+                                    onDelete={() => setDeleteRow(row)}
+                                />
+                                <button onClick={() => handleArchive(row)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                                    <Archive size={16} />
+                                </button>
+                                <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        )}
+                    />
+                )}
                 <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -212,6 +251,7 @@ const BusTrips = () => {
                 />
             </div>
 
+            {/* View Modal */}
             {viewRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
@@ -231,41 +271,53 @@ const BusTrips = () => {
                 </div>
             )}
 
+            {/* Edit Modal - Connected to API via handleUpdateRecord */}
             {editRow && (
                 <EditBusTrip
                     row={editRow}
                     onClose={() => setEditRow(null)}
-                    onSave={(updated) => {
-                        const next = records.map((r) => (r.id === updated.id ? updated : r));
-                        persist(next);
-                        setEditRow(null);
-                    }}
+                    onSave={handleUpdateRecord} 
                 />
             )}
 
-            {deleteRow && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-                        <h3 className="text-base font-semibold text-slate-800">Archive Bus Trip</h3>
-                        <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive template {deleteRow.templateno}?</p>
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-                            <button onClick={() => { 
-                                handleArchive(deleteRow); 
-                                setDeleteRow(null); 
-                            }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+            {/* Add New Modal - Needs to be connected to handleCreateRecord */}
+            {showPreview && (
+                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-3xl bg-white rounded-xl p-6">
+                        {/* NOTE: You need to update your <Form> component or this section 
+                           to capture the form data state and call handleCreateRecord(formData) 
+                           instead of just closing it.
+                        */}
+                        <Form
+                            title="Add New Bus Trip"
+                            onSubmit={(formData) => handleCreateRecord(formData)} // Hypothetical prop
+                            onCancel={() => setShowPreview(false)} // Hypothetical prop
+                            fields={[
+                                { name: "templateNo", label: "Template No", type: "text" },
+                                { name: "route", label: "Route", type: "text" },
+                                { name: "time", label: "Time", type: "time" },
+                                { name: "date", label: "Date", type: "date" },
+                                { name: "company", label: "Company", type: "text" },
+                                { name: "status", label: "Status", type: "select", options: ["Active", "Inactive"] },
+                            ]}
+                        />
+                         <div className="mt-3 flex justify-end">
+                            <button onClick={() => setShowPreview(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* Delete Modal */}
             <DeleteModal
                 isOpen={!!deleteRow}
                 onClose={() => setDeleteRow(null)}
                 onConfirm={handleDeleteConfirm}
                 title="Delete Record"
                 message="Are you sure you want to remove this bus record? This action cannot be undone."
-                itemName={deleteRow ? `Template No - #${deleteRow.templateno} - ${deleteRow.route} - ${deleteRow.company}` : ""}
+                itemName={deleteRow ? `Template #${deleteRow.templateno}` : ""}
             />
 
             {role === "bus" && showSubmitModal && (
