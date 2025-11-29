@@ -1,9 +1,8 @@
-// models/Parking.js
 import mongoose from "mongoose";
 
 const ParkingSchema = new mongoose.Schema({
   ticketNo: { type: String, required: true },
-  plateNumber: { type: String, required: true }, 
+  plateNo: { type: String, required: true }, 
   type: { type: String, required: true },    
   baseRate: { type: Number, required: true }, 
   finalPrice: { type: Number, default: 0 },   

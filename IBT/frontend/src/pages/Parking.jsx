@@ -10,26 +10,22 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-// Added 'Archive' to imports
-import { Trash2, LogOut, Car, Bike, Clock, FileText, DollarSign, ArrowLeft, Archive } from "lucide-react";
+import { Trash2, LogOut, Car, Bike, Clock, FileText, PhilippinePeso, Archive, ArrowLeft } from "lucide-react";
 
 const Parking = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
 
-  // Modal States
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [logoutRow, setLogoutRow] = useState(null);
   
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -40,21 +36,19 @@ const Parking = () => {
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/parking";
 
-  // --- 1. Form State ---
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
     type: "Car", 
-    plateNumber: "",
+    plateNo: "",
     baseRate: 50, 
     timeIn: "", 
   });
 
-  // Calculate unique plates for Autocomplete
   const existingPlates = useMemo(() => {
-    return [...new Set(records.map(r => r.plateNumber).filter(Boolean))];
+    return [...new Set(records.map(r => r.plateNo).filter(Boolean))];
   }, [records]);
 
-  // --- 2. Fetch Data ---
+
   const fetchParkingTickets = async () => {
     setIsLoading(true);
     try {
@@ -72,23 +66,15 @@ const Parking = () => {
 
   useEffect(() => { fetchParkingTickets(); }, []);
 
-  // --- Focus Effect for Step 2 ---
-  useEffect(() => {
-    if (showAddModal && step === 2 && plateInputRef.current) {
-      plateInputRef.current.focus();
-    }
-  }, [step, showAddModal]);
-
-  // --- 3. Handle Add New (Reset Form) ---
   const handleAddClick = () => {
     const now = new Date();
-    // Format for datetime-local input (YYYY-MM-DDTHH:MM)
+
     const formattedTimeIn = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
     setNewTicket({
       ticketNo: "",
-      type: "", // Reset type so user is forced to choose
-      plateNumber: "",
+      type: "Car",
+      plateNo: "",
       baseRate: 50, 
       timeIn: formattedTimeIn, 
     });
@@ -131,7 +117,43 @@ const Parking = () => {
     }
   };
 
-  // --- 4. Handle Departure ---
+  const handleArchive = async (rowToArchive) => {
+      try {
+        const archiveRes = await fetch(`${API_URL}/archives`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+               type: "Parking",
+               description: `Ticket #${rowToArchive.ticketNo} - ${rowToArchive.type}`,
+               originalData: rowToArchive,
+               archivedBy: role
+            })
+        });
+  
+        if (!archiveRes.ok) throw new Error("Failed to archive");
+  
+        const idToDelete = rowToArchive._id || rowToArchive.id;
+  
+        if (!idToDelete) {
+            throw new Error("System Error: Record ID is missing.");
+        }
+  
+        const deleteRes = await fetch(`${API_URL}/parking/${idToDelete}`, { 
+            method: "DELETE" 
+        });
+  
+        if (!deleteRes.ok) throw new Error("Failed to remove from active list");
+  
+        await fetchFees(); 
+        await logActivity(role, "ARCHIVE_PARKING", `Archived Parking #${rowToArchive.ticketNo}`, "Parking");
+        showToastMessage("Ticket archived successfully!"); 
+  
+      } catch (e) {
+        console.error("Failed to archive:", e);
+        showToastMessage("Failed to archive ticket.");
+      }
+    };
+
   const confirmLogout = async () => {
     if (!logoutRow) return;
     try {
@@ -149,45 +171,6 @@ const Parking = () => {
     }
   };
 
-  // --- 5. Handle Archive (Soft Delete) ---
-  const handleArchive = async (row) => {
-    // Optional: Add a confirm check if desired
-    // if(!window.confirm("Archive this ticket?")) return;
-
-    try {
-        const response = await fetch(`${API_URL}/${row.id}`, {
-            method: "PUT", // Assuming your API supports PUT for updates
-            headers: { "Content-Type": "application/json" },
-            // We update status to Archived. Adjust 'isArchived' based on your backend schema
-            body: JSON.stringify({ ...row, status: "Archived", isArchived: true }),
-        });
-        if(response.ok) {
-            // Remove from current view immediately
-            setRecords(prev => prev.filter(r => r.id !== row.id));
-        }
-    } catch (error) {
-        console.error("Error archiving:", error);
-    }
-  };
-
-  // --- 6. Handle Delete Confirm ---
-  const handleDeleteConfirm = async () => {
-    if (!deleteRow) return;
-    try {
-        const response = await fetch(`${API_URL}/${deleteRow.id}`, {
-            method: "DELETE",
-        });
-        if(response.ok) {
-            setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
-        }
-    } catch (error) {
-        console.error("Error deleting:", error);
-    } finally {
-        setDeleteRow(null);
-    }
-  };
-
-  // --- 7. Helper to Format Date ---
   const formatDateDisplay = (dateString) => {
       if(!dateString) return "--/--";
       return new Date(dateString).toLocaleDateString() + " " + new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -198,18 +181,15 @@ const Parking = () => {
       return new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   }
 
-  // Helper to get the RAW data object for Modals
   const getRawRecord = (id) => {
     return records.find(r => r.id === id);
   };
 
-  // --- Filtering ---
   const filtered = records.filter((ticket) => {
     const matchesSearch = 
       (ticket.ticketNo && String(ticket.ticketNo).includes(searchQuery)) ||
-      (ticket.plateNumber && ticket.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+      (ticket.plateNo && ticket.plateNo.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    // Date Filtering Fix
     const ticketDate = ticket.timeIn ? new Date(ticket.timeIn).toDateString() : "";
     const filterDate = selectedDate ? new Date(selectedDate).toDateString() : "";
     const matchesDate = !selectedDate || ticketDate === filterDate;
@@ -218,7 +198,6 @@ const Parking = () => {
     return matchesSearch && matchesType && matchesDate;
   });
   
-  // Stats
   const carCount = filtered.filter((t) => t.type === "Car").length;
   const motoCount = filtered.filter((t) => t.type === "Motorcycle").length;
   const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
@@ -239,7 +218,7 @@ const Parking = () => {
   };
 
   return (
-    <Layout title="Bus Parking Management">
+    <Layout title="Parking Management">
       
       <div className="mb-6">
         <StatCardGroupPark cars={carCount} motorcycles={motoCount} totalVehicles={filtered.length} totalRevenue={revenue} />
@@ -266,61 +245,69 @@ const Parking = () => {
             columns={["Ticket No", "Plate No", "Type", "Fee/Hr", "Total", "Time In", "Time Out", "Duration", "Status"]}
             data={paginatedData.map((ticket) => ({
               id: ticket.id,
-              ticketNo: ticket.ticketNo ? `#${ticket.ticketNo}` : <span className="text-slate-300">---</span>,
-              plateNumber: ticket.plateNumber ? <span className="font-mono font-semibold text-slate-700">{ticket.plateNumber}</span> : <span className="text-slate-300">---</span>,
+              ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : <span className="text-slate-300">---</span>,
+              plateno: ticket.plateNo ? <span className="font-mono font-semibold text-slate-700">{ticket.plateNo}</span> : <span className="text-slate-300">---</span>,
               type: ticket.type,
-              baseRate: ticket.baseRate ? `₱${ticket.baseRate}` : <span className="text-slate-300">---</span>,
-              finalPrice: ticket.status === "Departed" ? <span className="font-bold text-emerald-600">₱{ticket.finalPrice}</span> : <span className="text-slate-400">---</span>,
-              timeIn: formatTimeOnly(ticket.timeIn),
-              timeOut: ticket.timeOut ? formatTimeOnly(ticket.timeOut) : "---",
+              "fee/hr": ticket.baseRate ? `₱${ticket.baseRate}` : <span className="text-slate-300">---</span>,
+              total: ticket.status === "Departed" ? <span className="font-bold text-emerald-600">₱{ticket.finalPrice}</span> : <span className="text-slate-400">---</span>,
+              timein: formatTimeOnly(ticket.timeIn),
+              timeout: ticket.timeOut ? formatTimeOnly(ticket.timeOut) : "---",
               duration: ticket.duration || "---",
               status: ticket.status,
             }))}
-            actions={(row) => (
-              <div className="flex justify-end items-center space-x-2">
-                {/* Depart Button */}
-                {row.status === "Parked" && (
-                     <button 
-                        onClick={() => setLogoutRow(getRawRecord(row.id))} 
-                        title="Depart / Logout"
-                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
-                      >
-                      <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
-                  </button>
-                )}
-                
-                {/* View / Edit Actions */}
-                <TableActions 
-                    onView={() => setViewRow(getRawRecord(row.id))} 
-                    onEdit={() => setEditRow(getRawRecord(row.id))} 
-                    // onDelete removed from here to separate the button below
-                />
+            actions={(row) => {
+  // 1. FIND THE RECORD MATCHING THE ROW ID
+  const selectedRecord = records.find(r => r.id === row.id);
 
-                {/* Archive Button */}
-                <button 
-                    onClick={() => handleArchive(getRawRecord(row.id))} 
-                    title="Archive" 
-                    className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
-                >
-                    <Archive size={16} />
-                </button>
+  return (
+    <div className="flex justify-end items-center space-x-2">
+      {/* Existing Depart Button logic */}
+      {row.status === "Parked" && (
+        <button 
+          onClick={() => setLogoutRow(selectedRecord)} 
+          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
+        >
+          <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
+        </button>
+      )}
 
-                {/* Delete Button */}
-                <button 
-                    onClick={() => setDeleteRow(getRawRecord(row.id))} 
-                    title="Delete" 
-                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-                >
-                    <Trash2 size={16} />
-                </button>
-              </div>
-            )}
+      {/* View and Edit Buttons */}
+      <TableActions
+        onView={() => setViewRow(selectedRecord)}
+        onEdit={() => setEditRow(selectedRecord)}
+      /> 
+
+      {/* Archive Button */}
+      <button 
+        onClick={() => {
+          if (selectedRecord) {
+              // handleArchive(selectedRecord); // UNCOMMENT THIS ONLY IF YOU DEFINE handleArchive IN YOUR FILE
+              console.log("Archive clicked (Function not defined yet)");
+          }
+        }} 
+        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+        title="Archive">
+        <Archive size={16} />
+      </button>
+
+      {/* Delete Button */}
+      <button 
+        onClick={() => { 
+          setDeleteRow(selectedRecord); 
+          // Removed setDeleteRemarks("") because it does not exist in Parking.jsx
+        }} 
+        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+        title="Delete">
+        <Trash2 size={16} />
+      </button>
+    </div>
+  );
+}}
           />
       )}
       
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} totalItems={filtered.length} onItemsPerPageChange={setItemsPerPage} />
 
-    {/* --- NEW ADD MODAL (STEP-BY-STEP DESIGN) --- */}
     {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
@@ -379,11 +366,12 @@ const Parking = () => {
                             <input 
                                 ref={plateInputRef}
                                 type="text" 
-                                list="plate-options"
-                                placeholder="ABC 1234" 
-                                value={newTicket.plateNumber}
-                                onChange={(e) => setNewTicket({...newTicket, plateNumber: e.target.value.toUpperCase()})}
-                                className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors uppercase"
+                                list="plate-options" 
+                                placeholder="ABC 123"
+                                required
+                                value={newTicket.plateNo}
+                                onChange={(e) => setNewTicket({...newTicket, plateNo: e.target.value.toUpperCase()})}
+                                className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none uppercase"
                             />
                             {/* Preserve Autocomplete Logic */}
                             <datalist id="plate-options">
@@ -393,35 +381,27 @@ const Parking = () => {
                             </datalist>
                         </div>
 
-                        {/* Ticket Input */}
-                        <div className="text-left">
-                            <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
-                                Ticket Number
-                            </label>
-                            <input 
-                                type="number" 
-                                placeholder="001" 
-                                value={newTicket.ticketNo}
-                                onChange={(e) => setNewTicket({...newTicket, ticketNo: e.target.value})}
-                                className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors"
-                            />
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Entry Time</label>
+                            <div className="relative">
+                                <Clock size={16} className="absolute left-3 top-3 text-slate-400" />
+                                <input type="datetime-local" value={newTicket.timeIn} onChange={(e) => setNewTicket({...newTicket, timeIn: e.target.value})} className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-50" />
+                            </div>
                         </div>
-
-                        {/* Buttons */}
-                        <div className="flex gap-4 mt-4 h-16">
-                            <button 
-                                onClick={handleBack}
-                                className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors"
-                            >
-                                <ArrowLeft size={24} /> Back
-                            </button>
-                            <button 
-                                onClick={handleCreateTicket}
-                                className="flex-[2] bg-emerald-500 text-white text-2xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg"
-                            >
-                                ENTER
-                            </button>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Hourly Rate</label>
+                            <div className="relative">
+                                <PhilippinePeso size={16} className="absolute left-3 top-3 text-slate-500" />
+                                <input 
+                                    type="number" 
+                                    value={newTicket.baseRate} 
+                                    readOnly 
+                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed font-semibold"
+                                />
+                            </div>
                         </div>
+                    </div>
 
                     </div>
                 )}
@@ -429,7 +409,6 @@ const Parking = () => {
         </div>
     )}
 
-    {/* --- DEPART CONFIRMATION --- */}
     {logoutRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
@@ -449,15 +428,14 @@ const Parking = () => {
         </div>
     )}
 
-      {/* View Modal */}
       {viewRow && ( 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
                 <h3 className="mb-4 text-base font-semibold text-slate-800">View Parking Ticket</h3>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
-                    {/* Handles missing data safely */}
+              
                     <Field label="Ticket No" value={viewRow.ticketNo || "N/A"} />
-                    <Field label="Plate No" value={viewRow.plateNumber || "N/A"} />
+                    <Field label="Plate No" value={viewRow.plateNo || "N/A"} />
                     <Field label="Type" value={viewRow.type} />
                     <Field label="Base Rate" value={viewRow.baseRate ? `₱${viewRow.baseRate}` : "N/A"} />
                     <Field label="Final Price" value={viewRow.finalPrice ? `₱${viewRow.finalPrice}` : "Pending"} />
@@ -473,7 +451,6 @@ const Parking = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
       {editRow && (
         <EditParking
             row={editRow}
@@ -490,7 +467,6 @@ const Parking = () => {
         />
       )}
 
-      {/* Delete Modal */}
       <DeleteModal 
         isOpen={!!deleteRow} 
         onClose={() => setDeleteRow(null)} 
