@@ -11,7 +11,7 @@ import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
-import { Archive, Trash2, Package, FileText, Calendar, Tag } from "lucide-react"; 
+import { Archive, Trash2, Package, FileText, Calendar, MapPin, Tag } from "lucide-react"; 
 
 const LostFound = () => {
   const [records, setRecords] = useState([]);
@@ -45,7 +45,7 @@ const LostFound = () => {
     trackingNo: "",
     description: "",
     dateTime: "",
-    status: "Pending" // Default
+    status: "Unclaimed",
   });
 
   // --- 2. Fetch Data ---
@@ -83,8 +83,9 @@ const LostFound = () => {
     setNewItem({
         trackingNo: autoTracking,
         description: "",
+        where: "",
         dateTime: formattedNow,
-        status: "Pending"
+        status: "Unclaimed" 
     });
     setShowAddModal(true);
   };
@@ -226,11 +227,12 @@ const LostFound = () => {
           <div className="text-center py-10">Loading records...</div>
       ) : (
         <Table
-            columns={["Tracking No", "Description", "DateTime", "Status"]}
+            columns={["Tracking No", "Description", "Where", "DateTime", "Status"]}
             data={paginatedData.map((item) => ({
             id: item.id,
             trackingno: item.trackingNo,
             description: item.description,
+            where: item.where,
             datetime: formatDateTime(item.dateTime),
             status: item.status,
             }))}
@@ -274,6 +276,26 @@ const LostFound = () => {
                 </div>
                 <form onSubmit={handleCreateItem}>
                     <div className="space-y-4">
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                            <div className="flex p-1 bg-slate-100 rounded-lg">
+                              {["Unclaimed", "Claimed"].map((status) => (
+                                <button
+                                  type="button"
+                                  key={status}
+                                  onClick={() => setNewItem({ ...newItem, status })}
+                                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                                    newItem.status === status
+                                    ? "bg-white text-emerald-600 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-700"
+                                  }`}
+                                >
+                                {status}
+                                </button>
+                              ))}
+                            </div>
+                        </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
                             <div className="relative">
@@ -282,9 +304,10 @@ const LostFound = () => {
                                     type="text" 
                                     value={newItem.trackingNo} 
                                     onChange={(e) => setNewItem({...newItem, trackingNo: e.target.value})}
-                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                                    disabled className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 " 
                                     placeholder="LF-123456"
                                     required
+                                    readOnly
                                 />
                             </div>
                         </div>
@@ -297,7 +320,7 @@ const LostFound = () => {
                                     type="datetime-local" 
                                     value={newItem.dateTime} 
                                     onChange={(e) => setNewItem({...newItem, dateTime: e.target.value})}
-                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-50" 
+                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-35" 
                                     required
                                 />
                             </div>
@@ -317,21 +340,19 @@ const LostFound = () => {
                             </div>
                         </div>
 
-                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Where</label>
                             <div className="relative">
-                                <Tag size={16} className="absolute left-3 top-3 text-slate-400" />
-                                <select 
-                                    value={newItem.status} 
-                                    onChange={(e) => setNewItem({...newItem, status: e.target.value})}
-                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                                >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Claimed">Claimed</option>
-                                    <option value="Unclaimed">Unclaimed</option>
-                                </select>
+                                <MapPin size={16} className="absolute left-3 top-3 text-slate-400" />
+                                <textarea 
+                                    value={newItem.where} 
+                                    onChange={(e) => setNewItem({...newItem, where: e.target.value})}
+                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300  " 
+                                    placeholder="Location of the item found..."
+                                    required
+                                />
                             </div>
-                        </div>
+                        </div>                        
                     </div>
                     <div className="flex gap-3 mt-6">
                         <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
@@ -352,6 +373,7 @@ const LostFound = () => {
               <Field label="Status" value={viewRow.status} />
               <Field label="DateTime" value={formatDateTime(viewRow.dateTime)} />
               <div className="md:col-span-2"><Field label="Description" value={viewRow.description} /></div>
+              <div className="md:col-span-2"><Field label="Where" value={viewRow.where} /></div>
             </div>
             <div className="mt-4 flex justify-end"><button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button></div>
           </div>

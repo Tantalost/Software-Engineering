@@ -53,7 +53,7 @@ const TerminalFees = () => {
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
-    passengerType: "Regular",
+    passengerType: "Regular", 
     price: 15.00,
     date: "",
     time: ""

@@ -3,11 +3,12 @@ import mongoose from "mongoose";
 const LostFoundSchema = new mongoose.Schema({
   trackingNo: { type: String, required: true },
   description: { type: String, required: true },
+  where: { type: String, required: true },
   dateTime: { type: Date, required: true },
   status: { 
     type: String, 
-    enum: ["Pending", "Claimed", "Unclaimed", "Archived"], 
-    default: "Pending" 
+    enum: [ "Claimed", "Unclaimed", "Archived"], 
+    default: "Unclaimed" 
   },
   isArchived: { type: Boolean, default: false }
 }, { timestamps: true });
