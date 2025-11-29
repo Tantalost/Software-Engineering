@@ -252,7 +252,6 @@ const BusTrips = () => {
                         }))}
                         actions={(row) => (
                             <div className="flex justify-end items-center space-x-2">
-                                {/* Only show Log Out button if status is Pending */}
                                 {row.status === "Pending" && (
                                     <button 
                                         onClick={() => handleLogoutClick(row)} 
@@ -289,7 +288,7 @@ const BusTrips = () => {
                 />
             </div>
 
-            {/* --- ADD NEW BUS MODAL (Customized) --- */}
+            {/* --- ADD NEW BUS MODAL  --- */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg">

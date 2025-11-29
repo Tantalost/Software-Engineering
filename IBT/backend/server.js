@@ -11,6 +11,7 @@ import deletionRequestRoutes from "./routes/deletionRequestRoutes.js";
 import archiveRoutes from "./routes/archiveRoutes.js";
 import waitlistRoutes from "./routes/waitlistRoutes.js"; 
 import tenantRoutes from "./routes/tenantRoutes.js";
+import parkingRoutes from "./routes/parkingRoutes.js";
 
 connectDB();
 connectCloudinary();
@@ -25,6 +26,7 @@ app.get('/', (req, res) => res.send("API is working"));
 app.use("/api/bustrips", busTripRoutes);
 app.use("/api/terminal-fees", terminalFeeRoutes);
 app.use("/api/logs", logRoutes);
+app.use("/api/parking", parkingRoutes);
 app.use("/api/deletion-requests", deletionRequestRoutes);
 app.use("/api/archives", archiveRoutes);
 app.use("/api/waitlist", waitlistRoutes); 
