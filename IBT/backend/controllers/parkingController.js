@@ -13,11 +13,11 @@ export const getParkingTickets = async (req, res) => {
 // CREATE (Entry)
 export const createParking = async (req, res) => {
   try {
-    const { ticketNo, plateNumber, type, baseRate, timeIn } = req.body;
+    const { ticketNo, plateNo, type, baseRate, timeIn } = req.body;
 
     const newTicket = new Parking({
       ticketNo,
-      plateNumber,
+      plateNo,
       type,
       baseRate, // Store the rate (e.g. 50 or 20)
       timeIn: timeIn || new Date(), // Use provided time or current server time
