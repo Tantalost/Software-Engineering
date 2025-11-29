@@ -10,7 +10,7 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { Trash2, LogOut, Car, Bike, Clock, FileText, PhilippinePeso, Archive, ArrowLeft } from "lucide-react";
+import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft } from "lucide-react";
 
 const Parking = () => {
   const [records, setRecords] = useState([]);
@@ -29,12 +29,13 @@ const Parking = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // --- NEW: Step State for the Form UI ---
+  // --- Step State for the Form UI ---
   const [step, setStep] = useState(1);
   const plateInputRef = useRef(null);
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/parking";
+  const ARCHIVE_URL = "http://localhost:3000/api/archives"; 
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -68,7 +69,6 @@ const Parking = () => {
 
   const handleAddClick = () => {
     const now = new Date();
-
     const formattedTimeIn = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 
     setNewTicket({
@@ -76,13 +76,12 @@ const Parking = () => {
       type: "Car",
       plateNo: "",
       baseRate: 50, 
-      timeIn: formattedTimeIn, 
+      timeIn: formattedTimeIn, // Time is still set in background, just not shown
     });
-    setStep(1); // Always start at Step 1
+    setStep(1); 
     setShowAddModal(true);
   };
 
-  // Selection Handler (Step 1 -> Step 2)
   const handleSelectType = (type) => {
     const rate = type === "Car" ? 50 : 20; 
     setNewTicket(prev => ({ ...prev, type: type, baseRate: rate }));
@@ -91,14 +90,15 @@ const Parking = () => {
 
   const handleBack = () => {
     setStep(1);
-    setNewTicket(prev => ({ ...prev, type: "", plateNumber: "", ticketNo: "" }));
+    setNewTicket(prev => ({ ...prev, type: "", plateNo: "", ticketNo: "" }));
   };
 
   const handleCreateTicket = async (e) => {
     e.preventDefault(); 
     
-    if (!newTicket.plateNumber || !newTicket.ticketNo) {
-        alert("Please fill in both fields.");
+    // Fixed validation to use plateNo instead of plateNumber
+    if (!newTicket.plateNo || !newTicket.ticketNo) {
+        alert("Please fill in both Ticket Number and Plate Number.");
         return;
     }
 
@@ -117,9 +117,34 @@ const Parking = () => {
     }
   };
 
+  // --- DELETE FUNCTIONALITY ---
+  const handleDeleteConfirm = async () => {
+    if (!deleteRow) return;
+    try {
+        const response = await fetch(`${API_URL}/${deleteRow.id}`, {
+            method: "DELETE",
+        });
+
+        if (response.ok) {
+            setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
+            setDeleteRow(null);
+        } else {
+            alert("Failed to delete record");
+        }
+    } catch (error) {
+        console.error("Error deleting:", error);
+    }
+  };
+
+  // --- ARCHIVE FUNCTIONALITY ---
   const handleArchive = async (rowToArchive) => {
+      if(!window.confirm(`Are you sure you want to archive Ticket #${rowToArchive.ticketNo}?`)) return;
+
       try {
-        const archiveRes = await fetch(`${API_URL}/archives`, {
+        const idToDelete = rowToArchive._id || rowToArchive.id;
+        if (!idToDelete) throw new Error("Record ID is missing.");
+
+        const archiveRes = await fetch(ARCHIVE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -130,27 +155,20 @@ const Parking = () => {
             })
         });
   
-        if (!archiveRes.ok) throw new Error("Failed to archive");
+        if (!archiveRes.ok) throw new Error("Failed to save to archive");
   
-        const idToDelete = rowToArchive._id || rowToArchive.id;
-  
-        if (!idToDelete) {
-            throw new Error("System Error: Record ID is missing.");
-        }
-  
-        const deleteRes = await fetch(`${API_URL}/parking/${idToDelete}`, { 
+        const deleteRes = await fetch(`${API_URL}/${idToDelete}`, { 
             method: "DELETE" 
         });
   
         if (!deleteRes.ok) throw new Error("Failed to remove from active list");
   
-        await fetchFees(); 
-        await logActivity(role, "ARCHIVE_PARKING", `Archived Parking #${rowToArchive.ticketNo}`, "Parking");
-        showToastMessage("Ticket archived successfully!"); 
+        setRecords(prev => prev.filter(r => r.id !== idToDelete));
+        alert("Ticket archived successfully!"); 
   
       } catch (e) {
         console.error("Failed to archive:", e);
-        showToastMessage("Failed to archive ticket.");
+        alert("Failed to archive ticket.");
       }
     };
 
@@ -209,7 +227,6 @@ const Parking = () => {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
-  // Helper for Badge Styles in Modal
   const getBadgeStyles = () => {
     if (newTicket.type === 'Car') {
       return "bg-blue-50 text-blue-600 border-blue-600";
@@ -256,53 +273,36 @@ const Parking = () => {
               status: ticket.status,
             }))}
             actions={(row) => {
-  // 1. FIND THE RECORD MATCHING THE ROW ID
-  const selectedRecord = records.find(r => r.id === row.id);
-
-  return (
-    <div className="flex justify-end items-center space-x-2">
-      {/* Existing Depart Button logic */}
-      {row.status === "Parked" && (
-        <button 
-          onClick={() => setLogoutRow(selectedRecord)} 
-          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
-        >
-          <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
-        </button>
-      )}
-
-      {/* View and Edit Buttons */}
-      <TableActions
-        onView={() => setViewRow(selectedRecord)}
-        onEdit={() => setEditRow(selectedRecord)}
-      /> 
-
-      {/* Archive Button */}
-      <button 
-        onClick={() => {
-          if (selectedRecord) {
-              // handleArchive(selectedRecord); // UNCOMMENT THIS ONLY IF YOU DEFINE handleArchive IN YOUR FILE
-              console.log("Archive clicked (Function not defined yet)");
-          }
-        }} 
-        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
-        title="Archive">
-        <Archive size={16} />
-      </button>
-
-      {/* Delete Button */}
-      <button 
-        onClick={() => { 
-          setDeleteRow(selectedRecord); 
-          // Removed setDeleteRemarks("") because it does not exist in Parking.jsx
-        }} 
-        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
-        title="Delete">
-        <Trash2 size={16} />
-      </button>
-    </div>
-  );
-}}
+              const selectedRecord = records.find(r => r.id === row.id);
+              return (
+                <div className="flex justify-end items-center space-x-2">
+                  {row.status === "Parked" && (
+                    <button 
+                      onClick={() => setLogoutRow(selectedRecord)} 
+                      className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
+                    >
+                      <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
+                    </button>
+                  )}
+                  <TableActions
+                    onView={() => setViewRow(selectedRecord)}
+                    onEdit={() => setEditRow(selectedRecord)}
+                  /> 
+                  <button 
+                    onClick={() => handleArchive(selectedRecord)} 
+                    className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                    title="Archive">
+                    <Archive size={16} />
+                  </button>
+                  <button 
+                    onClick={() => setDeleteRow(selectedRecord)} 
+                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                    title="Delete">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              );
+            }}
           />
       )}
       
@@ -312,12 +312,10 @@ const Parking = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
                 
-                {/* Close Button */}
                 <button onClick={() => setShowAddModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
                     ✕
                 </button>
 
-                {/* Header */}
                 <h1 className="text-3xl font-bold text-gray-800 mb-8">
                     {step === 1 ? "Select Vehicle" : "Enter Details"}
                 </h1>
@@ -325,7 +323,6 @@ const Parking = () => {
                 {/* STEP 1: Selection Grid */}
                 {step === 1 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
-                        {/* Car Button */}
                         <button 
                             onClick={() => handleSelectType('Car')}
                             className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-blue-600 bg-blue-50 text-blue-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
@@ -334,8 +331,6 @@ const Parking = () => {
                             <span className="text-2xl font-bold mt-2">CAR / BUS</span>
                             <span className="text-sm opacity-70 mt-1 font-medium">₱50.00 / hr</span>
                         </button>
-
-                        {/* Motorcycle Button */}
                         <button 
                             onClick={() => handleSelectType('Motorcycle')}
                             className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-orange-500 bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
@@ -347,11 +342,10 @@ const Parking = () => {
                     </div>
                 )}
 
-                {/* STEP 2: Input Form */}
+                {/* STEP 2: Input Form (MODIFIED) */}
                 {step === 2 && (
                     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                         
-                        {/* Selected Badge */}
                         <div>
                             <span className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}>
                                 Selected: {newTicket.type === 'Car' ? 'Car / Bus' : 'Motorcycle'}
@@ -371,9 +365,8 @@ const Parking = () => {
                                 required
                                 value={newTicket.plateNo}
                                 onChange={(e) => setNewTicket({...newTicket, plateNo: e.target.value.toUpperCase()})}
-                                className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none uppercase"
+                                className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors uppercase"
                             />
-                            {/* Preserve Autocomplete Logic */}
                             <datalist id="plate-options">
                                 {existingPlates.map((plate, index) => (
                                     <option key={index} value={plate} />
@@ -381,27 +374,36 @@ const Parking = () => {
                             </datalist>
                         </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Entry Time</label>
-                            <div className="relative">
-                                <Clock size={16} className="absolute left-3 top-3 text-slate-400" />
-                                <input type="datetime-local" value={newTicket.timeIn} onChange={(e) => setNewTicket({...newTicket, timeIn: e.target.value})} className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-50" />
-                            </div>
+                        {/* Ticket Number Input (Added) */}
+                        <div className="text-left">
+                            <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
+                                Ticket Number
+                            </label>
+                            <input 
+                                type="number" 
+                                placeholder="001"
+                                required
+                                value={newTicket.ticketNo}
+                                onChange={(e) => setNewTicket({...newTicket, ticketNo: e.target.value})}
+                                className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors"
+                            />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Hourly Rate</label>
-                            <div className="relative">
-                                <PhilippinePeso size={16} className="absolute left-3 top-3 text-slate-500" />
-                                <input 
-                                    type="number" 
-                                    value={newTicket.baseRate} 
-                                    readOnly 
-                                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed font-semibold"
-                                />
-                            </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-4 mt-2">
+                             <button 
+                                 onClick={handleBack}
+                                 className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors py-3"
+                             >
+                                 <ArrowLeft size={24} /> Back
+                             </button>
+                             <button 
+                                 onClick={handleCreateTicket}
+                                 className="flex-[2] bg-emerald-500 text-white text-xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg py-3"
+                             >
+                                 ENTER TICKET
+                             </button>
                         </div>
-                    </div>
 
                     </div>
                 )}
@@ -449,22 +451,6 @@ const Parking = () => {
                 </div>
             </div>
         </div>
-      )}
-
-      {editRow && (
-        <EditParking
-            row={editRow}
-            onClose={() => setEditRow(null)}
-            onSave={async (updatedData) => {
-                await fetch(`${API_URL}/${updatedData.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatedData)
-                });
-                fetchParkingTickets();
-                setEditRow(null);
-            }}
-        />
       )}
 
       <DeleteModal 
