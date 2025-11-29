@@ -10,7 +10,8 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { Trash2, LogOut, Car, Bike, Clock, FileText, DollarSign, ArrowLeft } from "lucide-react";
+// Added 'Archive' to imports
+import { Trash2, LogOut, Car, Bike, Clock, FileText, DollarSign, ArrowLeft, Archive } from "lucide-react";
 
 const Parking = () => {
   const [records, setRecords] = useState([]);
@@ -108,7 +109,7 @@ const Parking = () => {
   };
 
   const handleCreateTicket = async (e) => {
-    e.preventDefault(); // prevent form default if wrapped in form
+    e.preventDefault(); 
     
     if (!newTicket.plateNumber || !newTicket.ticketNo) {
         alert("Please fill in both fields.");
@@ -148,7 +149,45 @@ const Parking = () => {
     }
   };
 
-  // --- 5. Helper to Format Date ---
+  // --- 5. Handle Archive (Soft Delete) ---
+  const handleArchive = async (row) => {
+    // Optional: Add a confirm check if desired
+    // if(!window.confirm("Archive this ticket?")) return;
+
+    try {
+        const response = await fetch(`${API_URL}/${row.id}`, {
+            method: "PUT", // Assuming your API supports PUT for updates
+            headers: { "Content-Type": "application/json" },
+            // We update status to Archived. Adjust 'isArchived' based on your backend schema
+            body: JSON.stringify({ ...row, status: "Archived", isArchived: true }),
+        });
+        if(response.ok) {
+            // Remove from current view immediately
+            setRecords(prev => prev.filter(r => r.id !== row.id));
+        }
+    } catch (error) {
+        console.error("Error archiving:", error);
+    }
+  };
+
+  // --- 6. Handle Delete Confirm ---
+  const handleDeleteConfirm = async () => {
+    if (!deleteRow) return;
+    try {
+        const response = await fetch(`${API_URL}/${deleteRow.id}`, {
+            method: "DELETE",
+        });
+        if(response.ok) {
+            setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
+        }
+    } catch (error) {
+        console.error("Error deleting:", error);
+    } finally {
+        setDeleteRow(null);
+    }
+  };
+
+  // --- 7. Helper to Format Date ---
   const formatDateDisplay = (dateString) => {
       if(!dateString) return "--/--";
       return new Date(dateString).toLocaleDateString() + " " + new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -219,7 +258,7 @@ const Parking = () => {
       <div className="mb-4">
         <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
       </div>
-       
+        
       {isLoading ? (
           <div className="text-center py-10">Loading tickets...</div>
       ) : (
@@ -239,19 +278,41 @@ const Parking = () => {
             }))}
             actions={(row) => (
               <div className="flex justify-end items-center space-x-2">
+                {/* Depart Button */}
                 {row.status === "Parked" && (
                      <button 
                         onClick={() => setLogoutRow(getRawRecord(row.id))} 
+                        title="Depart / Logout"
                         className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
-                     >
-                     <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
-                 </button>
+                      >
+                      <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
+                  </button>
                 )}
+                
+                {/* View / Edit Actions */}
                 <TableActions 
                     onView={() => setViewRow(getRawRecord(row.id))} 
                     onEdit={() => setEditRow(getRawRecord(row.id))} 
-                    onDelete={() => setDeleteRow(getRawRecord(row.id))} 
+                    // onDelete removed from here to separate the button below
                 />
+
+                {/* Archive Button */}
+                <button 
+                    onClick={() => handleArchive(getRawRecord(row.id))} 
+                    title="Archive" 
+                    className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+                >
+                    <Archive size={16} />
+                </button>
+
+                {/* Delete Button */}
+                <button 
+                    onClick={() => setDeleteRow(getRawRecord(row.id))} 
+                    title="Delete" 
+                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                >
+                    <Trash2 size={16} />
+                </button>
               </div>
             )}
           />
@@ -433,16 +494,10 @@ const Parking = () => {
       <DeleteModal 
         isOpen={!!deleteRow} 
         onClose={() => setDeleteRow(null)} 
-        onConfirm={async () => { 
-            if(deleteRow) { 
-                await fetch(`${API_URL}/${deleteRow.id}`, {method: 'DELETE'}); 
-                fetchParkingTickets(); 
-                setDeleteRow(null); 
-            } 
-        }} 
+        onConfirm={handleDeleteConfirm} 
         title="Delete Record" 
-        message="Remove this record?" 
-        itemName={deleteRow ? (deleteRow.ticketNo || "this item") : ""} 
+        message="Are you sure you want to permanently remove this record?" 
+        itemName={deleteRow ? (deleteRow.ticketNo ? `Ticket #${deleteRow.ticketNo}` : "this item") : ""} 
       />
 
     </Layout>
