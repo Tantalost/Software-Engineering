@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import StatCardGroupPark from "../components/parking/StatCardGroupPark";
@@ -10,7 +10,7 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { Trash2, LogOut, Car, Bike, Clock, FileText, PhilippinePeso, Archive } from "lucide-react";
+import { Trash2, LogOut, Car, Bike, Clock, FileText, PhilippinePeso, Archive, ArrowLeft } from "lucide-react";
 
 const Parking = () => {
   const [records, setRecords] = useState([]);
@@ -28,6 +28,10 @@ const Parking = () => {
   
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // --- NEW: Step State for the Form UI ---
+  const [step, setStep] = useState(1);
+  const plateInputRef = useRef(null);
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/parking";
@@ -74,16 +78,30 @@ const Parking = () => {
       baseRate: 50, 
       timeIn: formattedTimeIn, 
     });
+    setStep(1); // Always start at Step 1
     setShowAddModal(true);
   };
 
-  const handleVehicleTypeChange = (type) => {
+  // Selection Handler (Step 1 -> Step 2)
+  const handleSelectType = (type) => {
     const rate = type === "Car" ? 50 : 20; 
-    setNewTicket(prev => ({ ...prev, type, baseRate: rate }));
+    setNewTicket(prev => ({ ...prev, type: type, baseRate: rate }));
+    setStep(2);
+  };
+
+  const handleBack = () => {
+    setStep(1);
+    setNewTicket(prev => ({ ...prev, type: "", plateNumber: "", ticketNo: "" }));
   };
 
   const handleCreateTicket = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // prevent form default if wrapped in form
+    
+    if (!newTicket.plateNumber || !newTicket.ticketNo) {
+        alert("Please fill in both fields.");
+        return;
+    }
+
     try {
       const response = await fetch(API_URL, {
         method: "POST",
@@ -191,6 +209,14 @@ const Parking = () => {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
+  // Helper for Badge Styles in Modal
+  const getBadgeStyles = () => {
+    if (newTicket.type === 'Car') {
+      return "bg-blue-50 text-blue-600 border-blue-600";
+    }
+    return "bg-orange-50 text-orange-500 border-orange-500";
+  };
+
   return (
     <Layout title="Parking Management">
       
@@ -283,43 +309,62 @@ const Parking = () => {
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} totalItems={filtered.length} onItemsPerPageChange={setItemsPerPage} />
 
     {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-slate-800">New Parking Entry</h3>
-                    <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
+                
+                {/* Close Button */}
+                <button onClick={() => setShowAddModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+                    ✕
+                </button>
 
-                <form onSubmit={handleCreateTicket}>
-                    <div className="mb-6">
-                        <label className="block text-sm font-semibold text-slate-700 mb-3">Select Vehicle Type</label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button type="button" onClick={() => handleVehicleTypeChange("Car")}
-                                className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${newTicket.type === "Car" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200"}`}>
-                                <Car size={32} className="mb-2" />
-                                <span className="font-medium">Car / Bus</span>
-                                <span className="text-xs opacity-75">₱50.00 / hr</span>
-                            </button>
-                            <button type="button" onClick={() => handleVehicleTypeChange("Motorcycle")}
-                                className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${newTicket.type === "Motorcycle" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200"}`}>
-                                <Bike size={32} className="mb-2" />
-                                <span className="font-medium">Motorcycle</span>
-                                <span className="text-xs opacity-75">₱20.00 / hr</span>
-                            </button>
-                        </div>
+                {/* Header */}
+                <h1 className="text-3xl font-bold text-gray-800 mb-8">
+                    {step === 1 ? "Select Vehicle" : "Enter Details"}
+                </h1>
+
+                {/* STEP 1: Selection Grid */}
+                {step === 1 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
+                        {/* Car Button */}
+                        <button 
+                            onClick={() => handleSelectType('Car')}
+                            className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-blue-600 bg-blue-50 text-blue-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
+                        >
+                            <Car size={80} className="mb-4" />
+                            <span className="text-2xl font-bold mt-2">CAR / BUS</span>
+                            <span className="text-sm opacity-70 mt-1 font-medium">₱50.00 / hr</span>
+                        </button>
+
+                        {/* Motorcycle Button */}
+                        <button 
+                            onClick={() => handleSelectType('Motorcycle')}
+                            className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-orange-500 bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
+                        >
+                            <Bike size={80} className="mb-4" />
+                            <span className="text-2xl font-bold mt-2">MOTORCYCLE</span>
+                            <span className="text-sm opacity-70 mt-1 font-medium">₱20.00 / hr</span>
+                        </button>
                     </div>
+                )}
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Ticket Number</label>
-                            <div className="relative">
-                                <FileText size={16} className="absolute left-3 top-3 text-slate-400" />
-                                <input type="text" required value={newTicket.ticketNo} onChange={(e) => setNewTicket({...newTicket, ticketNo: e.target.value})} className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="1001" />
-                            </div>
-                        </div>
+                {/* STEP 2: Input Form */}
+                {step === 2 && (
+                    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                        
+                        {/* Selected Badge */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Plate Number</label>
+                            <span className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}>
+                                Selected: {newTicket.type === 'Car' ? 'Car / Bus' : 'Motorcycle'}
+                            </span>
+                        </div>
+
+                        {/* Plate Input */}
+                        <div className="text-left">
+                            <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
+                                Plate Number
+                            </label>
                             <input 
+                                ref={plateInputRef}
                                 type="text" 
                                 list="plate-options" 
                                 placeholder="ABC 123"
@@ -328,13 +373,13 @@ const Parking = () => {
                                 onChange={(e) => setNewTicket({...newTicket, plateNo: e.target.value.toUpperCase()})}
                                 className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none uppercase"
                             />
+                            {/* Preserve Autocomplete Logic */}
                             <datalist id="plate-options">
                                 {existingPlates.map((plate, index) => (
                                     <option key={index} value={plate} />
                                 ))}
                             </datalist>
                         </div>
-                    </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div>
@@ -358,11 +403,8 @@ const Parking = () => {
                         </div>
                     </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
-                        <button type="submit" className="flex-1 py-3 bg-emerald-600 rounded-xl text-white font-medium shadow-md hover:bg-emerald-700 transition-all">Confirm Entry</button>
                     </div>
-                </form>
+                )}
             </div>
         </div>
     )}
