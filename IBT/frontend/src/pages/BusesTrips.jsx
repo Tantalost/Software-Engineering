@@ -3,7 +3,7 @@ import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
-import TableActions from "../components/common/TableActions"; // Assuming this handles View/Edit/Delete
+import TableActions from "../components/common/TableActions"; 
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditBusTrip from "../components/bustrips/EditBusTrip";
@@ -12,7 +12,6 @@ import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import { Archive, Trash2, LogOut, CheckCircle } from "lucide-react";
 
-// Mock Data for Templates (You can move this to a DB or Config later)
 const TEMPLATE_ROUTES = {
     "T-101": "Iligan - Cagayan de Oro",
     "T-102": "Iligan - Pagadian",
@@ -28,35 +27,30 @@ const BusTrips = () => {
     const [selectedDate, setSelectedDate] = useState("");
     const [selectedCompany, setSelectedCompany] = useState("");
     
-    // Modal States
-    const [showAddModal, setShowAddModal] = useState(false); // Renamed from showPreview for clarity
+    const [showAddModal, setShowAddModal] = useState(false); 
     const [viewRow, setViewRow] = useState(null);
     const [editRow, setEditRow] = useState(null);
     const [deleteRow, setDeleteRow] = useState(null);
-    const [logoutRow, setLogoutRow] = useState(null); // New state for Log Out flow
+    const [logoutRow, setLogoutRow] = useState(null); 
     
-    // Notification States
     const [showNotify, setShowNotify] = useState(false);
     const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
-    
-    // Pagination States
+   
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     
     const role = localStorage.getItem("authRole") || "superadmin";
     const API_URL = "http://localhost:3000/api/bustrips";
 
-    // --- New Bus Form State ---
     const [newBusData, setNewBusData] = useState({
         templateNo: "",
         route: "",
-        company: "Dindo", // Default tab
+        company: "Dindo", 
         time: "",
-        date: new Date().toISOString().split('T')[0], // Default today
-        status: "Pending" // Default status on add
+        date: new Date().toISOString().split('T')[0], 
+        status: "Pending" 
     });
 
-    // --- Log Out Form State ---
     const [ticketRefInput, setTicketRefInput] = useState("");
 
     const fetchBusTrips = async () => {
@@ -83,9 +77,8 @@ const BusTrips = () => {
 
     const uniqueCompanies = [...new Set(records.map((bus) => bus.company))];
 
-    // --- HANDLE ADD NEW BUS ---
     const handleAddClick = () => {
-        // Reset form when opening
+       
         setNewBusData({
             templateNo: "",
             route: "",
@@ -102,7 +95,7 @@ const BusTrips = () => {
         setNewBusData(prev => ({
             ...prev,
             templateNo: tempNo,
-            route: TEMPLATE_ROUTES[tempNo] || "" // Auto-fill Route
+            route: TEMPLATE_ROUTES[tempNo] || "" 
         }));
     };
 
@@ -123,32 +116,29 @@ const BusTrips = () => {
         }
     };
 
-    // --- HANDLE LOG OUT (DEPARTURE) ---
     const handleLogoutClick = (row) => {
         setLogoutRow(row);
-        setTicketRefInput(""); // Reset input
+        setTicketRefInput(""); 
     };
 
     const confirmLogout = async () => {
         if (!logoutRow || !ticketRefInput) return;
 
-        const updatedData = {
-            ...logoutRow,
+        const changes = {
             ticketReferenceNo: ticketRefInput,
-            status: "Paid", // Automatically set to Paid
-            departureTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) // Optional: Record departure time
+            status: "Paid",
+            departureTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) // Saves as HH:mm
         };
 
         try {
             const response = await fetch(`${API_URL}/${logoutRow.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updatedData),
+                body: JSON.stringify(changes), 
             });
 
             if (response.ok) {
-                // Update local state immediately
-                setRecords(prev => prev.map(r => (r.id === logoutRow.id ? updatedData : r)));
+                setRecords(prev => prev.map(r => (r.id === logoutRow.id ? { ...r, ...changes } : r)));
                 setLogoutRow(null);
             }
         } catch (error) {
@@ -156,7 +146,6 @@ const BusTrips = () => {
         }
     };
 
-    // --- EXISTING HANDLERS (Update, Delete, Archive) ---
     const handleDeleteConfirm = async () => {
         if (!deleteRow) return;
         try {
@@ -184,11 +173,10 @@ const BusTrips = () => {
     };
 
     const handleArchive = async (rowToArchive) => {
-        // Logic for archive...
+        
         console.log("Archive logic here for", rowToArchive);
     };
 
-    // --- FILTERING ---
     const filtered = records.filter((bus) => {
         const templateNo = bus.templateNo || bus.templateno || "";
         const matchesSearch =
@@ -205,6 +193,19 @@ const BusTrips = () => {
     }, [filtered, currentPage, itemsPerPage]);
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+    const formatTime = (timeStr) => {
+        if (!timeStr) return "";
+        try {
+            return new Date(`1970-01-01T${timeStr}`).toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+        } catch (e) {
+            return timeStr; 
+        }
+    };
 
     return (
         <Layout title="Bus Trips Management">
@@ -239,43 +240,53 @@ const BusTrips = () => {
                     <div className="text-center py-10">Loading data...</div>
                 ) : (
                     <Table
-                        columns={["Template No", "Route", "Time", "Date", "Company", "Status", "Ticket Ref"]}
-                        data={paginatedData.map((bus) => ({
-                            id: bus.id,
-                            templateno: bus.templateNo || bus.templateno,
-                            route: bus.route,
-                            time: bus.time,
-                            date: bus.date,
-                            company: bus.company,
-                            status: bus.status,
-                            ticketReferenceNo: bus.ticketReferenceNo || "-"
-                        }))}
-                        actions={(row) => (
-                            <div className="flex justify-end items-center space-x-2">
-                                {row.status === "Pending" && (
-                                    <button 
-                                        onClick={() => handleLogoutClick(row)} 
-                                        title="Log Out (Depart)"
-                                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
-                                    >
-                                        <LogOut size={16} /> 
-                                        <span className="text-xs font-medium">Depart</span>
-                                    </button>
-                                )}
+                        columns={["Template No", "Ticket Ref", "Route", "Time", "Departure", "Date", "Company", "Status"]}
+    
+                            data={paginatedData.map((bus) => ({
+                                id: bus.id,
+                                templateno: bus.templateNo || bus.templateno,
+                                route: bus.route,
+    
+                                time: formatTime(bus.time),
+                                rawTime: bus.time,
+                                departure: formatTime(bus.departureTime),
+                                rawDepartureTime: bus.departureTime, 
+
+                                date: bus.date ? new Date(bus.date).toLocaleDateString() : "",
+                                rawDate: bus.date,
+
+                                company: bus.company,
+                                status: bus.status,
+                                ticketref: bus.ticketReferenceNo || "-"
+                        
+                            }))}
+                        
+                            actions={(row) => (
+                                <div className="flex justify-end items-center space-x-2">
+                                    {row.status === "Pending" && (
+                                        <button 
+                                            onClick={() => handleLogoutClick(row)} 
+                                            title="Log Out (Depart)"
+                                            className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
+                                            >
+                                            <LogOut size={16} /> 
+                                            <span className="text-xs font-medium">Depart</span>
+                                        </button>
+                                    )}
                                 
-                                <TableActions
-                                    onView={() => setViewRow(row)}
-                                    onEdit={() => setEditRow(row)}
-                                    onDelete={() => setDeleteRow(row)}
-                                />
-                                <button onClick={() => handleArchive(row)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
-                                    <Archive size={16} />
-                                </button>
-                                <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        )}
+                                    <TableActions
+                                        onView={() => setViewRow(row)}
+                                        onEdit={() => setEditRow(row)}
+                                        onDelete={() => setDeleteRow(row)}
+                                    />
+                                    <button onClick={() => handleArchive(row)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                                        <Archive size={16} />
+                                    </button>
+                                    <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            )}
                     />
                 )}
                 <Pagination
@@ -288,7 +299,6 @@ const BusTrips = () => {
                 />
             </div>
 
-            {/* --- ADD NEW BUS MODAL  --- */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg">
@@ -296,7 +306,6 @@ const BusTrips = () => {
                         <form onSubmit={handleCreateRecord}>
                             <div className="space-y-4">
                                 
-                                {/* 1. Company Tabs */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-2">Company</label>
                                     <div className="flex p-1 bg-slate-100 rounded-lg">
@@ -317,7 +326,6 @@ const BusTrips = () => {
                                     </div>
                                 </div>
 
-                                {/* 2. Template Dropdown */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Template No.</label>
                                     <select
@@ -333,7 +341,6 @@ const BusTrips = () => {
                                     </select>
                                 </div>
 
-                                {/* 3. Route (Auto-filled) */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Route</label>
                                     <input
@@ -346,7 +353,7 @@ const BusTrips = () => {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    {/* 4. Arrival Time (Auto) */}
+                                    
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Arrival Time</label>
                                         <input
@@ -356,7 +363,7 @@ const BusTrips = () => {
                                             className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500"
                                         />
                                     </div>
-                                    {/* Date */}
+                                   
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
                                         <input
@@ -368,7 +375,7 @@ const BusTrips = () => {
                                     </div>
                                 </div>
                                 
-                                {/* Status Information */}
+                              
                                 <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-100 flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                                     Status will be set to <strong>Pending</strong>
@@ -396,7 +403,7 @@ const BusTrips = () => {
                 </div>
             )}
 
-            {/* --- LOG OUT / DEPARTURE MODAL --- */}
+           
             {logoutRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg transform transition-all">
@@ -451,7 +458,6 @@ const BusTrips = () => {
                 </div>
             )}
             
-            {/* View Modal */}
             {viewRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
@@ -459,11 +465,12 @@ const BusTrips = () => {
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
                             <Field label="Template No" value={viewRow.templateno} />
                             <Field label="Route" value={viewRow.route} />
-                            <Field label="Time" value={viewRow.time} />
+                            <Field label="Scheduled Time" value={viewRow.time} />
+                            <Field label="Departure" value={viewRow.departure || "-"} />
                             <Field label="Date" value={viewRow.date} />
                             <Field label="Company" value={viewRow.company} />
                             <Field label="Status" value={viewRow.status} />
-                            <Field label="Ticket Ref" value={viewRow.ticketReferenceNo || "N/A"} />
+                            <Field label="Ticket Ref" value={viewRow.ticketref || "N/A"} />
                         </div>
                         <div className="mt-4 flex justify-end">
                             <button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button>
@@ -472,16 +479,15 @@ const BusTrips = () => {
                 </div>
             )}
 
-            {/* Edit Modal */}
             {editRow && (
                 <EditBusTrip
                     row={editRow}
+                    templates={TEMPLATE_ROUTES} // <--- ADD THIS PROP
                     onClose={() => setEditRow(null)}
                     onSave={handleUpdateRecord} 
                 />
             )}
 
-            {/* Delete Modal */}
             <DeleteModal
                 isOpen={!!deleteRow}
                 onClose={() => setDeleteRow(null)}
@@ -491,7 +497,6 @@ const BusTrips = () => {
                 itemName={deleteRow ? `Template #${deleteRow.templateno}` : ""}
             />
 
-            {/* Notification Modal */}
             {role === "superadmin" && showNotify && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
