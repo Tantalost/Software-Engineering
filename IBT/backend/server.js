@@ -12,6 +12,7 @@ import archiveRoutes from "./routes/archiveRoutes.js";
 import waitlistRoutes from "./routes/waitlistRoutes.js"; 
 import tenantRoutes from "./routes/tenantRoutes.js";
 import parkingRoutes from "./routes/parkingRoutes.js";
+import lostfoundRoutes from "./routes/lostfoundRoutes.js";
 
 connectDB();
 connectCloudinary();
@@ -31,6 +32,7 @@ app.use("/api/deletion-requests", deletionRequestRoutes);
 app.use("/api/archives", archiveRoutes);
 app.use("/api/waitlist", waitlistRoutes); 
 app.use("/api/tenants", tenantRoutes);
+app.use("/api/lostfound", lostfoundRoutes);
 
 const PORT = process.env.PORT || 3000;
 
