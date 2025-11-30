@@ -50,7 +50,7 @@ const Parking = () => {
     ticketNo: "",
     type: "Car",
     plateNo: "",
-    baseRate: 50,
+    baseRate: 10,
     timeIn: "",
   });
 
@@ -90,7 +90,7 @@ const Parking = () => {
       ticketNo: "",
       type: "Car",
       plateNo: "",
-      baseRate: 50, 
+      baseRate: 5, 
       timeIn: formattedTimeIn, 
     });
     setStep(1);
@@ -98,7 +98,7 @@ const Parking = () => {
   };
 
   const handleSelectType = (type) => {
-    const rate = type === "Car" ? 50 : 20;
+    const rate = type === "Car" ? 10 : 5;
     setNewTicket(prev => ({ ...prev, type, baseRate: rate }));
     setStep(2);
   };
@@ -234,7 +234,7 @@ const Parking = () => {
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-      // 1. Helper to format date/time to "11/30/2025, 2:30 PM"
+    
       const formatDateTime = (dateStr) => {
         if (!dateStr) return "-";
         return new Date(dateStr).toLocaleString('en-US', {
@@ -247,12 +247,7 @@ const Parking = () => {
         });
       };
 
-      // 2. Format Data & Remove Unwanted Columns
-     // Inside Parking.jsx -> handleSubmitReport function
-
 const formattedData = filtered.map(item => {
-  // FIND THIS LINE:
-  // Add 'isArchived' to this list to remove it from the final report
   const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
 
   return {
@@ -277,7 +272,7 @@ const formattedData = filtered.map(item => {
             totalVehicles: filtered.length,
             totalRevenue: revenue
         },
-        data: formattedData // <--- Send cleaned data
+        data: formattedData 
       };
 
       // 4. Submit to Backend
@@ -369,7 +364,7 @@ const formattedData = filtered.map(item => {
       ]),
       theme: "grid",
       headStyles: { fillColor: [16,185,129] },
-      styles: { fontSize: 9, cellPadding: 3 }
+      styles: { fontSize: 10, cellPadding: 3 }
     });
     doc.text(`Total Vehicles: ${filtered.length}`, 14, doc.lastAutoTable.finalY + 10);
     doc.text(`Total Revenue: ₱${revenue}`, 14, doc.lastAutoTable.finalY + 16);
@@ -641,7 +636,6 @@ const formattedData = filtered.map(item => {
             </div>
         </div>
       )}
-      {/* ------------------------------------------------ */}
 
     </Layout>
   );
