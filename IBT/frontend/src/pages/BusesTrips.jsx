@@ -8,11 +8,11 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditBusTrip from "../components/busTrips/EditBusTrip";
 import DeleteModal from "../components/common/DeleteModal";
-import Input from "../components/common/Input";
-import Textarea from "../components/common/Textarea";
+import LogModal from "../components/common/LogModal"; // Added LogModal
 import { submitPageReport } from "../utils/reportService.js";
 import { sendNotification } from "../utils/notificationService.js";
-import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2 } from "lucide-react";
+import { logActivity } from "../utils/logger"; // Added Logger
+import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2, History, ListChecks, X } from "lucide-react"; // Added Icons
 
 const TEMPLATE_ROUTES = {
     "T-101": "Iligan - Cagayan de Oro",
@@ -31,6 +31,12 @@ const BusTrips = () => {
     const [selectedCompany, setSelectedCompany] = useState("");
 
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showLogModal, setShowLogModal] = useState(false); // Log Modal State
+    
+    // Selection Mode State
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+
     const [viewRow, setViewRow] = useState(null);
     const [editRow, setEditRow] = useState(null);
     const [deleteRow, setDeleteRow] = useState(null);
@@ -91,12 +97,127 @@ const BusTrips = () => {
         const matchesDate = !selectedDate || new Date(bus.date).toDateString() === new Date(selectedDate).toDateString();
         return matchesSearch && matchesCompany && matchesDate;
     });
-// --- UPDATED SUBMIT HANDLER ---
-  // --- UPDATED SUBMIT HANDLER ---
+
+    const paginatedData = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    }, [filtered, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+    // --- SELECTION HANDLERS ---
+    const toggleSelectionMode = () => {
+        if (isSelectionMode) {
+            setSelectedIds([]); 
+        }
+        setIsSelectionMode(!isSelectionMode);
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const ids = paginatedData.map(item => item.id);
+            setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+        } else {
+            const pageIds = paginatedData.map(item => item.id);
+            setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+        }
+    };
+
+    const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
+
+    // --- BULK DELETE HANDLER ---
+   // --- UPDATED BULK DELETE HANDLER ---
+    const handleBulkDelete = async () => {
+        // 1. Determine confirmation message based on role
+        const confirmMsg = role === "bus" 
+            ? `Request deletion for ${selectedIds.length} records?` 
+            : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+
+        // 2. Ask for confirmation
+        if (!window.confirm(confirmMsg)) return;
+
+        setIsLoading(true);
+        try {
+            if (role === "bus") {
+                // ============================================================
+                // BUS ADMIN: SEND DELETION REQUESTS & NOTIFY SUPERADMIN
+                // ============================================================
+                const requestPromises = selectedIds.map(async (id) => {
+                    // Find the item to send original data for reference
+                    const item = records.find(r => r.id === id);
+                    if (!item) return;
+
+                    return fetch("http://localhost:3000/api/deletion-requests", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            itemType: "Bus Trip",
+                            itemDescription: `Template: ${item.templateNo || item.templateno} - ${item.route}`,
+                            requestedBy: "Bus Admin",
+                            originalData: item, 
+                            reason: "Bulk deletion request"
+                        })
+                    });
+                });
+
+                await Promise.all(requestPromises);
+                
+                // Log the activity
+                await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} bus trips`, "BusTrips");
+                
+                // Notify Superadmin ONLY (Note the 4th argument "superadmin")
+                await sendNotification(
+                    "Deletion Request: Bus Trips", 
+                    `Bus Admin has requested to delete ${selectedIds.length} bus trip records. Please review in deletion requests.`,
+                    "Bus Trips",
+                    "superadmin" 
+                );
+
+                alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin has been notified.`);
+                
+                // Clear selection (but do not remove from table until approved)
+                setSelectedIds([]);
+                setIsSelectionMode(false);
+
+            } else {
+                // ============================================================
+                // SUPERADMIN: IMMEDIATE DELETE
+                // ============================================================
+                const deletePromises = selectedIds.map(id => 
+                    fetch(`${API_URL}/${id}`, { method: "DELETE" })
+                );
+                
+                await Promise.all(deletePromises);
+                
+                // Log the activity
+                await logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} bus trips via bulk action`, "BusTrips");
+                
+                alert(`Successfully deleted ${selectedIds.length} records`);
+
+                // Refresh the table and clear selection
+                await fetchBusTrips();
+                setSelectedIds([]);
+                setIsSelectionMode(false);
+            }
+
+        } catch (error) {
+            console.error("Bulk action failed", error);
+            alert("Failed to process some records.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // --- EXISTING HANDLERS ---
     const handleSubmitReport = async () => {
         setIsReporting(true);
         try {
-            // 1. Helper for 12-hour AM/PM time
             const to12HourFormat = (timeStr) => {
                 if (!timeStr) return "-";
                 try {
@@ -110,22 +231,16 @@ const BusTrips = () => {
                 }
             };
 
-            // 2. Format data and Remove unwanted columns
             const formattedData = filtered.map(item => {
-                // Destructure to separate unwanted fields from the rest
-                // We also remove _id since 'id' is usually already present and cleaner
                 const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
-
                 return {
-                    ...rest, // Keep remaining fields (company, route, status, etc.)
-                    // Overwrite date/time with readable formats
+                    ...rest,
                     date: rest.date ? new Date(rest.date).toLocaleDateString() : "-",
                     time: to12HourFormat(rest.time),
                     departureTime: to12HourFormat(rest.departureTime || "")
                 };
             });
 
-            // 3. Package the data for the Report
             const reportPayload = {
                 screen: "Bus Trips Management",
                 generatedDate: new Date().toLocaleString(),
@@ -138,10 +253,9 @@ const BusTrips = () => {
                     totalRecords: records.length,
                     displayedRecords: filtered.length
                 },
-                data: formattedData // <--- Cleaned and formatted data
+                data: formattedData 
             };
 
-            // Step 4: Send to Reports Backend
             await submitPageReport("Bus Trips", reportPayload, "Admin");
 
             await sendNotification(
@@ -150,18 +264,13 @@ const BusTrips = () => {
                 "Bus Trips"
             );
 
-            // Step 5: CLEAR THE TABLE
             const deletePromises = filtered.map(item => 
                 fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
             );
             
             await Promise.all(deletePromises);
-
             alert("Report submitted successfully!");
             setShowSubmitModal(false); 
-            fetchBusTrips();
- 
-            // Step 7: Refresh the list
             fetchBusTrips();
 
         } catch (error) {
@@ -171,16 +280,7 @@ const BusTrips = () => {
             setIsReporting(false);
         }
     };
-    // ---------------------------------------------------------------------------------
 
-    const paginatedData = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return filtered.slice(startIndex, startIndex + itemsPerPage);
-    }, [filtered, currentPage, itemsPerPage]);
-
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-    // 4. HANDLERS
     const handleAddClick = () => {
         setNewBusData({
             templateNo: "",
@@ -211,6 +311,8 @@ const BusTrips = () => {
                 body: JSON.stringify(newBusData),
             });
             if (response.ok) {
+                const newItem = await response.json();
+                await logActivity(role, "CREATE_TRIP", `Created Trip ${newItem.templateNo} - ${newItem.route}`, "BusTrips");
                 fetchBusTrips();
                 setShowAddModal(false);
             }
@@ -242,6 +344,7 @@ const BusTrips = () => {
 
             if (response.ok) {
                 setRecords(prev => prev.map(r => (r.id === logoutRow.id ? { ...r, ...changes } : r)));
+                await logActivity(role, "BUS_DEPARTURE", `Bus Departed: ${logoutRow.templateno} (Ref: ${ticketRefInput})`, "BusTrips");
                 setLogoutRow(null);
             }
         } catch (error) {
@@ -254,6 +357,7 @@ const BusTrips = () => {
         try {
             const response = await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
             if (response.ok) {
+                await logActivity(role, "DELETE_TRIP", `Deleted Trip ${deleteRow.templateno || deleteRow.templateNo}`, "BusTrips");
                 setRecords(prev => prev.filter((r) => r.id !== deleteRow.id));
             }
         } catch (error) { console.error("Error deleting:", error); }
@@ -269,6 +373,7 @@ const BusTrips = () => {
             });
             if (response.ok) {
                 const savedItem = await response.json();
+                await logActivity(role, "UPDATE_TRIP", `Updated Trip ${savedItem.templateNo}`, "BusTrips");
                 setRecords(prev => prev.map(r => (r.id === savedItem._id ? { ...savedItem, id: savedItem._id } : r)));
                 setEditRow(null);
             }
@@ -276,7 +381,8 @@ const BusTrips = () => {
     };
 
     const handleArchive = async (rowToArchive) => {
-        console.log("Archive logic here for", rowToArchive);
+        // Simple archive placeholder logging
+        await logActivity(role, "ARCHIVE_TRIP", `Archived Trip ${rowToArchive.templateno}`, "BusTrips");
     };
 
     const formatTime = (timeStr) => {
@@ -292,6 +398,21 @@ const BusTrips = () => {
         }
     };
 
+    // --- TABLE COLUMNS SETUP ---
+    const tableColumns = isSelectionMode 
+    ? [
+        <div key="header-check" className="flex items-center">
+            <input 
+                type="checkbox" 
+                checked={isAllSelected}
+                onChange={handleSelectAll}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+        </div>,
+        "Template No", "Ticket Ref", "Route", "Time", "Departure", "Date", "Company", "Status"
+      ]
+    : ["Template No", "Ticket Ref", "Route", "Time", "Departure", "Date", "Company", "Status"];
+
     return (
         <Layout title="Bus Trips Management">
             <div className="px-4 lg:px-8 mt-4">
@@ -305,48 +426,116 @@ const BusTrips = () => {
                         setSelectedCompany={setSelectedCompany}
                         uniqueCompanies={uniqueCompanies}
                     />
-                    <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
+                    
+                    {/* UPDATED ACTION BAR */}
+                    <div className="flex flex-wrap items-center justify-end gap-3 w-full mb-2">
                         
                         {(role === "bus") && (
                             <button
                                 onClick={() => setShowSubmitModal(true)}
                                 disabled={isReporting}
-                                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+                                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
                             >
                                 <FileText size={18} />
                                 <span>Submit Report</span>
                             </button>
                         )}
 
-                        <button onClick={handleAddClick} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
-                            + Add Bus
+                        <button onClick={handleAddClick} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+                            <span>+ Add Bus</span>
+                        </button>
+                        
+                        <ExportMenu />
+                                            
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                         {/* LOGS BUTTON */}
+                        <button 
+                            onClick={() => setShowLogModal(true)} 
+                            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                            title="View Logs"
+                        >
+                            <History size={18} /> 
+                            <span className="hidden sm:inline">Logs</span>
                         </button>
 
-                        <ExportMenu />
+                        {/* BULK DELETE BUTTON */}
+                        {isSelectionMode && selectedIds.length > 0 && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                                <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                                {selectedIds.length} Selected
+                                </span>
+                                <button
+                                onClick={handleBulkDelete}
+                                title="Delete Selected"
+                                className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                                >
+                                <Trash2 className="h-5 w-5" />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* TOGGLE SELECTION BUTTON */}
+                        <button
+                        onClick={toggleSelectionMode}
+                        title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                        className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                            isSelectionMode
+                            ? "bg-red-500 text-white shadow-md"
+                            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                        }`}
+                        >
+                        {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+                        </button>
                     </div>
                 </div>
             </div>
 
             <div className="p-4 lg:p-8">
                 {isLoading ? (
-                    <div className="text-center py-10">Loading data...</div>
+                    <div className="flex flex-col items-center justify-center h-64">
+                         <Loader2 className="h-10 w-10 text-emerald-500 animate-spin mb-2" />
+                         <p>Loading data...</p>
+                    </div>
                 ) : (
                     <Table
-                        columns={["Template No", "Ticket Ref", "Route", "Time", "Departure", "Date", "Company", "Status"]}
-                        data={paginatedData.map((bus) => ({
-                            id: bus.id,
-                            templateno: bus.templateNo || bus.templateno,
-                            route: bus.route,
-                            time: formatTime(bus.time),
-                            rawTime: bus.time,
-                            departure: formatTime(bus.departureTime),
-                            rawDepartureTime: bus.departureTime,
-                            date: bus.date ? new Date(bus.date).toLocaleDateString() : "",
-                            rawDate: bus.date,
-                            company: bus.company,
-                            status: bus.status,
-                            ticketref: bus.ticketReferenceNo || "-"
-                        }))}
+                        columns={tableColumns}
+                        data={paginatedData.map((bus) => {
+                            const baseData = {
+                                id: bus.id,
+                                templateno: bus.templateNo || bus.templateno,
+                                route: bus.route,
+                                time: formatTime(bus.time),
+                                rawTime: bus.time,
+                                departure: formatTime(bus.departureTime),
+                                rawDepartureTime: bus.departureTime,
+                                date: bus.date ? new Date(bus.date).toLocaleDateString() : "",
+                                rawDate: bus.date,
+                                company: bus.company,
+                                status: bus.status,
+                                ticketref: bus.ticketReferenceNo || "-"
+                            };
+
+                            // Add selection checkbox if in selection mode
+                            if (isSelectionMode) {
+                                return {
+                                    select: (
+                                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                                            <input 
+                                                type="checkbox"
+                                                checked={selectedIds.includes(bus.id)}
+                                                onChange={() => toggleSelect(bus.id)}
+                                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                        </div>
+                                    ),
+                                    ...baseData
+                                };
+                            }
+                            return baseData;
+                        })}
+                        
                         actions={(row) => (
                             <div className="flex justify-end items-center space-x-2">
                                 {row.status === "Pending" && (
@@ -383,6 +572,13 @@ const BusTrips = () => {
                     onItemsPerPageChange={setItemsPerPage}
                 />
             </div>
+
+            {/* --- MODALS --- */}
+
+            <LogModal 
+                isOpen={showLogModal} 
+                onClose={() => setShowLogModal(false)} 
+            />
 
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

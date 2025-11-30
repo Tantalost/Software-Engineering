@@ -1,42 +1,49 @@
-const API_URL = "http://localhost:3000/api/notifications";
+// src/utils/notificationService.js
 
-export const sendNotification = async (title, message, source = "System") => {
+// 1. ADD 'targetRole' here -------------------👇
+export const sendNotification = async (title, message, source, targetRole = "all") => {
     try {
-        const response = await fetch(API_URL, {
+        const response = await fetch("http://localhost:3000/api/notifications", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title, message, source }),
+            body: JSON.stringify({
+                title,
+                message,
+                source,
+                targetRole // 2. SEND IT TO BACKEND ---👇
+            }),
         });
-        return response.ok;
+        
+        // Debugging line: Check if it's sending correctly
+        console.log("Notification Sent:", { title, targetRole }); 
+
+        if (!response.ok) {
+            console.error("Failed to send notification");
+        }
     } catch (error) {
-        console.error("Failed to send notification:", error);
-        return false;
+        console.error("Error sending notification:", error);
     }
 };
 
+// ... keep existing fetchNotifications, markRead, etc.
 export const fetchNotifications = async () => {
     try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error("Failed to fetch");
+        const response = await fetch("http://localhost:3000/api/notifications");
         return await response.json();
     } catch (error) {
-        console.error(error);
+        console.error("Error fetching notifications", error);
         return [];
     }
 };
 
 export const markNotificationAsRead = async (id) => {
     try {
-        await fetch(`${API_URL}/${id}/read`, { method: "PUT" });
-    } catch (error) {
-        console.error("Failed to mark read:", error);
-    }
+        await fetch(`http://localhost:3000/api/notifications/${id}/read`, { method: "PUT" });
+    } catch (error) { console.error(error); }
 };
 
 export const deleteNotification = async (id) => {
     try {
-        await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-    } catch (error) {
-        console.error("Failed to delete:", error);
-    }
+        await fetch(`http://localhost:3000/api/notifications/${id}`, { method: "DELETE" });
+    } catch (error) { console.error(error); }
 };

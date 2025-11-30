@@ -11,8 +11,6 @@ import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 
-import Input from "../components/common/Input";
-import Textarea from "../components/common/Textarea";
 import ViewModal from "../components/common/ViewModal";
 import DeleteModal from "../components/common/DeleteModal"; 
 import LogModal from "../components/common/LogModal"; 

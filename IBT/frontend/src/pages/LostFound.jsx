@@ -8,49 +8,58 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditLostFound from "../components/lostfound/EditLostFound";
 import DeleteModal from "../components/common/DeleteModal";
-import Input from "../components/common/Input";
-import Textarea from "../components/common/Textarea";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
-import { submitPageReport } from "../utils/reportService.js"; // <--- IMPORT SERVICE
-// Added Loader2
-import { Archive, Trash2, Package, FileText, Calendar, MapPin, Tag, Loader2 } from "lucide-react";
+import LogModal from "../components/common/LogModal"; // <--- 1. IMPORT LOG MODAL
+import { submitPageReport } from "../utils/reportService.js";
+import { logActivity } from "../utils/logger"; // <--- 2. IMPORT LOGGER
+import { sendNotification } from "../utils/notificationService.js"; // <--- 3. IMPORT NOTIFICATION
+import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag } from "lucide-react";
 
 const LostFound = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter States
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeStatus, setActiveStatus] = useState("All");
 
-  // Modal States
+  
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showLogModal, setShowLogModal] = useState(false); // <--- 4. LOG STATE
+  
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
+
+  // --- SELECTION STATE ---
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  // -----------------------
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // --- REPORTING STATES ---
+  
   const [isReporting, setIsReporting] = useState(false);
-  // ------------------------
+  
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/lostfound";
 
-  // --- 1. New Item State ---
+  
   const [newItem, setNewItem] = useState({
     trackingNo: "",
     description: "",
+    itemType: "", 
+    location: "",
     dateTime: "",
-    status: "Unclaimed",
+    status: "Unclaimed", 
   });
 
-  // --- 2. Fetch Data ---
+  
   const fetchLostFound = async () => {
     setIsLoading(true);
     try {
@@ -58,7 +67,7 @@ const LostFound = () => {
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
 
-      // Map _id to id
+      
       const formattedData = data.map(item => ({
         ...item,
         id: item._id
@@ -75,9 +84,9 @@ const LostFound = () => {
     fetchLostFound();
   }, []);
 
-  // --- 3. Handle Add New ---
+  
   const handleAddClick = () => {
-    // Generate a simple tracking number based on timestamp for convenience
+    
     const autoTracking = `LF-${Date.now().toString().slice(-6)}`;
     const now = new Date();
     const formattedNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
@@ -85,9 +94,10 @@ const LostFound = () => {
     setNewItem({
       trackingNo: autoTracking,
       description: "",
+      itemType: "", 
       location: "",
       dateTime: formattedNow,
-      status: "Unclaimed"
+      status: "Unclaimed" 
     });
     setShowAddModal(true);
   };
@@ -101,6 +111,8 @@ const LostFound = () => {
         body: JSON.stringify(newItem),
       });
       if (response.ok) {
+        const created = await response.json();
+        await logActivity(role, "CREATE_LOSTFOUND", `Logged Item #${created.trackingNo}`, "LostFound");
         fetchLostFound();
         setShowAddModal(false);
       }
@@ -109,7 +121,7 @@ const LostFound = () => {
     }
   };
 
-  // --- 4. Handle Update ---
+  
   const handleUpdateRecord = async (updatedData) => {
     try {
       const response = await fetch(`${API_URL}/${updatedData.id}`, {
@@ -118,6 +130,7 @@ const LostFound = () => {
         body: JSON.stringify(updatedData),
       });
       if (response.ok) {
+        await logActivity(role, "UPDATE_LOSTFOUND", `Updated Item #${updatedData.trackingNo}`, "LostFound");
         fetchLostFound();
         setEditRow(null);
       }
@@ -126,7 +139,7 @@ const LostFound = () => {
     }
   };
 
-  // --- 5. Handle Delete ---
+ 
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
@@ -134,6 +147,7 @@ const LostFound = () => {
         method: "DELETE",
       });
       if (response.ok) {
+        await logActivity(role, "DELETE_LOSTFOUND", `Deleted Item #${deleteRow.trackingNo}`, "LostFound");
         setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
       }
     } catch (error) {
@@ -143,30 +157,43 @@ const LostFound = () => {
     }
   };
 
-  // --- 6. Handle Archive (Soft Delete logic usually) ---
+  // --- 6. Handle Archive ---
   const handleArchive = async (row) => {
-    // For now, we will just use the standard Delete for functionality, 
-    // or you can implement a PUT { isArchived: true } if your backend supports it.
-    // Here is the Soft Delete implementation:
+    if (!window.confirm(`Are you sure you want to archive Item #${row.trackingNo}?`)) return;
+    
     try {
-      const response = await fetch(`${API_URL}/${row.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...row, isArchived: true, status: "Archived" }),
+      // 1. Send to Archive Collection
+      const archiveRes = await fetch("http://localhost:3000/api/archives", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+              type: "LostFound",
+              description: `Item #${row.trackingNo} - ${row.description}`,
+              originalData: row,
+              archivedBy: role
+          })
       });
-      if (response.ok) {
-        // Remove from current view
-        setRecords(prev => prev.filter(r => r.id !== row.id));
-      }
+      if (!archiveRes.ok) throw new Error("Failed to archive");
+
+      // 2. Delete from Active Collection
+      const deleteRes = await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
+      if (!deleteRes.ok) throw new Error("Failed to remove from active list");
+
+      await logActivity(role, "ARCHIVE_LOSTFOUND", `Archived Item #${row.trackingNo}`, "LostFound");
+      setRecords(prev => prev.filter(r => r.id !== row.id));
+      alert("Item archived successfully!");
+
     } catch (error) {
       console.error("Error archiving:", error);
+      alert("Failed to archive item.");
     }
   };
 
-  // --- Filtering Logic ---
+  
   const filtered = records.filter((item) => {
     const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase());
+      item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.itemType && item.itemType.toLowerCase().includes(searchQuery.toLowerCase())); 
 
     const matchesDate = !selectedDate || new Date(item.dateTime).toDateString() === new Date(selectedDate).toDateString();
 
@@ -175,34 +202,122 @@ const LostFound = () => {
     return matchesSearch && matchesDate && matchesStatus;
   });
 
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  // --- SELECTION HANDLERS ---
+  const toggleSelectionMode = () => {
+    if (isSelectionMode) setSelectedIds([]);
+    setIsSelectionMode(!isSelectionMode);
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const ids = paginatedData.map(item => item.id);
+      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+    } else {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
+
+  // --- BULK DELETE HANDLER ---
+  const handleBulkDelete = async () => {
+    const confirmMsg = role === "lostfound" 
+        ? `Request deletion for ${selectedIds.length} records?` 
+        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsLoading(true);
+    try {
+        if (role === "lostfound") {
+            // --- LOSTFOUND ADMIN: SEND REQUEST ---
+            const requestPromises = selectedIds.map(async (id) => {
+                const item = records.find(r => r.id === id);
+                if (!item) return;
+
+                return fetch("http://localhost:3000/api/deletion-requests", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        itemType: "Lost & Found Item",
+                        itemDescription: `Item #${item.trackingNo} - ${item.description}`,
+                        requestedBy: "LostFound Admin",
+                        originalData: item, 
+                        reason: "Bulk deletion request"
+                    })
+                });
+            });
+
+            await Promise.all(requestPromises);
+            await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} items`, "LostFound");
+            
+            // --- NOTIFY SUPERADMIN ONLY ---
+            await sendNotification(
+                "Deletion Request: Lost & Found", 
+                `Lost & Found Admin has requested to delete ${selectedIds.length} records.`,
+                "Lost & Found",
+                "superadmin" // <--- Target Role
+            );
+
+            alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`);
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+
+        } else {
+            // --- SUPERADMIN: IMMEDIATE DELETE ---
+            const deletePromises = selectedIds.map(id => 
+                fetch(`${API_URL}/${id}`, { method: "DELETE" })
+            );
+            
+            await Promise.all(deletePromises);
+            await logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} items via bulk action`, "LostFound");
+            
+            alert(`Successfully deleted ${selectedIds.length} records`);
+            fetchLostFound();
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+        }
+
+    } catch (error) {
+      console.error("Bulk action failed", error);
+      alert("Failed to process some records.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // --- SUBMIT REPORT HANDLER ---
-  // --- UPDATED SUBMIT HANDLER ---
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-      // 1. Format Data & Remove Unwanted Columns
       const formattedData = filtered.map(item => {
-        // Destructure to separate unwanted fields
         const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
-
         return {
-          ...rest, // Keep trackingNo, description, location, status, etc.
-          // Format the DateTime to be readable (e.g., "11/30/2025, 2:30 PM")
+          ...rest,
+          ...rest,
           dateTime: rest.dateTime ? new Date(rest.dateTime).toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
+            year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
           }) : "-"
         };
       });
 
-      // 2. Package Data
       const reportPayload = {
         screen: "Lost & Found Log",
-        generatedDate: new Date().toLocaleString(), // Readable report date
+        generatedDate: new Date().toLocaleString(),
         filters: {
           searchQuery,
           selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
@@ -214,30 +329,23 @@ const LostFound = () => {
           unclaimed: filtered.filter(i => i.status === "Unclaimed").length,
           claimed: filtered.filter(i => i.status === "Claimed").length
         },
-        data: formattedData // <--- Send cleaned data
+        data: formattedData
       };
 
-      // 3. Submit to Backend
       await submitPageReport("Lost & Found", reportPayload, "LostFound Admin");
 
-      await fetch("http://localhost:3000/api/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Report Submitted: Lost & Found Report",
-          message: "A new Lost & Found report has been generated and the active log has been cleared.",
-          source: "Lost & Found"
-        }),
-      });
+      await sendNotification(
+        "Report Submitted: Lost & Found Report",
+        "A new Lost & Found report has been generated and the active log has been cleared.",
+        "Lost & Found",
+        "superadmin"
+      );
 
-      // 4. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item =>
         fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
       );
 
       await Promise.all(deletePromises);
-
-      // 5. Update UI
       alert("Report submitted successfully! The table has been cleared.");
       setShowSubmitModal(false);
       fetchLostFound();
@@ -249,20 +357,27 @@ const LostFound = () => {
       setIsReporting(false);
     }
   };
-  // -----------------------------
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  // Helper for Date Display
+  
   const formatDateTime = (dateStr) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString() + " " + new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // --- COLUMN CONFIG FOR SELECTION ---
+  const tableColumns = isSelectionMode 
+    ? [
+        <div key="header-check" className="flex items-center">
+            <input 
+                type="checkbox" 
+                checked={isAllSelected}
+                onChange={handleSelectAll}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+        </div>,
+        "Tracking No", "Description", "Location", "DateTime", "Status"
+      ]
+    : ["Tracking No", "Description", "Location", "DateTime", "Status"];
 
   return (
     <Layout title="Lost and Found Records">
@@ -276,7 +391,6 @@ const LostFound = () => {
 
         <div className="flex items-center justify-end gap-3">
 
-          {/* --- SUBMIT REPORT BUTTON (Visible to 'lostfound' or 'superadmin') --- */}
           {(role === "lostfound") && (
             <button
               onClick={() => setShowSubmitModal(true)}
@@ -287,7 +401,6 @@ const LostFound = () => {
               <span>Submit Report</span>
             </button>
           )}
-          {/* ------------------------------------------------------------------- */}
 
           <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center">
             + Add New
@@ -299,38 +412,98 @@ const LostFound = () => {
         </div>
       </div>
 
-      <div className="mb-4">
-        <LostFoundStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
+          <LostFoundStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+
+          <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+             <button 
+                onClick={() => setShowLogModal(true)} 
+                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                title="View Logs"
+            >
+                <History size={18} /> 
+                <span className="hidden sm:inline">Logs</span>
+            </button>
+
+            {isSelectionMode && selectedIds.length > 0 && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                    <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                        {selectedIds.length} Selected
+                    </span>
+                    <button
+                        onClick={handleBulkDelete}
+                        title="Delete Selected"
+                        className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                    >
+                        <Trash2 className="h-5 w-5" />
+                    </button>
+                </div>
+            )}
+
+            <button
+                onClick={toggleSelectionMode}
+                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                    isSelectionMode
+                        ? "bg-red-500 text-white shadow-md"
+                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                }`}
+            >
+                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+            </button>
+          </div>
       </div>
 
       {isLoading ? (
         <div className="text-center py-10">Loading records...</div>
       ) : (
         <Table
-          columns={["Tracking No", "Description", "Location", "DateTime", "Status"]}
-          data={paginatedData.map((item) => ({
-            id: item.id,
-            trackingno: item.trackingNo,
-            description: item.description,
-            location: item.location,
-            datetime: formatDateTime(item.dateTime),
-            status: item.status,
-          }))}
-          actions={(row) => (
-            <div className="flex justify-end items-center space-x-2">
-              <TableActions
-                onView={() => setViewRow(records.find(r => r.id === row.id))}
-                onEdit={() => setEditRow(records.find(r => r.id === row.id))}
-                onDelete={() => setDeleteRow(records.find(r => r.id === row.id))}
-              />
-              <button onClick={() => handleArchive(row)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
-                <Archive size={16} />
-              </button>
-              <button onClick={() => setDeleteRow(row)} title="Delete" className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          )}
+          columns={tableColumns}
+          data={paginatedData.map((item) => {
+            const baseData = {
+                id: item.id,
+                trackingno: item.trackingNo,
+                description: item.description,
+                location: item.location,
+                datetime: formatDateTime(item.dateTime),
+                status: item.status,
+            };
+
+            if (isSelectionMode) {
+                return {
+                    select: (
+                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                                type="checkbox"
+                                checked={selectedIds.includes(item.id)}
+                                onChange={() => toggleSelect(item.id)}
+                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                        </div>
+                    ),
+                    ...baseData
+                };
+            }
+            return baseData;
+          })}
+          actions={(row) => {
+              const selectedRecord = records.find(r => r.id === row.id);
+              return (
+                <div className="flex justify-end items-center space-x-2">
+                <TableActions
+                    onView={() => setViewRow(selectedRecord)}
+                    onEdit={() => setEditRow(selectedRecord)}
+                    onDelete={() => setDeleteRow(selectedRecord)}
+                />
+                <button onClick={() => handleArchive(selectedRecord)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                    <Archive size={16} />
+                </button>
+                <button onClick={() => setDeleteRow(selectedRecord)} title="Delete" className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
+                    <Trash2 size={16} />
+                </button>
+                </div>
+              );
+          }}
         />
       )}
 
@@ -346,6 +519,12 @@ const LostFound = () => {
         }}
       />
 
+      {/* --- LOG MODAL --- */}
+      <LogModal 
+        isOpen={showLogModal} 
+        onClose={() => setShowLogModal(false)} 
+      />
+
       {/* --- ADD NEW MODAL --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -357,24 +536,23 @@ const LostFound = () => {
             <form onSubmit={handleCreateItem}>
               <div className="space-y-4">
 
+                
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-                  <div className="flex p-1 bg-slate-100 rounded-lg">
-                    {["Unclaimed", "Claimed"].map((status) => (
-                      <button
-                        type="button"
-                        key={status}
-                        onClick={() => setNewItem({ ...newItem, status })}
-                        className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${newItem.status === status
-                          ? "bg-white text-emerald-600 shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                          }`}
-                      >
-                        {status}
-                      </button>
-                    ))}
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Type of Item</label>
+                  <div className="relative">
+                    <Tag size={16} className="absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      value={newItem.itemType}
+                      onChange={(e) => setNewItem({ ...newItem, itemType: e.target.value })}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="e.g., Wallet, Keys, Laptop, Book"
+                      required
+                    />
                   </div>
                 </div>
+              
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
                   <div className="relative">
@@ -426,12 +604,16 @@ const LostFound = () => {
                     <textarea
                       value={newItem.location}
                       onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300  "
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300  "
                       placeholder="Location of the item found..."
                       required
                     />
                   </div>
                 </div>
+
+           
+                <input type="hidden" name="status" value={newItem.status} />
+
               </div>
               <div className="flex gap-3 mt-6">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
@@ -442,13 +624,14 @@ const LostFound = () => {
         </div>
       )}
 
-      {/* View Modal */}
+ 
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
             <h3 className="mb-4 text-base font-semibold text-slate-800">View Lost/Found</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
               <Field label="Tracking No" value={viewRow.trackingNo} />
+              <Field label="Type" value={viewRow.itemType} /> 
               <Field label="Status" value={viewRow.status} />
               <Field label="DateTime" value={formatDateTime(viewRow.dateTime)} />
               <div className="md:col-span-2"><Field label="Description" value={viewRow.description} /></div>
@@ -459,7 +642,7 @@ const LostFound = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
+
       {editRow && (
         <EditLostFound
           row={editRow}
@@ -468,7 +651,7 @@ const LostFound = () => {
         />
       )}
 
-      {/* Delete Modal */}
+  
       <DeleteModal
         isOpen={!!deleteRow}
         onClose={() => setDeleteRow(null)}
@@ -478,7 +661,6 @@ const LostFound = () => {
         itemName={deleteRow ? `Track #${deleteRow.trackingNo}` : ""}
       />
 
-      {/* Submit Report Confirmation Modal */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
@@ -510,7 +692,7 @@ const LostFound = () => {
           </div>
         </div>
       )}
-      
+
     </Layout>
   );
 };

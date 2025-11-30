@@ -24,17 +24,33 @@ const Topbar = ({ title, onMenuClick }) => {
       const res = await fetch("http://localhost:3000/api/notifications");
       if (res.ok) {
         const data = await res.json();
-        // Update the list for the dropdown
-        setNotifications(data.slice(0, 5)); 
-        // Calculate unread count
-        const unread = data.filter(n => !n.read).length;
+        
+        // ============================================================
+        // 🛑 CRITICAL FIX: FILTER DATA BEFORE SETTING STATE
+        // ============================================================
+        // 1. Get current user role
+        const myRole = localStorage.getItem("authRole") || "superadmin";
+
+        // 2. Filter: Keep only notifications that are:
+        //    a) Missing a targetRole (legacy data)
+        //    b) Explicitly for "all"
+        //    c) Explicitly for MY role
+        const filteredData = data.filter(n => {
+           return !n.targetRole || n.targetRole === "all" || n.targetRole === myRole;
+        });
+
+        // 3. Update state with FILTERED data only
+        setNotifications(filteredData.slice(0, 5)); 
+        
+        const unread = filteredData.filter(n => !n.read).length;
         setUnreadCount(unread);
+        // ============================================================
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
   };
-
+  
   useEffect(() => {
     fetchNotifications(); // Initial fetch
     const interval = setInterval(fetchNotifications, 10000); // Poll every 10 seconds

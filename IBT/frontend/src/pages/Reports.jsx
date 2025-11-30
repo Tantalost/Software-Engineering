@@ -8,8 +8,11 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditReport from "../components/reports/EditReport";
 import DeleteModal from "../components/common/DeleteModal";
-import { Archive, Trash2,Filter, Calendar, Tag} from "lucide-react";
+import LogModal from "../components/common/LogModal"; 
+import { logActivity } from "../utils/logger"; 
+import { Archive, Trash2, Filter, Calendar, Tag, History, ListChecks, X, Loader2 } from "lucide-react";
 
+// --- HELPER COMPONENT FOR VIEWING REPORT DATA ---
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload) return <div className="text-gray-400 italic p-4">No report data available</div>;
 
@@ -19,7 +22,6 @@ const DataRenderer = ({ reportPayload }) => {
     if (!statistics || Object.keys(statistics).length === 0) return null;
     return (
       <div className="mb-12">
-      
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(statistics).map(([key, value]) => (
             <div key={key} className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -38,10 +40,7 @@ const DataRenderer = ({ reportPayload }) => {
 
   const renderFilters = () => {
     if (!filters || Object.keys(filters).length === 0) return null;
-    const hasValues = Object.values(filters).some((val) => val !== "" && val !== "All");
-    if (!hasValues) return null;
-
-    
+    return null; 
   };
 
   const renderDataTable = () => {
@@ -98,7 +97,7 @@ const DataRenderer = ({ reportPayload }) => {
   );
 };
 
-// --- MAIN COMPONENT ---
+// --- MAIN PAGE COMPONENT ---
 const Reports = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,13 +112,21 @@ const Reports = () => {
   const [activeStatus, setActiveStatus] = useState("All");
 
   const [showPreview, setShowPreview] = useState(false);
+  const [showLogModal, setShowLogModal] = useState(false); 
+
+  // Selection State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/reports";
+  const ARCHIVE_URL = "http://localhost:3000/api/archives";
 
   // Fetch reports
   const fetchReports = async () => {
@@ -140,11 +147,112 @@ const Reports = () => {
     fetchReports();
   }, []);
 
-  // Delete
+  // Filtered data logic
+  const filtered = useMemo(() => {
+    return records.filter((report) => {
+      const reportDate = new Date(report.createdAt || report.date);
+      const now = new Date();
+
+      const matchesSearch =
+        report.id?.toString().includes(searchQuery) ||
+        report.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        report.author?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesDate = !selectedDate || reportDate.toDateString() === new Date(selectedDate).toDateString();
+      const matchesStatus = activeStatus === "All" || report.status?.toLowerCase() === activeStatus.toLowerCase();
+      const matchesCategory = selectedCategory === "All" || report.type === selectedCategory;
+
+      let matchesTimeRange = true;
+      if (timeRange !== "All") {
+        if (timeRange === "This Week") {
+          const weekAgo = new Date();
+          weekAgo.setDate(now.getDate() - 7);
+          matchesTimeRange = reportDate >= weekAgo;
+        } else if (timeRange === "This Month") matchesTimeRange = reportDate.getMonth() === now.getMonth();
+        else if (timeRange === "This Year") matchesTimeRange = reportDate.getFullYear() === now.getFullYear();
+      }
+
+      return matchesSearch && matchesDate && matchesStatus && matchesCategory && matchesTimeRange;
+    });
+  }, [records, searchQuery, selectedDate, activeStatus, selectedCategory, timeRange]);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  // --- SELECTION HANDLERS ---
+  const toggleSelectionMode = () => {
+    if (isSelectionMode) setSelectedIds([]);
+    setIsSelectionMode(!isSelectionMode);
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const ids = paginatedData.map(item => item.id);
+      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+    } else {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
+
+  // --- BULK ACTION: ARCHIVE & DELETE (SUPERADMIN) ---
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} reports? \n\nThey will be moved to the Archives before deletion.`)) return;
+
+    setLoading(true);
+    try {
+        const processPromises = selectedIds.map(async (id) => {
+            const report = records.find(r => r.id === id);
+            if (!report) return;
+
+            // 1. AUTO-ARCHIVE
+            await fetch(ARCHIVE_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: "Report",
+                    description: `${report.type} Report by ${report.author}`,
+                    originalData: report,
+                    archivedBy: role
+                })
+            });
+
+            // 2. PERMANENT DELETE
+            await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+        });
+
+        await Promise.all(processPromises);
+        await logActivity(role, "BULK_DELETE_REPORTS", `Archived & Deleted ${selectedIds.length} reports`, "Reports");
+        
+        await fetchReports();
+        setSelectedIds([]);
+        setIsSelectionMode(false);
+        alert(`Successfully archived and deleted ${selectedIds.length} reports.`);
+
+    } catch (error) {
+        console.error("Bulk action failed", error);
+        alert("Failed to process some records.");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  // Single Delete
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
       await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
+      await logActivity(role, "DELETE_REPORT", `Deleted Report ${deleteRow.id}`, "Reports");
       setRecords(records.filter((r) => r.id !== deleteRow.id));
       setDeleteRow(null);
     } catch (err) {
@@ -152,44 +260,49 @@ const Reports = () => {
     }
   };
 
-  // Archive
-  const handleArchive = (row) => setRecords(records.filter((r) => r.id !== row.id));
+  // Single Archive
+  const handleArchive = async (row) => {
+    if (!window.confirm("Archive this report?")) return;
+    try {
+        await fetch(ARCHIVE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                type: "Report",
+                description: `${row.type} Report by ${row.author}`,
+                originalData: row,
+                archivedBy: role
+            })
+        });
 
-  // Filtered data
-  const filtered = records.filter((report) => {
-    const reportDate = new Date(report.createdAt || report.date);
-    const now = new Date();
-
-    const matchesSearch =
-      report.id?.toString().includes(searchQuery) ||
-      report.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.author?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesDate = !selectedDate || reportDate.toDateString() === new Date(selectedDate).toDateString();
-    const matchesStatus = activeStatus === "All" || report.status?.toLowerCase() === activeStatus.toLowerCase();
-    const matchesCategory = selectedCategory === "All" || report.type === selectedCategory;
-
-    let matchesTimeRange = true;
-    if (timeRange !== "All") {
-      if (timeRange === "This Week") {
-        const weekAgo = new Date();
-        weekAgo.setDate(now.getDate() - 7);
-        matchesTimeRange = reportDate >= weekAgo;
-      } else if (timeRange === "This Month") matchesTimeRange = reportDate.getMonth() === now.getMonth();
-      else if (timeRange === "This Year") matchesTimeRange = reportDate.getFullYear() === now.getFullYear();
+        await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
+        await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${row.id}`, "Reports");
+        
+        setRecords(records.filter((r) => r.id !== row.id));
+        alert("Report moved to archives.");
+    } catch (e) {
+        console.error(e);
     }
+  };
 
-    return matchesSearch && matchesDate && matchesStatus && matchesCategory && matchesTimeRange;
-  });
-
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
+  // --- TABLE COLUMNS ---
+  const tableColumns = isSelectionMode 
+    ? [
+        <div key="header-check" className="flex items-center">
+            <input 
+                type="checkbox" 
+                checked={isAllSelected}
+                onChange={handleSelectAll}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+        </div>,
+        "Report ID", "Type", "Author", "Date", "Status"
+      ]
+    : ["Report ID", "Type", "Author", "Date", "Status"];
 
   return (
     <Layout title="Reports Management">
-      {/* Top Filters */}
+      {/* Top Header Section (Search & Main Actions) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
@@ -204,15 +317,17 @@ const Reports = () => {
           >
             + Add New
           </button>
+          
           <div className="h-[44px] flex items-center">
             <ExportMenu />
           </div>
         </div>
       </div>
 
-      {/* New Filter Section */}
+      {/* Secondary Filter Grid (Filters, Logs & Selection Controls) */}
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Category */}
+        
+        {/* 1. Category Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Tag size={16} />
@@ -235,7 +350,7 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Time Range */}
+        {/* 2. Time Range Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Calendar size={16} />
@@ -257,33 +372,100 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Status Filter */}
-    
+        {/* 3. Action Buttons (Logs & Selection) */}
+        <div className="flex items-center justify-end gap-2">
+            
+            {/* Logs Button */}
+            <button 
+                onClick={() => setShowLogModal(true)} 
+                className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all"
+                title="View Logs"
+            >
+                <History size={18} /> 
+                <span className="hidden xl:inline">Logs</span>
+            </button>
+
+            {isSelectionMode && selectedIds.length > 0 && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                  <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                    {selectedIds.length} Selected
+                  </span>
+                  <button
+                    onClick={handleBulkDelete}
+                    title="Delete Selected"
+                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+            )}
+           
+            <button
+              onClick={toggleSelectionMode}
+              title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+              className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+              isSelectionMode
+              ? "bg-red-500 text-white shadow-md"
+              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+              }`}
+              >
+              {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+            </button>
+        </div>
+
       </div>
 
-      {/* Table */}
+      {/* Table Section */}
       {loading ? (
-        <div className="p-8 text-center text-slate-500">Loading reports...</div>
+        <div className="p-8 text-center text-slate-500 flex flex-col items-center">
+            <Loader2 className="animate-spin mb-2" />
+            Loading reports...
+        </div>
       ) : (
         <Table
-          columns={["Report ID", "Type", "Author", "Date", "Status"]}
-          data={paginatedData.map((report) => ({
-            ...report,
-            reportid: report.id ? report.id.substring(0, 8).toUpperCase() : "ERR",
-            date: new Date(report.createdAt || report.date).toLocaleDateString(),
-          }))}
+          columns={tableColumns}
+          data={paginatedData.map((report) => {
+            const baseData = {
+                id: report.id,
+                reportid: report.id ? report.id.substring(0, 8).toUpperCase() : "ERR",
+                type: report.type,
+                author: report.author,
+                date: new Date(report.createdAt || report.date).toLocaleDateString(),
+                status: report.status
+            };
+
+            if (isSelectionMode) {
+                return {
+                    select: (
+                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                                type="checkbox"
+                                checked={selectedIds.includes(report.id)}
+                                onChange={() => toggleSelect(report.id)}
+                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                        </div>
+                    ),
+                    ...baseData
+                };
+            }
+            return baseData;
+          })}
+
           actions={(row) => (
             <div className="flex justify-end items-center space-x-2">
               <TableActions onView={() => setViewRow(row)} onEdit={() => setEditRow(row)} onDelete={() => setDeleteRow(row)} />
               <button
                 onClick={() => handleArchive(row)}
                 className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+                title="Archive"
               >
                 <Archive size={16} />
               </button>
               <button
                 onClick={() => setDeleteRow(row)}
                 className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                title="Delete"
               >
                 <Trash2 size={16} />
               </button>
@@ -305,7 +487,13 @@ const Reports = () => {
         }}
       />
 
-      {/* Modals */}
+      {/* LOG MODAL */}
+      <LogModal 
+        isOpen={showLogModal} 
+        onClose={() => setShowLogModal(false)} 
+      />
+
+      {/* View Modal */}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
