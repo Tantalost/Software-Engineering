@@ -13,7 +13,7 @@ import LogModal from "../components/common/LogModal"; // <--- 1. IMPORT LOG MODA
 import { submitPageReport } from "../utils/reportService.js";
 import { logActivity } from "../utils/logger"; // <--- 2. IMPORT LOGGER
 import { sendNotification } from "../utils/notificationService.js"; // <--- 3. IMPORT NOTIFICATION
-import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X } from "lucide-react";
+import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag } from "lucide-react";
 
 const LostFound = () => {
   const [records, setRecords] = useState([]);
