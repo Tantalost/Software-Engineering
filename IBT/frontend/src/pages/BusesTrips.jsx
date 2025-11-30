@@ -6,7 +6,7 @@ import BusTripFilters from "../components/common/BusTripFilters";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
-import EditBusTrip from "../components/bustrips/EditBusTrip";
+import EditBusTrip from "../components/busTrips/EditBusTrip";
 import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
@@ -93,43 +93,71 @@ const BusTrips = () => {
         const matchesDate = !selectedDate || new Date(bus.date).toDateString() === new Date(selectedDate).toDateString();
         return matchesSearch && matchesCompany && matchesDate;
     });
-
-    // --- UPDATED SUBMIT HANDLER (Saves Report THEN Clears Table) ---
+// --- UPDATED SUBMIT HANDLER ---
+  // --- UPDATED SUBMIT HANDLER ---
     const handleSubmitReport = async () => {
         setIsReporting(true);
         try {
-            // Step 1: Package the data for the Report
+            // 1. Helper for 12-hour AM/PM time
+            const to12HourFormat = (timeStr) => {
+                if (!timeStr) return "-";
+                try {
+                    return new Date(`1970-01-01T${timeStr}`).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                } catch (e) {
+                    return timeStr;
+                }
+            };
+
+            // 2. Format data and Remove unwanted columns
+            const formattedData = filtered.map(item => {
+                // Destructure to separate unwanted fields from the rest
+                // We also remove _id since 'id' is usually already present and cleaner
+                const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
+
+                return {
+                    ...rest, // Keep remaining fields (company, route, status, etc.)
+                    // Overwrite date/time with readable formats
+                    date: rest.date ? new Date(rest.date).toLocaleDateString() : "-",
+                    time: to12HourFormat(rest.time),
+                    departureTime: to12HourFormat(rest.departureTime || "")
+                };
+            });
+
+            // 3. Package the data for the Report
             const reportPayload = {
                 screen: "Bus Trips Management",
-                generatedDate: new Date().toISOString(),
+                generatedDate: new Date().toLocaleString(),
                 filters: {
                     searchQuery,
-                    selectedDate,
+                    selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
                     selectedCompany
                 },
                 statistics: {
                     totalRecords: records.length,
                     displayedRecords: filtered.length
                 },
-                data: filtered // Save snapshot of current data
+                data: formattedData // <--- Cleaned and formatted data
             };
 
-            // Step 2: Send to Reports Backend
+            // Step 4: Send to Reports Backend
             await submitPageReport("Bus Trips", reportPayload, "Admin");
 
-            // Step 3: CLEAR THE TABLE (Delete the records from the active DB)
-            // We use Promise.all to delete all filtered records in parallel
+            // Step 5: CLEAR THE TABLE
             const deletePromises = filtered.map(item => 
                 fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
             );
             
             await Promise.all(deletePromises);
 
-            // Step 4: UI Updates
+            // Step 6: UI Updates
             alert("Report submitted successfully! The table has been cleared for new entries.");
             setShowSubmitModal(false); 
             
-            // Step 5: Refresh the list (It should now be empty)
+            // Step 7: Refresh the list
             fetchBusTrips();
 
         } catch (error) {
