@@ -61,6 +61,7 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       <LoginBackground />
+      <form onSubmit={handleSubmit}>
       <LoginCard
         icon={<Shield className="w-7 h-7 sm:w-8 sm:h-8 text-white" />}
         title="Admin Portal"
@@ -75,6 +76,7 @@ export default function AdminLogin() {
         isLoading={isLoading}
         error={error}
       />
+      </form>
     </div>
   );
 }
