@@ -8,10 +8,8 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditReport from "../components/reports/EditReport";
 import DeleteModal from "../components/common/DeleteModal";
-// Removed ReportFilter import to implement custom logic directly
 import { Archive, Trash2,Filter, Calendar, Tag} from "lucide-react";
 
-// --- VISUALIZED DATA RENDERER ---
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload) return <div className="text-gray-400 italic p-4">No report data available</div>;
 
