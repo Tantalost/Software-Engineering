@@ -1,275 +1,593 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import StatCardGroupPark from "../components/parking/StatCardGroupPark";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
-import { parkingTickets } from "../data/assets";
-import Form from "../components/common/Form";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
-import Input from "../components/common/Input";
-import Textarea from "../components/common/Textarea";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { Archive, Trash2 } from "lucide-react"; 
+import { submitPageReport } from "../utils/reportService.js"; // <--- IMPORT SERVICE
+// Added FileText and Loader2 to imports
+import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft, FileText, Loader2 } from "lucide-react"; 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const Parking = () => {
+  const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
-  const [showPreview, setShowPreview] = useState(false);
+
+  const [showAddModal, setShowAddModal] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null); 
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const role = localStorage.getItem("authRole") || "superadmin";
-  const [showNotify, setShowNotify] = useState(false);
-  const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+  const [deleteRow, setDeleteRow] = useState(null);
+  const [logoutRow, setLogoutRow] = useState(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const loadStored = () => {
+  const [step, setStep] = useState(1);
+  const plateInputRef = useRef(null);
+
+  const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, message: "" });
+
+  // --- REPORTING STATES ---
+  const [isReporting, setIsReporting] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  // ------------------------
+
+  const role = localStorage.getItem("authRole") || "superadmin";
+  const API_URL = "http://localhost:3000/api/parking";
+  const ARCHIVE_URL = "http://localhost:3000/api/archives";
+
+  const [newTicket, setNewTicket] = useState({
+    ticketNo: "",
+    type: "Car",
+    plateNo: "",
+    baseRate: 50,
+    timeIn: "",
+  });
+
+  const existingPlates = useMemo(() => {
+    return [...new Set(records.map(r => r.plateNo).filter(Boolean))];
+  }, [records]);
+
+  const existingTicketNumbers = useMemo(() => {
+    return [...new Set(records.map(r => r.ticketNo).filter(Boolean))];
+  }, [records]);
+
+  const fetchParkingTickets = async () => {
+    setIsLoading(true);
     try {
-      const raw = localStorage.getItem("ibt_parking");
-      return raw ? JSON.parse(raw) : parkingTickets;
-    } catch (e) {
-      return parkingTickets;
+      const response = await fetch(API_URL);
+      if (!response.ok) throw new Error("Failed to fetch");
+      const data = await response.json();
+      const formattedData = data.map(item => ({ ...item, id: item._id }));
+      setRecords(formattedData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
-  const [records, setRecords] = useState(loadStored());
-  const persist = (next) => {
-    setRecords(next);
-    localStorage.setItem("ibt_parking", JSON.stringify(next));
+
+  useEffect(() => { fetchParkingTickets(); }, []);
+
+  // --- Add Ticket Handlers ---
+  const handleAddClick = () => {
+    const now = new Date();
+    const formattedTimeIn = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+      .toISOString()
+      .slice(0, 16);
+
+    setNewTicket({
+      ticketNo: "",
+      type: "Car",
+      plateNo: "",
+      baseRate: 50, 
+      timeIn: formattedTimeIn, 
+    });
+    setStep(1);
+    setShowAddModal(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (!deleteRow) return;
+  const handleSelectType = (type) => {
+    const rate = type === "Car" ? 50 : 20;
+    setNewTicket(prev => ({ ...prev, type, baseRate: rate }));
+    setStep(2);
+  };
 
-    const nextList = records.filter((r) => r.id !== deleteRow.id);
+  const handleBack = () => {
+    setStep(1);
+    setNewTicket(prev => ({ ...prev, type: "", plateNo: "", ticketNo: "" }));
+  };
+
+  const handleCreateTicket = async (e) => {
+    e.preventDefault(); 
     
-    persist(nextList); 
-    setDeleteRow(null); 
-    console.log("Item deleted successfully");
-  };
-
-  const handleArchive = (rowToArchive) => {
-    if (!rowToArchive) return;
-
-    try {
-      const rawArchive = localStorage.getItem("ibt_archive");
-      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
-
-      const archiveItem = {
-        id: `archive-${Date.now()}-${rowToArchive.id}`,
-        type: "Parking Ticket", 
-        description: `${rowToArchive.type} - ${rowToArchive.price} (${rowToArchive.duration})`, 
-        dateArchived: new Date().toISOString(),
-        originalStatus: rowToArchive.status,
-        originalData: rowToArchive
-      };
-      
-      archiveList.push(archiveItem);
-      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
-
-    } catch (e) {
-      console.error("Failed to add to archive:", e);
+    if (!newTicket.plateNo || !newTicket.ticketNo) {
+      alert("Please fill in both Ticket Number and Plate Number.");
       return;
     }
 
-    const nextActiveList = records.filter((r) => r.id !== rowToArchive.id);
-    persist(nextActiveList);
-    
-    console.log("Item archived successfully!");
+    // --- Check for duplicates ---
+    const duplicateTicket = existingTicketNumbers.includes(newTicket.ticketNo);
+    const duplicatePlate = existingPlates.some(p => p.toLowerCase() === newTicket.plateNo.toLowerCase());
+
+    if (duplicateTicket) {
+      setDuplicateModal({ isOpen: true, message: `Ticket Number #${newTicket.ticketNo} already exists!` });
+      return;
+    }
+
+    if (duplicatePlate) {
+      setDuplicateModal({ isOpen: true, message: `Plate Number ${newTicket.plateNo.toUpperCase()} already exists!` });
+      return;
+    }
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTicket),
+      });
+      if (response.ok) {
+        fetchParkingTickets();
+        setShowAddModal(false);
+      }
+    } catch (error) {
+      console.error("Error creating ticket:", error);
+    }
   };
 
-  const filtered = records.filter((ticket) => {
-    const matchesSearch = ticket.type
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+  // --- Delete Functionality ---
+  const handleDeleteConfirm = async () => {
+    if (!deleteRow) return;
+    try {
+      const response = await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
+      if (response.ok) {
+        setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
+        setDeleteRow(null);
+      } else alert("Failed to delete record");
+    } catch (error) {
+      console.error("Error deleting:", error);
+    }
+  };
 
-    const matchesDate =
-      !selectedDate ||
-      new Date(ticket.date).toDateString() ===
-        new Date(selectedDate).toDateString();
+  // --- Archive ---
+  const handleArchive = async (rowToArchive) => {
+    if (!window.confirm(`Are you sure you want to archive Ticket #${rowToArchive.ticketNo}?`)) return;
+    try {
+      const idToDelete = rowToArchive._id || rowToArchive.id;
+      if (!idToDelete) throw new Error("Record ID is missing.");
 
-    const matchesType = 
-      activeType === "All" || 
-      ticket.type.toLowerCase().includes(activeType.toLowerCase());
+      const archiveRes = await fetch(ARCHIVE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Parking",
+          description: `Ticket #${rowToArchive.ticketNo} - ${rowToArchive.type}`,
+          originalData: rowToArchive,
+          archivedBy: role
+        })
+      });
+      if (!archiveRes.ok) throw new Error("Failed to save to archive");
 
-    return matchesSearch && matchesDate && matchesType;
+      const deleteRes = await fetch(`${API_URL}/${idToDelete}`, { method: "DELETE" });
+      if (!deleteRes.ok) throw new Error("Failed to remove from active list");
+
+      setRecords(prev => prev.filter(r => r.id !== idToDelete));
+      alert("Ticket archived successfully!");
+    } catch (e) {
+      console.error("Failed to archive:", e);
+      alert("Failed to archive ticket.");
+    }
+  };
+
+  // --- Logout / Depart ---
+  const confirmLogout = async () => {
+    if (!logoutRow) return;
+    try {
+      const response = await fetch(`${API_URL}/${logoutRow.id}/depart`, { method: "PUT", headers: { "Content-Type": "application/json" } });
+      if (response.ok) {
+        fetchParkingTickets();
+        setLogoutRow(null);
+      }
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
+
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return "--/--";
+    return new Date(dateString).toLocaleDateString() + " " + new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatTimeOnly = (dateString) => {
+    if (!dateString) return "--:--";
+    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // --- Filtered & Paginated Data ---
+  const filtered = records.filter(ticket => {
+    const matchesSearch =
+      (ticket.ticketNo && String(ticket.ticketNo).includes(searchQuery)) ||
+      (ticket.plateNo && ticket.plateNo.toLowerCase().includes(searchQuery.toLowerCase()));
+    const ticketDate = ticket.timeIn ? new Date(ticket.timeIn).toDateString() : "";
+    const filterDate = selectedDate ? new Date(selectedDate).toDateString() : "";
+    const matchesDate = !selectedDate || ticketDate === filterDate;
+    const matchesType = activeType === "All" || ticket.type.toLowerCase() === activeType.toLowerCase();
+    return matchesSearch && matchesType && matchesDate;
   });
 
-  const carCount = filtered.filter((t) =>
-    t.type.toLowerCase().includes("car")
-  ).length;
-  const motorcycleCount = filtered.filter((t) =>
-    t.type.toLowerCase().includes("motorcycle")
-  ).length;
-  const totalVehicles = filtered.length;
-  const totalRevenue = filtered.reduce((sum, t) => sum + (t.price || 0), 0);
+  const carCount = filtered.filter(t => t.type === "Car").length;
+  const motoCount = filtered.filter(t => t.type === "Motorcycle").length;
+  const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
+
+  // --- SUBMIT REPORT HANDLER ---
+ // --- UPDATED SUBMIT HANDLER ---
+  const handleSubmitReport = async () => {
+    setIsReporting(true);
+    try {
+      // 1. Helper to format date/time to "11/30/2025, 2:30 PM"
+      const formatDateTime = (dateStr) => {
+        if (!dateStr) return "-";
+        return new Date(dateStr).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      };
+
+      // 2. Format Data & Remove Unwanted Columns
+     // Inside Parking.jsx -> handleSubmitReport function
+
+const formattedData = filtered.map(item => {
+  // FIND THIS LINE:
+  // Add 'isArchived' to this list to remove it from the final report
+  const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
+
+  return {
+    ...rest, 
+    timeIn: formatDateTime(rest.timeIn),
+    timeOut: rest.timeOut ? formatDateTime(rest.timeOut) : "Parked (Active)"
+  };
+});
+
+      // 3. Package Data
+      const reportPayload = {
+        screen: "Parking Management",
+        generatedDate: new Date().toLocaleString(), // Readable report date
+        filters: {
+           searchQuery,
+           selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
+           activeType
+        },
+        statistics: {
+            cars: carCount,
+            motorcycles: motoCount,
+            totalVehicles: filtered.length,
+            totalRevenue: revenue
+        },
+        data: formattedData // <--- Send cleaned data
+      };
+
+      // 4. Submit to Backend
+      await submitPageReport("Parking", reportPayload, "Parking Admin");
+
+      await fetch("http://localhost:3000/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Report Submitted: Parking Report",
+          message: "A new Parking Management report has been generated and the active log has been cleared.",
+          source: "Parking"
+        }),
+      });
+
+      // 5. Clear Table (Bulk Delete)
+      const deletePromises = filtered.map(item => 
+          fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
+      );
+      
+      await Promise.all(deletePromises);
+
+      // 6. Update UI
+      alert("Report submitted successfully! The table has been cleared.");
+      setShowSubmitModal(false);
+      fetchParkingTickets();
+
+    } catch (error) {
+      console.error(error);
+      alert("Failed to submit report.");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+  // -----------------------------
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filtered.slice(startIndex, endIndex);
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
-  return (
-    <Layout title="Bus Parking Management">
-      <div className="mb-6">
-        <StatCardGroupPark
-          cars={carCount}
-          motorcycles={motorcycleCount}
-          totalVehicles={totalVehicles}
-          totalRevenue={totalRevenue}
-        />
-      </div>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        />
+  const getBadgeStyles = () => {
+    if (newTicket.type === 'Car') return "bg-blue-50 text-blue-600 border-blue-600";
+    return "bg-orange-50 text-orange-500 border-orange-500";
+  };
 
+  // --- Export Functions ---
+  const exportToCSV = () => {
+    const headers = ["Ticket No","Plate No","Type","Fee/Hr","Total","Time In","Time Out","Duration","Status"];
+    const rows = filtered.map(item => [
+      item.ticketNo || "",
+      item.plateNo || "",
+      item.type || "",
+      item.baseRate ? `₱${item.baseRate}` : "",
+      item.finalPrice ? `₱${item.finalPrice}` : "",
+      item.timeIn ? formatDateDisplay(item.timeIn) : "",
+      item.timeOut ? formatDateDisplay(item.timeOut) : "",
+      item.duration || "",
+      item.status || ""
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `parking_records_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Parking Records Report", 14, 20);
+    autoTable(doc, {
+      startY: 30,
+      head: [["Ticket No","Plate No","Type","Fee/Hr","Total","Time In","Time Out","Duration","Status"]],
+      body: filtered.map(item => [
+        item.ticketNo || "",
+        item.plateNo || "",
+        item.type || "",
+        item.baseRate ? `₱${item.baseRate}` : "",
+        item.finalPrice ? `₱${item.finalPrice}` : "",
+        item.timeIn ? formatDateDisplay(item.timeIn) : "",
+        item.timeOut ? formatDateDisplay(item.timeOut) : "",
+        item.duration || "",
+        item.status || ""
+      ]),
+      theme: "grid",
+      headStyles: { fillColor: [16,185,129] },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+    doc.text(`Total Vehicles: ${filtered.length}`, 14, doc.lastAutoTable.finalY + 10);
+    doc.text(`Total Revenue: ₱${revenue}`, 14, doc.lastAutoTable.finalY + 16);
+    doc.save(`parking_records_${new Date().toISOString().split("T")[0]}.pdf`);
+  };
+
+  return (
+    <Layout title="Parking Management">
+      {/* STAT CARDS */}
+      <div className="mb-6">
+        <StatCardGroupPark cars={carCount} motorcycles={motoCount} totalVehicles={filtered.length} totalRevenue={revenue} />
+      </div>
+
+      {/* FILTERS + EXPORT */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
+        <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <div className="flex items-center justify-end gap-3">
-          <button onClick={() => setShowPreview(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center">
+          
+          {(role === "parking") && (
+            <button 
+                onClick={() => setShowSubmitModal(true)} 
+                disabled={isReporting}
+                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+            >
+              <FileText size={18} />
+              <span>Submit Report</span>
+            </button>
+          )}
+          {/* ----------------------------------------------------------------- */}
+
+          <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             + Add New
           </button>
-          {role === "superadmin" && (
-            <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-sm hover:border-slate-300 transition-all flex items-center justify-center">
-              Notify
-            </button>
-          )}
-          {role === "parking" && (
-            <button
-              onClick={() => setShowSubmitModal(true)}
-              className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
-            >
-              Submit Report
-            </button>
-          )}
-          <div className="h-[44px] flex items-center">
-            <ExportMenu
-              onExportCSV={() => console.log("Exporting to CSV...")}
-              onExportExcel={() => console.log("Exporting to Excel...")}
-              onExportPDF={() => console.log("Exporting to PDF...")}
-              onPrint={() => window.print()}
-            />
-          </div>
+          <ExportMenu onExportExcel={exportToCSV} onExportPDF={exportToPDF} />
         </div>
       </div>
 
       <div className="mb-4">
-        <ParkingFilter 
-            activeType={activeType} 
-            onTypeChange={setActiveType} 
-        />
+        <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
       </div>
-       
-      <Table
-        columns={["Ticket", "Type", "Price", "TimeIn", "TimeOut", "Duration", "Date", "Status"]}
-        data={paginatedData.map((ticket) => ({
-          id: ticket.id,
-          ticket: `#${String(ticket.ticketNo).padStart(4, '0')}`, 
-          
-          type: ticket.type,
-          price: `₱${ticket.price.toFixed(2)}`,
-          timein: ticket.timeIn, 
-          timeout: ticket.timeOut, 
-          duration: ticket.duration,
-          date: ticket.date,
-          status: ticket.status, 
-        }))}
-        actions={(row) => (
-          <div className="flex justify-end items-center space-x-2">
-            <TableActions
-              onView={() => setViewRow(row)}
-              onEdit={() => setEditRow(row)}
-              onDelete={() => setDeleteRow(row)}
-            />
-            <button
-              onClick={() => handleArchive(row)}
-              title="Archive"
-              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
-            >
-              <Archive size={16} />
-            </button>
 
+      {/* TABLE + PAGINATION */}
+      {isLoading ? (
+        <div className="text-center py-10">Loading tickets...</div>
+      ) : (
+        <>
+          <Table
+            columns={["Ticket No", "Plate No", "Type", "Fee/Hr", "Total", "Time In", "Time Out", "Duration", "Status"]}
+            data={paginatedData.map(ticket => ({
+              id: ticket.id,
+              ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : "---",
+              plateno: ticket.plateNo || "---",
+              type: ticket.type,
+              "fee/hr": ticket.baseRate ? `₱${ticket.baseRate}` : "---",
+              total: ticket.finalPrice ? `₱${ticket.finalPrice}` : "---",
+              timein: formatTimeOnly(ticket.timeIn),
+              timeout: ticket.timeOut ? formatTimeOnly(ticket.timeOut) : "---",
+              duration: ticket.duration || "---",
+              status: ticket.status
+            }))}
+            actions={row => {
+              const selectedRecord = records.find(r => r.id === row.id);
+              return (
+                <div className="flex justify-end items-center space-x-2">
+                  {row.status === "Parked" && (
+                    <button onClick={() => setLogoutRow(selectedRecord)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2">
+                      <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
+                    </button>
+                  )}
+                  <TableActions
+                    onView={() => setViewRow(selectedRecord)}
+                    onEdit={() => setEditRow(selectedRecord)}
+                  />
+                  <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
+                    <Archive size={16} />
+                  </button>
+                  <button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              );
+            }}
+          />
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            totalItems={filtered.length}
+            onItemsPerPageChange={setItemsPerPage}
+          />
+        </>
+      )}
+
+      {/* ADD MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
+            <button onClick={() => setShowAddModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">✕</button>
+            <h1 className="text-3xl font-bold text-gray-800 mb-8">
+              {step === 1 ? "Select Vehicle" : "Enter Details"}
+            </h1>
+            {step === 1 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
+                <button onClick={() => handleSelectType('Car')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-cyan-500 bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
+                  <Car size={80} className="mb-4" />
+                  <span className="text-2xl font-bold mt-2">CAR / JEEP</span>
+                  <span className="text-sm opacity-70 mt-1 font-medium">₱10.00 / hr</span>
+                </button>
+                <button onClick={() => handleSelectType('Motorcycle')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-red-500 bg-red-50 text-red-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
+                  <Bike size={80} className="mb-4" />
+                  <span className="text-2xl font-bold mt-2">MOTORCYCLE</span>
+                  <span className="text-sm opacity-70 mt-1 font-medium">₱5.00 / hr</span>
+                </button>
+              </div>
+            )}
+            {step === 2 && (
+              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div>
+                  <span className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}>
+                    Selected: {newTicket.type === 'Car' ? 'Car / Bus' : 'Motorcycle'}
+                  </span>
+                </div>
+                <div className="text-left">
+                  <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">Plate Number</label>
+                  <input
+                    ref={plateInputRef}
+                    type="text"
+                    list="plate-options"
+                    placeholder="ABC 123"
+                    required
+                    value={newTicket.plateNo}
+                    onChange={(e) => setNewTicket({...newTicket, plateNo: e.target.value.toUpperCase()})}
+                    className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors uppercase"
+                  />
+                  <datalist id="plate-options">
+                    {existingPlates.map((plate, index) => (<option key={index} value={plate} />))}
+                  </datalist>
+                </div>
+                <div className="text-left">
+                  <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">Ticket Number</label>
+                  <input
+                    type="number"
+                    placeholder="001"
+                    required
+                    value={newTicket.ticketNo}
+                    onChange={(e) => setNewTicket({...newTicket, ticketNo: e.target.value})}
+                    className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors"
+                  />
+                </div>
+                <div className="flex gap-4 mt-2">
+                  <button onClick={handleBack} className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors py-3">
+                    <ArrowLeft size={24} /> Back
+                  </button>
+                  <button onClick={handleCreateTicket} className="flex-[2] bg-emerald-500 text-white text-xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg py-3">
+                    ENTER TICKET
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DUPLICATE MODAL */}
+      {duplicateModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
+            <h3 className="text-lg font-bold text-red-600 mb-2">Duplicate Entry</h3>
+            <p className="text-slate-700 mb-6">{duplicateModal.message}</p>
             <button
-              onClick={() => setDeleteRow(row)}
-              title="Delete"
-              className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-              >
-              <Trash2 size={16} />
+              onClick={() => setDuplicateModal({ isOpen: false, message: "" })}
+              className="px-5 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+            >
+              OK
             </button>
           </div>
-        )}
-      />
+        </div>
+      )}
 
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        totalItems={filtered.length}
-        onItemsPerPageChange={(newItemsPerPage) => {
-          setItemsPerPage(newItemsPerPage);
-          setCurrentPage(1);
-        }}
-      />
+      {/* Other modals: DEPART, VIEW, DELETE */}
+      {logoutRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
+            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <LogOut size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">Confirm Departure</h3>
+            <p className="text-slate-600 mt-2 text-sm">
+              Ticket <strong>{logoutRow.ticketNo}</strong> is leaving.<br />
+              The system will calculate the total price based on duration.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setLogoutRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium">Cancel</button>
+              <button onClick={confirmLogout} className="flex-1 py-2.5 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-700 shadow-lg">Process Payment</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
             <h3 className="mb-4 text-base font-semibold text-slate-800">View Parking Ticket</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
-              <Field label="Ticket No" value={viewRow.ticket} />
+              <Field label="Ticket No" value={viewRow.ticketNo || "N/A"} />
+              <Field label="Plate No" value={viewRow.plateNo || "N/A"} />
               <Field label="Type" value={viewRow.type} />
-              <Field label="Price" value={viewRow.price} />
-              <Field label="Time In" value={viewRow.timein} />
-              <Field label="Time Out" value={viewRow.timeout} />
+              <Field label="Base Rate" value={viewRow.baseRate ? `₱${viewRow.baseRate}` : "N/A"} />
+              <Field label="Final Price" value={viewRow.finalPrice ? `₱${viewRow.finalPrice}` : "Pending"} />
+              <Field label="Time In" value={formatDateDisplay(viewRow.timeIn)} />
+              <Field label="Time Out" value={formatDateDisplay(viewRow.timeOut)} />
               <Field label="Duration" value={viewRow.duration} />
-              <Field label="Date" value={viewRow.date} />
               <Field label="Status" value={viewRow.status} />
             </div>
             <div className="mt-4 flex justify-end">
-              <button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editRow && (
-        <EditParking
-          row={editRow}
-          onClose={() => setEditRow(null)}
-          onSave={(updated) => {
-            const next = records.map((r) => (r.id === updated.id ? updated : r));
-            persist(next);
-            setEditRow(null);
-          }}
-        />
-      )}
-      
-      {deleteRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Archive Parking Ticket</h3>
-            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive this ticket for {deleteRow.type}?</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { 
-                handleArchive(deleteRow); 
-                setDeleteRow(null); 
-              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+              <button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button>
             </div>
           </div>
         </div>
@@ -280,61 +598,51 @@ const Parking = () => {
         onClose={() => setDeleteRow(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Record"
-        message="Are you sure you want to remove this parking record? This action cannot be undone."
-        itemName={deleteRow ? `Ticket ${deleteRow.ticket} - ${deleteRow.type} - ${deleteRow.price}` : ""}
+        message="Are you sure you want to permanently remove this record?"
+        itemName={deleteRow ? (deleteRow.ticketNo ? `Ticket #${deleteRow.ticketNo}` : "this item") : ""}
       />
 
-      {role === "parking" && showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Submit Parking Report</h3>
-            <p className="mt-2 text-sm text-slate-600">Are you sure you want to submit the current parking report?</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { setShowSubmitModal(false); console.log('Parking report submitted.'); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Submit</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* --- CONFIRMATION MODAL FOR REPORT SUBMISSION --- */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+                <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                    Are you sure you want to capture and submit the current parking report?
+                    <br />
+                    <span className="text-red-500 font-semibold text-xs">
+                        Note: This will clear the current table for new entries.
+                    </span>
+                </p>
 
-      {role === "superadmin" && showNotify && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
-            <div className="space-y-3">
-              <Input label="Title" value={notifyDraft.title} onChange={(e) => setNotifyDraft({ ...notifyDraft, title: e.target.value })} />
-              <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.target.value })} />
+                <div className="mt-6 flex justify-end gap-3">
+                    <button 
+                        onClick={() => setShowSubmitModal(false)} 
+                        disabled={isReporting}
+                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={handleSubmitReport} 
+                        disabled={isReporting}
+                        className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {isReporting ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span>Submitting...</span>
+                            </>
+                        ) : (
+                            <span>Confirm Submit</span>
+                        )}
+                    </button>
+                </div>
             </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { const raw = localStorage.getItem("ibt_notifications"); const list = raw ? JSON.parse(raw) : []; list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Parking" }); localStorage.setItem("ibt_notifications", JSON.stringify(list)); setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
-            </div>
-          </div>
         </div>
       )}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl">
-            <Form
-              title="Parking Management"
-              fields={[
-                { label: "Type", type: "text" },
-                { label: "Price", type: "number", placeholder: "0.00" },
-                { label: "Time-in", type: "text" },
-                { label: "Time-out", type: "text" },
-                { label: "Duration", type: "text", placeholder: "e.g., 2 hours" },
-                { label: "Date", type: "date" },
-                { label: "Status", type: "select", options: ["Active", "Inactive"] },
-              ]}
-            />
-            <div className="mt-3 flex justify-end">
-              <button onClick={() => setShowPreview(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ------------------------------------------------ */}
+
     </Layout>
   );
 };

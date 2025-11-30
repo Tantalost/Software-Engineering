@@ -1,7 +1,7 @@
 import React from "react";
 
 const TerminalFilter = ({ activeType, onTypeChange }) => {
-  const statuses = ["All", "Regular", "Student", "Senior Citizen / PWD"];
+  const statuses = ["All", "Regular", "Student", "Senior Citizen / PWD "];
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto py-1">

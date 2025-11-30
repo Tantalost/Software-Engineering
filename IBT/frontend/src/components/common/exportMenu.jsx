@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Download, FileSpreadsheet, FileText, Printer, ChevronDown } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
 
-const ExportMenu = ({ onExportCSV, onExportExcel, onExportPDF, onPrint }) => {
+const ExportMenu = ({ onExportExcel, onExportPDF }) => {
   const [open, setOpen] = useState(false);
 
   const handleToggle = () => setOpen(!open);
@@ -29,17 +29,7 @@ const ExportMenu = ({ onExportCSV, onExportExcel, onExportPDF, onPrint }) => {
             className="absolute right-0 mt-2 w-44 origin-top-right bg-white border border-gray-200 rounded-xl shadow-xl z-20"
           >
             <div className="p-1">
-              <button
-                onClick={() => {
-                  onExportCSV && onExportCSV();
-                  handleClose();
-                }}
-                className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all text-gray-700"
-              >
-                <FileText size={16} className="text-emerald-600" />
-                <span>Export CSV</span>
-              </button>
-
+             
               <button
                 onClick={() => {
                   onExportExcel && onExportExcel();
@@ -62,16 +52,6 @@ const ExportMenu = ({ onExportCSV, onExportExcel, onExportPDF, onPrint }) => {
                 <span>Export PDF</span>
               </button>
 
-              <button
-                onClick={() => {
-                  onPrint && onPrint();
-                  handleClose();
-                }}
-                className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all text-gray-700"
-              >
-                <Printer size={16} className="text-emerald-600" />
-                <span>Print</span>
-              </button>
             </div>
           </div>
         </>

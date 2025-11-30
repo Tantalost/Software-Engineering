@@ -7,6 +7,7 @@ const EditLostFound = ({ row, onClose, onSave }) => {
     id: row.id,
     trackingNo: row.trackingno,
     description: row.description,
+    location: row.location,
     dateTime: row.datetime,
     status: row.status,
   });
@@ -16,9 +17,29 @@ const EditLostFound = ({ row, onClose, onSave }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
         <h3 className="mb-4 text-base font-semibold text-slate-800">Edit Record</h3>
+        <div className="space-y-4 mb-6">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+              <div className="flex p-1 bg-slate-100 rounded-lg">
+                {["Unclaimed", "Claimed"].map((status) => (
+                  <button
+                    type="button"
+                    key={status}
+                    onClick={() => setForm({ ...form, status })}
+                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                    form.status === status
+                    ? "bg-white text-emerald-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                  {status}
+                  </button>
+                ))}
+              </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Input label="Tracking No" value={form.trackingNo} onChange={(e) => set("trackingNo", e.target.value)} />
-          <Select label="Status" value={form.status} onChange={(e) => set("status", e.target.value)} options={["Unclaimed", "Claimed", "Pending"]} />
+
           <Input label="DateTime" value={form.dateTime} onChange={(e) => set("dateTime", e.target.value)} />
           <div className="md:col-span-2">
             <Input label="Description" value={form.description} onChange={(e) => set("description", e.target.value)} />

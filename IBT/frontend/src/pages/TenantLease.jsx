@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { db } from "../firebaseConfig";
-import { collection, deleteDoc, doc, updateDoc, onSnapshot, writeBatch, query, where, getDocs 
-} from "firebase/firestore";
+const API_URL = "http://localhost:3000/api";
+
 import emailjs from '@emailjs/browser';
 import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList } from "lucide-react";
 
@@ -62,20 +61,33 @@ const TenantLease = () => {
   const [remarksText, setRemarksText] = useState("");
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "tenants"), (snapshot) => {
-      const liveData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      liveData.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      setRecords(liveData);
-    });
-    return () => unsubscribe(); 
+    fetchTenants();
   }, []);
 
+  const fetchTenants = async () => {
+    try {
+      const res = await fetch(`${API_URL}/tenants`);
+      const data = await res.json();
+      data.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      setRecords(data);
+    } catch (err) {
+      console.error("Error fetching tenants:", err);
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "waitlist"), (snapshot) => {
-      setWaitlistData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
+    fetchWaitlist();
   }, []);
+
+  const fetchWaitlist = async () => {
+    try {
+      const res = await fetch(`${API_URL}/waitlist`);
+      const data = await res.json();
+      setWaitlistData(data);
+    } catch (err) {
+      console.error("Error fetching waitlist:", err);
+    }
+  };
 
   useEffect(() => {
     const newAlerts = [];
@@ -111,7 +123,7 @@ const TenantLease = () => {
   const handleAddToWaitlist = () => {
     if (!waitlistForm.name || !waitlistForm.contact) { alert("Please fill in Name and Contact."); return; }
     const updatedList = [...waitlistData, { id: Date.now(), ...waitlistForm, dateRequested: new Date().toISOString(), status: "Pending" }];
-    setWaitlistData(updatedList); // Note: Should probably write to DB here, but kept original logic
+    setWaitlistData(updatedList); 
     localStorage.setItem("ibt_waitlist", JSON.stringify(updatedList));
     setWaitlistForm({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
     setShowWaitlistForm(false); 
@@ -124,13 +136,28 @@ const TenantLease = () => {
   };
 
   const handleUnlockPayment = async () => {
-    if (!reviewData?.id) return;
+    if (!reviewData?._id && !reviewData?.uid) return; 
+    
+    const idToUpdate = reviewData.uid; 
+
     try {
-        await updateDoc(doc(db, "waitlist", reviewData.id), { status: "PAYMENT_UNLOCKED" });
-        alert("Payment Unlocked!");
-        setShowReviewModal(false);
-        setShowWaitlistModal(true); 
-    } catch (error) { console.error("Error:", error); alert("Failed to update status."); }
+        const response = await fetch(`${API_URL}/waitlist/${idToUpdate}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: "PAYMENT_UNLOCKED" })
+        });
+
+        if (response.ok) {
+            alert("Payment Unlocked!");
+            setShowReviewModal(false);
+            setShowWaitlistModal(true); 
+            fetchWaitlist(); 
+        } else {
+            alert("Failed to update status.");
+        }
+    } catch (error) { 
+        console.error("Error:", error); 
+    }
   };
 
   const handleProceedToLease = () => {
@@ -139,11 +166,13 @@ const TenantLease = () => {
     setShowAddModal(true);
   };
 
-  const handleRejectApplicant = async (id) => {
+  const handleRejectApplicant = async (uid) => { 
     if(window.confirm("Are you sure you want to REJECT and DELETE this application?")) {
       try {
-        await deleteDoc(doc(db, "waitlist", id));
+        await fetch(`${API_URL}/waitlist/${uid}`, { method: 'DELETE' });
+        
         alert("Application removed.");
+        fetchWaitlist(); 
         if(showReviewModal) setShowReviewModal(false);
       } catch (error) { console.error(error); alert("Error removing application."); }
     }
@@ -151,45 +180,37 @@ const TenantLease = () => {
 
   const handleAddTenant = async (newTenant) => {
     try {
-      const batch = writeBatch(db);
-      const tenantRef = doc(collection(db, "tenants"));
-      batch.set(tenantRef, { ...newTenant, status: "Paid", createdAt: new Date().toISOString() });
-
-      newTenant.slotNo.split(', ').forEach(slot => {
-        const { row, col } = calculateGridPosition(slot);
-        batch.set(doc(db, "stalls", `${newTenant.tenantType}-${row}-${col}`), {
-          row, col, floor: newTenant.tenantType, status: "Paid", tenantId: tenantRef.id, slotNo: slot 
-        });
+      const response = await fetch(`${API_URL}/tenants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              ...newTenant,
+              transferWaitlistId: transferApplicant?.uid 
+          })
       });
-     
-      if (transferApplicant) batch.delete(doc(db, "waitlist", transferApplicant.id));
-      await batch.commit();
-      setShowAddModal(false);
-      alert("Tenant marked as PAID and Mobile App updated!");
-    } catch (e) { console.error(e); alert("Error saving to database"); }
+
+      if (response.ok) {
+          setShowAddModal(false);
+          alert("Tenant Added Successfully!");
+          fetchTenants(); 
+          fetchWaitlist(); 
+      } else {
+          alert("Error saving to database");
+      }
+    } catch (e) { 
+        console.error(e); 
+        alert("Server Error"); 
+    }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteRow?.id) return;
+    if (!deleteRow?.id && !deleteRow?._id) return; 
+    const idToDelete = deleteRow._id || deleteRow.id;
+
     try {
-      const batch = writeBatch(db);
-      const tenantId = String(deleteRow.id); 
+      await fetch(`${API_URL}/tenants/${idToDelete}`, { method: 'DELETE' });
       
-      const q = query(collection(db, "stalls"), where("tenantId", "==", tenantId));
-      (await getDocs(q)).forEach((doc) => batch.delete(doc.ref));
-
-      const slotString = deleteRow.slotNo || deleteRow.slotno; 
-      if (slotString && deleteRow.tenantType) {
-        slotString.split(',').map(s => s.trim()).forEach(slot => {
-           const { row, col } = calculateGridPosition(slot);
-           batch.delete(doc(db, "stalls", `${deleteRow.tenantType}-${row}-${col}`));
-        });
-      }
-
-      batch.delete(doc(db, "tenants", tenantId));
-      await batch.commit();
-      
-      setRecords(prev => prev.filter(item => item.id !== deleteRow.id));
+      setRecords(prev => prev.filter(item => (item._id || item.id) !== idToDelete));
       setDeleteRow(null);
       alert("Successfully deleted!");
     } catch (e) { console.error(e); alert(`Error: ${e.message}`); }
@@ -224,6 +245,19 @@ const TenantLease = () => {
     const matchesStatus = activeStatus === "All" || t.status.toLowerCase() === activeStatus.toLowerCase();
     return matchesSearch && matchesTab && matchesDate && matchesStatus;
   });
+
+  const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    month: 'numeric', 
+    day: 'numeric', 
+    year: 'numeric', 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true
+  });
+};
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -271,19 +305,20 @@ const TenantLease = () => {
       <Table
         columns={["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"]}
         data={paginatedData.map((t) => ({
-          id: t.id,
-          slotno: t.slotNo,
-          refno: t.referenceNo || t.referenceno,
-          name: t.tenantName || t.name,
-          email: t.email,
-          contactno: t.contactNo,
-          startdate: t.StartDateTime || "-",
-          duedate: t.DueDateTime || t.EndDateTime || "-",
-          rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
-          util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
-          totaldue: t.totalAmount ? `₱${t.totalAmount.toLocaleString()}` : (t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-"),
-          status: t.status,
+        id: t.id,
+        slotno: t.slotNo,
+        refno: t.referenceNo || t.referenceno,
+        name: t.tenantName || t.name,
+        email: t.email,
+        contactno: t.contactNo,
+        startdate: formatDate(t.StartDateTime), 
+        duedate: formatDate(t.DueDateTime || t.EndDateTime),
+        rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
+        util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
+        totaldue: t.totalAmount ? `₱${t.totalAmount.toLocaleString()}` : (t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-"),
+        status: t.status,
         }))}
+
         actions={(row) => (
           <div className="flex justify-end items-center space-x-2">
             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
@@ -354,22 +389,28 @@ const TenantLease = () => {
           tenants={records} 
           onClose={() => setEditRow(null)} 
           onSave={async (updatedData) => { 
-             try {
-                const batch = writeBatch(db);
-                batch.update(doc(db, "tenants", updatedData.id), updatedData);
-                const q = query(collection(db, "stalls"), where("tenantId", "==", updatedData.id));
-                (await getDocs(q)).forEach((doc) => batch.delete(doc.ref));
-                if (updatedData.slotNo) {
-                  updatedData.slotNo.split(', ').forEach(slot => {
-                    const { row, col } = calculateGridPosition(slot);
-                    batch.set(doc(db, "stalls", `${updatedData.tenantType}-${row}-${col}`), {
-                      row, col, floor: updatedData.tenantType, status: updatedData.status, tenantId: updatedData.id, slotNo: slot 
-                    });
-                  });
-                }
-                await batch.commit();
-                setEditRow(null); alert("Tenant updated!");
-             } catch (error) { console.error(error); alert("Failed to update record."); }
+            try {
+              const idToUpdate = updatedData._id || updatedData.id;
+              if (!idToUpdate) {
+                alert("Error: No Tenant ID found to update.");
+                return;
+              }
+              const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+              }); 
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Update failed");
+              }
+              alert("Tenant updated successfully!");
+              fetchTenants(); 
+              setEditRow(null); 
+            } catch (error) { 
+              console.error("Update Error:", error); 
+              alert(`Failed to update record: ${error.message}`); 
+            }
           }}
         />
       )}
