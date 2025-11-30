@@ -328,7 +328,7 @@ const Parking = () => {
                             className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-blue-600 bg-blue-50 text-blue-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                         >
                             <Car size={80} className="mb-4" />
-                            <span className="text-2xl font-bold mt-2">CAR / BUS</span>
+                            <span className="text-2xl font-bold mt-2">CAR / JEEP</span>
                             <span className="text-sm opacity-70 mt-1 font-medium">₱50.00 / hr</span>
                         </button>
                         <button 

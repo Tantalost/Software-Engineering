@@ -8,17 +8,15 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditReport from "../components/reports/EditReport";
 import DeleteModal from "../components/common/DeleteModal";
-import ReportFilter from "../components/reports/ReportFilter";
-import { Archive, Trash2, FileBarChart, Filter } from "lucide-react";
+// Removed ReportFilter import to implement custom logic directly
+import { Archive, Trash2, FileBarChart, Filter, Calendar, Tag, Layers } from "lucide-react";
 
-// --- NEW VISUALIZED DATA RENDERER ---
+// --- VISUALIZED DATA RENDERER (Unchanged) ---
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload) return <div className="text-gray-400 italic p-4">No report data available</div>;
 
-  // Destructure the standard payload structure we created in BusTrips/TerminalFees
   const { statistics, filters, data } = reportPayload;
 
-  // 1. Render Statistics Cards
   const renderStats = () => {
     if (!statistics || Object.keys(statistics).length === 0) return null;
     return (
@@ -42,11 +40,8 @@ const DataRenderer = ({ reportPayload }) => {
     );
   };
 
-  // 2. Render Active Filters
   const renderFilters = () => {
     if (!filters || Object.keys(filters).length === 0) return null;
-    
-    // Check if there are any actual values in the filters
     const hasValues = Object.values(filters).some(val => val !== "" && val !== "All");
     if (!hasValues) return null;
 
@@ -69,7 +64,6 @@ const DataRenderer = ({ reportPayload }) => {
     );
   };
 
-  // 3. Render the Main Data List as a Table
   const renderDataTable = () => {
     if (!Array.isArray(data) || data.length === 0) {
         return (
@@ -79,7 +73,6 @@ const DataRenderer = ({ reportPayload }) => {
         );
     }
 
-    // Dynamic Headers based on the first item
     const headers = Object.keys(data[0]).filter(k => k !== 'id' && k !== '_id');
 
     return (
@@ -101,7 +94,6 @@ const DataRenderer = ({ reportPayload }) => {
                 <tr key={idx} className="hover:bg-slate-50 transition-colors">
                     {headers.map(header => {
                        let cellVal = row[header];
-                       // Handle nested objects cleanly
                        if (typeof cellVal === 'object' && cellVal !== null) {
                            cellVal = JSON.stringify(cellVal); 
                        }
@@ -128,21 +120,27 @@ const DataRenderer = ({ reportPayload }) => {
     </div>
   );
 };
-// ----------------------------------------
 
+// --- MAIN COMPONENT ---
 const Reports = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Basic Search & Pagination
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(""); // Exact date picker
+  
+  // NEW FILTER STATES
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [timeRange, setTimeRange] = useState("All");
+  const [activeStatus, setActiveStatus] = useState("All");
+
   const [showPreview, setShowPreview] = useState(false); 
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [activeStatus, setActiveStatus] = useState("All");
 
   const API_URL = "http://localhost:3000/api/reports"; 
 
@@ -153,7 +151,6 @@ const Reports = () => {
       if (!res.ok) throw new Error("Failed to connect");
       const data = await res.json();
 
-      // Ensure ID exists
       const formattedData = data.map(item => ({
         ...item,
         id: item._id || item.id, 
@@ -170,6 +167,12 @@ const Reports = () => {
   useEffect(() => {
     fetchReports();
   }, []);
+
+  // Compute unique categories dynamically from the data
+  const uniqueCategories = useMemo(() => {
+      const cats = new Set(records.map(r => r.type));
+      return ["All", ...Array.from(cats)];
+  }, [records]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
@@ -188,15 +191,41 @@ const Reports = () => {
     setRecords(nextActiveList);
   };
 
+  // --- UPDATED FILTERING LOGIC ---
   const filtered = records.filter((report) => {
     const reportDate = new Date(report.createdAt || report.date);
+    const now = new Date();
+
+    // 1. Search Query
     const matchesSearch =
       report.id?.toString().includes(searchQuery) ||
       report.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.author?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // 2. Exact Date (from FilterBar)
     const matchesDate = !selectedDate || reportDate.toDateString() === new Date(selectedDate).toDateString();
-    const matchesStatus = activeStatus === "All" || report.status?.toLowerCase().includes(activeStatus.toLowerCase());
-    return matchesSearch && matchesDate && matchesStatus;
+
+    // 3. Status
+    const matchesStatus = activeStatus === "All" || report.status?.toLowerCase() === activeStatus.toLowerCase();
+
+    // 4. Category (New)
+    const matchesCategory = selectedCategory === "All" || report.type === selectedCategory;
+
+    // 5. Time Range (New)
+    let matchesTimeRange = true;
+    if (timeRange !== "All") {
+        if (timeRange === "This Week") {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(now.getDate() - 7);
+            matchesTimeRange = reportDate >= oneWeekAgo;
+        } else if (timeRange === "This Month") {
+            matchesTimeRange = reportDate.getMonth() === now.getMonth() && reportDate.getFullYear() === now.getFullYear();
+        } else if (timeRange === "This Year") {
+            matchesTimeRange = reportDate.getFullYear() === now.getFullYear();
+        }
+    }
+
+    return matchesSearch && matchesDate && matchesStatus && matchesCategory && matchesTimeRange;
   });
 
   const paginatedData = useMemo(() => {
@@ -223,9 +252,60 @@ const Reports = () => {
         </div>
       </div>
 
-      <div className="mb-4">
-        <ReportFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+      {/* --- NEW FILTER SECTION --- */}
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        {/* Category Filter */}
+        <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <Tag size={16} />
+            </div>
+            <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-emerald-500 hover:border-slate-300 appearance-none cursor-pointer"
+            >
+                {uniqueCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat === "All" ? "All Categories" : cat}</option>
+                ))}
+            </select>
+        </div>
+
+        {/* Time Period Filter */}
+        <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <Calendar size={16} />
+            </div>
+            <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-emerald-500 hover:border-slate-300 appearance-none cursor-pointer"
+            >
+                <option value="All">All Time</option>
+                <option value="This Week">This Week</option>
+                <option value="This Month">This Month</option>
+                <option value="This Year">This Year</option>
+            </select>
+        </div>
+
+        {/* Status Filter */}
+        <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <Layers size={16} />
+            </div>
+            <select
+                value={activeStatus}
+                onChange={(e) => setActiveStatus(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-emerald-500 hover:border-slate-300 appearance-none cursor-pointer"
+            >
+                <option value="All">All Statuses</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Draft">Draft</option>
+                <option value="Approved">Approved</option>
+            </select>
+        </div>
       </div>
+      {/* --------------------------- */}
 
       {loading ? (
         <div className="p-8 text-center text-slate-500">Loading reports...</div>
@@ -260,12 +340,9 @@ const Reports = () => {
         onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }}
       />
 
-      {/* --- VISUALIZED VIEW MODAL --- */}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
-            
-            {/* Header */}
             <div className="flex justify-between items-center p-6 border-b border-slate-100">
                  <div>
                     <h3 className="text-xl font-bold text-slate-800">Report Details</h3>
@@ -282,24 +359,16 @@ const Reports = () => {
                  </div>
             </div>
             
-            {/* Scrollable Content */}
             <div className="p-6 overflow-y-auto custom-scrollbar">
-                
-                {/* Meta Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                    <Field label="Source Module" value={viewRow.type} />
                    <Field label="Generated By" value={viewRow.author} />
                    <Field label="Submission Date" value={viewRow.date} />
                 </div>
-
                 <hr className="border-slate-100 mb-6" />
-
-                {/* THE NEW VISUAL RENDERER */}
                 <DataRenderer reportPayload={viewRow.data} />
-            
             </div>
 
-            {/* Footer */}
             <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end">
               <button
                 onClick={() => setViewRow(null)}
