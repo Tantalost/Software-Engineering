@@ -7,7 +7,7 @@ const EditLostFound = ({ row, onClose, onSave }) => {
     id: row.id,
     trackingNo: row.trackingno,
     description: row.description,
-    where: row.where,
+    location: row.location,
     dateTime: row.datetime,
     status: row.status,
   });

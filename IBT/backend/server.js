@@ -13,6 +13,8 @@ import waitlistRoutes from "./routes/waitlistRoutes.js";
 import tenantRoutes from "./routes/tenantRoutes.js";
 import parkingRoutes from "./routes/parkingRoutes.js";
 import lostfoundRoutes from "./routes/lostfoundRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+
 
 connectDB();
 connectCloudinary();
@@ -33,6 +35,7 @@ app.use("/api/archives", archiveRoutes);
 app.use("/api/waitlist", waitlistRoutes); 
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/lostfound", lostfoundRoutes);
+app.use('/api/reports', reportRoutes);
 
 const PORT = process.env.PORT || 3000;
 

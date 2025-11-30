@@ -3,14 +3,15 @@ import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
-import TableActions from "../components/common/TableActions"; 
+import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditBusTrip from "../components/bustrips/EditBusTrip";
 import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
-import { Archive, Trash2, LogOut, CheckCircle } from "lucide-react";
+import { submitPageReport } from "../utils/reportService.js";
+import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2 } from "lucide-react";
 
 const TEMPLATE_ROUTES = {
     "T-101": "Iligan - Cagayan de Oro",
@@ -20,39 +21,44 @@ const TEMPLATE_ROUTES = {
 };
 
 const BusTrips = () => {
+    // 1. STATE DECLARATIONS
     const [records, setRecords] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
     const [selectedCompany, setSelectedCompany] = useState("");
-    
-    const [showAddModal, setShowAddModal] = useState(false); 
+
+    const [showAddModal, setShowAddModal] = useState(false);
     const [viewRow, setViewRow] = useState(null);
     const [editRow, setEditRow] = useState(null);
     const [deleteRow, setDeleteRow] = useState(null);
-    const [logoutRow, setLogoutRow] = useState(null); 
-    
+    const [logoutRow, setLogoutRow] = useState(null);
+
     const [showNotify, setShowNotify] = useState(false);
     const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
-   
+
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    
+
+    const [isReporting, setIsReporting] = useState(false);
+    const [showSubmitModal, setShowSubmitModal] = useState(false); 
+
     const role = localStorage.getItem("authRole") || "superadmin";
     const API_URL = "http://localhost:3000/api/bustrips";
 
     const [newBusData, setNewBusData] = useState({
         templateNo: "",
         route: "",
-        company: "Dindo", 
+        company: "Dindo",
         time: "",
-        date: new Date().toISOString().split('T')[0], 
-        status: "Pending" 
+        date: new Date().toISOString().split('T')[0],
+        status: "Pending"
     });
 
     const [ticketRefInput, setTicketRefInput] = useState("");
 
+    // 2. DATA FETCHING
     const fetchBusTrips = async () => {
         setIsLoading(true);
         try {
@@ -75,15 +81,80 @@ const BusTrips = () => {
         fetchBusTrips();
     }, []);
 
+    // 3. COMPUTED VALUES (FILTERING)
     const uniqueCompanies = [...new Set(records.map((bus) => bus.company))];
 
+    const filtered = records.filter((bus) => {
+        const templateNo = bus.templateNo || bus.templateno || "";
+        const matchesSearch =
+            templateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            bus.route.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCompany = selectedCompany === "" || bus.company === selectedCompany;
+        const matchesDate = !selectedDate || new Date(bus.date).toDateString() === new Date(selectedDate).toDateString();
+        return matchesSearch && matchesCompany && matchesDate;
+    });
+
+    // --- UPDATED SUBMIT HANDLER (Saves Report THEN Clears Table) ---
+    const handleSubmitReport = async () => {
+        setIsReporting(true);
+        try {
+            // Step 1: Package the data for the Report
+            const reportPayload = {
+                screen: "Bus Trips Management",
+                generatedDate: new Date().toISOString(),
+                filters: {
+                    searchQuery,
+                    selectedDate,
+                    selectedCompany
+                },
+                statistics: {
+                    totalRecords: records.length,
+                    displayedRecords: filtered.length
+                },
+                data: filtered // Save snapshot of current data
+            };
+
+            // Step 2: Send to Reports Backend
+            await submitPageReport("Bus Trips", reportPayload, "Admin");
+
+            // Step 3: CLEAR THE TABLE (Delete the records from the active DB)
+            // We use Promise.all to delete all filtered records in parallel
+            const deletePromises = filtered.map(item => 
+                fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
+            );
+            
+            await Promise.all(deletePromises);
+
+            // Step 4: UI Updates
+            alert("Report submitted successfully! The table has been cleared for new entries.");
+            setShowSubmitModal(false); 
+            
+            // Step 5: Refresh the list (It should now be empty)
+            fetchBusTrips();
+
+        } catch (error) {
+            console.error(error);
+            alert("Failed to process report. Please try again.");
+        } finally {
+            setIsReporting(false);
+        }
+    };
+    // ---------------------------------------------------------------------------------
+
+    const paginatedData = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filtered.slice(startIndex, startIndex + itemsPerPage);
+    }, [filtered, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+    // 4. HANDLERS
     const handleAddClick = () => {
-       
         setNewBusData({
             templateNo: "",
             route: "",
             company: "Dindo",
-            time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), // Auto Current Time
+            time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
             date: new Date().toISOString().split('T')[0],
             status: "Pending"
         });
@@ -95,7 +166,7 @@ const BusTrips = () => {
         setNewBusData(prev => ({
             ...prev,
             templateNo: tempNo,
-            route: TEMPLATE_ROUTES[tempNo] || "" 
+            route: TEMPLATE_ROUTES[tempNo] || ""
         }));
     };
 
@@ -118,7 +189,7 @@ const BusTrips = () => {
 
     const handleLogoutClick = (row) => {
         setLogoutRow(row);
-        setTicketRefInput(""); 
+        setTicketRefInput("");
     };
 
     const confirmLogout = async () => {
@@ -127,14 +198,14 @@ const BusTrips = () => {
         const changes = {
             ticketReferenceNo: ticketRefInput,
             status: "Paid",
-            departureTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) // Saves as HH:mm
+            departureTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
         };
 
         try {
             const response = await fetch(`${API_URL}/${logoutRow.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(changes), 
+                body: JSON.stringify(changes),
             });
 
             if (response.ok) {
@@ -153,7 +224,7 @@ const BusTrips = () => {
             if (response.ok) {
                 setRecords(prev => prev.filter((r) => r.id !== deleteRow.id));
             }
-        } catch (error) { console.error("Error deleting:", error); } 
+        } catch (error) { console.error("Error deleting:", error); }
         finally { setDeleteRow(null); }
     };
 
@@ -173,37 +244,19 @@ const BusTrips = () => {
     };
 
     const handleArchive = async (rowToArchive) => {
-        
         console.log("Archive logic here for", rowToArchive);
     };
-
-    const filtered = records.filter((bus) => {
-        const templateNo = bus.templateNo || bus.templateno || "";
-        const matchesSearch =
-            templateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            bus.route.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCompany = selectedCompany === "" || bus.company === selectedCompany;
-        const matchesDate = !selectedDate || new Date(bus.date).toDateString() === new Date(selectedDate).toDateString();
-        return matchesSearch && matchesCompany && matchesDate;
-    });
-
-    const paginatedData = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return filtered.slice(startIndex, startIndex + itemsPerPage);
-    }, [filtered, currentPage, itemsPerPage]);
-
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
     const formatTime = (timeStr) => {
         if (!timeStr) return "";
         try {
-            return new Date(`1970-01-01T${timeStr}`).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
+            return new Date(`1970-01-01T${timeStr}`).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
             });
         } catch (e) {
-            return timeStr; 
+            return timeStr;
         }
     };
 
@@ -221,10 +274,22 @@ const BusTrips = () => {
                         uniqueCompanies={uniqueCompanies}
                     />
                     <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
+                        
+                        {(role === "bus") && (
+                            <button
+                                onClick={() => setShowSubmitModal(true)}
+                                disabled={isReporting}
+                                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+                            >
+                                <FileText size={18} />
+                                <span>Submit Report</span>
+                            </button>
+                        )}
+
                         <button onClick={handleAddClick} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
                             + Add Bus
                         </button>
-                        
+
                         {role === "superadmin" && (
                             <button onClick={() => setShowNotify(true)} className="flex items-center justify-center space-x-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all w-full sm:w-auto">
                                 Notify
@@ -241,52 +306,45 @@ const BusTrips = () => {
                 ) : (
                     <Table
                         columns={["Template No", "Ticket Ref", "Route", "Time", "Departure", "Date", "Company", "Status"]}
-    
-                            data={paginatedData.map((bus) => ({
-                                id: bus.id,
-                                templateno: bus.templateNo || bus.templateno,
-                                route: bus.route,
-    
-                                time: formatTime(bus.time),
-                                rawTime: bus.time,
-                                departure: formatTime(bus.departureTime),
-                                rawDepartureTime: bus.departureTime, 
-
-                                date: bus.date ? new Date(bus.date).toLocaleDateString() : "",
-                                rawDate: bus.date,
-
-                                company: bus.company,
-                                status: bus.status,
-                                ticketref: bus.ticketReferenceNo || "-"
-                        
-                            }))}
-                        
-                            actions={(row) => (
-                                <div className="flex justify-end items-center space-x-2">
-                                    {row.status === "Pending" && (
-                                        <button 
-                                            onClick={() => handleLogoutClick(row)} 
-                                            title="Log Out (Depart)"
-                                            className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
-                                            >
-                                            <LogOut size={16} /> 
-                                            <span className="text-xs font-medium">Depart</span>
-                                        </button>
-                                    )}
-                                
-                                    <TableActions
-                                        onView={() => setViewRow(row)}
-                                        onEdit={() => setEditRow(row)}
-                                        onDelete={() => setDeleteRow(row)}
-                                    />
-                                    <button onClick={() => handleArchive(row)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
-                                        <Archive size={16} />
+                        data={paginatedData.map((bus) => ({
+                            id: bus.id,
+                            templateno: bus.templateNo || bus.templateno,
+                            route: bus.route,
+                            time: formatTime(bus.time),
+                            rawTime: bus.time,
+                            departure: formatTime(bus.departureTime),
+                            rawDepartureTime: bus.departureTime,
+                            date: bus.date ? new Date(bus.date).toLocaleDateString() : "",
+                            rawDate: bus.date,
+                            company: bus.company,
+                            status: bus.status,
+                            ticketref: bus.ticketReferenceNo || "-"
+                        }))}
+                        actions={(row) => (
+                            <div className="flex justify-end items-center space-x-2">
+                                {row.status === "Pending" && (
+                                    <button
+                                        onClick={() => handleLogoutClick(row)}
+                                        title="Log Out (Depart)"
+                                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
+                                    >
+                                        <LogOut size={16} />
+                                        <span className="text-xs font-medium">Depart</span>
                                     </button>
-                                    <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            )}
+                                )}
+                                <TableActions
+                                    onView={() => setViewRow(row)}
+                                    onEdit={() => setEditRow(row)}
+                                    onDelete={() => setDeleteRow(row)}
+                                />
+                                <button onClick={() => handleArchive(row)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                                    <Archive size={16} />
+                                </button>
+                                <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        )}
                     />
                 )}
                 <Pagination
@@ -305,7 +363,6 @@ const BusTrips = () => {
                         <h3 className="mb-4 text-xl font-bold text-slate-800">Add New Bus Trip</h3>
                         <form onSubmit={handleCreateRecord}>
                             <div className="space-y-4">
-                                
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-2">Company</label>
                                     <div className="flex p-1 bg-slate-100 rounded-lg">
@@ -314,11 +371,10 @@ const BusTrips = () => {
                                                 type="button"
                                                 key={company}
                                                 onClick={() => setNewBusData({ ...newBusData, company })}
-                                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                                                    newBusData.company === company
-                                                        ? "bg-white text-emerald-600 shadow-sm"
-                                                        : "text-slate-500 hover:text-slate-700"
-                                                }`}
+                                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${newBusData.company === company
+                                                    ? "bg-white text-emerald-600 shadow-sm"
+                                                    : "text-slate-500 hover:text-slate-700"
+                                                    }`}
                                             >
                                                 {company}
                                             </button>
@@ -353,34 +409,29 @@ const BusTrips = () => {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Arrival Time</label>
                                         <input
                                             type="time"
                                             value={newBusData.time}
-                                            onChange={(e) => setNewBusData({...newBusData, time: e.target.value})}
+                                            onChange={(e) => setNewBusData({ ...newBusData, time: e.target.value })}
                                             className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500"
                                         />
                                     </div>
-                                   
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
                                         <input
                                             type="date"
                                             value={newBusData.date}
-                                            onChange={(e) => setNewBusData({...newBusData, date: e.target.value})}
+                                            onChange={(e) => setNewBusData({ ...newBusData, date: e.target.value })}
                                             className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500"
                                         />
                                     </div>
                                 </div>
-                                
-                              
                                 <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-100 flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                                     Status will be set to <strong>Pending</strong>
                                 </div>
-
                             </div>
 
                             <div className="mt-6 flex justify-end gap-3">
@@ -403,7 +454,6 @@ const BusTrips = () => {
                 </div>
             )}
 
-           
             {logoutRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg transform transition-all">
@@ -413,9 +463,9 @@ const BusTrips = () => {
                             </div>
                             <h3 className="text-lg font-bold text-slate-800">Confirm Departure</h3>
                         </div>
-                        
+
                         <p className="text-sm text-slate-600 mb-4">
-                            You are about to log out bus <strong>{logoutRow.templateno}</strong> ({logoutRow.company}). 
+                            You are about to log out bus <strong>{logoutRow.templateno}</strong> ({logoutRow.company}).
                             Please enter the ticket reference number to proceed.
                         </p>
 
@@ -430,9 +480,9 @@ const BusTrips = () => {
                                 className="w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                             />
                         </div>
-                        
-                         <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-700 border border-yellow-100 mb-4">
-                             Status will change from <strong>Pending</strong> to <strong>Paid</strong>.
+
+                        <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-700 border border-yellow-100 mb-4">
+                            Status will change from <strong>Pending</strong> to <strong>Paid</strong>.
                         </div>
 
                         <div className="flex justify-end gap-3">
@@ -445,11 +495,10 @@ const BusTrips = () => {
                             <button
                                 onClick={confirmLogout}
                                 disabled={!ticketRefInput}
-                                className={`rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm ${
-                                    ticketRefInput 
-                                    ? "bg-emerald-600 hover:bg-emerald-700" 
+                                className={`rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm ${ticketRefInput
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
                                     : "bg-emerald-300 cursor-not-allowed"
-                                }`}
+                                    }`}
                             >
                                 Confirm Departure
                             </button>
@@ -457,7 +506,46 @@ const BusTrips = () => {
                     </div>
                 </div>
             )}
-            
+
+            {showSubmitModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+                        <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
+                        <p className="mt-2 text-sm text-slate-600">
+                            Are you sure you want to capture and submit the current bus trips report?
+                            <br />
+                            <span className="text-red-500 font-semibold text-xs">
+                                Note: This will clear the current table for new entries.
+                            </span>
+                        </p>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowSubmitModal(false)}
+                                disabled={isReporting}
+                                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmitReport}
+                                disabled={isReporting}
+                                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                {isReporting ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        <span>Submitting...</span>
+                                    </>
+                                ) : (
+                                    <span>Confirm Submit</span>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {viewRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
@@ -482,9 +570,9 @@ const BusTrips = () => {
             {editRow && (
                 <EditBusTrip
                     row={editRow}
-                    templates={TEMPLATE_ROUTES} // <--- ADD THIS PROP
+                    templates={TEMPLATE_ROUTES}
                     onClose={() => setEditRow(null)}
-                    onSave={handleUpdateRecord} 
+                    onSave={handleUpdateRecord}
                 />
             )}
 
@@ -507,13 +595,13 @@ const BusTrips = () => {
                         </div>
                         <div className="mt-4 flex justify-end gap-2">
                             <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-                            <button onClick={() => { 
-                                const raw = localStorage.getItem("ibt_notifications"); 
-                                const list = raw ? JSON.parse(raw) : []; 
-                                list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Bus Trips" }); 
-                                localStorage.setItem("ibt_notifications", JSON.stringify(list)); 
-                                setShowNotify(false); 
-                                setNotifyDraft({ title: "", message: "" }); 
+                            <button onClick={() => {
+                                const raw = localStorage.getItem("ibt_notifications");
+                                const list = raw ? JSON.parse(raw) : [];
+                                list.push({ id: Date.now(), title: notifyDraft.title, message: notifyDraft.message, date: new Date().toISOString().slice(0, 10), source: "Bus Trips" });
+                                localStorage.setItem("ibt_notifications", JSON.stringify(list));
+                                setShowNotify(false);
+                                setNotifyDraft({ title: "", message: "" });
                             }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
                         </div>
                     </div>
