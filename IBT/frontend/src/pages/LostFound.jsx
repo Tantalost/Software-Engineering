@@ -180,16 +180,36 @@ const LostFound = () => {
   });
 
   // --- SUBMIT REPORT HANDLER ---
+  // --- UPDATED SUBMIT HANDLER ---
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-      // 1. Package Data
+      // 1. Format Data & Remove Unwanted Columns
+      const formattedData = filtered.map(item => {
+        // Destructure to separate unwanted fields
+        const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
+
+        return {
+          ...rest, // Keep trackingNo, description, location, status, etc.
+          // Format the DateTime to be readable (e.g., "11/30/2025, 2:30 PM")
+          dateTime: rest.dateTime ? new Date(rest.dateTime).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }) : "-"
+        };
+      });
+
+      // 2. Package Data
       const reportPayload = {
         screen: "Lost & Found Log",
-        generatedDate: new Date().toISOString(),
+        generatedDate: new Date().toLocaleString(), // Readable report date
         filters: {
           searchQuery,
-          selectedDate,
+          selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
           activeStatus
         },
         statistics: {
@@ -198,20 +218,20 @@ const LostFound = () => {
           unclaimed: filtered.filter(i => i.status === "Unclaimed").length,
           claimed: filtered.filter(i => i.status === "Claimed").length
         },
-        data: filtered
+        data: formattedData // <--- Send cleaned data
       };
 
-      // 2. Submit to Backend
+      // 3. Submit to Backend
       await submitPageReport("Lost & Found", reportPayload, "LostFound Admin");
 
-      // 3. Clear Table (Bulk Delete)
+      // 4. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item =>
         fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
       );
 
       await Promise.all(deletePromises);
 
-      // 4. Update UI
+      // 5. Update UI
       alert("Report submitted successfully! The table has been cleared.");
       setShowSubmitModal(false);
       fetchLostFound();

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks } from "lucide-react"; 
+import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks, FileText } from "lucide-react"; 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -21,7 +21,7 @@ import RequestDeletionModal from "../components/common/RequestDeletionModal";
 import StatCardGroupTerminal from "../components/terminal/StatCardGroupTerminal";
 import TerminalFilter from "../components/terminal/TerminalFilter";
 import { logActivity } from "../utils/logger";
-import { submitPageReport } from "../utils/reportService"; // <--- IMPORT SERVICE
+import { submitPageReport } from "../utils/reportService"; 
 
 const API_URL = "http://localhost:3000/api";
 
@@ -87,31 +87,46 @@ const TerminalFees = () => {
     fetchFees();
   }, []);
 
-  // --- 1. MOVED UP: Derived State (Must be defined before they are used in handlers) ---
+  // --- 1. Derived State ---
 
   const filtered = useMemo(() => {
     return records.filter((fee) => {
-      const matchesSearch = fee.passengerType.toLowerCase().includes(searchQuery.toLowerCase());
+      const pType = (fee.passengerType || "").toLowerCase();
+      const aType = activeType.toLowerCase();
+      const matchesSearch = pType.includes(searchQuery.toLowerCase());
       const matchesDate = selectedDate ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString() : true;
-      const matchesType = activeType === "All" || fee.passengerType.toLowerCase().includes(activeType.toLowerCase());
+      
+      let matchesType = false;
+      if (aType === "all") {
+        matchesType = true;
+      } else if (aType.includes("senior") || aType.includes("pwd")) {
+        matchesType = pType.includes("senior") || pType.includes("pwd");
+      } else {
+        matchesType = pType.includes(aType);
+      }
+
       return matchesSearch && matchesDate && matchesType;
     });
   }, [records, searchQuery, selectedDate, activeType]);
 
   const stats = useMemo(() => ({
-    regular: filtered.filter(f => (f.passengerType || "").toLowerCase() === "regular").length,
-    student: filtered.filter(f => (f.passengerType || "").toLowerCase() === "student").length,
-    senior: filtered.filter(f => (f.passengerType || "").toLowerCase() === "senior citizen / pwd").length,
+    regular: filtered.filter(f => (f.passengerType || "").toLowerCase().includes("regular")).length,
+    student: filtered.filter(f => (f.passengerType || "").toLowerCase().includes("student")).length,
+    senior: filtered.filter(f => {
+      const type = (f.passengerType || "").toLowerCase();
+      return type.includes("senior") || type.includes("pwd");
+    }).length,
     total: filtered.length,
     revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0)
   }), [filtered]);
 
+  // THIS WAS MISSING:
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filtered.slice(startIndex, startIndex + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-  // --- 2. Handlers using Derived State ---
+  // --- 2. Handlers ---
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) {
@@ -136,13 +151,88 @@ const TerminalFees = () => {
     }
   };
 
-  // This variable relies on paginatedData, so it must be after the useMemo above
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item._id || item.id));
 
   const showToastMessage = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 3000); 
   };
+
+  // --- UPDATED SUBMIT HANDLER (Report & Clear) ---
+  const handleSubmitReport = async () => {
+    setIsReporting(true);
+    try {
+      // 1. Helper to ensure consistent 12-hour AM/PM format
+      const to12HourFormat = (timeStr) => {
+        if (!timeStr) return "-";
+        // Check if it's already in AM/PM format
+        if (timeStr.includes("M") || timeStr.includes("m")) return timeStr;
+        
+        try {
+          return new Date(`1970-01-01T${timeStr}`).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+        } catch (e) {
+          return timeStr;
+        }
+      };
+
+      const formattedData = filtered.map(item => {
+        
+        const { createdAt, updatedAt, __v, _id, isArchived, status,...rest } = item;
+
+        return {
+          ...rest, // Keep ticketNo, passengerType, price
+          price: typeof rest.price === 'number' ? `₱${rest.price.toFixed(2)}` : rest.price,
+          date: rest.date ? new Date(rest.date).toLocaleDateString() : "-",
+          time: to12HourFormat(rest.time)
+        };
+      });
+
+      // 3. Package Data
+      const reportPayload = {
+        screen: "Terminal Fees Management",
+        generatedDate: new Date().toLocaleString(),
+        filters: {
+          searchQuery,
+          selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
+          activeType
+        },
+        statistics: {
+           totalPassengers: stats.total,
+           totalRevenue: stats.revenue,
+           regularCount: stats.regular,
+           studentCount: stats.student,
+           seniorCount: stats.senior
+        },
+        data: formattedData 
+      };
+
+      // 4. Submit to Backend
+      await submitPageReport("Terminal Fees", reportPayload, "Ticket Admin");
+
+      // 5. Clear Table (Bulk Delete)
+      const deletePromises = filtered.map(item => 
+          fetch(`${API_URL}/terminal-fees/${item._id || item.id}`, { method: 'DELETE' })
+      );
+      
+      await Promise.all(deletePromises);
+
+      // 6. Update UI
+      showToastMessage("Report submitted successfully! Table cleared.");
+      setShowSubmitModal(false);
+      fetchFees();
+
+    } catch (error) {
+      console.error(error);
+      showToastMessage("Failed to submit report.");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+  // ------------------------------------------------
 
   const handleBulkDelete = async () => {
     const confirmMsg = role === "ticket" 
@@ -381,24 +471,17 @@ const TerminalFees = () => {
   };
 
   const exportToCSV = () => {
-    // Define headers
     const headers = ["Ticket No", "Passenger Type", "Price", "Time"];
-    
-    // Map the current filtered data to rows
     const rows = filtered.map(item => [
       item.ticketNo,
       item.passengerType,
       item.price.toFixed(2),
       item.time
     ]);
-
-    // Combine headers and rows
     const csvContent = [
       headers.join(","), 
       ...rows.map(row => row.join(","))
     ].join("\n");
-
-    // Create a blob and download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -409,15 +492,10 @@ const TerminalFees = () => {
     document.body.removeChild(link);
   };
 
-  // 2. Export to PDF
   const exportToPDF = () => {
     const doc = new jsPDF();
-
-    // Add Title
     doc.text("Terminal Fees Report", 14, 20);
     doc.setFontSize(10);
-
-    // Define columns and rows
     const tableColumn = ["Ticket No", "Passenger Type", "Price", "Date", "Time"];
     const tableRows = filtered.map(item => [
       item.ticketNo,
@@ -425,21 +503,17 @@ const TerminalFees = () => {
       `P${item.price.toFixed(2)}`,
       item.time
     ]);
-
-    // Generate table
     autoTable(doc, {
       startY: 35,
       head: [tableColumn],
       body: tableRows,
       theme: 'grid',
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [16, 185, 129] } // Emerald color to match your theme
+      headStyles: { fillColor: [16, 185, 129] }
     });
-
-    // Save
     doc.save(`terminal_fees_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
-  // Define Columns dynamically based on Selection Mode
+
   const tableColumns = isSelectionMode 
     ? [
         <div key="header-check" className="flex items-center">
@@ -458,7 +532,6 @@ const TerminalFees = () => {
       ]
     : ["Ticket No", "Passenger Type", "Time", "Date", "Price"];
 
-  
   return (
     <Layout title="Terminal Fees Management">
       <div className="mb-6">
@@ -515,7 +588,7 @@ const TerminalFees = () => {
 
      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
   
-  {/* LEFT SIDE: Filter (Scrollable on mobile or full width) */}
+  {/* LEFT SIDE: Filter */}
   <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
     <TerminalFilter activeType={activeType} onTypeChange={setActiveType} />
   </div>
@@ -523,7 +596,6 @@ const TerminalFees = () => {
   {/* RIGHT SIDE: Bulk Actions, Logs, and Toggle */}
   <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
     
-    {/* Ticket Role Log Button */}
     {role === "ticket" && (
       <button 
         onClick={() => setShowLogModal(true)} 
@@ -531,12 +603,10 @@ const TerminalFees = () => {
         title="View Logs"
       >
         <History size={18} /> 
-        {/* Hidden on small mobile, visible on tablet+ */}
         <span className="hidden sm:inline">Logs</span>
       </button>
     )}
     
-    {/* Bulk Action Indicator */}
     {isSelectionMode && selectedIds.length > 0 && (
       <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
         <span className="text-xs font-semibold text-slate-600 px-1 sm:px-2 whitespace-nowrap">
@@ -553,7 +623,6 @@ const TerminalFees = () => {
       </div>
     )}
 
-    {/* Selection Mode Toggle */}
     <button
       onClick={toggleSelectionMode}
       title={isSelectionMode ? "Cancel Selection" : "Select Records"}
@@ -750,77 +819,77 @@ const TerminalFees = () => {
         </div>
       )}
 
-{editRow && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-lg font-bold text-slate-800">Edit Terminal Fee</h3>
-        <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-      </div>
+    {editRow && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-lg font-bold text-slate-800">Edit Terminal Fee</h3>
+            <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
-          const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? 10.0 : 15.0;
-          const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
-          return (
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
+              const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? 10.0 : 15.0;
+              const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setEditRow(prev => ({ ...prev, passengerType: type, price: newPrice }))}
+                  className={`py-2 px-1 rounded-lg text-xs font-semibold border ${active ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
+                >
+                  {type === "Senior Citizen / PWD" ? "Senior/PWD" : type}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Price</label>
+              <input
+                type="number"
+                value={editRow.price ?? 0}
+                disabled
+                className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Date</label>
+              <input
+                type="text"
+                value={
+                  editRow.date
+                    ? new Date(editRow.date).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""
+                }
+                disabled
+                className="w-full bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+            <button onClick={() => setEditRow(null)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Cancel</button>
             <button
-              key={type}
-              type="button"
-              onClick={() => setEditRow(prev => ({ ...prev, passengerType: type, price: newPrice }))}
-              className={`py-2 px-1 rounded-lg text-xs font-semibold border ${active ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
+              onClick={() => {
+                handleEditSubmit(editRow);
+                setEditRow(null);
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg"
             >
-              {type === "Senior Citizen / PWD" ? "Senior/PWD" : type}
+              Save Changes
             </button>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Price</label>
-          <input
-            type="number"
-            value={editRow.price ?? 0}
-            disabled
-            className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-semibold"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Date</label>
-          <input
-            type="text"
-            value={
-              editRow.date
-                ? new Date(editRow.date).toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : ""
-            }
-            disabled
-            className="w-full bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg text-sm"
-          />
+          </div>
         </div>
       </div>
-
-      <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-        <button onClick={() => setEditRow(null)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Cancel</button>
-        <button
-          onClick={() => {
-            handleEditSubmit(editRow);
-            setEditRow(null);
-          }}
-          className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg"
-        >
-          Save Changes
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+    )}
 
       {toast && (
         <div className="fixed bottom-5 right-5 z-[100] flex items-center gap-3 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl animate-in slide-in-from-bottom-5 fade-in">

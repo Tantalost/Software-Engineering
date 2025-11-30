@@ -223,16 +223,45 @@ const Parking = () => {
   const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
 
   // --- SUBMIT REPORT HANDLER ---
+ // --- UPDATED SUBMIT HANDLER ---
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-      // 1. Package Data
+      // 1. Helper to format date/time to "11/30/2025, 2:30 PM"
+      const formatDateTime = (dateStr) => {
+        if (!dateStr) return "-";
+        return new Date(dateStr).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      };
+
+      // 2. Format Data & Remove Unwanted Columns
+     // Inside Parking.jsx -> handleSubmitReport function
+
+const formattedData = filtered.map(item => {
+  // FIND THIS LINE:
+  // Add 'isArchived' to this list to remove it from the final report
+  const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
+
+  return {
+    ...rest, 
+    timeIn: formatDateTime(rest.timeIn),
+    timeOut: rest.timeOut ? formatDateTime(rest.timeOut) : "Parked (Active)"
+  };
+});
+
+      // 3. Package Data
       const reportPayload = {
         screen: "Parking Management",
-        generatedDate: new Date().toISOString(),
+        generatedDate: new Date().toLocaleString(), // Readable report date
         filters: {
            searchQuery,
-           selectedDate,
+           selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
            activeType
         },
         statistics: {
@@ -241,20 +270,20 @@ const Parking = () => {
             totalVehicles: filtered.length,
             totalRevenue: revenue
         },
-        data: filtered 
+        data: formattedData // <--- Send cleaned data
       };
 
-      // 2. Submit to Backend
+      // 4. Submit to Backend
       await submitPageReport("Parking", reportPayload, "Parking Admin");
 
-      // 3. Clear Table (Bulk Delete)
+      // 5. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item => 
           fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
       );
       
       await Promise.all(deletePromises);
 
-      // 4. Update UI
+      // 6. Update UI
       alert("Report submitted successfully! The table has been cleared.");
       setShowSubmitModal(false);
       fetchParkingTickets();
