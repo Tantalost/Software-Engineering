@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks } from "lucide-react"; 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
@@ -372,6 +374,65 @@ const TerminalFees = () => {
     }
   };
 
+  const exportToCSV = () => {
+    // Define headers
+    const headers = ["Ticket No", "Passenger Type", "Price", "Time"];
+    
+    // Map the current filtered data to rows
+    const rows = filtered.map(item => [
+      item.ticketNo,
+      item.passengerType,
+      item.price.toFixed(2),
+      item.time
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","), 
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    // Create a blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `terminal_fees_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 2. Export to PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    // Add Title
+    doc.text("Terminal Fees Report", 14, 20);
+    doc.setFontSize(10);
+
+    // Define columns and rows
+    const tableColumn = ["Ticket No", "Passenger Type", "Price", "Date", "Time"];
+    const tableRows = filtered.map(item => [
+      item.ticketNo,
+      item.passengerType,
+      `P${item.price.toFixed(2)}`,
+      item.time
+    ]);
+
+    // Generate table
+    autoTable(doc, {
+      startY: 35,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [16, 185, 129] } // Emerald color to match your theme
+    });
+
+    // Save
+    doc.save(`terminal_fees_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
   // Define Columns dynamically based on Selection Mode
   const tableColumns = isSelectionMode 
     ? [
@@ -433,7 +494,10 @@ const TerminalFees = () => {
               Submit Report
             </button>
           )}
-          <ExportMenu onExportCSV={() => {}} onPrint={() => window.print()} />
+          <ExportMenu 
+            onExportExcel={exportToCSV} 
+            onExportPDF={exportToPDF} 
+          />
         </div>
       </div>
 
