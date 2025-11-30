@@ -276,6 +276,16 @@ const formattedData = filtered.map(item => {
       // 4. Submit to Backend
       await submitPageReport("Parking", reportPayload, "Parking Admin");
 
+      await fetch("http://localhost:3000/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Report Submitted: Parking Report",
+          message: "A new Parking Management report has been generated and the active log has been cleared.",
+          source: "Parking"
+        }),
+      });
+
       // 5. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item => 
           fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })

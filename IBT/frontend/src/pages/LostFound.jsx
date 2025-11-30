@@ -224,6 +224,16 @@ const LostFound = () => {
       // 3. Submit to Backend
       await submitPageReport("Lost & Found", reportPayload, "LostFound Admin");
 
+      await fetch("http://localhost:3000/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Report Submitted: Lost & Found Report",
+          message: "A new Lost & Found report has been generated and the active log has been cleared.",
+          source: "Lost & Found"
+        }),
+      });
+
       // 4. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item =>
         fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })

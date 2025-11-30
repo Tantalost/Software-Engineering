@@ -11,6 +11,7 @@ import DeleteModal from "../components/common/DeleteModal";
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import { submitPageReport } from "../utils/reportService.js";
+import { sendNotification } from "../utils/notificationService.js";
 import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2 } from "lucide-react";
 
 const TEMPLATE_ROUTES = {
@@ -146,6 +147,12 @@ const BusTrips = () => {
             // Step 4: Send to Reports Backend
             await submitPageReport("Bus Trips", reportPayload, "Admin");
 
+            await sendNotification(
+                "Report Submitted: Bus Report", 
+                `A Bus Trips report was successfully submitted by ${role === 'bus' ? 'Bus Admin' : 'Admin'}.`,
+                "Bus Trips"
+            );
+
             // Step 5: CLEAR THE TABLE
             const deletePromises = filtered.map(item => 
                 fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
@@ -153,10 +160,10 @@ const BusTrips = () => {
             
             await Promise.all(deletePromises);
 
-            // Step 6: UI Updates
-            alert("Report submitted successfully! The table has been cleared for new entries.");
+            alert("Report submitted successfully!");
             setShowSubmitModal(false); 
-            
+            fetchBusTrips();
+ 
             // Step 7: Refresh the list
             fetchBusTrips();
 

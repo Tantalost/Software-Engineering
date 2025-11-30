@@ -8,6 +8,8 @@ const Topbar = ({ title, onMenuClick }) => {
   const [showUser, setShowUser] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const role = (typeof window !== "undefined" && localStorage.getItem("authRole")) || "superadmin";
   const userLabel = role === "parking" ? "Parking Admin" : 
   role === "lostfound" ? "Lostfound Admin" : 
@@ -17,16 +19,27 @@ const Topbar = ({ title, onMenuClick }) => {
   const bellRef = useRef(null);
   const userRef = useRef(null);
 
-  useEffect(() => {
+  const fetchNotifications = async () => {
     try {
-      const raw = localStorage.getItem("ibt_notifications");
-      const list = raw ? JSON.parse(raw) : [];
-      const sorted = [...list].sort((a, b) => (b.id || 0) - (a.id || 0));
-      setNotifications(sorted.slice(0, 3));
-    } catch {
-      setNotifications([]);
+      const res = await fetch("http://localhost:3000/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        // Update the list for the dropdown
+        setNotifications(data.slice(0, 5)); 
+        // Calculate unread count
+        const unread = data.filter(n => !n.read).length;
+        setUnreadCount(unread);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
     }
-  }, [showBell]);
+  };
+
+  useEffect(() => {
+    fetchNotifications(); // Initial fetch
+    const interval = setInterval(fetchNotifications, 10000); // Poll every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -58,13 +71,16 @@ const Topbar = ({ title, onMenuClick }) => {
 
             <div className="flex items-center space-x-3">
               <div className="hidden sm:block relative" ref={bellRef}>
-                <button
+               <button
                   onClick={() => setShowBell((s) => !s)}
                   className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative cursor-pointer"
                 >
                   <Bell size={22} className="text-gray-600" />
-                  {notifications.length > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white animate-bounce">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
                   )}
                 </button>
                 {showBell && (

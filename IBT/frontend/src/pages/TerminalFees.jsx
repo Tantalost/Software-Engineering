@@ -212,6 +212,15 @@ const TerminalFees = () => {
 
       // 4. Submit to Backend
       await submitPageReport("Terminal Fees", reportPayload, "Ticket Admin");
+      await fetch("http://localhost:3000/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Report Submitted: Terminal Fees Reports",
+          message: "A new Terminal Fees report has been generated and the active log has been cleared.",
+          source: "Terminal Fees"
+        }),
+      });
 
       // 5. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item => 
