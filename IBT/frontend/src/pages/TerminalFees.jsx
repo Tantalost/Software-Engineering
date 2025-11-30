@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History } from "lucide-react"; 
+import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks } from "lucide-react"; 
 
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
@@ -7,15 +7,11 @@ import ExportMenu from "../components/common/exportMenu";
 
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
-
-import SelectField from "../components/common/SelectField";
-
 import Pagination from "../components/common/Pagination";
 
 import Input from "../components/common/Input";
 import Textarea from "../components/common/Textarea";
 import ViewModal from "../components/common/ViewModal";
-import EditModal from "../components/common/EditModal";
 import DeleteModal from "../components/common/DeleteModal"; 
 import LogModal from "../components/common/LogModal"; 
 import SecurityCheckModal from "../components/common/SecurityCheckModal"; 
@@ -35,6 +31,11 @@ const TerminalFees = () => {
   const [activeType, setActiveType] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Selection Mode State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
@@ -74,13 +75,118 @@ const TerminalFees = () => {
     }
   };
 
- useEffect(() => {
+  useEffect(() => {
     fetchFees();
   }, []);
+
+  // --- 1. MOVED UP: Derived State (Must be defined before they are used in handlers) ---
+
+  const filtered = useMemo(() => {
+    return records.filter((fee) => {
+      const matchesSearch = fee.passengerType.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDate = selectedDate ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString() : true;
+      const matchesType = activeType === "All" || fee.passengerType.toLowerCase().includes(activeType.toLowerCase());
+      return matchesSearch && matchesDate && matchesType;
+    });
+  }, [records, searchQuery, selectedDate, activeType]);
+
+  const stats = useMemo(() => ({
+    regular: filtered.filter(f => (f.passengerType || "").toLowerCase() === "regular").length,
+    student: filtered.filter(f => (f.passengerType || "").toLowerCase() === "student").length,
+    senior: filtered.filter(f => (f.passengerType || "").toLowerCase() === "senior citizen / pwd").length,
+    total: filtered.length,
+    revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0)
+  }), [filtered]);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  // --- 2. Handlers using Derived State ---
+
+  const toggleSelectionMode = () => {
+    if (isSelectionMode) {
+        setSelectedIds([]); 
+    }
+    setIsSelectionMode(!isSelectionMode);
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const ids = paginatedData.map(item => item._id || item.id);
+      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+    } else {
+        const pageIds = paginatedData.map(item => item._id || item.id);
+        setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  // This variable relies on paginatedData, so it must be after the useMemo above
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item._id || item.id));
 
   const showToastMessage = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 3000); 
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmMsg = role === "ticket" 
+        ? `Request deletion for ${selectedIds.length} records?` 
+        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsLoading(true);
+    try {
+        if (role === "ticket") {
+            const requestPromises = selectedIds.map(async (id) => {
+                const item = records.find(r => (r._id || r.id) === id);
+                if (!item) return;
+
+                return fetch(`${API_URL}/deletion-requests`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        itemType: "Terminal Fee",
+                        itemDescription: `Ticket #${item.ticketNo} - ${item.passengerType}`,
+                        requestedBy: "Ticket Admin",
+                        originalData: item, 
+                        reason: "Bulk deletion request"
+                    })
+                });
+            });
+
+            await Promise.all(requestPromises);
+            await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} tickets`, "TerminalFees");
+            showToastMessage(`Sent deletion requests for ${selectedIds.length} records.`);
+
+        } else {
+            const deletePromises = selectedIds.map(id => 
+                fetch(`${API_URL}/terminal-fees/${id}`, { method: "DELETE" })
+            );
+            
+            await Promise.all(deletePromises);
+            await logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} tickets via bulk action`, "TerminalFees");
+            showToastMessage(`Successfully deleted ${selectedIds.length} records`);
+            await fetchFees(); 
+        }
+
+        setSelectedIds([]);
+        setIsSelectionMode(false);
+
+    } catch (error) {
+      console.error("Bulk action failed", error);
+      showToastMessage("Failed to process some records.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const executeUpdate = async (data) => {
@@ -96,14 +202,7 @@ const TerminalFees = () => {
       if (!res.ok) throw new Error("Update failed");
 
       await fetchFees(); 
-      
-      await logActivity(
-        role, 
-        "UPDATE_TICKET", 
-        `Updated Ticket #${data.ticketNo}. Changed type to ${data.passengerType}.`, 
-        "TerminalFees"
-      );
-      
+      await logActivity(role, "UPDATE_TICKET", `Updated Ticket #${data.ticketNo}.`, "TerminalFees");
       showToastMessage("Record updated successfully!"); 
     } catch (error) {
       console.error(error);
@@ -113,19 +212,15 @@ const TerminalFees = () => {
 
  const handleEditSubmit = (updatedData) => {
     if (!editRow) return;
-    
     const finalData = { ...editRow, ...updatedData };
 
     if (role === "superadmin") {
         executeUpdate(finalData); 
         setEditRow(null);        
-    } 
-    
-    else if (role === "ticket") {
+    } else if (role === "ticket") {
         setPendingEdit(finalData); 
         setEditRow(null); 
         setConfirmAction("edit"); 
-        
         setPasswordInput(""); 
         setPasswordError("");
         setShowPasswordModal(true); 
@@ -164,9 +259,7 @@ const TerminalFees = () => {
             });
 
             if (!res.ok) throw new Error("Failed to send request");
-
             await logActivity(role, "REQUEST_DELETE", `Requested deletion: Ticket #${deleteRow.ticketNo}`, "TerminalFees");
-            
             showToastMessage("Deletion request sent to Superadmin.");
             setDeleteRow(null);
             setDeleteRemarks(""); 
@@ -180,15 +273,11 @@ const TerminalFees = () => {
 
      if (role === "superadmin") {
           const idToDelete = deleteRow._id || deleteRow.id;
-
           if (!idToDelete) {
-             console.error("Error: Record ID is missing", deleteRow);
              showToastMessage("System Error: Cannot delete (Missing ID)");
              return;
           }
-
           await executeDelete(idToDelete, deleteRow.ticketNo);
-          
           setDeleteRow(null);
           return;
       }
@@ -196,7 +285,6 @@ const TerminalFees = () => {
       setPendingEdit(deleteRow);
       setDeleteRow(null);
       setConfirmAction("delete");
-      
       setPasswordInput("");
       setPasswordError("");
       setShowPasswordModal(true);
@@ -208,26 +296,20 @@ const TerminalFees = () => {
         : (localStorage.getItem("authPassword") || "admin123");
 
     if (passwordInput === requiredPassword) {
-      
       const recordId = pendingEdit?._id || pendingEdit?.id;
-
       if (!pendingEdit || !recordId) {
           setPasswordError("System Error: Lost record ID. Please refresh and try again.");
           return;
       }
-
       if (confirmAction === "edit") {
           executeUpdate(pendingEdit); 
-      } 
-      else if (confirmAction === "delete") {
+      } else if (confirmAction === "delete") {
           executeDelete(recordId, pendingEdit.ticketNo); 
       }
-
       setShowPasswordModal(false);
       setPendingEdit(null);
       setConfirmAction(null);
       setPasswordInput("");
-      
     } else {
       setPasswordError("Incorrect password. Please try again.");
     }
@@ -236,7 +318,6 @@ const TerminalFees = () => {
   const handleOpenAdd = () => {
     const maxTicket = records.length > 0 ? Math.max(...records.map(r => Number(r.ticketNo) || 0)) : 0;
     const now = new Date();
-    
     setNewTicket({
       ticketNo: maxTicket + 1,
       passengerType: "Regular",
@@ -254,21 +335,11 @@ const TerminalFees = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newTicket)
       });
-
       if (!res.ok) throw new Error("Failed to save to database");
-      
       await fetchFees(); 
-
-      await logActivity(
-        role,                                                                       
-        "CREATE_TICKET",                                                            
-        `Created Ticket #${newTicket.ticketNo} - ${newTicket.passengerType}`,       
-        "TerminalFees"                                                             
-      );
-
+      await logActivity(role, "CREATE_TICKET", `Created Ticket #${newTicket.ticketNo} - ${newTicket.passengerType}`, "TerminalFees");
       showToastMessage("New ticket added successfully!"); 
       setShowAddModal(false);
-
     } catch (error) {
       console.error("Error saving ticket:", error);
       showToastMessage("Failed to save ticket. Please check server connection.");
@@ -287,53 +358,38 @@ const TerminalFees = () => {
              archivedBy: role
           })
       });
-
       if (!archiveRes.ok) throw new Error("Failed to archive");
-
       const idToDelete = rowToArchive._id || rowToArchive.id;
-
-      if (!idToDelete) {
-          throw new Error("System Error: Record ID is missing.");
-      }
-
-      const deleteRes = await fetch(`${API_URL}/terminal-fees/${idToDelete}`, { 
-          method: "DELETE" 
-      });
-
+      if (!idToDelete) throw new Error("System Error: Record ID is missing.");
+      const deleteRes = await fetch(`${API_URL}/terminal-fees/${idToDelete}`, { method: "DELETE" });
       if (!deleteRes.ok) throw new Error("Failed to remove from active list");
-
       await fetchFees(); 
       await logActivity(role, "ARCHIVE_TICKET", `Archived Ticket #${rowToArchive.ticketNo}`, "TerminalFees");
       showToastMessage("Ticket archived successfully!"); 
-
     } catch (e) {
       console.error("Failed to archive:", e);
       showToastMessage("Failed to archive ticket.");
     }
   };
 
-  const filtered = useMemo(() => {
-    return records.filter((fee) => {
-      const matchesSearch = fee.passengerType.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesDate = selectedDate ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString() : true;
-      const matchesType = activeType === "All" || fee.passengerType.toLowerCase().includes(activeType.toLowerCase());
-      return matchesSearch && matchesDate && matchesType;
-    });
-  }, [records, searchQuery, selectedDate, activeType]);
-
-  const stats = useMemo(() => ({
-    regular: filtered.filter(f => (f.passengerType || "").toLowerCase() === "regular").length,
-    student: filtered.filter(f => (f.passengerType || "").toLowerCase() === "student").length,
-    senior: filtered.filter(f => (f.passengerType || "").toLowerCase() === "senior citizen / pwd").length,
-    total: filtered.length,
-    revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0)
-  }), [filtered]);
-
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
-
+  // Define Columns dynamically based on Selection Mode
+  const tableColumns = isSelectionMode 
+    ? [
+        <div key="header-check" className="flex items-center">
+            <input 
+                type="checkbox" 
+                checked={isAllSelected}
+                onChange={handleSelectAll}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+        </div>,
+        "Ticket No", 
+        "Passenger Type", 
+        "Time", 
+        "Date", 
+        "Price"
+      ]
+    : ["Ticket No", "Passenger Type", "Time", "Date", "Price"];
 
   
   return (
@@ -355,6 +411,7 @@ const TerminalFees = () => {
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
         />
+        
         <div className="flex items-center justify-end gap-3">
           <button onClick={handleOpenAdd} className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             <Plus size={18} /> <span>Add Fee</span>
@@ -380,14 +437,60 @@ const TerminalFees = () => {
         </div>
       </div>
 
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <TerminalFilter activeType={activeType} onTypeChange={setActiveType} />
-        {role === "ticket" && (
-            <button onClick={() => setShowLogModal(true)} className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 h-10 rounded-xl shadow-sm hover:border-slate-300">
-                <History size={18} /> <span className="hidden sm:inline">Logs</span>
-            </button>
-        )}
+     <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+  
+  {/* LEFT SIDE: Filter (Scrollable on mobile or full width) */}
+  <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+    <TerminalFilter activeType={activeType} onTypeChange={setActiveType} />
+  </div>
+
+  {/* RIGHT SIDE: Bulk Actions, Logs, and Toggle */}
+  <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+    
+    {/* Ticket Role Log Button */}
+    {role === "ticket" && (
+      <button 
+        onClick={() => setShowLogModal(true)} 
+        className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+        title="View Logs"
+      >
+        <History size={18} /> 
+        {/* Hidden on small mobile, visible on tablet+ */}
+        <span className="hidden sm:inline">Logs</span>
+      </button>
+    )}
+    
+    {/* Bulk Action Indicator */}
+    {isSelectionMode && selectedIds.length > 0 && (
+      <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+        <span className="text-xs font-semibold text-slate-600 px-1 sm:px-2 whitespace-nowrap">
+          {selectedIds.length} <span className="hidden xs:inline">Selected</span>
+        </span>
+        <button
+          onClick={handleBulkDelete}
+          title={role === "ticket" ? "Request Deletion" : "Delete Selected"}
+          className="rounded-lg p-1.5 sm:p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+        >
+          <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+        </button>
+        <div className="hidden sm:block h-5 w-px bg-slate-300 mx-1"></div>
       </div>
+    )}
+
+    {/* Selection Mode Toggle */}
+    <button
+      onClick={toggleSelectionMode}
+      title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+      className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+        isSelectionMode
+          ? "bg-slate-800 border-slate-800 text-white shadow-md"
+          : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+      }`}
+    >
+      {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+    </button>
+  </div>
+</div>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center h-64 border rounded-xl border-slate-200 bg-white/50">
@@ -397,15 +500,36 @@ const TerminalFees = () => {
       ) : (
       
       <Table
-        columns={["Ticket No", "Passenger Type", "Time", "Date", "Price"]}
-          data={paginatedData.map((fee) => ({
-            id: fee._id || fee.id,
-            ticketno: fee.ticketNo,
-            passengertype: fee.passengerType, 
-            time: fee.time,
-            date: fee.date,
-            price: `₱${fee.price.toFixed(2)}`,
-          }))}
+        columns={tableColumns}
+          data={paginatedData.map((fee) => {
+            const rowId = fee._id || fee.id;
+            const baseData = {
+                id: rowId,
+                ticketno: fee.ticketNo,
+                passengertype: fee.passengerType, 
+                time: fee.time,
+                date: fee.date,
+                price: `₱${fee.price.toFixed(2)}`,
+            };
+
+            if (isSelectionMode) {
+                return {
+                    select: (
+                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                                type="checkbox"
+                                checked={selectedIds.includes(rowId)}
+                                onChange={() => toggleSelect(rowId)}
+                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                        </div>
+                    ),
+                    ...baseData
+                };
+            }
+
+            return baseData;
+          })}
 
           actions={(row) => {
             const selectedRecord = records.find(r => (r._id || r.id) == row.id);
@@ -550,36 +674,77 @@ const TerminalFees = () => {
         </div>
       )}
 
-      {editRow && (
-        <EditModal
-          title="Edit Terminal Fee"
-          initialData={editRow}
-          onClose={() => setEditRow(null)}
-          onSave={handleEditSubmit} 
-          fields={(form, set) => (
-            <>
-              <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Ticket No</label>
-                  <input type="text" value={form.ticketNo} disabled className="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-slate-500"/>
-              </div>
-              <SelectField
-                label="Passenger Type"
-                value={form.passengerType} 
-                onChange={(e) => {
-                    const newType = e.target.value;
-                    set("passengerType", newType); 
-                    set("price", (newType === "Student" || newType === "Senior Citizen / PWD") ? 10.00 : 15.00);
-                }}
-                options={["Regular", "Student", "Senior Citizen / PWD"]}
-              />
-              <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
-                  <input type="number" value={form.price} disabled className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-semibold"/>
-              </div>
-            </>
-          )}
-        />
-      )}
+{editRow && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-lg font-bold text-slate-800">Edit Terminal Fee</h3>
+        <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
+          const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? 10.0 : 15.0;
+          const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setEditRow(prev => ({ ...prev, passengerType: type, price: newPrice }))}
+              className={`py-2 px-1 rounded-lg text-xs font-semibold border ${active ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
+            >
+              {type === "Senior Citizen / PWD" ? "Senior/PWD" : type}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Price</label>
+          <input
+            type="number"
+            value={editRow.price ?? 0}
+            disabled
+            className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-semibold"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Date</label>
+          <input
+            type="text"
+            value={
+              editRow.date
+                ? new Date(editRow.date).toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : ""
+            }
+            disabled
+            className="w-full bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+        <button onClick={() => setEditRow(null)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Cancel</button>
+        <button
+          onClick={() => {
+            handleEditSubmit(editRow);
+            setEditRow(null);
+          }}
+          className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg"
+        >
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {toast && (
         <div className="fixed bottom-5 right-5 z-[100] flex items-center gap-3 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl animate-in slide-in-from-bottom-5 fade-in">
