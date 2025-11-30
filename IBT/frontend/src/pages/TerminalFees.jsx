@@ -564,15 +564,6 @@ const TerminalFees = () => {
             <Plus size={18} /> <span>Add Fee</span>
           </button>
 
-          {role === "superadmin" && (
-            <>
-              <button onClick={() => setShowLogModal(true)} title="View Activity Logs" className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all">
-                <History size={18} /> <span className="hidden sm:inline">Logs</span>
-              </button>
-              
-            </>
-          )}
-
           {/* --- SUBMIT REPORT BUTTON (Visible to only Ticket Admin) --- */}
           {(role === "ticket") && (
             <button 
@@ -593,13 +584,22 @@ const TerminalFees = () => {
 
      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
   
-  {/* LEFT SIDE: Filter */}
   <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
     <TerminalFilter activeType={activeType} onTypeChange={setActiveType} />
   </div>
 
-  {/* RIGHT SIDE: Bulk Actions, Logs, and Toggle */}
   <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+
+    {role === "superadmin" && (
+      <button 
+        onClick={() => setShowLogModal(true)} 
+        className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+        title="View Logs"
+      >
+        <History size={18} /> 
+        <span className="hidden sm:inline">Logs</span>
+      </button>
+    )}
     
     {role === "ticket" && (
       <button 
@@ -633,7 +633,7 @@ const TerminalFees = () => {
       title={isSelectionMode ? "Cancel Selection" : "Select Records"}
       className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
         isSelectionMode
-          ? "bg-slate-800 border-slate-800 text-white shadow-md"
+          ? "bg-red-500  text-white shadow-md"
           : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
       }`}
     >
