@@ -19,12 +19,12 @@ const LostFound = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter States
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeStatus, setActiveStatus] = useState("All");
 
-  // Modal States
+  
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false); // <--- 4. LOG STATE
@@ -42,22 +42,24 @@ const LostFound = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // --- REPORTING STATES ---
+  
   const [isReporting, setIsReporting] = useState(false);
-  // ------------------------
+  
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/lostfound";
 
-  // --- 1. New Item State ---
+  
   const [newItem, setNewItem] = useState({
     trackingNo: "",
     description: "",
+    itemType: "", 
+    location: "",
     dateTime: "",
-    status: "Unclaimed",
+    status: "Unclaimed", 
   });
 
-  // --- 2. Fetch Data ---
+  
   const fetchLostFound = async () => {
     setIsLoading(true);
     try {
@@ -65,7 +67,7 @@ const LostFound = () => {
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
 
-      // Map _id to id
+      
       const formattedData = data.map(item => ({
         ...item,
         id: item._id
@@ -82,9 +84,9 @@ const LostFound = () => {
     fetchLostFound();
   }, []);
 
-  // --- 3. Handle Add New ---
+  
   const handleAddClick = () => {
-    // Generate a simple tracking number based on timestamp for convenience
+    
     const autoTracking = `LF-${Date.now().toString().slice(-6)}`;
     const now = new Date();
     const formattedNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
@@ -92,9 +94,10 @@ const LostFound = () => {
     setNewItem({
       trackingNo: autoTracking,
       description: "",
+      itemType: "", 
       location: "",
       dateTime: formattedNow,
-      status: "Unclaimed"
+      status: "Unclaimed" 
     });
     setShowAddModal(true);
   };
@@ -118,7 +121,7 @@ const LostFound = () => {
     }
   };
 
-  // --- 4. Handle Update ---
+  
   const handleUpdateRecord = async (updatedData) => {
     try {
       const response = await fetch(`${API_URL}/${updatedData.id}`, {
@@ -136,7 +139,7 @@ const LostFound = () => {
     }
   };
 
-  // --- 5. Handle Delete ---
+ 
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
@@ -186,10 +189,11 @@ const LostFound = () => {
     }
   };
 
-  // --- Filtering Logic ---
+  
   const filtered = records.filter((item) => {
     const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase());
+      item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.itemType && item.itemType.toLowerCase().includes(searchQuery.toLowerCase())); 
 
     const matchesDate = !selectedDate || new Date(item.dateTime).toDateString() === new Date(selectedDate).toDateString();
 
@@ -304,6 +308,7 @@ const LostFound = () => {
         const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
         return {
           ...rest,
+          ...rest,
           dateTime: rest.dateTime ? new Date(rest.dateTime).toLocaleString('en-US', {
             year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
           }) : "-"
@@ -353,7 +358,7 @@ const LostFound = () => {
     }
   };
 
-  // Helper for Date Display
+  
   const formatDateTime = (dateStr) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString() + " " + new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -531,24 +536,23 @@ const LostFound = () => {
             <form onSubmit={handleCreateItem}>
               <div className="space-y-4">
 
+                
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-                  <div className="flex p-1 bg-slate-100 rounded-lg">
-                    {["Unclaimed", "Claimed"].map((status) => (
-                      <button
-                        type="button"
-                        key={status}
-                        onClick={() => setNewItem({ ...newItem, status })}
-                        className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${newItem.status === status
-                          ? "bg-white text-emerald-600 shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                          }`}
-                      >
-                        {status}
-                      </button>
-                    ))}
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Type of Item</label>
+                  <div className="relative">
+                    <Tag size={16} className="absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      value={newItem.itemType}
+                      onChange={(e) => setNewItem({ ...newItem, itemType: e.target.value })}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="e.g., Wallet, Keys, Laptop, Book"
+                      required
+                    />
                   </div>
                 </div>
+              
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
                   <div className="relative">
@@ -600,12 +604,16 @@ const LostFound = () => {
                     <textarea
                       value={newItem.location}
                       onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300  "
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300  "
                       placeholder="Location of the item found..."
                       required
                     />
                   </div>
                 </div>
+
+           
+                <input type="hidden" name="status" value={newItem.status} />
+
               </div>
               <div className="flex gap-3 mt-6">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
@@ -616,13 +624,14 @@ const LostFound = () => {
         </div>
       )}
 
-      {/* View Modal */}
+ 
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
             <h3 className="mb-4 text-base font-semibold text-slate-800">View Lost/Found</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
               <Field label="Tracking No" value={viewRow.trackingNo} />
+              <Field label="Type" value={viewRow.itemType} /> 
               <Field label="Status" value={viewRow.status} />
               <Field label="DateTime" value={formatDateTime(viewRow.dateTime)} />
               <div className="md:col-span-2"><Field label="Description" value={viewRow.description} /></div>
@@ -633,7 +642,7 @@ const LostFound = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
+
       {editRow && (
         <EditLostFound
           row={editRow}
@@ -642,7 +651,7 @@ const LostFound = () => {
         />
       )}
 
-      {/* Delete Modal */}
+  
       <DeleteModal
         isOpen={!!deleteRow}
         onClose={() => setDeleteRow(null)}
@@ -652,7 +661,6 @@ const LostFound = () => {
         itemName={deleteRow ? `Track #${deleteRow.trackingNo}` : ""}
       />
 
-      {/* Submit Report Confirmation Modal */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
@@ -684,7 +692,7 @@ const LostFound = () => {
           </div>
         </div>
       )}
-      
+
     </Layout>
   );
 };
