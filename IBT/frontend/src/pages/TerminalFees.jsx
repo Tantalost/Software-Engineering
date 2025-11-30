@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History } from "lucide-react"; 
+import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, FileText } from "lucide-react"; 
 
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
@@ -23,6 +23,7 @@ import RequestDeletionModal from "../components/common/RequestDeletionModal";
 import StatCardGroupTerminal from "../components/terminal/StatCardGroupTerminal";
 import TerminalFilter from "../components/terminal/TerminalFilter";
 import { logActivity } from "../utils/logger";
+import { submitPageReport } from "../utils/reportService"; // <--- IMPORT SERVICE
 
 const API_URL = "http://localhost:3000/api";
 
@@ -41,7 +42,7 @@ const TerminalFees = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false); 
   const [showNotify, setShowNotify] = useState(false);
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -50,6 +51,11 @@ const TerminalFees = () => {
   const [deleteRemarks, setDeleteRemarks] = useState(""); 
   const [toast, setToast] = useState(null);
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
+
+  // --- REPORTING STATES ---
+  const [isReporting, setIsReporting] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  // ------------------------
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -74,7 +80,7 @@ const TerminalFees = () => {
     }
   };
 
- useEffect(() => {
+  useEffect(() => {
     fetchFees();
   }, []);
 
@@ -82,6 +88,61 @@ const TerminalFees = () => {
     setToast(message);
     setTimeout(() => setToast(null), 3000); 
   };
+
+  const filtered = useMemo(() => {
+    return records.filter((fee) => {
+      const matchesSearch = fee.passengerType.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDate = selectedDate ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString() : true;
+      const matchesType = activeType === "All" || fee.passengerType.toLowerCase().includes(activeType.toLowerCase());
+      return matchesSearch && matchesDate && matchesType;
+    });
+  }, [records, searchQuery, selectedDate, activeType]);
+
+  const stats = useMemo(() => ({
+    regular: filtered.filter(f => (f.passengerType || "").toLowerCase() === "regular").length,
+    student: filtered.filter(f => (f.passengerType || "").toLowerCase() === "student").length,
+    senior: filtered.filter(f => (f.passengerType || "").toLowerCase() === "senior citizen / pwd").length,
+    total: filtered.length,
+    revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0)
+  }), [filtered]);
+
+  const handleSubmitReport = async () => {
+    setIsReporting(true);
+    try {
+      const reportPayload = {
+        screen: "Terminal Fees Management",
+        generatedDate: new Date().toISOString(),
+        filters: {
+           searchQuery,
+           selectedDate,
+           activeType
+        },
+        statistics: stats,
+        data: filtered 
+      };
+
+      await submitPageReport("Terminal Fees", reportPayload, "Ticket Admin");
+
+      const deletePromises = filtered.map(item => {
+          const id = item._id || item.id;
+          return fetch(`${API_URL}/terminal-fees/${id}`, { method: 'DELETE' });
+      });
+      
+      await Promise.all(deletePromises);
+
+      // 4. Update UI
+      alert("Report submitted successfully! The table has been cleared for new entries.");
+      setShowSubmitModal(false);
+      fetchFees();
+
+    } catch (error) {
+      console.error(error);
+      alert("Failed to submit report.");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+  // ---------------------------------------------
 
   const executeUpdate = async (data) => {
     try {
@@ -111,7 +172,7 @@ const TerminalFees = () => {
     }
   };
 
- const handleEditSubmit = (updatedData) => {
+  const handleEditSubmit = (updatedData) => {
     if (!editRow) return;
     
     const finalData = { ...editRow, ...updatedData };
@@ -179,18 +240,18 @@ const TerminalFees = () => {
       }
 
      if (role === "superadmin") {
-          const idToDelete = deleteRow._id || deleteRow.id;
+         const idToDelete = deleteRow._id || deleteRow.id;
 
-          if (!idToDelete) {
+         if (!idToDelete) {
              console.error("Error: Record ID is missing", deleteRow);
              showToastMessage("System Error: Cannot delete (Missing ID)");
              return;
-          }
+         }
 
-          await executeDelete(idToDelete, deleteRow.ticketNo);
-          
-          setDeleteRow(null);
-          return;
+         await executeDelete(idToDelete, deleteRow.ticketNo);
+         
+         setDeleteRow(null);
+         return;
       }
       
       setPendingEdit(deleteRow);
@@ -260,10 +321,10 @@ const TerminalFees = () => {
       await fetchFees(); 
 
       await logActivity(
-        role,                                                                       
-        "CREATE_TICKET",                                                            
+        role,                                                                             
+        "CREATE_TICKET",                                                                  
         `Created Ticket #${newTicket.ticketNo} - ${newTicket.passengerType}`,       
-        "TerminalFees"                                                             
+        "TerminalFees"                                                                   
       );
 
       showToastMessage("New ticket added successfully!"); 
@@ -312,30 +373,11 @@ const TerminalFees = () => {
     }
   };
 
-  const filtered = useMemo(() => {
-    return records.filter((fee) => {
-      const matchesSearch = fee.passengerType.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesDate = selectedDate ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString() : true;
-      const matchesType = activeType === "All" || fee.passengerType.toLowerCase().includes(activeType.toLowerCase());
-      return matchesSearch && matchesDate && matchesType;
-    });
-  }, [records, searchQuery, selectedDate, activeType]);
-
-  const stats = useMemo(() => ({
-    regular: filtered.filter(f => (f.passengerType || "").toLowerCase() === "regular").length,
-    student: filtered.filter(f => (f.passengerType || "").toLowerCase() === "student").length,
-    senior: filtered.filter(f => (f.passengerType || "").toLowerCase() === "senior citizen / pwd").length,
-    total: filtered.length,
-    revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0)
-  }), [filtered]);
-
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filtered.slice(startIndex, startIndex + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-
-  
   return (
     <Layout title="Terminal Fees Management">
       <div className="mb-6">
@@ -371,11 +413,19 @@ const TerminalFees = () => {
             </>
           )}
 
-          {role === "ticket" && (
-            <button onClick={() => setShowSubmitModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
-              Submit Report
+          {/* --- SUBMIT REPORT BUTTON (Visible to only Ticket Admin) --- */}
+          {(role === "ticket") && (
+            <button 
+                onClick={() => setShowSubmitModal(true)} 
+                disabled={isReporting}
+                className="flex items-center justify-center gap-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
+              <FileText size={18} />
+              <span>Submit Report</span>
             </button>
           )}
+          {/* ---------------------------------------------------------------- */}
+
           <ExportMenu onExportCSV={() => {}} onPrint={() => window.print()} />
         </div>
       </div>
@@ -605,14 +655,40 @@ const TerminalFees = () => {
         </div>
       )}
       
-      {role === "ticket" && showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Submit Report</h3>
-            <p className="mt-2 text-sm text-slate-600">Are you sure you want to submit the current report?</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { setShowSubmitModal(false); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Submit</button>
+      {/* --- CONFIRMATION MODAL FOR REPORT SUBMISSION --- */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+            <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
+            <p className="mt-2 text-sm text-slate-600">
+                Are you sure you want to capture and submit the current terminal fees report?
+                <br />
+                <span className="text-red-500 font-semibold text-xs">
+                    Note: This will clear the current table for new entries.
+                </span>
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowSubmitModal(false)} 
+                disabled={isReporting}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSubmitReport} 
+                disabled={isReporting}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isReporting ? (
+                   <>
+                     <Loader2 size={16} className="animate-spin" />
+                     <span>Submitting...</span>
+                   </>
+                ) : (
+                   <span>Confirm Submit</span>
+                )}
+              </button>
             </div>
           </div>
         </div>

@@ -10,7 +10,9 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft } from "lucide-react";
+import { submitPageReport } from "../utils/reportService.js"; // <--- IMPORT SERVICE
+// Added FileText and Loader2 to imports
+import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft, FileText, Loader2 } from "lucide-react"; 
 
 const Parking = () => {
   const [records, setRecords] = useState([]);
@@ -32,6 +34,11 @@ const Parking = () => {
   // --- Step State for the Form UI ---
   const [step, setStep] = useState(1);
   const plateInputRef = useRef(null);
+
+  // --- REPORTING STATES ---
+  const [isReporting, setIsReporting] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  // ------------------------
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/parking";
@@ -76,7 +83,7 @@ const Parking = () => {
       type: "Car",
       plateNo: "",
       baseRate: 50, 
-      timeIn: formattedTimeIn, // Time is still set in background, just not shown
+      timeIn: formattedTimeIn, 
     });
     setStep(1); 
     setShowAddModal(true);
@@ -96,7 +103,6 @@ const Parking = () => {
   const handleCreateTicket = async (e) => {
     e.preventDefault(); 
     
-    // Fixed validation to use plateNo instead of plateNumber
     if (!newTicket.plateNo || !newTicket.ticketNo) {
         alert("Please fill in both Ticket Number and Plate Number.");
         return;
@@ -199,10 +205,6 @@ const Parking = () => {
       return new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   }
 
-  const getRawRecord = (id) => {
-    return records.find(r => r.id === id);
-  };
-
   const filtered = records.filter((ticket) => {
     const matchesSearch = 
       (ticket.ticketNo && String(ticket.ticketNo).includes(searchQuery)) ||
@@ -219,6 +221,52 @@ const Parking = () => {
   const carCount = filtered.filter((t) => t.type === "Car").length;
   const motoCount = filtered.filter((t) => t.type === "Motorcycle").length;
   const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
+
+  // --- SUBMIT REPORT HANDLER ---
+  const handleSubmitReport = async () => {
+    setIsReporting(true);
+    try {
+      // 1. Package Data
+      const reportPayload = {
+        screen: "Parking Management",
+        generatedDate: new Date().toISOString(),
+        filters: {
+           searchQuery,
+           selectedDate,
+           activeType
+        },
+        statistics: {
+            cars: carCount,
+            motorcycles: motoCount,
+            totalVehicles: filtered.length,
+            totalRevenue: revenue
+        },
+        data: filtered 
+      };
+
+      // 2. Submit to Backend
+      await submitPageReport("Parking", reportPayload, "Parking Admin");
+
+      // 3. Clear Table (Bulk Delete)
+      const deletePromises = filtered.map(item => 
+          fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
+      );
+      
+      await Promise.all(deletePromises);
+
+      // 4. Update UI
+      alert("Report submitted successfully! The table has been cleared.");
+      setShowSubmitModal(false);
+      fetchParkingTickets();
+
+    } catch (error) {
+      console.error(error);
+      alert("Failed to submit report.");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+  // -----------------------------
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -244,6 +292,19 @@ const Parking = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <div className="flex items-center justify-end gap-3">
+          
+          {(role === "parking") && (
+            <button 
+                onClick={() => setShowSubmitModal(true)} 
+                disabled={isReporting}
+                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+            >
+              <FileText size={18} />
+              <span>Submit Report</span>
+            </button>
+          )}
+          {/* ----------------------------------------------------------------- */}
+
           <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             + Add New
           </button>
@@ -320,7 +381,6 @@ const Parking = () => {
                     {step === 1 ? "Select Vehicle" : "Enter Details"}
                 </h1>
 
-                {/* STEP 1: Selection Grid */}
                 {step === 1 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
                         <button 
@@ -342,7 +402,6 @@ const Parking = () => {
                     </div>
                 )}
 
-                {/* STEP 2: Input Form (MODIFIED) */}
                 {step === 2 && (
                     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                         
@@ -374,7 +433,7 @@ const Parking = () => {
                             </datalist>
                         </div>
 
-                        {/* Ticket Number Input (Added) */}
+                        {/* Ticket Number Input */}
                         <div className="text-left">
                             <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
                                 Ticket Number
@@ -461,6 +520,47 @@ const Parking = () => {
         message="Are you sure you want to permanently remove this record?" 
         itemName={deleteRow ? (deleteRow.ticketNo ? `Ticket #${deleteRow.ticketNo}` : "this item") : ""} 
       />
+
+      {/* --- CONFIRMATION MODAL FOR REPORT SUBMISSION --- */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+                <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                    Are you sure you want to capture and submit the current parking report?
+                    <br />
+                    <span className="text-red-500 font-semibold text-xs">
+                        Note: This will clear the current table for new entries.
+                    </span>
+                </p>
+
+                <div className="mt-6 flex justify-end gap-3">
+                    <button 
+                        onClick={() => setShowSubmitModal(false)} 
+                        disabled={isReporting}
+                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={handleSubmitReport} 
+                        disabled={isReporting}
+                        className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {isReporting ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span>Submitting...</span>
+                            </>
+                        ) : (
+                            <span>Confirm Submit</span>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+      {/* ------------------------------------------------ */}
 
     </Layout>
   );
