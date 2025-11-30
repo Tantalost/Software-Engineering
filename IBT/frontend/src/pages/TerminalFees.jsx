@@ -44,8 +44,7 @@ const TerminalFees = () => {
   const [deleteRow, setDeleteRow] = useState(null); 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false); 
-  const [showNotify, setShowNotify] = useState(false);
-  
+    
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -53,8 +52,7 @@ const TerminalFees = () => {
   const [confirmAction, setConfirmAction] = useState(null); 
   const [deleteRemarks, setDeleteRemarks] = useState(""); 
   const [toast, setToast] = useState(null);
-  const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
-
+ 
   // --- REPORTING STATES ---
   const [isReporting, setIsReporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -571,9 +569,7 @@ const TerminalFees = () => {
               <button onClick={() => setShowLogModal(true)} title="View Activity Logs" className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all">
                 <History size={18} /> <span className="hidden sm:inline">Logs</span>
               </button>
-              <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all">
-                Notify
-              </button>
+              
             </>
           )}
 
@@ -908,21 +904,7 @@ const TerminalFees = () => {
         </div>
       )}
       
-      {role === "superadmin" && showNotify && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
-            <div className="space-y-3">
-              <Input label="Title" value={notifyDraft.title} onChange={(e) => setNotifyDraft({ ...notifyDraft, title: e.target.value })} />
-              <Textarea label="Body" value={notifyDraft.message} onChange={(e) => setNotifyDraft({ ...notifyDraft, message: e.target.value })} />
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowNotify(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { setShowNotify(false); setNotifyDraft({ title: "", message: "" }); }} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Send</button>
-            </div>
-          </div>
-        </div>
-      )}
+      
       
       {/* --- CONFIRMATION MODAL FOR REPORT SUBMISSION --- */}
       {showSubmitModal && (
