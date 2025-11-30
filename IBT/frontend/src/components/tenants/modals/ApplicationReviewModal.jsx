@@ -13,8 +13,8 @@ const ApplicationReviewModal = ({
 
   // Safe access to UID for display (Fixes the .slice error)
   // We convert to String() first to handle cases where uid might be a number or undefined object
-  const displayId = reviewData?.uid 
-    ? String(reviewData.uid).slice(-6).toUpperCase() 
+  const displayId = reviewData?._id 
+    ? String(reviewData._id).slice(-6).toUpperCase() 
     : "---";
   
   const isPaymentUnlocked = reviewData.status === "PAYMENT_UNLOCKED";

@@ -2,16 +2,17 @@ import Waitlist from "../models/Waitlist.js";
 
 export const getWaitlist = async (req, res) => {
   try {
-    const list = await Waitlist.find().sort({ dateRequested: -1 });
+    // Sort by createdAt (newest first)
+    const list = await Waitlist.find().sort({ createdAt: -1 });
     res.json(list);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const getWaitlistByUid = async (req, res) => {
+export const getWaitlistById = async (req, res) => {
   try {
-    const application = await Waitlist.findOne({ uid: req.params.uid });
+    const application = await Waitlist.findById(req.params.id);
     res.json(application);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -22,7 +23,7 @@ export const createWaitlistEntry = async (req, res) => {
   try {
     const newApp = new Waitlist(req.body);
     await newApp.save();
-    res.json({ success: true, message: "Application Saved" });
+    res.json({ success: true, message: "Application Saved", data: newApp });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -30,8 +31,8 @@ export const createWaitlistEntry = async (req, res) => {
 
 export const updateWaitlistEntry = async (req, res) => {
   try {
-    const updated = await Waitlist.findOneAndUpdate(
-      { uid: req.params.uid },
+    const updated = await Waitlist.findByIdAndUpdate(
+      req.params.id,
       { $set: req.body }, 
       { new: true }
     );
@@ -43,8 +44,7 @@ export const updateWaitlistEntry = async (req, res) => {
 
 export const deleteWaitlistEntry = async (req, res) => {
   try {
-    const { uid } = req.params;
-    await Waitlist.findOneAndDelete({ uid: uid });
+    await Waitlist.findByIdAndDelete(req.params.id);
     res.json({ message: "Waitlist entry removed" });
   } catch (err) {
     res.status(500).json({ error: err.message });

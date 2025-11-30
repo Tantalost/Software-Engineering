@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 
 const WaitlistSchema = new mongoose.Schema({
-  uid: { type: String, required: true },
   name: String,
   contact: String,
   email: String,
@@ -18,7 +17,12 @@ const WaitlistSchema = new mongoose.Schema({
   paymentReference: String,
   paymentAmount: String,
   
-  dateRequested: { type: Date, default: Date.now }
-}, { collection: 'tenantapplications' }); // <--- FORCE COLLECTION NAME
+  // Use createdAt from your screenshot, or default to now
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { 
+  collection: 'tenantapplications', // <--- IMPORTANT: Point to existing collection
+  timestamps: true // This manages createdAt/updatedAt automatically
+});
 
 export default mongoose.model('Waitlist', WaitlistSchema);

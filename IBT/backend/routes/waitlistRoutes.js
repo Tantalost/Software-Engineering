@@ -1,7 +1,7 @@
 import express from "express";
 import { 
   getWaitlist, 
-  getWaitlistByUid, 
+  getWaitlistById, 
   createWaitlistEntry, 
   updateWaitlistEntry,
   deleteWaitlistEntry 
@@ -10,9 +10,9 @@ import {
 const router = express.Router();
 
 router.get('/', getWaitlist);
-router.get('/:uid', getWaitlistByUid);
+router.get('/:id', getWaitlistById);
 router.post('/', createWaitlistEntry);
-router.put('/:uid', updateWaitlistEntry);
-router.delete('/:uid', deleteWaitlistEntry);
+router.put('/:id', updateWaitlistEntry);
+router.delete('/:id', deleteWaitlistEntry);
 
 export default router;

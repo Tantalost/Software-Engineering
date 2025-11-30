@@ -6,7 +6,7 @@ const UPLOAD_PRESET = "ibt_upload";
 
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
 
-  const [isSubmitting, setIsSubmitting] = useState(false); // New loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     slotNo: "",
@@ -15,7 +15,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     email: "",
     contactNo: "",
     tenantType: "Permanent", 
-    uid: "",
+    _id: "",
   });
 
   const [showMapModal, setShowMapModal] = useState(false);
@@ -56,7 +56,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
           email: initialData.email || "",
           contactNo: initialData.contactNo || "",
           tenantType: initialData.tenantType || "Permanent", 
-          uid: initialData.uid || "",
+          _id: initialData._id || "",
         });
 
         if (initialData.slotNo) {
@@ -90,7 +90,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             email: "",
             contactNo: "",
             tenantType: "Permanent", 
-            uid: "", // Reset UID for manual entry
+            _id: "", 
         });
         setProductCategory("Food and Beverages");
         setOtherProductDetails("");
@@ -188,23 +188,48 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             }).replace(',', ''); 
         };
 
-        // 1. Process Documents (Upload new ones, keep existing strings)
+        // 1. Process Documents (Upload new ones, handle Base64 strings)
         const processedDocuments = { ...documents };
         
         for (const key of Object.keys(processedDocuments)) {
             const file = processedDocuments[key];
-            // If it's a File object (new upload), upload it. 
-            // If it's a string (URL from waitlist), keep it.
-            if (file && typeof file !== 'string') {
+            
+            if (!file) continue;
+
+            // Case A: It's a raw File object (from user input)
+            if (typeof file === 'object' && file instanceof File) {
                 const url = await uploadToCloudinary(file);
-                if (url) processedDocuments[key] = url;
+                if (url) {
+                    processedDocuments[key] = url;
+                } else {
+                     // If upload fails, set to empty or keep original only if it's safe.
+                     // We DON'T want to send the raw file object to backend.
+                     delete processedDocuments[key]; 
+                     console.warn(`Failed to upload ${key}, omitting from payload.`);
+                }
+            } 
+            // Case B: It's a Base64 string (from waitlist data)
+            // Base64 strings start with "data:image..." and are very long
+            else if (typeof file === 'string' && file.startsWith('data:')) {
+                const url = await uploadToCloudinary(file);
+                if (url) {
+                    processedDocuments[key] = url;
+                } else {
+                    // If upload fails, DO NOT send the massive base64 string
+                    delete processedDocuments[key];
+                    console.warn(`Failed to upload Base64 for ${key}, omitting from payload.`);
+                }
             }
+            // Case C: It's already a normal URL (keep it)
         }
 
+        // Destructure _id out, keep the rest
+        const { _id, ...restOfFormData } = formData;
+
         const newTenant = {
-            // Remove ID generation here if relying on MongoDB _id, 
-            // or keep it if you want a custom ID.
-            ...formData,
+            ...restOfFormData,
+            // Only include _id if it's a valid string (for updates), otherwise omit it (for creation)
+            ...(_id ? { _id } : {}),
             products: productCategory === "Other" ? otherProductDetails : productCategory,
             rentAmount,
             utilityAmount: parseFloat(utilityAmount),
@@ -247,7 +272,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
   const getFileStatus = (file) => {
       if (!file) return "Click to upload";
-      if (typeof file === 'string') return "Pre-filled from Application ✅";
+      if (typeof file === 'string') {
+          if (file.startsWith('data:')) return "Base64 Image (Will be uploaded) ⚠️";
+          return "Pre-filled from Application ✅";
+      }
       return file.name; 
   };
 

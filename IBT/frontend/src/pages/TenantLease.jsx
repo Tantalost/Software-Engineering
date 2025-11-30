@@ -84,7 +84,9 @@ const TenantLease = () => {
       const res = await fetch(`${API_URL}/waitlist`);
       if (!res.ok) throw new Error("Failed to fetch waitlist");
       const data = await res.json();
-      setWaitlistData(data);
+      // Map _id to id for consistency
+      const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
+      setWaitlistData(formatted);
     } catch (err) {
       console.error("Error fetching waitlist:", err);
     }
@@ -131,7 +133,7 @@ const TenantLease = () => {
     try {
         const payload = {
             ...waitlistForm,
-            uid: `manual-${Date.now()}`, 
+            // Removed manual uid generation, let MongoDB handle _id
             dateRequested: new Date().toISOString(),
             status: "Pending"
         };
@@ -162,9 +164,9 @@ const TenantLease = () => {
   };
 
   const handleUnlockPayment = async () => {
-    if (!reviewData?.uid) return; 
+    if (!reviewData?.id) return; 
     
-    const idToUpdate = reviewData.uid; 
+    const idToUpdate = reviewData.id; 
 
     try {
         const response = await fetch(`${API_URL}/waitlist/${idToUpdate}`, {
@@ -193,10 +195,10 @@ const TenantLease = () => {
   };
 
   // --- REJECT/DELETE APPLICANT ---
-  const handleRejectApplicant = async (uid) => { 
+  const handleRejectApplicant = async (id) => { // Expects id
     if(window.confirm("Are you sure you want to REJECT and DELETE this application?")) {
       try {
-        const response = await fetch(`${API_URL}/waitlist/${uid}`, { method: 'DELETE' });
+        const response = await fetch(`${API_URL}/waitlist/${id}`, { method: 'DELETE' }); // Use id in URL
         
         if (response.ok) {
             alert("Application removed.");
@@ -219,8 +221,7 @@ const TenantLease = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
               ...newTenant,
-              // Pass the waitlist UID so backend can delete it from waitlist automatically
-              transferWaitlistId: transferApplicant?.uid 
+              transferWaitlistId: transferApplicant?.id // Use id for transfer
           })
       });
 
@@ -228,7 +229,7 @@ const TenantLease = () => {
           setShowAddModal(false);
           alert("Tenant Added Successfully!");
           fetchTenants(); 
-          fetchWaitlist(); // Refresh waitlist as it might have changed
+          fetchWaitlist(); 
           setTransferApplicant(null);
       } else {
           const err = await response.json();
