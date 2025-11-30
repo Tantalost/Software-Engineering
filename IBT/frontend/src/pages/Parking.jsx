@@ -385,15 +385,15 @@ const Parking = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
                         <button 
                             onClick={() => handleSelectType('Car')}
-                            className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-blue-600 bg-blue-50 text-blue-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
-                        >
+                            className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-cyan-500 bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
+                          >
                             <Car size={80} className="mb-4" />
                             <span className="text-2xl font-bold mt-2">CAR / JEEP</span>
                             <span className="text-sm opacity-70 mt-1 font-medium">₱50.00 / hr</span>
                         </button>
                         <button 
                             onClick={() => handleSelectType('Motorcycle')}
-                            className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-orange-500 bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
+                            className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-red-500 bg-red-50 text-red-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                         >
                             <Bike size={80} className="mb-4" />
                             <span className="text-2xl font-bold mt-2">MOTORCYCLE</span>
