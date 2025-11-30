@@ -14,6 +14,7 @@ import tenantRoutes from "./routes/tenantRoutes.js";
 import parkingRoutes from "./routes/parkingRoutes.js";
 import lostfoundRoutes from "./routes/lostfoundRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import notifications from "../backend/routes/notifications.js";
 
 
 connectDB();
@@ -36,6 +37,7 @@ app.use("/api/waitlist", waitlistRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/lostfound", lostfoundRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notifications);
 
 const PORT = process.env.PORT || 3000;
 

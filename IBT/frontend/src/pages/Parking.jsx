@@ -10,7 +10,9 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft } from "lucide-react";
+import { submitPageReport } from "../utils/reportService.js"; // <--- IMPORT SERVICE
+// Added FileText and Loader2 to imports
+import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft, FileText, Loader2 } from "lucide-react"; 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -34,6 +36,11 @@ const Parking = () => {
   const plateInputRef = useRef(null);
 
   const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, message: "" });
+
+  // --- REPORTING STATES ---
+  const [isReporting, setIsReporting] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  // ------------------------
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/parking";
@@ -83,8 +90,8 @@ const Parking = () => {
       ticketNo: "",
       type: "Car",
       plateNo: "",
-      baseRate: 50,
-      timeIn: formattedTimeIn,
+      baseRate: 50, 
+      timeIn: formattedTimeIn, 
     });
     setStep(1);
     setShowAddModal(true);
@@ -102,8 +109,8 @@ const Parking = () => {
   };
 
   const handleCreateTicket = async (e) => {
-    e.preventDefault();
-
+    e.preventDefault(); 
+    
     if (!newTicket.plateNo || !newTicket.ticketNo) {
       alert("Please fill in both Ticket Number and Plate Number.");
       return;
@@ -222,6 +229,91 @@ const Parking = () => {
   const motoCount = filtered.filter(t => t.type === "Motorcycle").length;
   const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
 
+  // --- SUBMIT REPORT HANDLER ---
+ // --- UPDATED SUBMIT HANDLER ---
+  const handleSubmitReport = async () => {
+    setIsReporting(true);
+    try {
+      // 1. Helper to format date/time to "11/30/2025, 2:30 PM"
+      const formatDateTime = (dateStr) => {
+        if (!dateStr) return "-";
+        return new Date(dateStr).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      };
+
+      // 2. Format Data & Remove Unwanted Columns
+     // Inside Parking.jsx -> handleSubmitReport function
+
+const formattedData = filtered.map(item => {
+  // FIND THIS LINE:
+  // Add 'isArchived' to this list to remove it from the final report
+  const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
+
+  return {
+    ...rest, 
+    timeIn: formatDateTime(rest.timeIn),
+    timeOut: rest.timeOut ? formatDateTime(rest.timeOut) : "Parked (Active)"
+  };
+});
+
+      // 3. Package Data
+      const reportPayload = {
+        screen: "Parking Management",
+        generatedDate: new Date().toLocaleString(), // Readable report date
+        filters: {
+           searchQuery,
+           selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
+           activeType
+        },
+        statistics: {
+            cars: carCount,
+            motorcycles: motoCount,
+            totalVehicles: filtered.length,
+            totalRevenue: revenue
+        },
+        data: formattedData // <--- Send cleaned data
+      };
+
+      // 4. Submit to Backend
+      await submitPageReport("Parking", reportPayload, "Parking Admin");
+
+      await fetch("http://localhost:3000/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Report Submitted: Parking Report",
+          message: "A new Parking Management report has been generated and the active log has been cleared.",
+          source: "Parking"
+        }),
+      });
+
+      // 5. Clear Table (Bulk Delete)
+      const deletePromises = filtered.map(item => 
+          fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
+      );
+      
+      await Promise.all(deletePromises);
+
+      // 6. Update UI
+      alert("Report submitted successfully! The table has been cleared.");
+      setShowSubmitModal(false);
+      fetchParkingTickets();
+
+    } catch (error) {
+      console.error(error);
+      alert("Failed to submit report.");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+  // -----------------------------
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filtered.slice(startIndex, startIndex + itemsPerPage);
@@ -295,6 +387,19 @@ const Parking = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <div className="flex items-center justify-end gap-3">
+          
+          {(role === "parking") && (
+            <button 
+                onClick={() => setShowSubmitModal(true)} 
+                disabled={isReporting}
+                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+            >
+              <FileText size={18} />
+              <span>Submit Report</span>
+            </button>
+          )}
+          {/* ----------------------------------------------------------------- */}
+
           <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             + Add New
           </button>
@@ -496,6 +601,47 @@ const Parking = () => {
         message="Are you sure you want to permanently remove this record?"
         itemName={deleteRow ? (deleteRow.ticketNo ? `Ticket #${deleteRow.ticketNo}` : "this item") : ""}
       />
+
+      {/* --- CONFIRMATION MODAL FOR REPORT SUBMISSION --- */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+                <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                    Are you sure you want to capture and submit the current parking report?
+                    <br />
+                    <span className="text-red-500 font-semibold text-xs">
+                        Note: This will clear the current table for new entries.
+                    </span>
+                </p>
+
+                <div className="mt-6 flex justify-end gap-3">
+                    <button 
+                        onClick={() => setShowSubmitModal(false)} 
+                        disabled={isReporting}
+                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={handleSubmitReport} 
+                        disabled={isReporting}
+                        className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {isReporting ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span>Submitting...</span>
+                            </>
+                        ) : (
+                            <span>Confirm Submit</span>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+      {/* ------------------------------------------------ */}
 
     </Layout>
   );

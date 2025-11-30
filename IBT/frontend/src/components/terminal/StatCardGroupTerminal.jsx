@@ -15,7 +15,7 @@ const StatCardGroupTerminal = ({ regular, student, senior, totalPassengers, tota
       <StatCard
         icon={UsersRound }
         title="Senior/PWD/Student"
-        value={senior || student}
+        value={senior + student}
         color="cyan"
       />
 
