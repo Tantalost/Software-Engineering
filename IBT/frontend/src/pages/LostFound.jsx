@@ -83,7 +83,7 @@ const LostFound = () => {
     setNewItem({
         trackingNo: autoTracking,
         description: "",
-        where: "",
+        location: "",
         dateTime: formattedNow,
         status: "Unclaimed" 
     });
@@ -227,12 +227,12 @@ const LostFound = () => {
           <div className="text-center py-10">Loading records...</div>
       ) : (
         <Table
-            columns={["Tracking No", "Description", "Where", "DateTime", "Status"]}
+            columns={["Tracking No", "Description", "Location", "DateTime", "Status"]}
             data={paginatedData.map((item) => ({
             id: item.id,
             trackingno: item.trackingNo,
             description: item.description,
-            where: item.where,
+            location: item.location,
             datetime: formatDateTime(item.dateTime),
             status: item.status,
             }))}
@@ -341,12 +341,12 @@ const LostFound = () => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Where</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
                             <div className="relative">
                                 <MapPin size={16} className="absolute left-3 top-3 text-slate-400" />
                                 <textarea 
-                                    value={newItem.where} 
-                                    onChange={(e) => setNewItem({...newItem, where: e.target.value})}
+                                    value={newItem.location} 
+                                    onChange={(e) => setNewItem({...newItem, location: e.target.value})}
                                     className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300  " 
                                     placeholder="Location of the item found..."
                                     required
@@ -373,7 +373,7 @@ const LostFound = () => {
               <Field label="Status" value={viewRow.status} />
               <Field label="DateTime" value={formatDateTime(viewRow.dateTime)} />
               <div className="md:col-span-2"><Field label="Description" value={viewRow.description} /></div>
-              <div className="md:col-span-2"><Field label="Where" value={viewRow.where} /></div>
+              <div className="md:col-span-2"><Field label="Location" value={viewRow.location} /></div>
             </div>
             <div className="mt-4 flex justify-end"><button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button></div>
           </div>
