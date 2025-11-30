@@ -275,7 +275,7 @@ const BusTrips = () => {
                     />
                     <div className="flex justify-end sm:justify-end w-full sm:w-auto gap-5">
                         
-                        {(role === "bus" || role === "superadmin") && (
+                        {(role === "bus") && (
                             <button
                                 onClick={() => setShowSubmitModal(true)}
                                 disabled={isReporting}
