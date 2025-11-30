@@ -40,3 +40,13 @@ export const updateWaitlistEntry = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+export const deleteWaitlistEntry = async (req, res) => {
+  try {
+    const { uid } = req.params;
+    await Waitlist.findOneAndDelete({ uid: uid });
+    res.json({ message: "Waitlist entry removed" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

@@ -1,6 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-const API_URL = "http://localhost:3000/api";
-
 import emailjs from '@emailjs/browser';
 import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList } from "lucide-react";
 
@@ -23,7 +21,9 @@ import TenantEmailModal from "../components/tenants/modals/TenantEmailModal";
 import ApplicationReviewModal from "../components/tenants/modals/ApplicationReviewModal";
 import BroadcastModal from "../components/tenants/modals/BroadcastModal";
 import RemarksModal from "../components/tenants/modals/RemarksModal";
-import { calculateGridPosition, generateRentStatementPDF } from "../utils/tenantUtils";
+import { generateRentStatementPDF } from "../utils/tenantUtils";
+
+const API_URL = "http://localhost:3000/api";
 
 const TenantLease = () => {
 
@@ -62,26 +62,27 @@ const TenantLease = () => {
 
   useEffect(() => {
     fetchTenants();
+    fetchWaitlist();
   }, []);
 
   const fetchTenants = async () => {
     try {
       const res = await fetch(`${API_URL}/tenants`);
+      if (!res.ok) throw new Error("Failed to fetch tenants");
       const data = await res.json();
-      data.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      setRecords(data);
+      // Ensure we map _id to id for the table
+      const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
+      formatted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      setRecords(formatted);
     } catch (err) {
       console.error("Error fetching tenants:", err);
     }
   };
 
-  useEffect(() => {
-    fetchWaitlist();
-  }, []);
-
   const fetchWaitlist = async () => {
     try {
       const res = await fetch(`${API_URL}/waitlist`);
+      if (!res.ok) throw new Error("Failed to fetch waitlist");
       const data = await res.json();
       setWaitlistData(data);
     } catch (err) {
@@ -120,13 +121,38 @@ const TenantLease = () => {
     return { availableSlots: available, nonAvailableSlots: paid, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
   }, [records, activeTab]); 
 
-  const handleAddToWaitlist = () => {
-    if (!waitlistForm.name || !waitlistForm.contact) { alert("Please fill in Name and Contact."); return; }
-    const updatedList = [...waitlistData, { id: Date.now(), ...waitlistForm, dateRequested: new Date().toISOString(), status: "Pending" }];
-    setWaitlistData(updatedList); 
-    localStorage.setItem("ibt_waitlist", JSON.stringify(updatedList));
-    setWaitlistForm({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
-    setShowWaitlistForm(false); 
+  // --- MANUAL WAITLIST ENTRY ---
+  const handleAddToWaitlist = async () => {
+    if (!waitlistForm.name || !waitlistForm.contact) { 
+        alert("Please fill in Name and Contact."); 
+        return; 
+    }
+
+    try {
+        const payload = {
+            ...waitlistForm,
+            uid: `manual-${Date.now()}`, 
+            dateRequested: new Date().toISOString(),
+            status: "Pending"
+        };
+
+        const response = await fetch(`${API_URL}/waitlist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            alert("Added to waitlist successfully!");
+            fetchWaitlist();
+            setWaitlistForm({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
+            setShowWaitlistForm(false); 
+        } else {
+            alert("Failed to add to waitlist");
+        }
+    } catch (error) {
+        console.error("Waitlist Error:", error);
+    }
   };
 
   const handleStartApproval = (applicant) => {
@@ -136,7 +162,7 @@ const TenantLease = () => {
   };
 
   const handleUnlockPayment = async () => {
-    if (!reviewData?._id && !reviewData?.uid) return; 
+    if (!reviewData?.uid) return; 
     
     const idToUpdate = reviewData.uid; 
 
@@ -148,7 +174,7 @@ const TenantLease = () => {
         });
 
         if (response.ok) {
-            alert("Payment Unlocked!");
+            alert("Payment Unlocked for applicant!");
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
             fetchWaitlist(); 
@@ -166,15 +192,23 @@ const TenantLease = () => {
     setShowAddModal(true);
   };
 
+  // --- REJECT/DELETE APPLICANT ---
   const handleRejectApplicant = async (uid) => { 
     if(window.confirm("Are you sure you want to REJECT and DELETE this application?")) {
       try {
-        await fetch(`${API_URL}/waitlist/${uid}`, { method: 'DELETE' });
+        const response = await fetch(`${API_URL}/waitlist/${uid}`, { method: 'DELETE' });
         
-        alert("Application removed.");
-        fetchWaitlist(); 
-        if(showReviewModal) setShowReviewModal(false);
-      } catch (error) { console.error(error); alert("Error removing application."); }
+        if (response.ok) {
+            alert("Application removed.");
+            fetchWaitlist(); 
+            if(showReviewModal) setShowReviewModal(false);
+        } else {
+            alert("Failed to delete application.");
+        }
+      } catch (error) { 
+          console.error(error); 
+          alert("Error removing application."); 
+      }
     }
   };
 
@@ -185,6 +219,7 @@ const TenantLease = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
               ...newTenant,
+              // Pass the waitlist UID so backend can delete it from waitlist automatically
               transferWaitlistId: transferApplicant?.uid 
           })
       });
@@ -193,9 +228,11 @@ const TenantLease = () => {
           setShowAddModal(false);
           alert("Tenant Added Successfully!");
           fetchTenants(); 
-          fetchWaitlist(); 
+          fetchWaitlist(); // Refresh waitlist as it might have changed
+          setTransferApplicant(null);
       } else {
-          alert("Error saving to database");
+          const err = await response.json();
+          alert(`Error saving to database: ${err.error || 'Unknown error'}`);
       }
     } catch (e) { 
         console.error(e); 

@@ -1,4 +1,4 @@
-import React, { useState } from "react"; // Import useState
+import React, { useState } from "react"; 
 import { X, ClipboardList, UserCheck, CreditCard, Eye, Filter } from "lucide-react";
 
 const WaitlistModal = ({ 
@@ -88,7 +88,7 @@ const WaitlistModal = ({
               <tbody className="divide-y divide-slate-100">
                 {/* 4. MAP FILTERED DATA */}
                 {filteredData.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={app.uid || app._id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">
                         <div className="font-bold text-slate-800">{app.name}</div>
                         <div className="text-xs text-slate-500">{app.contact}</div>
@@ -113,7 +113,11 @@ const WaitlistModal = ({
                     </td>
                     <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
-                            <button onClick={() => onReject(app.id)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent hover:border-red-100 transition-all">
+                            <button 
+                                // FIX: Use app.uid because backend deletes by uid
+                                onClick={() => onReject(app.uid)} 
+                                className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent hover:border-red-100 transition-all"
+                            >
                                 Reject
                             </button>
                             <button 

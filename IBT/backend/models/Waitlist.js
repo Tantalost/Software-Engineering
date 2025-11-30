@@ -19,6 +19,6 @@ const WaitlistSchema = new mongoose.Schema({
   paymentAmount: String,
   
   dateRequested: { type: Date, default: Date.now }
-});
+}, { collection: 'tenantapplications' }); // <--- FORCE COLLECTION NAME
 
 export default mongoose.model('Waitlist', WaitlistSchema);

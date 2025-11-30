@@ -3,7 +3,8 @@ import {
   getWaitlist, 
   getWaitlistByUid, 
   createWaitlistEntry, 
-  updateWaitlistEntry 
+  updateWaitlistEntry,
+  deleteWaitlistEntry 
 } from "../controllers/waitlistController.js";
 
 const router = express.Router();
@@ -12,5 +13,6 @@ router.get('/', getWaitlist);
 router.get('/:uid', getWaitlistByUid);
 router.post('/', createWaitlistEntry);
 router.put('/:uid', updateWaitlistEntry);
+router.delete('/:uid', deleteWaitlistEntry);
 
 export default router;

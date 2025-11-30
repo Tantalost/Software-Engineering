@@ -1,6 +1,5 @@
-// src/components/tenants/modals/ApplicationReviewModal.jsx
 import React from "react";
-import { ArrowLeft, XCircle, UserCheck, FileText, CheckCircle, CreditCard } from "lucide-react";
+import { ArrowLeft, CheckCircle, Lock, Unlock, FileText, User, CreditCard } from "lucide-react";
 
 const ApplicationReviewModal = ({ 
   isOpen, 
@@ -12,138 +11,161 @@ const ApplicationReviewModal = ({
 }) => {
   if (!isOpen || !reviewData) return null;
 
+  // Safe access to UID for display (Fixes the .slice error)
+  // We convert to String() first to handle cases where uid might be a number or undefined object
+  const displayId = reviewData?.uid 
+    ? String(reviewData.uid).slice(-6).toUpperCase() 
+    : "---";
+  
+  const isPaymentUnlocked = reviewData.status === "PAYMENT_UNLOCKED";
+  // Check if receipt exists for logic, even if not displayed
+  const hasProofOfPayment = !!reviewData.receiptUrl; 
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-5xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
         
-        <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 p-4 flex justify-between items-center text-white rounded-t-xl shrink-0">
-           <div className="flex items-center gap-3">
-               <button onClick={onBack} className="p-1.5 rounded-full hover:bg-emerald-600 transition-colors" title="Back to Waitlist">
-                   <ArrowLeft size={22} />
-               </button>
-               <div className="h-6 w-px bg-emerald-600 mx-1"></div>
-               <h2 className="font-bold text-lg flex items-center gap-2">
-                   <UserCheck size={20}/> Verify Application
-               </h2>
-           </div>
-           <button onClick={onClose} className="hover:bg-emerald-600 p-1 rounded-full transition-colors">
-               <XCircle size={22}/>
-           </button>
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Application Review</h3>
+              <p className="text-sm text-slate-500">ID: {displayId}</p>
+            </div>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+            isPaymentUnlocked ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+          }`}>
+            {reviewData.status || "Pending"}
+          </div>
         </div>
-        
-        
-        <div className="p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-          <div className="space-y-6">
-              <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-                  <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-xl text-slate-800">{reviewData.name}</h3>
-                      <span className="text-xs text-slate-400 font-mono">ID: {reviewData.id.slice(-6)}</span>
-                  </div>
-                  <div className="space-y-1 mb-3">
-                      <p className="text-sm text-slate-600 flex items-center gap-2"><span className="font-semibold">📞</span> {reviewData.contact}</p>
-                      <p className="text-sm text-slate-600 flex items-center gap-2"><span className="font-semibold">✉️</span> {reviewData.email}</p>
-                  </div>
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-slate-200">
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-md font-bold border border-blue-200">
-                        Slot: {reviewData.targetSlot}
-                      </span>
-                      <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-md font-bold border border-emerald-200">
-                        {reviewData.product}
-                      </span>
-                  </div>
-              </div>
-
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          
+          {/* 1. Applicant Details */}
+          <section>
+            <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
+              <User size={18} className="text-emerald-600" /> Applicant Information
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2 border-b pb-2">
-                    <FileText size={18}/> 1. Identity Documents
-                </h4>
-                <div className="grid grid-cols-3 gap-3">
-                    <DocumentPreview label="Business Permit" url={reviewData.permitUrl} />
-                    <DocumentPreview label="Valid ID" url={reviewData.validIdUrl} />
-                    <DocumentPreview label="Brgy. Clearance" url={reviewData.clearanceUrl} />
+                <label className="text-xs font-bold text-slate-400 uppercase">Full Name</label>
+                <p className="font-medium text-slate-800">{reviewData.name || "N/A"}</p>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase">Contact</label>
+                <p className="font-medium text-slate-800">{reviewData.contact || "N/A"}</p>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase">Email</label>
+                <p className="font-medium text-slate-800">{reviewData.email || "N/A"}</p>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase">Target Slot</label>
+                <p className="font-medium text-slate-800">
+                  {reviewData.targetSlot ? `${reviewData.targetSlot} (${reviewData.floor || "General"})` : "Any"}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* 2. Documents */}
+          <section>
+            <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
+              <FileText size={18} className="text-emerald-600" /> Submitted Documents
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[
+                { label: "Valid ID", url: reviewData.validIdUrl },
+                { label: "Business Permit", url: reviewData.permitUrl },
+                { label: "Brgy Clearance", url: reviewData.clearanceUrl },
+                // Payment Receipt removed from display
+              ].map((doc, idx) => (
+                <div key={idx} className="group relative aspect-square bg-slate-100 rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center">
+                  {doc.url ? (
+                    <img 
+                      src={doc.url} 
+                      alt={doc.label} 
+                      className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() => window.open(doc.url, '_blank')}
+                    />
+                  ) : (
+                    <span className="text-xs text-slate-400 italic text-center px-2">No {doc.label}</span>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] py-1 text-center font-medium">
+                    {doc.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 3. Payment Status */}
+          <section>
+            <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
+              <CreditCard size={18} className="text-emerald-600" /> Payment Verification
+            </h4>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Reference Number</p>
+                  <p className="text-lg font-mono font-bold text-slate-900">{reviewData.paymentReference || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 text-right">Amount Paid</p>
+                  <p className="text-lg font-bold text-emerald-600 text-right">
+                    {reviewData.paymentAmount ? `₱${Number(reviewData.paymentAmount).toLocaleString()}` : "₱0.00"}
+                  </p>
                 </div>
               </div>
-          </div>
+              
+              {!isPaymentUnlocked && (
+                <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg flex items-start gap-2">
+                  <Lock size={16} className="mt-0.5 shrink-0" />
+                  <p>
+                    <strong>Action Required:</strong> Review the documents above. If everything looks good, unlock the payment portal for this applicant so they can proceed with the official lease.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
 
-          <div className="space-y-6">
-              <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <h4 className="font-bold text-slate-700 text-sm">Current Status</h4>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                    reviewData.status === 'PAYMENT_REVIEW' ? 'bg-orange-100 text-orange-700 border-orange-200' : 
-                    reviewData.status === 'PAYMENT_UNLOCKED' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 border-slate-200'
-                }`}>
-                    {reviewData.status ? reviewData.status.replace('_', ' ') : "PENDING"}
-                </span>
-              </div>
-
-              <div className={`p-5 rounded-xl border-2 border-dashed ${reviewData.receiptUrl ? 'bg-orange-50 border-orange-200' : 'bg-slate-50 border-slate-200'}`}>
-                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-dashed border-slate-300 pb-2">
-                    <CreditCard size={18} className="text-slate-500"/> 2. Payment Verification
-                  </h4>
-                  {reviewData.receiptUrl ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white p-2 rounded border border-orange-100">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Ref No.</p>
-                                <p className="font-mono font-bold text-slate-800">{reviewData.paymentReference}</p>
-                            </div>
-                            <div className="bg-white p-2 rounded border border-orange-100">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Amount</p>
-                                <p className="font-mono font-bold text-emerald-600">₱{reviewData.paymentAmount}</p>
-                            </div>
-                        </div>
-                        <div className="group relative rounded-lg overflow-hidden border border-orange-200 shadow-sm">
-                            <img src={reviewData.receiptUrl} alt="Receipt" className="w-full h-48 object-contain bg-white cursor-pointer" onClick={() => window.open(reviewData.receiptUrl)} />
-                        </div>
-                      </div>
-                  ) : (
-                      <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-                          <CreditCard size={40} className="mb-2 opacity-20"/>
-                          <p className="text-sm font-medium">No receipt uploaded yet.</p>
-                          <p className="text-xs">User must be "Unlocked" to upload.</p>
-                      </div>
-                  )}
-              </div>
-          </div>
         </div>
 
-        <div className="bg-slate-50 p-4 border-t border-slate-200 flex justify-between items-center rounded-b-xl shrink-0">
-           <div className="text-xs text-slate-400 italic">
-               Action Required: {reviewData.status === 'PAYMENT_REVIEW' ? 'Verify Payment' : 'Review Documents'}
-           </div>
-           <div className="flex gap-3">
-               {(!reviewData.status || reviewData.status === 'VERIFICATION_PENDING') && (
-                   <button onClick={onUnlockPayment} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-5 py-2 rounded-lg font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95">
-                       <CheckCircle size={18}/> Approve Docs & Unlock
-                   </button>
-               )}
-
-               {(reviewData.status === 'PAYMENT_UNLOCKED' || reviewData.status === 'PAYMENT_REVIEW') && (
-                   <button 
-                     onClick={onProceedToLease} 
-                     disabled={!reviewData.receiptUrl}
-                     className={`px-5 py-2 rounded-lg font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95 text-white ${!reviewData.receiptUrl ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-cyan-500'}`}
-                   >
-                       <UserCheck size={18}/> Confirm & Finalize
-                   </button>
-               )}
-           </div>
+        {/* Footer Actions */}
+        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+          {!isPaymentUnlocked ? (
+            <button 
+              onClick={() => {
+                console.log("Unlock Payment Clicked"); // Debug log
+                onUnlockPayment();
+              }}
+              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2"
+            >
+              <Unlock size={18} />
+              Verify & Unlock Payment
+            </button>
+          ) : (
+            <button 
+              onClick={onProceedToLease}
+              // If you removed the receipt because they don't provide one, 
+              // you might want to remove this 'disabled' check as well.
+              // disabled={!hasProofOfPayment} 
+              className={`px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-all bg-emerald-600 text-white hover:bg-emerald-700`}
+            >
+              <CheckCircle size={18} />
+              Approve & Create Lease
+            </button>
+          )}
         </div>
+
       </div>
     </div>
   );
 };
-
-const DocumentPreview = ({ label, url }) => (
-    <div className="group">
-        <p className="text-[10px] uppercase font-bold text-slate-500 mb-1">{label}</p>
-        {url ? (
-            <div className="relative overflow-hidden rounded-lg border border-slate-300 h-28 cursor-pointer" onClick={() => window.open(url)}>
-                <img src={url} alt={label} className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
-            </div>
-        ) : <span className="text-red-500 text-xs font-bold bg-red-50 px-2 py-1 rounded">Missing</span>}
-    </div>
-);
 
 export default ApplicationReviewModal;
