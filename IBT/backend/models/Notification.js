@@ -1,12 +1,14 @@
 import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    message: { type: String, required: true },
-    source: { type: String, default: "System" }, 
-    date: { type: String, required: true },
-    read: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now } 
+  title: String,
+  message: String,
+  source: String,
+  read: { type: Boolean, default: false },
+  date: { type: String, default: new Date().toLocaleString() },
+  
+  // 👇 YOU MUST ADD THIS FIELD 👇
+  targetRole: { type: String, default: "all" } 
 });
 
 export default mongoose.model("Notification", notificationSchema);

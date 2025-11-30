@@ -11,10 +11,23 @@ export default function Notifications() {
     const [selectedIds, setSelectedIds] = useState([]);
 
     // 1. Load from MongoDB on mount
-    const loadData = async () => {
+    // 1. Load from MongoDB on mount
+const loadData = async () => {
         setIsLoading(true);
-        const data = await fetchNotifications();
-        setNotes(data);
+        const data = await fetchNotifications(); // Fetches raw data
+
+        // ============================================================
+        // 🛑 CRITICAL FIX: FILTER DATA HERE TOO
+        // ============================================================
+        const userRole = localStorage.getItem("authRole") || "superadmin";
+        
+        const filteredNotes = data.filter(n => {
+            return !n.targetRole || n.targetRole === "all" || n.targetRole === userRole;
+        });
+        
+        setNotes(filteredNotes);
+        // ============================================================
+        
         setIsLoading(false);
     };
 

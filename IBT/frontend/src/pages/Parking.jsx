@@ -10,9 +10,11 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import { submitPageReport } from "../utils/reportService.js"; // <--- IMPORT SERVICE
-// Added FileText and Loader2 to imports
-import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft, FileText, Loader2 } from "lucide-react"; 
+import LogModal from "../components/common/LogModal"; // <--- 1. IMPORT LOG MODAL
+import { submitPageReport } from "../utils/reportService.js"; 
+import { logActivity } from "../utils/logger"; // <--- 2. IMPORT LOGGER
+import { sendNotification } from "../utils/notificationService.js"; // <--- 3. IMPORT NOTIFICATION
+import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft, FileText, Loader2, History, ListChecks, X } from "lucide-react"; 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -24,6 +26,13 @@ const Parking = () => {
   const [activeType, setActiveType] = useState("All");
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showLogModal, setShowLogModal] = useState(false); // <--- 4. LOG STATE
+
+  // --- SELECTION STATE ---
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  // -----------------------
+
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
@@ -37,10 +46,8 @@ const Parking = () => {
 
   const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, message: "" });
 
-  // --- REPORTING STATES ---
   const [isReporting, setIsReporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  // ------------------------
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/parking";
@@ -79,7 +86,121 @@ const Parking = () => {
 
   useEffect(() => { fetchParkingTickets(); }, []);
 
-  // --- Add Ticket Handlers ---
+  // --- Filtered & Paginated Data ---
+  const filtered = records.filter(ticket => {
+    const matchesSearch =
+      (ticket.ticketNo && String(ticket.ticketNo).includes(searchQuery)) ||
+      (ticket.plateNo && ticket.plateNo.toLowerCase().includes(searchQuery.toLowerCase()));
+    const ticketDate = ticket.timeIn ? new Date(ticket.timeIn).toDateString() : "";
+    const filterDate = selectedDate ? new Date(selectedDate).toDateString() : "";
+    const matchesDate = !selectedDate || ticketDate === filterDate;
+    const matchesType = activeType === "All" || ticket.type.toLowerCase() === activeType.toLowerCase();
+    return matchesSearch && matchesType && matchesDate;
+  });
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const carCount = filtered.filter(t => t.type === "Car").length;
+  const motoCount = filtered.filter(t => t.type === "Motorcycle").length;
+  const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
+
+  // --- 5. SELECTION HANDLERS ---
+  const toggleSelectionMode = () => {
+    if (isSelectionMode) setSelectedIds([]);
+    setIsSelectionMode(!isSelectionMode);
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const ids = paginatedData.map(item => item.id);
+      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+    } else {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
+
+  // --- 6. BULK DELETE HANDLER ---
+  const handleBulkDelete = async () => {
+    const confirmMsg = role === "parking" 
+        ? `Request deletion for ${selectedIds.length} records?` 
+        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsLoading(true);
+    try {
+        if (role === "parking") {
+            // --- PARKING ADMIN: SEND REQUEST ---
+            const requestPromises = selectedIds.map(async (id) => {
+                const item = records.find(r => r.id === id);
+                if (!item) return;
+
+                return fetch("http://localhost:3000/api/deletion-requests", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        itemType: "Parking Ticket",
+                        itemDescription: `Ticket #${item.ticketNo} - ${item.plateNo}`,
+                        requestedBy: "Parking Admin",
+                        originalData: item, 
+                        reason: "Bulk deletion request"
+                    })
+                });
+            });
+
+             await sendNotification(
+        "Deletion Request: Parking", 
+        `Parking Admin has requested to delete ${selectedIds.length} parking records.`,
+        "Parking",
+        "superadmin" // <--- IMPORTANT: This tags the specific audience
+    );
+
+            await Promise.all(requestPromises);
+            await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} parking tickets`, "Parking");
+            
+            // --- NOTIFY SUPERADMIN ONLY ---
+
+            alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`);
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+
+        } else {
+            // --- SUPERADMIN: IMMEDIATE DELETE ---
+            const deletePromises = selectedIds.map(id => 
+                fetch(`${API_URL}/${id}`, { method: "DELETE" })
+            );
+            
+            await Promise.all(deletePromises);
+            await logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} parking tickets via bulk action`, "Parking");
+            
+            alert(`Successfully deleted ${selectedIds.length} records`);
+            fetchParkingTickets();
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+        }
+
+    } catch (error) {
+      console.error("Bulk action failed", error);
+      alert("Failed to process some records.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- Handlers ---
   const handleAddClick = () => {
     const now = new Date();
     const formattedTimeIn = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
@@ -110,13 +231,11 @@ const Parking = () => {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault(); 
-    
     if (!newTicket.plateNo || !newTicket.ticketNo) {
       alert("Please fill in both Ticket Number and Plate Number.");
       return;
     }
 
-    // --- Check for duplicates ---
     const duplicateTicket = existingTicketNumbers.includes(newTicket.ticketNo);
     const duplicatePlate = existingPlates.some(p => p.toLowerCase() === newTicket.plateNo.toLowerCase());
 
@@ -124,7 +243,6 @@ const Parking = () => {
       setDuplicateModal({ isOpen: true, message: `Ticket Number #${newTicket.ticketNo} already exists!` });
       return;
     }
-
     if (duplicatePlate) {
       setDuplicateModal({ isOpen: true, message: `Plate Number ${newTicket.plateNo.toUpperCase()} already exists!` });
       return;
@@ -137,6 +255,8 @@ const Parking = () => {
         body: JSON.stringify(newTicket),
       });
       if (response.ok) {
+        const created = await response.json();
+        await logActivity(role, "CREATE_TICKET", `Created Parking Ticket #${newTicket.ticketNo}`, "Parking");
         fetchParkingTickets();
         setShowAddModal(false);
       }
@@ -145,12 +265,12 @@ const Parking = () => {
     }
   };
 
-  // --- Delete Functionality ---
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
       const response = await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
       if (response.ok) {
+        await logActivity(role, "DELETE_TICKET", `Deleted Parking Ticket #${deleteRow.ticketNo}`, "Parking");
         setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
         setDeleteRow(null);
       } else alert("Failed to delete record");
@@ -159,7 +279,6 @@ const Parking = () => {
     }
   };
 
-  // --- Archive ---
   const handleArchive = async (rowToArchive) => {
     if (!window.confirm(`Are you sure you want to archive Ticket #${rowToArchive.ticketNo}?`)) return;
     try {
@@ -181,6 +300,7 @@ const Parking = () => {
       const deleteRes = await fetch(`${API_URL}/${idToDelete}`, { method: "DELETE" });
       if (!deleteRes.ok) throw new Error("Failed to remove from active list");
 
+      await logActivity(role, "ARCHIVE_TICKET", `Archived Parking Ticket #${rowToArchive.ticketNo}`, "Parking");
       setRecords(prev => prev.filter(r => r.id !== idToDelete));
       alert("Ticket archived successfully!");
     } catch (e) {
@@ -189,12 +309,12 @@ const Parking = () => {
     }
   };
 
-  // --- Logout / Depart ---
   const confirmLogout = async () => {
     if (!logoutRow) return;
     try {
       const response = await fetch(`${API_URL}/${logoutRow.id}/depart`, { method: "PUT", headers: { "Content-Type": "application/json" } });
       if (response.ok) {
+        await logActivity(role, "VEHICLE_DEPART", `Vehicle Departed: Ticket #${logoutRow.ticketNo}`, "Parking");
         fetchParkingTickets();
         setLogoutRow(null);
       }
@@ -213,28 +333,9 @@ const Parking = () => {
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // --- Filtered & Paginated Data ---
-  const filtered = records.filter(ticket => {
-    const matchesSearch =
-      (ticket.ticketNo && String(ticket.ticketNo).includes(searchQuery)) ||
-      (ticket.plateNo && ticket.plateNo.toLowerCase().includes(searchQuery.toLowerCase()));
-    const ticketDate = ticket.timeIn ? new Date(ticket.timeIn).toDateString() : "";
-    const filterDate = selectedDate ? new Date(selectedDate).toDateString() : "";
-    const matchesDate = !selectedDate || ticketDate === filterDate;
-    const matchesType = activeType === "All" || ticket.type.toLowerCase() === activeType.toLowerCase();
-    return matchesSearch && matchesType && matchesDate;
-  });
-
-  const carCount = filtered.filter(t => t.type === "Car").length;
-  const motoCount = filtered.filter(t => t.type === "Motorcycle").length;
-  const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
-
-  // --- SUBMIT REPORT HANDLER ---
- // --- UPDATED SUBMIT HANDLER ---
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-      // 1. Helper to format date/time to "11/30/2025, 2:30 PM"
       const formatDateTime = (dateStr) => {
         if (!dateStr) return "-";
         return new Date(dateStr).toLocaleString('en-US', {
@@ -247,25 +348,18 @@ const Parking = () => {
         });
       };
 
-      // 2. Format Data & Remove Unwanted Columns
-     // Inside Parking.jsx -> handleSubmitReport function
+      const formattedData = filtered.map(item => {
+        const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
+        return {
+          ...rest, 
+          timeIn: formatDateTime(rest.timeIn),
+          timeOut: rest.timeOut ? formatDateTime(rest.timeOut) : "Parked (Active)"
+        };
+      });
 
-const formattedData = filtered.map(item => {
-  // FIND THIS LINE:
-  // Add 'isArchived' to this list to remove it from the final report
-  const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
-
-  return {
-    ...rest, 
-    timeIn: formatDateTime(rest.timeIn),
-    timeOut: rest.timeOut ? formatDateTime(rest.timeOut) : "Parked (Active)"
-  };
-});
-
-      // 3. Package Data
       const reportPayload = {
         screen: "Parking Management",
-        generatedDate: new Date().toLocaleString(), // Readable report date
+        generatedDate: new Date().toLocaleString(),
         filters: {
            searchQuery,
            selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
@@ -277,10 +371,9 @@ const formattedData = filtered.map(item => {
             totalVehicles: filtered.length,
             totalRevenue: revenue
         },
-        data: formattedData // <--- Send cleaned data
+        data: formattedData
       };
 
-      // 4. Submit to Backend
       await submitPageReport("Parking", reportPayload, "Parking Admin");
 
       await fetch("http://localhost:3000/api/notifications", {
@@ -289,18 +382,16 @@ const formattedData = filtered.map(item => {
         body: JSON.stringify({
           title: "Report Submitted: Parking Report",
           message: "A new Parking Management report has been generated and the active log has been cleared.",
-          source: "Parking"
+          source: "Parking",
+          targetRole: "superadmin" // Optional: notify superadmin only?
         }),
       });
 
-      // 5. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item => 
           fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
       );
       
       await Promise.all(deletePromises);
-
-      // 6. Update UI
       alert("Report submitted successfully! The table has been cleared.");
       setShowSubmitModal(false);
       fetchParkingTickets();
@@ -312,21 +403,12 @@ const formattedData = filtered.map(item => {
       setIsReporting(false);
     }
   };
-  // -----------------------------
-
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
   const getBadgeStyles = () => {
     if (newTicket.type === 'Car') return "bg-blue-50 text-blue-600 border-blue-600";
     return "bg-orange-50 text-orange-500 border-orange-500";
   };
 
-  // --- Export Functions ---
   const exportToCSV = () => {
     const headers = ["Ticket No","Plate No","Type","Fee/Hr","Total","Time In","Time Out","Duration","Status"];
     const rows = filtered.map(item => [
@@ -376,14 +458,27 @@ const formattedData = filtered.map(item => {
     doc.save(`parking_records_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
+  // --- 7. COLUMN CONFIG FOR SELECTION ---
+  const tableColumns = isSelectionMode 
+    ? [
+        <div key="header-check" className="flex items-center">
+            <input 
+                type="checkbox" 
+                checked={isAllSelected}
+                onChange={handleSelectAll}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+        </div>,
+        "Ticket No", "Plate No", "Type", "Fee/Hr", "Total", "Time In", "Time Out", "Duration", "Status"
+      ]
+    : ["Ticket No", "Plate No", "Type", "Fee/Hr", "Total", "Time In", "Time Out", "Duration", "Status"];
+
   return (
     <Layout title="Parking Management">
-      {/* STAT CARDS */}
       <div className="mb-6">
         <StatCardGroupPark cars={carCount} motorcycles={motoCount} totalVehicles={filtered.length} totalRevenue={revenue} />
       </div>
 
-      {/* FILTERS + EXPORT */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <div className="flex items-center justify-end gap-3">
@@ -398,38 +493,100 @@ const formattedData = filtered.map(item => {
               <span>Submit Report</span>
             </button>
           )}
-          {/* ----------------------------------------------------------------- */}
 
           <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             + Add New
           </button>
           <ExportMenu onExportExcel={exportToCSV} onExportPDF={exportToPDF} />
+
         </div>
       </div>
 
-      <div className="mb-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
+        
         <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
-      </div>
 
-      {/* TABLE + PAGINATION */}
+        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+            <button
+                onClick={() => setShowLogModal(true)}
+                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                title="View Logs"
+            >
+                <History size={18} />
+                <span className="hidden sm:inline">Logs</span>
+            </button>
+
+            {isSelectionMode && selectedIds.length > 0 && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                    <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                        {selectedIds.length} Selected
+                    </span>
+                    <button
+                        onClick={handleBulkDelete}
+                        title="Delete Selected"
+                        className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                    >
+                        <Trash2 className="h-5 w-5" />
+                    </button>
+                </div>
+            )}
+
+            <button
+                onClick={toggleSelectionMode}
+                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                    isSelectionMode
+                        ? "bg-red-500 text-white shadow-md"
+                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                }`}
+            >
+                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+            </button>
+        </div>
+    </div>
+
+
+      
+
       {isLoading ? (
         <div className="text-center py-10">Loading tickets...</div>
       ) : (
         <>
           <Table
-            columns={["Ticket No", "Plate No", "Type", "Fee/Hr", "Total", "Time In", "Time Out", "Duration", "Status"]}
-            data={paginatedData.map(ticket => ({
-              id: ticket.id,
-              ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : "---",
-              plateno: ticket.plateNo || "---",
-              type: ticket.type,
-              "fee/hr": ticket.baseRate ? `₱${ticket.baseRate}` : "---",
-              total: ticket.finalPrice ? `₱${ticket.finalPrice}` : "---",
-              timein: formatTimeOnly(ticket.timeIn),
-              timeout: ticket.timeOut ? formatTimeOnly(ticket.timeOut) : "---",
-              duration: ticket.duration || "---",
-              status: ticket.status
-            }))}
+            columns={tableColumns}
+            data={paginatedData.map(ticket => {
+              const baseData = {
+                id: ticket.id,
+                ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : "---",
+                plateno: ticket.plateNo || "---",
+                type: ticket.type,
+                "fee/hr": ticket.baseRate ? `₱${ticket.baseRate}` : "---",
+                total: ticket.finalPrice ? `₱${ticket.finalPrice}` : "---",
+                timein: formatTimeOnly(ticket.timeIn),
+                timeout: ticket.timeOut ? formatTimeOnly(ticket.timeOut) : "---",
+                duration: ticket.duration || "---",
+                status: ticket.status
+              };
+
+              // Add Checkbox if in selection mode
+              if (isSelectionMode) {
+                  return {
+                      select: (
+                          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                              <input 
+                                  type="checkbox"
+                                  checked={selectedIds.includes(ticket.id)}
+                                  onChange={() => toggleSelect(ticket.id)}
+                                  className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                              />
+                          </div>
+                      ),
+                      ...baseData
+                  };
+              }
+
+              return baseData;
+            })}
             actions={row => {
               const selectedRecord = records.find(r => r.id === row.id);
               return (
@@ -465,7 +622,13 @@ const formattedData = filtered.map(item => {
         </>
       )}
 
-      {/* ADD MODAL */}
+      {/* --- 9. LOG MODAL --- */}
+      <LogModal 
+        isOpen={showLogModal} 
+        onClose={() => setShowLogModal(false)} 
+      />
+      {/* -------------------- */}
+
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
@@ -535,7 +698,6 @@ const formattedData = filtered.map(item => {
         </div>
       )}
 
-      {/* DUPLICATE MODAL */}
       {duplicateModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
@@ -551,7 +713,6 @@ const formattedData = filtered.map(item => {
         </div>
       )}
 
-      {/* Other modals: DEPART, VIEW, DELETE */}
       {logoutRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
@@ -602,7 +763,6 @@ const formattedData = filtered.map(item => {
         itemName={deleteRow ? (deleteRow.ticketNo ? `Ticket #${deleteRow.ticketNo}` : "this item") : ""}
       />
 
-      {/* --- CONFIRMATION MODAL FOR REPORT SUBMISSION --- */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
@@ -641,7 +801,6 @@ const formattedData = filtered.map(item => {
             </div>
         </div>
       )}
-      {/* ------------------------------------------------ */}
 
     </Layout>
   );
