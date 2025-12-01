@@ -23,6 +23,7 @@ export const createBusTrip = async (req, res) => {
       time,
       date,
       company,
+      price: 75,
       status: status || "Pending",
       isArchived: false
     });

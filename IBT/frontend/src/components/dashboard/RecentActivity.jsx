@@ -1,45 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FileCheck } from "lucide-react";
+import { FileCheck } from "lucide-react"; 
 
-const RecentActivity = () => {
+const RecentActivity = ({ data = [] }) => {
   const navigate = useNavigate(); 
-
-  const activities = [
-    {
-      id: 1,
-      message: "New uploaded Bus trip schedule",
-      time: "5 mins ago",
-      icon: FileCheck,
-      type: "success",
-      user: "Inspector Lee",
-      link: "/buses-trips", 
-    },
-    {
-      id: 2,
-      message: "New updates for Parking Fees Report",
-      time: "12 mins ago",
-      icon: FileCheck,
-      type: "warning",
-      user: "Parking Attendant",
-      link: "/parking",
-    },
-    {
-      id: 3,
-      message: "New Tenants/Lease Report",
-      time: "28 mins ago",
-      icon: FileCheck,
-      type: "success",
-      user: "Manager Kim",
-      link: "/tenant-lease",
-    },
-  ];
 
   const typeColors = {
     success: "from-emerald-400 to-teal-400",
-    warning: "from-yellow-400 to-orange-400",
     alert: "from-red-400 to-pink-400",
   };
+
+  // Limit the data to the first 3 items only
+  const limitedData = data.slice(0, 3);
 
   return (
     <div className="bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500">
@@ -48,33 +20,36 @@ const RecentActivity = () => {
       </div>
 
       <div className="space-y-3">
-        {activities.map((activity, idx) => (
-          <div
-            key={activity.id}
-            onClick={() => navigate(activity.link)} 
-            className="flex items-center justify-between py-5 px-6 bg-gradient-to-r from-gray-50 to-white border border-gray-200 hover:border-emerald-300 rounded-2xl hover:shadow-md transition-all duration-300 cursor-pointer group"
-            style={{}}
-          >
-            <div className="flex items-center space-x-5 flex-1">
-              <div
-                className={`w-14 h-14 bg-gradient-to-br ${typeColors[activity.type]} rounded-2xl shadow-lg flex items-center justify-center group-hover:scale-110 transition-transform`}
-              >
-                <activity.icon className="text-white" size={24} />
+        {limitedData.length === 0 ? <p className="text-gray-500">No recent activity.</p> : null}
+        
+        {limitedData.map((activity, idx) => {
+          const Icon = activity.icon || FileCheck; 
+          const colorClass = typeColors[activity.type] || typeColors.success;
+          
+          return (
+            <div
+              key={activity.id || idx}
+              className="flex items-center justify-between py-5 px-6 bg-gradient-to-r from-gray-50 to-white border border-gray-200 hover:border-emerald-300 rounded-2xl hover:shadow-md transition-all duration-300 cursor-pointer group"
+            >
+              <div className="flex items-center space-x-5 flex-1">
+                <div className={`w-14 h-14 bg-gradient-to-br ${colorClass} rounded-2xl shadow-lg flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <Icon className="text-white" size={24} />
+                </div>
+
+                <div className="flex-1">
+                  <p className="text-gray-900 font-semibold text-base mb-1">
+                    {activity.message}
+                  </p>
+                  <p className="text-gray-500 text-sm">Status: {activity.status}</p>
+                </div>
               </div>
 
-              <div className="flex-1">
-                <p className="text-gray-900 font-semibold text-base mb-1">
-                  {activity.message}
-                </p>
-                <p className="text-gray-500 text-sm">by {activity.user}</p>
-              </div>
+              <span className="text-gray-500 text-sm font-medium ml-4">
+                {new Date(activity.date).toLocaleDateString()}
+              </span>
             </div>
-
-            <span className="text-gray-500 text-sm font-medium ml-4">
-              {activity.time}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
