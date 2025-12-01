@@ -10,7 +10,7 @@ import {
   Area,
   Line, 
 } from "recharts";
-import { DollarSign, BarChart3 } from "lucide-react";
+import { PhilippinePeso, BarChart3 } from "lucide-react";
 
 const OperationsAnalytics = ({ data }) => {
   const [viewMode, setViewMode] = useState("revenue"); // 'revenue' or 'volume'
@@ -79,7 +79,7 @@ const OperationsAnalytics = ({ data }) => {
                 : "text-gray-500 hover:text-gray-900"
             }`}
           >
-            <DollarSign size={16} />
+            <PhilippinePeso size={16} />
             Revenue
           </button>
           <button
