@@ -7,6 +7,7 @@ const BusTripSchema = new mongoose.Schema({
   departureTime: { type: String },        
   date: { type: Date, required: true },
   company: { type: String, required: true },
+  price: { type: Number, default: 75 },
   status: { type: String, default: "Active" }, 
   ticketReferenceNo: { type: String, default: "" }, 
   isArchived: { type: Boolean, default: false } 

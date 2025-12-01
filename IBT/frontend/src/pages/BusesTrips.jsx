@@ -409,9 +409,9 @@ const BusTrips = () => {
                 className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
             />
         </div>,
-        "Template No", "Ticket Ref", "Route", "Time", "Departure", "Date", "Company", "Status"
+        "Template No", "Ticket Ref", "Route", "Price", "Time", "Departure", "Date", "Company", "Status"
       ]
-    : ["Template No", "Ticket Ref", "Route", "Time", "Departure", "Date", "Company", "Status"];
+    : ["Template No", "Ticket Ref", "Route", "Price", "Time", "Departure", "Date", "Company", "Status"];
 
     return (
         <Layout title="Bus Trips Management">
@@ -508,6 +508,7 @@ const BusTrips = () => {
                                 id: bus.id,
                                 templateno: bus.templateNo || bus.templateno,
                                 route: bus.route,
+                                price: `₱${bus.price || 75}`,
                                 time: formatTime(bus.time),
                                 rawTime: bus.time,
                                 departure: formatTime(bus.departureTime),
