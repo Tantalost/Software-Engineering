@@ -236,17 +236,18 @@ const Parking = () => {
       return;
     }
 
+    // 1. Check ONLY for duplicate Ticket Number
     const duplicateTicket = existingTicketNumbers.includes(newTicket.ticketNo);
-    const duplicatePlate = existingPlates.some(p => p.toLowerCase() === newTicket.plateNo.toLowerCase());
+
+    // 2. We removed the 'duplicatePlate' check here so multiple entries 
+    // for the same plate are now allowed.
 
     if (duplicateTicket) {
       setDuplicateModal({ isOpen: true, message: `Ticket Number #${newTicket.ticketNo} already exists!` });
       return;
     }
-    if (duplicatePlate) {
-      setDuplicateModal({ isOpen: true, message: `Plate Number ${newTicket.plateNo.toUpperCase()} already exists!` });
-      return;
-    }
+
+    // Note: The duplicate plate check block was removed here.
 
     try {
       const response = await fetch(API_URL, {

@@ -17,6 +17,7 @@ export default function LoginCard({
   error,
 }) {
   return (
+    <div className="flex justify-center items-center w-200">
     <div
       className="relative w-full 
       max-w-xl sm:max-w-2xl md:max-w-3xl 
@@ -90,6 +91,7 @@ export default function LoginCard({
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

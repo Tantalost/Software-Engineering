@@ -19,7 +19,6 @@ const WaitlistModal = ({
     }
     
     if (statusFilter === "Payment Review") {
-        // Show Payment Review OR Payment Unlocked (since they are in the same bucket)
         return app.status === "PAYMENT_REVIEW" || app.status === "PAYMENT_UNLOCKED";
     }
     
