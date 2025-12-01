@@ -9,25 +9,43 @@ import Field from "../components/common/Field";
 import EditLostFound from "../components/lostfound/EditLostFound";
 import DeleteModal from "../components/common/DeleteModal";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
-import LogModal from "../components/common/LogModal"; // <--- 1. IMPORT LOG MODAL
+import LogModal from "../components/common/LogModal"; 
 import { submitPageReport } from "../utils/reportService.js";
-import { logActivity } from "../utils/logger"; // <--- 2. IMPORT LOGGER
-import { sendNotification } from "../utils/notificationService.js"; // <--- 3. IMPORT NOTIFICATION
+import { logActivity } from "../utils/logger"; 
+import { sendNotification } from "../utils/notificationService.js"; 
 import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag } from "lucide-react";
+
+// --- EXPORT LIBRARY IMPORTS ---
+// 1. PDF: npm install jspdf jspdf-autotable
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable'; 
+
+// 2. EXCEL: npm install xlsx
+import * as XLSX from 'xlsx';
+// ------------------------------
+
+// Helper function to format date/time consistently for export
+const formatDateTimeForExport = (dateStr) => {
+    if (!dateStr) return "-";
+    // Formats as MM/DD/YYYY HH:MM AM/PM
+    return new Date(dateStr).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+    }) + " " + new Date(dateStr).toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit', hour12: true
+    });
+};
 
 const LostFound = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeStatus, setActiveStatus] = useState("All");
-
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [showLogModal, setShowLogModal] = useState(false); // <--- 4. LOG STATE
+  const [showLogModal, setShowLogModal] = useState(false); 
   
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
@@ -41,7 +59,6 @@ const LostFound = () => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
   
   const [isReporting, setIsReporting] = useState(false);
   
@@ -157,7 +174,7 @@ const LostFound = () => {
     }
   };
 
-  // --- 6. Handle Archive ---
+  // --- Handle Archive ---
   const handleArchive = async (row) => {
     if (!window.confirm(`Are you sure you want to archive Item #${row.trackingNo}?`)) return;
     
@@ -363,6 +380,117 @@ const LostFound = () => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString() + " " + new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+    
+  // ===============================================
+  // START: EXPORT LOGIC IMPLEMENTATION
+  // ===============================================
+    
+  // 1. Data Transformation
+  const getExportData = (data) => {
+      return data.map(item => ({
+          "Tracking No": item.trackingNo,
+          "Item Type": item.itemType || "-",
+          "Description": item.description,
+          "Location": item.location,
+          "Date & Time": formatDateTimeForExport(item.dateTime),
+          "Status": item.status,
+      }));
+  };
+
+  // 2. CSV Export Handler
+  const handleExportCSV = () => {
+      if (filtered.length === 0) {
+          alert("No records to export.");
+          return;
+      }
+      const dataToExport = getExportData(filtered);
+      
+      const headers = Object.keys(dataToExport[0]).join(',');
+      // Escape values that might contain commas or quotes
+      const rows = dataToExport.map(row => 
+          Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+      
+      const csvContent = headers + '\n' + rows;
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `LostFound_Report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Lost & Found records to CSV`, "LostFound");
+  };
+
+  // 3. PDF Export Handler
+  const handleExportPDF = () => {
+      if (filtered.length === 0) {
+          alert("No records to export.");
+          return;
+      }
+      
+      const dataToExport = getExportData(filtered);
+      const headers = Object.keys(dataToExport[0]);
+      const body = dataToExport.map(item => Object.values(item));
+
+      // Initialize jsPDF (A4 portrait)
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      
+      doc.setFontSize(14);
+      doc.text("Lost & Found Records Report", 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 20);
+
+      // Add table using imported autoTable function
+      autoTable(doc, {
+          startY: 25,
+          head: [headers],
+          body: body,
+          theme: 'striped',
+          headStyles: { 
+              fillColor: [30, 144, 255], // Dodger Blue
+              fontSize: 8,
+              halign: 'center'
+          }, 
+          styles: {
+              fontSize: 7,
+              cellPadding: 2
+          }
+      });
+
+      doc.save(`LostFound_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Lost & Found records to PDF`, "LostFound");
+  };
+
+  // 4. Excel Export Handler (NEW)
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+        alert("No records to export.");
+        return;
+    }
+    const dataToExport = getExportData(filtered);
+
+    // Create a new workbook and a new worksheet
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    
+    // Append the worksheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "LostFound_Records");
+
+    // Write and download
+    XLSX.writeFile(workbook, `LostFound_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+    logActivity(role, "EXPORT_EXCEL", `Exported ${dataToExport.length} Lost & Found records to Excel`, "LostFound");
+  };
+
+  // ===============================================
+  // END: EXPORT LOGIC IMPLEMENTATION
+  // ===============================================
 
   // --- COLUMN CONFIG FOR SELECTION ---
   const tableColumns = isSelectionMode 
@@ -381,131 +509,152 @@ const LostFound = () => {
 
   return (
     <Layout title="Lost and Found Records">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        />
+        {/* Standardized main padding wrapper */}
+        <div className="px-4 lg:px-8 mt-4">
+            <div className="flex flex-col gap-4 w-full">
 
-        <div className="flex items-center justify-end gap-3">
+                {/* Filter and Primary Actions Row */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <FilterBar
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        selectedDate={selectedDate}
+                        setSelectedDate={setSelectedDate}
+                    />
 
-          {(role === "lostfound") && (
-            <button
-              onClick={() => setShowSubmitModal(true)}
-              disabled={isReporting}
-              className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
-            >
-              <FileText size={18} />
-              <span>Submit Report</span>
-            </button>
-          )}
+                    <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
 
-          <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center">
-            + Add New
-          </button>
+                        {(role === "lostfound") && (
+                            <button
+                                onClick={() => setShowSubmitModal(true)}
+                                disabled={isReporting}
+                                // Standardized style
+                                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+                            >
+                                <FileText size={18} />
+                                <span>Submit Report</span>
+                            </button>
+                        )}
+                        
+                        {/* Standardized Add Button style (using px-4 like BusTrips) */}
+                        <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center w-full sm:w-auto">
+                            + Add New
+                        </button>
 
-          <div className="h-[44px] flex items-center">
-            <ExportMenu />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
-          <LostFoundStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
-
-          <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
-             <button 
-                onClick={() => setShowLogModal(true)} 
-                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
-                title="View Logs"
-            >
-                <History size={18} /> 
-                <span className="hidden sm:inline">Logs</span>
-            </button>
-
-            {isSelectionMode && selectedIds.length > 0 && (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                    <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-                        {selectedIds.length} Selected
-                    </span>
-                    <button
-                        onClick={handleBulkDelete}
-                        title="Delete Selected"
-                        className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
-                    >
-                        <Trash2 className="h-5 w-5" />
-                    </button>
-                </div>
-            )}
-
-            <button
-                onClick={toggleSelectionMode}
-                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-                    isSelectionMode
-                        ? "bg-red-500 text-white shadow-md"
-                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                }`}
-            >
-                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-            </button>
-          </div>
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-10">Loading records...</div>
-      ) : (
-        <Table
-          columns={tableColumns}
-          data={paginatedData.map((item) => {
-            const baseData = {
-                id: item.id,
-                trackingno: item.trackingNo,
-                description: item.description,
-                location: item.location,
-                datetime: formatDateTime(item.dateTime),
-                status: item.status,
-            };
-
-            if (isSelectionMode) {
-                return {
-                    select: (
-                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                            <input 
-                                type="checkbox"
-                                checked={selectedIds.includes(item.id)}
-                                onChange={() => toggleSelect(item.id)}
-                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        <div className="h-[44px] flex items-center">
+                            {/* EXPORT MENU: Passing all 3 handlers */}
+                            <ExportMenu 
+                                onExportCSV={handleExportCSV} 
+                                onExportPDF={handleExportPDF} 
+                                onExportExcel={handleExportExcel}
                             />
                         </div>
-                    ),
-                    ...baseData
-                };
-            }
-            return baseData;
-          })}
-          actions={(row) => {
-              const selectedRecord = records.find(r => r.id === row.id);
-              return (
-                <div className="flex justify-end items-center space-x-2">
-                <TableActions
-                    onView={() => setViewRow(selectedRecord)}
-                    onEdit={() => setEditRow(selectedRecord)}
-                    onDelete={() => setDeleteRow(selectedRecord)}
-                />
-                <button onClick={() => handleArchive(selectedRecord)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
-                    <Archive size={16} />
-                </button>
-                <button onClick={() => setDeleteRow(selectedRecord)} title="Delete" className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
-                    <Trash2 size={16} />
-                </button>
+                    </div>
                 </div>
-              );
-          }}
-        />
-      )}
+
+                {/* Status Filter and Secondary Actions Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
+                    <LostFoundStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+
+                    <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                        <button 
+                            onClick={() => setShowLogModal(true)} 
+                            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                            title="View Logs"
+                        >
+                            <History size={18} /> 
+                            <span className="hidden sm:inline">Logs</span>
+                        </button>
+
+                        {isSelectionMode && selectedIds.length > 0 && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                                <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                                    {selectedIds.length} Selected
+                                </span>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    title="Delete Selected"
+                                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                                >
+                                    <Trash2 className="h-5 w-5" />
+                                </button>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={toggleSelectionMode}
+                            title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                            className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                                isSelectionMode
+                                    ? "bg-red-500 text-white shadow-md"
+                                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                            }`}
+                        >
+                            {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        {/* Standardized table padding wrapper */}
+        <div className="p-4 lg:p-8">
+            {isLoading ? (
+                <div className="flex flex-col items-center justify-center h-64">
+                    <Loader2 className="h-10 w-10 text-emerald-500 animate-spin mb-2" />
+                    <p>Loading data...</p>
+                </div>
+            ) : (
+                <Table
+                columns={tableColumns}
+                data={paginatedData.map((item) => {
+                    const baseData = {
+                        id: item.id,
+                        trackingno: item.trackingNo,
+                        description: item.description,
+                        location: item.location,
+                        datetime: formatDateTime(item.dateTime),
+                        status: item.status,
+                    };
+
+                    if (isSelectionMode) {
+                        return {
+                            select: (
+                                <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                                    <input 
+                                        type="checkbox"
+                                        checked={selectedIds.includes(item.id)}
+                                        onChange={() => toggleSelect(item.id)}
+                                        className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                </div>
+                            ),
+                            ...baseData
+                        };
+                    }
+                    return baseData;
+                })}
+                actions={(row) => {
+                    const selectedRecord = records.find(r => r.id === row.id);
+                    return (
+                        <div className="flex justify-end items-center space-x-2">
+                        <TableActions
+                            onView={() => setViewRow(selectedRecord)}
+                            onEdit={() => setEditRow(selectedRecord)}
+                            onDelete={() => setDeleteRow(selectedRecord)}
+                        />
+                        <button onClick={() => handleArchive(selectedRecord)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                            <Archive size={16} />
+                        </button>
+                        {/* Note: The redundant Delete button was removed here. */}
+                        </div>
+                    );
+                }}
+                />
+            )}
+        </div>
+
 
       <Pagination
         currentPage={currentPage}
@@ -577,7 +726,8 @@ const LostFound = () => {
                       type="datetime-local"
                       value={newItem.dateTime}
                       onChange={(e) => setNewItem({ ...newItem, dateTime: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-35"
+                      // FIX: Replaced invalid 'bg-slate-35' with a valid class 'bg-white'
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white" 
                       required
                     />
                   </div>
@@ -604,7 +754,7 @@ const LostFound = () => {
                     <textarea
                       value={newItem.location}
                       onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300  "
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300"
                       placeholder="Location of the item found..."
                       required
                     />

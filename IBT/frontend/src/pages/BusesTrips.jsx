@@ -427,40 +427,10 @@ const BusTrips = () => {
                         uniqueCompanies={uniqueCompanies}
                     />
                     
-                    {/* UPDATED ACTION BAR */}
-                    <div className="flex flex-wrap items-center justify-end gap-3 w-full mb-2">
+                    {/* CONSOLIDATED ACTION BAR */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
                         
-                        {(role === "bus") && (
-                            <button
-                                onClick={() => setShowSubmitModal(true)}
-                                disabled={isReporting}
-                                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
-                            >
-                                <FileText size={18} />
-                                <span>Submit Report</span>
-                            </button>
-                        )}
-
-                        <button onClick={handleAddClick} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
-                            <span>+ Add Bus</span>
-                        </button>
-                        
-                        <ExportMenu />
-                                            
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
-                         {/* LOGS BUTTON */}
-                        <button 
-                            onClick={() => setShowLogModal(true)} 
-                            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
-                            title="View Logs"
-                        >
-                            <History size={18} /> 
-                            <span className="hidden sm:inline">Logs</span>
-                        </button>
-
-                        {/* BULK DELETE BUTTON */}
+                        {/* BULK DELETE BUTTON (Left) */}
                         {isSelectionMode && selectedIds.length > 0 && (
                             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                                 <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
@@ -475,19 +445,51 @@ const BusTrips = () => {
                                 </button>
                             </div>
                         )}
+                        
+                        {/* PRIMARY/SECONDARY ACTIONS (Right) */}
+                        <div className={`flex flex-wrap items-center justify-end gap-3 ${isSelectionMode ? 'ml-auto' : 'w-full'}`}>
+                            {(role === "bus") && (
+                                <button
+                                    onClick={() => setShowSubmitModal(true)}
+                                    disabled={isReporting}
+                                    // Standardized style
+                                    className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+                                >
+                                    <FileText size={18} />
+                                    <span>Submit Report</span>
+                                </button>
+                            )}
 
-                        {/* TOGGLE SELECTION BUTTON */}
-                        <button
-                        onClick={toggleSelectionMode}
-                        title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-                        className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-                            isSelectionMode
-                            ? "bg-red-500 text-white shadow-md"
-                            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                        }`}
-                        >
-                        {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-                        </button>
+                            {/* Standardized style for Add Button */}
+                            <button onClick={handleAddClick} className="flex items-center justify-center bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+                                <span>+ Add Bus</span>
+                            </button>
+                            
+                            <ExportMenu />
+                            
+                            {/* LOGS BUTTON */}
+                            <button 
+                                onClick={() => setShowLogModal(true)} 
+                                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                                title="View Logs"
+                            >
+                                <History size={18} /> 
+                                <span className="hidden sm:inline">Logs</span>
+                            </button>
+
+                            {/* TOGGLE SELECTION BUTTON */}
+                            <button
+                                onClick={toggleSelectionMode}
+                                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                                    isSelectionMode
+                                    ? "bg-red-500 text-white shadow-md"
+                                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                }`}
+                            >
+                                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -542,7 +544,8 @@ const BusTrips = () => {
                                     <button
                                         onClick={() => handleLogoutClick(row)}
                                         title="Log Out (Depart)"
-                                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2"
+                                        // Cleaned up Depart button style
+                                        className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all flex items-center gap-1 px-2"
                                     >
                                         <LogOut size={16} />
                                         <span className="text-xs font-medium">Depart</span>
@@ -553,12 +556,10 @@ const BusTrips = () => {
                                     onEdit={() => setEditRow(row)}
                                     onDelete={() => setDeleteRow(row)}
                                 />
-                                <button onClick={() => handleArchive(row)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                                <button onClick={() => handleArchive(row)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
                                     <Archive size={16} />
                                 </button>
-                                <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
-                                    <Trash2 size={16} />
-                                </button>
+                                {/* Removed redundant Trash2 button */}
                             </div>
                         )}
                     />
@@ -582,7 +583,7 @@ const BusTrips = () => {
 
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg">
+                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"> {/* Standardized shadow to shadow-xl */}
                         <h3 className="mb-4 text-xl font-bold text-slate-800">Add New Bus Trip</h3>
                         <form onSubmit={handleCreateRecord}>
                             <div className="space-y-4">
@@ -679,7 +680,7 @@ const BusTrips = () => {
 
             {logoutRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg transform transition-all">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all"> {/* Standardized shadow to shadow-xl */}
                         <div className="mb-4 flex items-center gap-3 text-emerald-600">
                             <div className="p-2 bg-emerald-100 rounded-full">
                                 <CheckCircle size={24} />
