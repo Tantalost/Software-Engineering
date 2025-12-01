@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield } from "lucide-react";
+import LOGO from "../assets/LOGO.png"; 
 import LoginBackground from "../components/login/LoginBackground";
 import LoginCard from "../components/login/LoginCard";
 
@@ -62,20 +62,26 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       <LoginBackground />
       <form onSubmit={handleSubmit}>
-      <LoginCard
-        icon={<Shield className="w-7 h-7 sm:w-8 sm:h-8 text-white" />}
-        title="Admin Portal"
-        subtitle="Sign in to access your dashboard"
-        email={email}
-        setEmail={setEmail}
-        password={password}
-        setPassword={setPassword}
-        showPassword={showPassword}
-        setShowPassword={setShowPassword}
-        handleSubmit={handleSubmit}
-        isLoading={isLoading}
-        error={error}
-      />
+        <LoginCard 
+          icon={
+            <img 
+              src={LOGO} 
+              alt="Logo" 
+              className="w-full h-full object-contain" 
+            />
+          }
+          title="Admin Portal"
+          subtitle="Sign in to access your dashboard"
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          showPassword={showPassword}
+          setShowPassword={setShowPassword}
+          handleSubmit={handleSubmit}
+          isLoading={isLoading}
+          error={error}
+        />
       </form>
     </div>
   );
