@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks, FileText } from "lucide-react"; 
+// 1. IMPORT SETTINGS ICON
+import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks, FileText, Settings } from "lucide-react"; 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -42,6 +43,12 @@ const TerminalFees = () => {
   const [deleteRow, setDeleteRow] = useState(null); 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false); 
+  
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [basePrices, setBasePrices] = useState({
+    regular: 15.00,
+    discounted: 10.00 // Student, Senior, PWD
+  });
     
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -51,10 +58,8 @@ const TerminalFees = () => {
   const [deleteRemarks, setDeleteRemarks] = useState(""); 
   const [toast, setToast] = useState(null);
  
-  // --- REPORTING STATES ---
   const [isReporting, setIsReporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  // ------------------------
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -82,8 +87,6 @@ const TerminalFees = () => {
   useEffect(() => {
     fetchFees();
   }, []);
-
-  // --- 1. Derived State ---
 
   const filtered = useMemo(() => {
     return records.filter((fee) => {
@@ -116,13 +119,10 @@ const TerminalFees = () => {
     revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0)
   }), [filtered]);
 
-  // THIS WAS MISSING:
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filtered.slice(startIndex, startIndex + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
-
-  // --- 2. Handlers ---
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) {
@@ -154,16 +154,12 @@ const TerminalFees = () => {
     setTimeout(() => setToast(null), 3000); 
   };
 
-  // --- UPDATED SUBMIT HANDLER (Report & Clear) ---
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-      // 1. Helper to ensure consistent 12-hour AM/PM format
       const to12HourFormat = (timeStr) => {
         if (!timeStr) return "-";
-        // Check if it's already in AM/PM format
         if (timeStr.includes("M") || timeStr.includes("m")) return timeStr;
-        
         try {
           return new Date(`1970-01-01T${timeStr}`).toLocaleTimeString('en-US', {
             hour: 'numeric',
@@ -176,18 +172,15 @@ const TerminalFees = () => {
       };
 
       const formattedData = filtered.map(item => {
-        
         const { createdAt, updatedAt, __v, _id, isArchived, status,...rest } = item;
-
         return {
-          ...rest, // Keep ticketNo, passengerType, price
+          ...rest, 
           price: typeof rest.price === 'number' ? `₱${rest.price.toFixed(2)}` : rest.price,
           date: rest.date ? new Date(rest.date).toLocaleDateString() : "-",
           time: to12HourFormat(rest.time)
         };
       });
 
-      // 3. Package Data
       const reportPayload = {
         screen: "Terminal Fees Management",
         generatedDate: new Date().toLocaleString(),
@@ -206,7 +199,6 @@ const TerminalFees = () => {
         data: formattedData 
       };
 
-      // 4. Submit to Backend
       await submitPageReport("Terminal Fees", reportPayload, "Ticket Admin");
       await fetch("http://localhost:3000/api/notifications", {
         method: "POST",
@@ -218,18 +210,14 @@ const TerminalFees = () => {
         }),
       });
 
-      // 5. Clear Table (Bulk Delete)
       const deletePromises = filtered.map(item => 
           fetch(`${API_URL}/terminal-fees/${item._id || item.id}`, { method: 'DELETE' })
       );
       
       await Promise.all(deletePromises);
-
-      // 6. Update UI
       showToastMessage("Report submitted successfully! Table cleared.");
       setShowSubmitModal(false);
       fetchFees();
-
     } catch (error) {
       console.error(error);
       showToastMessage("Failed to submit report.");
@@ -237,7 +225,6 @@ const TerminalFees = () => {
       setIsReporting(false);
     }
   };
-  // ------------------------------------------------
 
   const handleBulkDelete = async () => {
     const confirmMsg = role === "ticket" 
@@ -295,15 +282,12 @@ const TerminalFees = () => {
   const executeUpdate = async (data) => {
     try {
       const idToUpdate = data._id || data.id;
-
       const res = await fetch(`${API_URL}/terminal-fees/${idToUpdate}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
       });
-
       if (!res.ok) throw new Error("Update failed");
-
       await fetchFees(); 
       await logActivity(role, "UPDATE_TICKET", `Updated Ticket #${data.ticketNo}.`, "TerminalFees");
       showToastMessage("Record updated successfully!"); 
@@ -334,7 +318,6 @@ const TerminalFees = () => {
     try {
       const res = await fetch(`${API_URL}/terminal-fees/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
-
       await fetchFees();
       await logActivity(role, "DELETE_TICKET", `Deleted Ticket #${ticketNo}`, "TerminalFees");
       showToastMessage("Record deleted successfully!"); 
@@ -375,14 +358,14 @@ const TerminalFees = () => {
       }
 
      if (role === "superadmin") {
-          const idToDelete = deleteRow._id || deleteRow.id;
-          if (!idToDelete) {
-             showToastMessage("System Error: Cannot delete (Missing ID)");
-             return;
-          }
-          await executeDelete(idToDelete, deleteRow.ticketNo);
-          setDeleteRow(null);
-          return;
+         const idToDelete = deleteRow._id || deleteRow.id;
+         if (!idToDelete) {
+            showToastMessage("System Error: Cannot delete (Missing ID)");
+            return;
+         }
+         await executeDelete(idToDelete, deleteRow.ticketNo);
+         setDeleteRow(null);
+         return;
       }
       
       setPendingEdit(deleteRow);
@@ -424,7 +407,8 @@ const TerminalFees = () => {
     setNewTicket({
       ticketNo: maxTicket + 1,
       passengerType: "Regular",
-      price: 15.00, 
+      // 3. USE DYNAMIC PRICE
+      price: basePrices.regular, 
       date: now.toISOString().split('T')[0], 
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
     });
@@ -529,11 +513,7 @@ const TerminalFees = () => {
                 className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
             />
         </div>,
-        "Ticket No", 
-        "Passenger Type", 
-        "Time", 
-        "Date", 
-        "Price"
+        "Ticket No", "Passenger Type", "Time", "Date", "Price"
       ]
     : ["Ticket No", "Passenger Type", "Time", "Date", "Price"];
 
@@ -558,11 +538,18 @@ const TerminalFees = () => {
         />
         
         <div className="flex items-center justify-end gap-3">
+          {(role === "superadmin") && (
+            <button 
+            onClick={() => setShowPriceModal(true)} 
+            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+          >
+            <Settings size={18} /> <span>Pricing</span>
+          </button>)}
+
           <button onClick={handleOpenAdd} className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             <Plus size={18} /> <span>Add Fee</span>
           </button>
 
-          {/* --- SUBMIT REPORT BUTTON (Visible to only Ticket Admin) --- */}
           {(role === "ticket") && (
             <button 
                 onClick={() => setShowSubmitModal(true)} 
@@ -776,6 +763,40 @@ const TerminalFees = () => {
         />
       )}
 
+      {showPriceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-slate-800">Set Base Prices</h3>
+              <button onClick={() => setShowPriceModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+               <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Regular Price</label>
+                  <input 
+                    type="number" 
+                    value={basePrices.regular} 
+                    onChange={(e) => setBasePrices({...basePrices, regular: Number(e.target.value)})}
+                    className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-medium"
+                  />
+               </div>
+               <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Student / Senior / PWD Price</label>
+                  <input 
+                    type="number" 
+                    value={basePrices.discounted} 
+                    onChange={(e) => setBasePrices({...basePrices, discounted: Number(e.target.value)})}
+                    className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-medium"
+                  />
+               </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+              <button onClick={() => setShowPriceModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
@@ -793,7 +814,8 @@ const TerminalFees = () => {
                 <div className="grid grid-cols-3 gap-2">
                   {["Regular", "Student", "Senior Citizen / PWD"].map((type) => (
                     <button key={type} onClick={() => {
-                        const price = (type === 'Student' || type === 'Senior Citizen / PWD') ? 10.00 : 15.00;
+                        // 6. USE DYNAMIC PRICE IN ADD MODAL
+                        const price = (type === 'Student' || type === 'Senior Citizen / PWD') ? basePrices.discounted : basePrices.regular;
                         setNewTicket(prev => ({ ...prev, passengerType: type, price }));
                       }}
                       className={`py-2 px-1 rounded-lg text-xs font-semibold border ${newTicket.passengerType === type ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
@@ -832,7 +854,8 @@ const TerminalFees = () => {
 
           <div className="grid grid-cols-3 gap-2 mb-4">
             {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
-              const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? 10.0 : 15.0;
+              // 7. USE DYNAMIC PRICE IN EDIT MODAL
+              const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? basePrices.discounted : basePrices.regular;
               const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
               return (
                 <button
@@ -902,9 +925,6 @@ const TerminalFees = () => {
         </div>
       )}
       
-      
-      
-      {/* --- CONFIRMATION MODAL FOR REPORT SUBMISSION --- */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">

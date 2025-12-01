@@ -46,7 +46,13 @@ const TenantViewModal = ({ viewRow, onClose }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {Object.entries(viewRow.documents).map(([key, file]) => {
                     if (!file) return null;
-                    const fileName = file.name || "Unknown File";
+
+                    // --- LOGIC FIX: Determine Display Name ---
+                    let fileName = "Unknown File";
+                    if (file.name) fileName = file.name; // Local File
+                    else if (file.original_filename) fileName = file.original_filename; // Cloudinary Object
+                    else if (typeof file === 'string') fileName = "View Document"; // Direct URL string
+
                     return (
                       <div key={key} className="group flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-emerald-400 hover:shadow-sm transition-all">
                         <div className="flex items-center gap-3 overflow-hidden">
@@ -60,14 +66,23 @@ const TenantViewModal = ({ viewRow, onClose }) => {
                         </div>
                         <button
                           onClick={() => {
+                            // --- LOGIC FIX: Handle Cloudinary URLs ---
                             if (file instanceof File || file instanceof Blob) {
+                              // Handle newly uploaded local file
                               const fileURL = URL.createObjectURL(file);
                               window.open(fileURL, '_blank');
+                            } else if (file.secure_url || file.url) {
+                              // Handle Cloudinary Object Response
+                              window.open(file.secure_url || file.url, '_blank');
+                            } else if (typeof file === 'string') {
+                              // Handle direct URL string
+                              window.open(file, '_blank');
                             } else {
-                              alert(`Preview not available for mock data.`);
+                              alert(`Preview not available.`);
                             }
                           }}
                           className="p-2 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                          title="View Document"
                         >
                           <Eye size={18} />
                         </button>

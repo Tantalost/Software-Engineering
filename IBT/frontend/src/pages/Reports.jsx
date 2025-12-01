@@ -10,13 +10,13 @@ import EditReport from "../components/reports/EditReport";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal"; 
 import { logActivity } from "../utils/logger"; 
-import { Archive, Trash2, Filter, Calendar, Tag, History, ListChecks, X, Loader2 } from "lucide-react";
+import { Archive, Trash2, Calendar, Tag, History, ListChecks, X, Loader2 } from "lucide-react";
 
 // --- HELPER COMPONENT FOR VIEWING REPORT DATA ---
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload) return <div className="text-gray-400 italic p-4">No report data available</div>;
 
-  const { statistics, filters, data } = reportPayload;
+  const { statistics, data } = reportPayload;
 
   const renderStats = () => {
     if (!statistics || Object.keys(statistics).length === 0) return null;
@@ -36,11 +36,6 @@ const DataRenderer = ({ reportPayload }) => {
         </div>
       </div>
     );
-  };
-
-  const renderFilters = () => {
-    if (!filters || Object.keys(filters).length === 0) return null;
-    return null; 
   };
 
   const renderDataTable = () => {
@@ -91,7 +86,6 @@ const DataRenderer = ({ reportPayload }) => {
   return (
     <div className="mt-2">
       {renderStats()}
-      {renderFilters()}
       {renderDataTable()}
     </div>
   );
@@ -452,25 +446,34 @@ const Reports = () => {
             return baseData;
           })}
 
-          actions={(row) => (
-            <div className="flex justify-end items-center space-x-2">
-              <TableActions onView={() => setViewRow(row)} onEdit={() => setEditRow(row)} onDelete={() => setDeleteRow(row)} />
-              <button
-                onClick={() => handleArchive(row)}
-                className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
-                title="Archive"
-              >
-                <Archive size={16} />
-              </button>
-              <button
-                onClick={() => setDeleteRow(row)}
-                className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-                title="Delete"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          )}
+          actions={(row) => {
+            // FIX: Retrieve the full record from state to ensure 'data' payload exists
+            const fullRecord = records.find(r => r.id === row.id);
+            
+            return (
+              <div className="flex justify-end items-center space-x-2">
+                <TableActions 
+                  onView={() => setViewRow(fullRecord)} 
+                  onEdit={() => setEditRow(fullRecord)} 
+                  onDelete={() => setDeleteRow(fullRecord)} 
+                />
+                <button
+                  onClick={() => handleArchive(fullRecord)}
+                  className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+                  title="Archive"
+                >
+                  <Archive size={16} />
+                </button>
+                <button
+                  onClick={() => setDeleteRow(fullRecord)}
+                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            );
+          }}
         />
       )}
 
@@ -516,7 +519,7 @@ const Reports = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                    <Field label="Source Module" value={viewRow.type} />
                    <Field label="Submitted By" value={viewRow.author} />
-                   <Field label="Submission Date" value={viewRow.date} />
+                   <Field label="Submission Date" value={new Date(viewRow.createdAt || viewRow.date).toLocaleDateString()} />
                 </div>
                 <hr className="border-slate-100 mb-6" />
                 <DataRenderer reportPayload={viewRow.data} />
