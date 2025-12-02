@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Eye, Loader2 } from "lucide-react";
+import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Eye, Loader2, ZoomIn } from "lucide-react";
 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/ibt_tenants/image/upload";
 const UPLOAD_PRESET = "ibt_upload";
@@ -7,10 +7,13 @@ const UPLOAD_PRESET = "ibt_upload";
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null); // State for Image Viewer
 
   const [formData, setFormData] = useState({
     slotNo: "",
-    tenantName: "",
+    firstName: "", 
+    middleName: "",
+    lastName: "",
     referenceNo: "", 
     email: "",
     contactNo: "",
@@ -36,6 +39,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     validID: null,
     barangayClearance: null,
     proofOfReceipt: null,
+    contract: null, // ADDED: Contract field
   });
 
   const formatDateTimeForInput = (dateObj) => {
@@ -48,11 +52,32 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   // --- INITIALIZATION ---
   useEffect(() => {
     if (isOpen) {
+      // Helper to generate Auto Ref
+      const generateRef = () => `REF-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
+
       if (initialData) {
+        // NAME SPLITTING LOGIC
+        const fullName = initialData.name || initialData.tenantName || "";
+        const nameParts = fullName.split(" ");
+        let fName = "", mName = "", lName = "";
+
+        if (nameParts.length === 1) {
+            fName = nameParts[0];
+        } else if (nameParts.length === 2) {
+            fName = nameParts[0];
+            lName = nameParts[1];
+        } else if (nameParts.length > 2) {
+            fName = nameParts[0];
+            lName = nameParts[nameParts.length - 1];
+            mName = nameParts.slice(1, -1).join(" ");
+        }
+
         setFormData({
           slotNo: initialData.slotNo || "", 
-          referenceNo: initialData.referenceNo || "", 
-          tenantName: initialData.name || "",
+          referenceNo: initialData.referenceNo || generateRef(),
+          firstName: fName,
+          middleName: mName,
+          lastName: lName,
           email: initialData.email || "",
           contactNo: initialData.contactNo || "",
           tenantType: initialData.tenantType || "Permanent", 
@@ -63,12 +88,14 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             setTempSelectedSlots(initialData.slotNo.split(', '));
         }
 
+        // LOAD DOCUMENTS (Including Contract if present)
         if (initialData.documents) {
             setDocuments({
                 businessPermit: initialData.documents.businessPermit || null,
                 validID: initialData.documents.validID || null,
                 barangayClearance: initialData.documents.barangayClearance || null,
                 proofOfReceipt: initialData.documents.proofOfReceipt || null,
+                contract: initialData.documents.contract || null, // Load contract
             });
         }
 
@@ -82,11 +109,13 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         }
 
       } else {
-        // Reset
+        // Reset for New Entry
         setFormData({
             slotNo: "",
-            tenantName: "",
-            referenceNo: "", 
+            firstName: "",
+            middleName: "",
+            lastName: "",
+            referenceNo: generateRef(), 
             email: "",
             contactNo: "",
             tenantType: "Permanent", 
@@ -99,6 +128,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             validID: null,
             barangayClearance: null,
             proofOfReceipt: null,
+            contract: null, // Reset contract
         });
         setTempSelectedSlots([]); 
       }
@@ -188,47 +218,36 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             }).replace(',', ''); 
         };
 
-        // 1. Process Documents (Upload new ones, handle Base64 strings)
         const processedDocuments = { ...documents };
         
-        for (const key of Object.keys(processedDocuments)) {
-            const file = processedDocuments[key];
-            
-            if (!file) continue;
-
-            // Case A: It's a raw File object (from user input)
-            if (typeof file === 'object' && file instanceof File) {
-                const url = await uploadToCloudinary(file);
-                if (url) {
-                    processedDocuments[key] = url;
-                } else {
-                     // If upload fails, set to empty or keep original only if it's safe.
-                     // We DON'T want to send the raw file object to backend.
-                     delete processedDocuments[key]; 
-                     console.warn(`Failed to upload ${key}, omitting from payload.`);
-                }
-            } 
-            // Case B: It's a Base64 string (from waitlist data)
-            // Base64 strings start with "data:image..." and are very long
-            else if (typeof file === 'string' && file.startsWith('data:')) {
-                const url = await uploadToCloudinary(file);
-                if (url) {
-                    processedDocuments[key] = url;
-                } else {
-                    // If upload fails, DO NOT send the massive base64 string
-                    delete processedDocuments[key];
-                    console.warn(`Failed to upload Base64 for ${key}, omitting from payload.`);
-                }
-            }
-            // Case C: It's already a normal URL (keep it)
+        // Remove contract from payload if Night Market (optional cleanup)
+        if (formData.tenantType !== "Permanent") {
+            delete processedDocuments.contract;
         }
 
-        // Destructure _id out, keep the rest
-        const { _id, ...restOfFormData } = formData;
+        for (const key of Object.keys(processedDocuments)) {
+            const file = processedDocuments[key];
+            if (!file) continue;
+
+            if (typeof file === 'object' && file instanceof File) {
+                const url = await uploadToCloudinary(file);
+                if (url) processedDocuments[key] = url;
+                else delete processedDocuments[key]; 
+            } 
+            else if (typeof file === 'string' && file.startsWith('data:')) {
+                const url = await uploadToCloudinary(file);
+                if (url) processedDocuments[key] = url;
+                else delete processedDocuments[key];
+            }
+        }
+
+        const { _id, firstName, middleName, lastName, ...restOfFormData } = formData;
+        
+        const combinedName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
 
         const newTenant = {
             ...restOfFormData,
-            // Only include _id if it's a valid string (for updates), otherwise omit it (for creation)
+            tenantName: combinedName,
             ...(_id ? { _id } : {}),
             products: productCategory === "Other" ? otherProductDetails : productCategory,
             rentAmount,
@@ -237,7 +256,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             StartDateTime: formatForTable(startDate), 
             DueDateTime: formatForTable(dueDate),    
             status: "Paid", 
-            documents: processedDocuments // Send URLs
+            documents: processedDocuments
         };
 
         await onSave(newTenant);
@@ -273,8 +292,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   const getFileStatus = (file) => {
       if (!file) return "Click to upload";
       if (typeof file === 'string') {
-          if (file.startsWith('data:')) return "Base64 Image (Will be uploaded) ⚠️";
-          return "Pre-filled from Application ✅";
+          if (file.startsWith('data:')) return "Ready to upload";
+          return "Attached";
       }
       return file.name; 
   };
@@ -282,6 +301,28 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   if (!isOpen) return null;
 
   return (
+    <>
+    {/* --- IMAGE PREVIEW OVERLAY --- */}
+    {previewImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button 
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-5 right-5 p-2 bg-white/10 rounded-full text-white hover:text-red-400 hover:bg-white/20 transition-all"
+          >
+            <X size={32} />
+          </button>
+          <img 
+            src={previewImage} 
+            alt="Preview" 
+            className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+    )}
+
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 flex flex-col max-h-[90vh]">
         
@@ -319,14 +360,12 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Reference No</label>
+                  <label className="text-xs font-semibold text-slate-600">Reference No </label>
                   <input 
                   type="text" 
-                  required 
-                  placeholder="Enter Reference No."
-                  className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                  readOnly 
+                  className="p-2.5 rounded-lg border border-slate-200 bg-slate-100 text-slate-600 font-mono focus:outline-none cursor-not-allowed" 
                   value={formData.referenceNo}
-                  onChange={(e) => setFormData({...formData, referenceNo: e.target.value})}
                   />
                 </div>
 
@@ -352,7 +391,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                    </div>
                 </div>
 
-                {/* MAP MODAL UI (Unchanged logic, just ensure it renders) */}
+                {/* MAP MODAL UI */}
                 {showMapModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                         <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -407,15 +446,30 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                     </div>
                 )}
                
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Full Name</label>
-                  <input type="text" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.tenantName} onChange={(e) => setFormData({...formData, tenantName: e.target.value})} />
+                {/* SPLIT NAMES */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:col-span-2">
+                    <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-slate-600">First Name</label>
+                    <input type="text" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                        value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-slate-600">Middle Name</label>
+                    <input type="text" className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                        value={formData.middleName} onChange={(e) => setFormData({...formData, middleName: e.target.value})} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-slate-600">Last Name</label>
+                    <input type="text" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                        value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                    </div>
                 </div>
+
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Email Address</label>
                   <input type="email" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                 </div>
-                <div className="flex flex-col gap-1 md:col-span-2">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Contact Number</label>
                   <input type="tel" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.contactNo} onChange={(e) => setFormData({...formData, contactNo: e.target.value})} />
                 </div>
@@ -475,20 +529,50 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
               </div>
             </section>
 
+            {/* --- 5. UPDATED UPLOAD DOCUMENTS (CONDITIONAL RENDER) --- */}
             <section className="pt-4 border-t border-slate-100">
               <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2">
                 <Upload size={16} /> 5. Upload Documents
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
-                {['Business Permit', 'Valid ID', 'Barangay Clearance', 'Proof of Receipt'].map((label, idx) => {
-                   const keyMap = ['businessPermit', 'validID', 'barangayClearance', 'proofOfReceipt'];
-                   const key = keyMap[idx];
+                {(() => {
+                  // Base Documents
+                  const docFields = [
+                    { label: 'Business Permit', key: 'businessPermit' },
+                    { label: 'Valid ID', key: 'validID' },
+                    { label: 'Barangay Clearance', key: 'barangayClearance' },
+                    { label: 'Proof of Receipt', key: 'proofOfReceipt' }
+                  ];
+
+                  // Only show Contract if Permanent
+                  if (formData.tenantType === "Permanent") {
+                    docFields.push({ label: 'Signed Contract', key: 'contract' });
+                  }
+
+                  return docFields.map(({ label, key }) => {
                    const currentFile = documents[key];
-                   const isBase64 = typeof currentFile === 'string';
+                   const isString = typeof currentFile === 'string'; 
 
                    return (
-                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors ${isBase64 ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
+                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${isString ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
+                      
+                      {isString && (
+                        <div className="absolute top-2 right-2 z-10">
+                            <button 
+                                type="button" 
+                                onClick={(e) => {
+                                    e.preventDefault(); 
+                                    setPreviewImage(currentFile);
+                                }} 
+                                className="bg-white text-emerald-600 p-1.5 rounded-full shadow border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all"
+                                title="View Image"
+                            >
+                                <ZoomIn size={16} />
+                            </button>
+                        </div>
+                      )}
+
                       <label className="block cursor-pointer">
                         <span className="block text-sm font-medium text-slate-700 mb-1">{label}</span>
                         <input 
@@ -497,17 +581,18 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                           onChange={(e) => handleFileChange(e, key)}
                         />
                         <div className="flex items-center gap-2 text-slate-400 text-xs">
-                          <div className={`p-2 rounded-full ${isBase64 ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
-                            {isBase64 ? <Eye size={14} /> : <Upload size={14} />}
+                          <div className={`p-2 rounded-full ${isString ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
+                            {isString ? <Check size={14} /> : <Upload size={14} />}
                           </div>
-                          <span className={isBase64 ? "text-emerald-700 font-bold" : ""}>
+                          <span className={isString ? "text-emerald-700 font-bold" : ""}>
                              {getFileStatus(currentFile)}
                           </span>
                         </div>
                       </label>
                     </div>
                    );
-                })}
+                  });
+                })()}
 
               </div>
             </section>
@@ -542,6 +627,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         
       </div>
     </div>
+    </>
   );
 };
 

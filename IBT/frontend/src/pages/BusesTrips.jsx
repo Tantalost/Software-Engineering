@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
@@ -13,6 +15,7 @@ import { submitPageReport } from "../utils/reportService.js";
 import { sendNotification } from "../utils/notificationService.js";
 import { logActivity } from "../utils/logger"; // Added Logger
 import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2, History, ListChecks, X } from "lucide-react"; // Added Icons
+
 
 const TEMPLATE_ROUTES = {
     "T-101": "Iligan - Cagayan de Oro",
@@ -104,6 +107,84 @@ const BusTrips = () => {
     }, [filtered, currentPage, itemsPerPage]);
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+    // --- HELPER: FORMAT DATA FOR EXPORT ---
+    // Added this helper to format time correctly for export
+    const formatTimeExport = (timeStr) => {
+        if (!timeStr) return "";
+        try {
+            return new Date(`1970-01-01T${timeStr}`).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            return timeStr;
+        }
+    };
+
+    const getExportData = () => {
+        return filtered.map(item => ({
+            "Template No": item.templateNo || item.templateno,
+            "Ticket Ref": item.ticketReferenceNo || "-",
+            "Route": item.route,
+            "Price": `₱${item.price || 75}`,
+            "Time": formatTimeExport(item.time),
+            "Departure": formatTimeExport(item.departureTime),
+            "Date": item.date ? new Date(item.date).toLocaleDateString() : "",
+            "Company": item.company,
+            "Status": item.status
+        }));
+    };
+
+    // --- EXPORT TO EXCEL (CSV) ---
+    const handleExportExcel = () => {
+        const data = getExportData();
+        if (!data || data.length === 0) return alert("No data to export");
+
+        const headers = Object.keys(data[0]);
+        const csvContent = [
+            headers.join(","),
+            ...data.map(row => headers.map(header => `"${row[header]}"`).join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Bus_Trips_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // --- EXPORT TO PDF ---
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+        const data = getExportData();
+
+        if (!data || data.length === 0) return alert("No data to export");
+
+        const tableColumn = Object.keys(data[0]);
+        const tableRows = data.map(row => Object.values(row));
+
+        doc.text("Bus Trips Report", 14, 15);
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+        // FIXED: Using autoTable(doc, options) instead of doc.autoTable
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 25,
+            theme: 'grid',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [16, 185, 129] } // Emerald green
+        });
+
+        doc.save(`Bus_Trips_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
 
     // --- SELECTION HANDLERS ---
     const toggleSelectionMode = () => {
@@ -465,7 +546,11 @@ const BusTrips = () => {
                                 <span>+ Add Bus</span>
                             </button>
                             
-                            <ExportMenu />
+                            {/* UPDATED: Export Menu Passing Handlers */}
+                            <ExportMenu 
+                                onExportExcel={handleExportExcel} 
+                                onExportPDF={handleExportPDF}
+                            />
                             
                             {/* LOGS BUTTON */}
                             <button 
