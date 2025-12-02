@@ -12,6 +12,11 @@ import LogModal from "../components/common/LogModal";
 import { logActivity } from "../utils/logger"; 
 import { Archive, Trash2, Calendar, Tag, History, ListChecks, X, Loader2 } from "lucide-react";
 
+// --- FIXED EXPORT IMPORTS ---
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf"; // Changed to named import
+import autoTable from "jspdf-autotable"; // Changed to functional import
+
 // --- HELPER COMPONENT FOR VIEWING REPORT DATA ---
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload) return <div className="text-gray-400 italic p-4">No report data available</div>;
@@ -175,6 +180,57 @@ const Reports = () => {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
+  // --- EXPORT FUNCTIONS ---
+
+  const handleExportExcel = () => {
+    const dataToExport = filtered.map((item) => ({
+      "Report ID": item.id,
+      "Type": item.type,
+      "Author": item.author,
+      "Date": new Date(item.createdAt || item.date).toLocaleDateString(),
+      "Status": item.status,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Reports");
+
+    XLSX.writeFile(workbook, `Reports_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExportPDF = () => {
+    // 1. Initialize jsPDF
+    const doc = new jsPDF();
+
+    // 2. Define Headers and Title
+    doc.text("Reports List", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+    const tableColumn = ["Report ID", "Type", "Author", "Date", "Status"];
+    
+    // 3. Map data
+    const tableRows = filtered.map((item) => [
+      item.id,
+      item.type,
+      item.author,
+      new Date(item.createdAt || item.date).toLocaleDateString(),
+      item.status,
+    ]);
+
+    // 4. Generate Table using functional approach
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 25,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [16, 185, 129] }, // Emerald color
+    });
+
+    // 5. Save file
+    doc.save(`Reports_Export_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   // --- SELECTION HANDLERS ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
@@ -313,7 +369,10 @@ const Reports = () => {
           </button>
           
           <div className="h-[44px] flex items-center">
-            <ExportMenu />
+            <ExportMenu 
+              onExportExcel={handleExportExcel} 
+              onExportPDF={handleExportPDF} 
+            />
           </div>
         </div>
       </div>
@@ -447,7 +506,6 @@ const Reports = () => {
           })}
 
           actions={(row) => {
-            // FIX: Retrieve the full record from state to ensure 'data' payload exists
             const fullRecord = records.find(r => r.id === row.id);
             
             return (
