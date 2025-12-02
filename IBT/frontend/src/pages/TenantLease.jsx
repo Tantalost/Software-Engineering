@@ -70,7 +70,6 @@ const TenantLease = () => {
       const res = await fetch(`${API_URL}/tenants`);
       if (!res.ok) throw new Error("Failed to fetch tenants");
       const data = await res.json();
-      // Ensure we map _id to id for the table
       const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
       formatted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       setRecords(formatted);
@@ -84,7 +83,6 @@ const TenantLease = () => {
       const res = await fetch(`${API_URL}/waitlist`);
       if (!res.ok) throw new Error("Failed to fetch waitlist");
       const data = await res.json();
-      // Map _id to id for consistency
       const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
       setWaitlistData(formatted);
     } catch (err) {
@@ -133,7 +131,6 @@ const TenantLease = () => {
     try {
         const payload = {
             ...waitlistForm,
-            // Removed manual uid generation, let MongoDB handle _id
             dateRequested: new Date().toISOString(),
             status: "Pending"
         };
@@ -163,9 +160,9 @@ const TenantLease = () => {
     setShowReviewModal(true); 
   };
 
+  // --- STEP 3 & 4: UNLOCK PAYMENT & SEND EMAIL ---
   const handleUnlockPayment = async () => {
     if (!reviewData?.id) return; 
-    
     const idToUpdate = reviewData.id; 
 
     try {
@@ -176,7 +173,53 @@ const TenantLease = () => {
         });
 
         if (response.ok) {
-            alert("Payment Unlocked for applicant!");
+            // STEP 4: SEND EMAIL
+            const emailMsg = `Dear ${reviewData.name},\n\nYour application form was approved. Please open the app and upload your receipt photo before approval of slot.\n\nThank you!`;
+            
+            await emailjs.send('service_xyz123','template_abc456', {
+                to_name: reviewData.name, 
+                to_email: reviewData.email, 
+                message: emailMsg, 
+                subject_type: "Application Approved" 
+            }, '1poBGqvXaYHzOxqM8');
+
+            alert("Payment Unlocked & Notification Sent!");
+            setShowReviewModal(false);
+            setShowWaitlistModal(true); 
+            fetchWaitlist(); 
+        } else {
+            alert("Failed to update status.");
+        }
+    } catch (error) { 
+        console.error("Error:", error); 
+        alert("Status updated but failed to send email.");
+    }
+  };
+
+  // --- STEP 7 (Part 2): REQUEST CONTRACT (Permanent Only) ---
+  const handleRequestContract = async () => {
+    if (!reviewData?.id) return; 
+    const idToUpdate = reviewData.id; 
+
+    try {
+        const response = await fetch(`${API_URL}/waitlist/${idToUpdate}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: "CONTRACT_PENDING" })
+        });
+
+        if (response.ok) {
+             // Optional: Email notification for contract
+             const emailMsg = `Dear ${reviewData.name},\n\nWe have verified your payment. Since you applied for a Permanent slot, please upload your Signed Contract document via the app to proceed.\n\nThank you!`;
+             
+             await emailjs.send('service_xyz123','template_abc456', {
+                 to_name: reviewData.name, 
+                 to_email: reviewData.email, 
+                 message: emailMsg, 
+                 subject_type: "Action Required: Upload Contract" 
+             }, '1poBGqvXaYHzOxqM8');
+
+            alert("Status updated to Contract Pending. User notified.");
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
             fetchWaitlist(); 
@@ -188,17 +231,67 @@ const TenantLease = () => {
     }
   };
 
+  // --- STEP 7 (Part 1): PROCEED TO ADD TENANT ---
   const handleProceedToLease = () => {
     setTransferApplicant(reviewData);
     setShowReviewModal(false);
     setShowAddModal(true);
   };
 
-  // --- REJECT/DELETE APPLICANT ---
-  const handleRejectApplicant = async (id) => { // Expects id
+  // --- STEP 8 & 9: ADD TENANT & SEND FINAL EMAIL ---
+  const handleAddTenant = async (newTenant) => {
+    try {
+      const response = await fetch(`${API_URL}/tenants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              ...newTenant,
+              transferWaitlistId: transferApplicant?.id 
+          })
+      });
+
+      if (response.ok) {
+          // STEP 9: FINAL EMAIL WITH RULES
+          const emailMsg = `
+            Congratulations ${newTenant.tenantName}!
+            
+            You have been approved. You can start operating your business at slot ${newTenant.slotNo}.
+            
+            RULES AND REGULATIONS:
+            1. Operating hours: 8:00 AM - 10:00 PM.
+            2. Keep area clean.
+            3. No sub-leasing.
+            4. Rent due on the ${new Date(newTenant.StartDateTime).getDate()}th of the month.
+            
+            Welcome to the team!
+          `;
+
+          await emailjs.send('service_xyz123','template_abc456', {
+              to_name: newTenant.tenantName, 
+              to_email: newTenant.email, 
+              message: emailMsg, 
+              subject_type: "Application Approved - Welcome!" 
+          }, '1poBGqvXaYHzOxqM8');
+
+          setShowAddModal(false);
+          alert("Tenant Added & Final Email Sent!");
+          fetchTenants(); 
+          fetchWaitlist(); 
+          setTransferApplicant(null);
+      } else {
+          const err = await response.json();
+          alert(`Error saving: ${err.error || 'Unknown error'}`);
+      }
+    } catch (e) { 
+        console.error(e); 
+        alert("Server Error"); 
+    }
+  };
+
+  const handleRejectApplicant = async (id) => { 
     if(window.confirm("Are you sure you want to REJECT and DELETE this application?")) {
       try {
-        const response = await fetch(`${API_URL}/waitlist/${id}`, { method: 'DELETE' }); // Use id in URL
+        const response = await fetch(`${API_URL}/waitlist/${id}`, { method: 'DELETE' }); 
         
         if (response.ok) {
             alert("Application removed.");
@@ -214,40 +307,12 @@ const TenantLease = () => {
     }
   };
 
-  const handleAddTenant = async (newTenant) => {
-    try {
-      const response = await fetch(`${API_URL}/tenants`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              ...newTenant,
-              transferWaitlistId: transferApplicant?.id // Use id for transfer
-          })
-      });
-
-      if (response.ok) {
-          setShowAddModal(false);
-          alert("Tenant Added Successfully!");
-          fetchTenants(); 
-          fetchWaitlist(); 
-          setTransferApplicant(null);
-      } else {
-          const err = await response.json();
-          alert(`Error saving to database: ${err.error || 'Unknown error'}`);
-      }
-    } catch (e) { 
-        console.error(e); 
-        alert("Server Error"); 
-    }
-  };
-
   const handleDeleteConfirm = async () => {
     if (!deleteRow?.id && !deleteRow?._id) return; 
     const idToDelete = deleteRow._id || deleteRow.id;
 
     try {
       await fetch(`${API_URL}/tenants/${idToDelete}`, { method: 'DELETE' });
-      
       setRecords(prev => prev.filter(item => (item._id || item.id) !== idToDelete));
       setDeleteRow(null);
       alert("Successfully deleted!");
@@ -285,17 +350,10 @@ const TenantLease = () => {
   });
 
   const formatDate = (dateString) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleString('en-US', {
-    month: 'numeric', 
-    day: 'numeric', 
-    year: 'numeric', 
-    hour: 'numeric', 
-    minute: '2-digit',
-    hour12: true
-  });
-};
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+  };
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -304,17 +362,13 @@ const TenantLease = () => {
 
   return (
     <Layout title="Tenants/Lease Management">
-      <div className="mb-6">
-        <StatCardGroup {...mapStats} />
-      </div>
+      <div className="mb-6"><StatCardGroup {...mapStats} /></div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
           <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center"> + Add New </button>
-          {role === "superadmin" && (
-            <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all"> Notify All </button>
-          )}
+          {role === "superadmin" && (<button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all"> Notify All </button>)}
           <ExportMenu onPrint={() => window.print()} />
         </div>
       </div>
@@ -322,16 +376,10 @@ const TenantLease = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
           <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
-            <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-              <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
-            </button>
-            <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-              <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
-            </button>
+            <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}><Store size={18} /> <span className="hidden sm:inline">Permanent</span></button>
+            <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}><MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span></button>
           </div>
-          <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all">
-            <Map size={18} /> <span className="hidden sm:inline">View Map</span>
-          </button>
+          <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all"><Map size={18} /> <span className="hidden sm:inline">View Map</span></button>
           <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all">
             <ClipboardList size={18} /> <span className="hidden sm:inline">Waitlist</span>
             {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
@@ -356,7 +404,6 @@ const TenantLease = () => {
         totaldue: t.totalAmount ? `₱${t.totalAmount.toLocaleString()}` : (t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-"),
         status: t.status,
         }))}
-
         actions={(row) => (
           <div className="flex justify-end items-center space-x-2">
             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
@@ -369,9 +416,7 @@ const TenantLease = () => {
       />
       
       <Pagination currentPage={currentPage} totalPages={Math.ceil(filtered.length / itemsPerPage)} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} totalItems={filtered.length} onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }} />
-      
       <TenantViewModal viewRow={viewRow} onClose={() => setViewRow(null)} />
-      
       <TenantMapModal isOpen={showMapModal} onClose={() => setShowMapModal(false)} activeTab={activeTab} records={records} onSelectSlot={(tenant) => setViewRow(tenant)} />
 
       <WaitlistModal 
@@ -389,12 +434,14 @@ const TenantLease = () => {
 
       <TenantEmailModal isOpen={showEmailModal} onClose={() => setShowEmailModal(false)} recipient={messagingRow} body={emailBody} setBody={setEmailBody} onSend={sendEmailNotification} />
 
+      {/* --- REVIEW MODAL WITH 9-STEP FLOW LOGIC --- */}
       <ApplicationReviewModal 
         isOpen={showReviewModal}
         reviewData={reviewData}
         onClose={() => setShowReviewModal(false)}
         onBack={() => { setShowReviewModal(false); setShowWaitlistModal(true); }}
         onUnlockPayment={handleUnlockPayment}
+        onRequestContract={handleRequestContract}
         onProceedToLease={handleProceedToLease}
       />
 
@@ -416,7 +463,8 @@ const TenantLease = () => {
               businessPermit: transferApplicant.permitUrl,
               validID: transferApplicant.validIdUrl,
               barangayClearance: transferApplicant.clearanceUrl,
-              proofOfReceipt: transferApplicant.receiptUrl
+              proofOfReceipt: transferApplicant.receiptUrl,
+              contract: transferApplicant.contractUrl
           }
         } : null}
       />
@@ -433,32 +481,17 @@ const TenantLease = () => {
                 alert("Error: No Tenant ID found to update.");
                 return;
               }
-              const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedData)
-              }); 
-              if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Update failed");
-              }
-              alert("Tenant updated successfully!");
-              fetchTenants(); 
-              setEditRow(null); 
-            } catch (error) { 
-              console.error("Update Error:", error); 
-              alert(`Failed to update record: ${error.message}`); 
-            }
+              const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData) }); 
+              if (!response.ok) throw new Error("Update failed");
+              alert("Tenant updated successfully!"); fetchTenants(); setEditRow(null); 
+            } catch (error) { console.error("Update Error:", error); alert(`Failed to update record: ${error.message}`); }
           }}
         />
       )}
       
-      <DeleteModal isOpen={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDeleteConfirm} title="Delete Record" message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion." itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} />
-
+      <DeleteModal isOpen={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDeleteConfirm} title="Delete Record" message="Are you sure you want to PERMANENTLY delete this record?" itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} />
       <RemarksModal isOpen={!!remarksRow} onClose={() => setRemarksRow(null)} onSave={handleSaveRemarks} remarksText={remarksText} setRemarksText={setRemarksText} />
-
       <BroadcastModal isOpen={showNotify} onClose={() => setShowNotify(false)} onBroadcast={handleBroadcast} draft={notifyDraft} setDraft={setNotifyDraft} />
-
     </Layout>
   );
 };
