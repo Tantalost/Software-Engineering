@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import emailjs from '@emailjs/browser';
+import * as XLSX from 'xlsx'; // ADDED: Excel Library
+import jsPDF from 'jspdf'; // ADDED: PDF Library
+import autoTable from "jspdf-autotable"; // ADDED: PDF Table Plugin
 import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList } from "lucide-react";
 
 import Layout from "../components/layout/Layout";
@@ -360,6 +363,62 @@ const TenantLease = () => {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
+  // --- ADDED: EXPORT LOGIC ---
+
+  const getExportData = () => {
+      // Use the filtered data to ensure what the user sees is what gets exported
+      return filtered.map(t => ({
+          "Slot No": t.slotNo,
+          "Ref No": t.referenceNo || t.referenceno || "-",
+          "Tenant Name": t.tenantName || t.name,
+          "Email": t.email || "-",
+          "Contact No": t.contactNo || "-",
+          "Start Date": formatDate(t.StartDateTime), 
+          "Due Date": formatDate(t.DueDateTime || t.EndDateTime),
+          "Rent Amount": t.rentAmount ? `₱${t.rentAmount}` : "0",
+          "Utility Amount": t.utilityAmount ? `₱${t.utilityAmount}` : "0",
+          "Total Due": t.totalAmount ? `₱${t.totalAmount}` : "0",
+          "Status": t.status,
+      }));
+  };
+
+  const handleExportExcel = () => {
+    const data = getExportData();
+    if (!data.length) return alert("No data to export");
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Tenants");
+    XLSX.writeFile(workbook, `Tenant_List_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExportPDF = () => {
+    const data = getExportData();
+    if (!data.length) return alert("No data to export");
+
+    const doc = new jsPDF();
+    const tableColumn = Object.keys(data[0]);
+    const tableRows = data.map(row => Object.values(row));
+
+    doc.text("Tenant Management Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+    // FIX APPLIED: Using autoTable(doc, options)
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 25,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [16, 185, 129] } // Emerald green matches your theme
+    });
+
+    doc.save(`Tenant_List_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // ---------------------------
+
   return (
     <Layout title="Tenants/Lease Management">
       <div className="mb-6"><StatCardGroup {...mapStats} /></div>
@@ -369,7 +428,14 @@ const TenantLease = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
           <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center"> + Add New </button>
           {role === "superadmin" && (<button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all"> Notify All </button>)}
-          <ExportMenu onPrint={() => window.print()} />
+          
+          {/* UPDATED: Export Menu with new handlers */}
+          <ExportMenu 
+            onPrint={() => window.print()} 
+            onExportExcel={handleExportExcel}
+            onExportPDF={handleExportPDF}
+          />
+
         </div>
       </div>
 
