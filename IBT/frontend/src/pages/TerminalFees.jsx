@@ -24,6 +24,27 @@ import { submitPageReport } from "../utils/reportService";
 
 const API_URL = "http://localhost:3000/api";
 
+// --- START FIX: Persistence Logic for Base Prices ---
+const getInitialBasePrices = () => {
+    const storedPrices = localStorage.getItem("terminalBasePrices");
+    if (storedPrices) {
+      try {
+        // Use JSON.parse to retrieve the object from storage
+        return JSON.parse(storedPrices);
+      } catch (e) {
+        console.error("Error parsing base prices from localStorage", e);
+        // Fallback to default in case of corruption
+      }
+    }
+    // Default values if nothing is in localStorage or if parsing fails
+    return {
+      regular: 15.00,
+      discounted: 10.00 // Student, Senior, PWD
+    };
+};
+// --- END FIX: Persistence Logic for Base Prices ---
+
+
 const TerminalFees = () => {
   const role = localStorage.getItem("authRole") || "superadmin"; 
   const [records, setRecords] = useState([]);
@@ -45,10 +66,17 @@ const TerminalFees = () => {
   const [showLogModal, setShowLogModal] = useState(false); 
   
   const [showPriceModal, setShowPriceModal] = useState(false);
-  const [basePrices, setBasePrices] = useState({
-    regular: 15.00,
-    discounted: 10.00 // Student, Senior, PWD
+  
+  // --- FIX 1: Initialize basePrices from localStorage ---
+  const [basePrices, setBasePrices] = useState(getInitialBasePrices);
+  // --- End FIX 1 ---
+  
+  // Local state to manage price input as string in the modal (for UX fix)
+  const [modalPrices, setModalPrices] = useState({
+      regular: 15.00,
+      discounted: 10.00 
   });
+  
     
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -68,6 +96,82 @@ const TerminalFees = () => {
     date: "",
     time: ""
   });
+  
+  // --- FIX 2: Effect to save basePrices to localStorage whenever they change ---
+  useEffect(() => {
+    // This runs on mount (to read from basePrices), and after every update via setBasePrices
+    localStorage.setItem("terminalBasePrices", JSON.stringify(basePrices));
+  }, [basePrices]);
+  // --- End FIX 2 ---
+
+
+  // Input handler for modal price, using string to fix "01" issue
+  const handleModalPriceChange = (key, value) => {
+      // 1. Allow empty string
+      if (value === "") {
+          setModalPrices(prev => ({ ...prev, [key]: "" }));
+          return;
+      }
+
+      // 2. Check for valid numeric/decimal input structure (allow "15", "15.", ".5", "15.50")
+      const regex = /^\d*\.?\d*$/;
+      if (!regex.test(value)) {
+          // Ignore invalid input (like letters or multiple decimals)
+          return;
+      }
+
+      // 3. FIX: Strip leading zero if it's immediately followed by a digit (e.g., "01" -> "1"), 
+      // but keep it for decimals (e.g., "0.5").
+      if (value.length > 1 && value.startsWith("0") && value[1] !== '.') {
+          value = value.substring(1); 
+      }
+      
+      // 4. Update local state as a string
+      setModalPrices(prev => ({ ...prev, [key]: value }));
+  };
+  
+  // Function to commit changes from modal local state to global basePrices state
+  const handleSaveBasePrices = () => {
+      const newPrices = {};
+      let hasError = false;
+
+      for (const key in modalPrices) {
+          const priceString = String(modalPrices[key]);
+          
+          // Treat empty string or just a decimal point as 0.00
+          if (priceString === "" || priceString === ".") {
+              newPrices[key] = 0.00;
+          } else {
+              const numValue = parseFloat(priceString);
+              
+              if (isNaN(numValue) || numValue < 0) {
+                  showToastMessage("Error: Price must be a valid non-negative number.");
+                  hasError = true;
+                  break;
+              }
+              // Commit rounded value (optional, but good practice for currency)
+              newPrices[key] = parseFloat(numValue.toFixed(2)); 
+          }
+      }
+
+      if (!hasError) {
+          setBasePrices(newPrices); // Commit to parent state (triggers useEffect to save to localStorage)
+          setShowPriceModal(false);
+          showToastMessage("Base prices updated successfully!");
+      }
+  };
+  
+  // Function to open modal and sync local state
+  const handleOpenPriceModal = () => {
+      // Set modalPrices to the string version of basePrices for input fields to work correctly with decimals
+      // Use toFixed(2) to ensure the decimal point is present for editing if the number is an integer
+      setModalPrices({
+          regular: basePrices.regular.toFixed(2),
+          discounted: basePrices.discounted.toFixed(2)
+      });
+      setShowPriceModal(true);
+  };
+
 
   const fetchFees = async () => {
     setIsLoading(true);
@@ -599,7 +703,7 @@ const TerminalFees = () => {
         <div className="flex items-center justify-end gap-3">
           {(role === "superadmin") && (
             <button 
-            onClick={() => setShowPriceModal(true)} 
+            onClick={handleOpenPriceModal} 
             className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
           >
             <Settings size={18} /> <span>Pricing</span>
@@ -824,33 +928,71 @@ const TerminalFees = () => {
 
       {showPriceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-slate-800">Set Base Prices</h3>
-              <button onClick={() => setShowPriceModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between mb-5 border-b pb-3">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <Settings size={20} className="text-emerald-600"/> Base Price Settings
+              </h3>
+              <button 
+                onClick={() => setShowPriceModal(false)} 
+                className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <div className="space-y-4">
+            
+            <p className="text-sm text-slate-600 mb-5">
+                Adjust the default fees applied to new tickets. Changes take effect upon saving.
+            </p>
+
+            <div className="space-y-5">
+               {/* REGULAR PRICE INPUT - FIXED: Changed type to text and added custom handler */}
                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Regular Price</label>
-                  <input 
-                    type="number" 
-                    value={basePrices.regular} 
-                    onChange={(e) => setBasePrices({...basePrices, regular: Number(e.target.value)})}
-                    className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-medium"
-                  />
+                  <label htmlFor="regular-price" className="block text-sm font-semibold text-slate-700 mb-1">Regular Passenger Price</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
+                    <input 
+                      id="regular-price"
+                      type="text" // Use text for better decimal control
+                      value={modalPrices.regular} 
+                      onChange={(e) => handleModalPriceChange('regular', e.target.value)}
+                      className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      placeholder="0.00"
+                    />
+                  </div>
                </div>
+
+               {/* DISCOUNTED PRICE INPUT - FIXED: Changed type to text and added custom handler */}
                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Student / Senior / PWD Price</label>
-                  <input 
-                    type="number" 
-                    value={basePrices.discounted} 
-                    onChange={(e) => setBasePrices({...basePrices, discounted: Number(e.target.value)})}
-                    className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-medium"
-                  />
+                  <label htmlFor="discounted-price" className="block text-sm font-semibold text-slate-700 mb-1">Student / Senior / PWD Price</label>
+                  <div className="relative">
+                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
+                     <input 
+                      id="discounted-price"
+                      type="text" // Use text for better decimal control
+                      value={modalPrices.discounted} 
+                      onChange={(e) => handleModalPriceChange('discounted', e.target.value)}
+                      className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      placeholder="0.00"
+                    />
+                  </div>
                </div>
             </div>
-            <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-              <button onClick={() => setShowPriceModal(false)} className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Close</button>
+            
+            <div className="mt-8 flex justify-end gap-3 border-t pt-4">
+              <button 
+                onClick={() => setShowPriceModal(false)} 
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveBasePrices} 
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2"
+              >
+                <CheckCircle size={16} /> Save Changes
+              </button>
             </div>
           </div>
         </div>
@@ -873,7 +1015,7 @@ const TerminalFees = () => {
                 <div className="grid grid-cols-3 gap-2 ">
                   {["Regular", "Student", "Senior Citizen / PWD"].map((type) => (
                     <button key={type} onClick={() => {
-                        // 6. USE DYNAMIC PRICE IN ADD MODAL
+                        // USE PERSISTED PRICE IN ADD MODAL
                         const price = (type === 'Student' || type === 'Senior Citizen / PWD') ? basePrices.discounted : basePrices.regular;
                         setNewTicket(prev => ({ ...prev, passengerType: type, price }));
                       }}
@@ -913,7 +1055,7 @@ const TerminalFees = () => {
 
           <div className="grid grid-cols-3 gap-2 mb-4">
             {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
-              // 7. USE DYNAMIC PRICE IN EDIT MODAL
+              // USE PERSISTED PRICE IN EDIT MODAL
               const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? basePrices.discounted : basePrices.regular;
               const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
               return (
