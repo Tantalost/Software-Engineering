@@ -18,10 +18,15 @@ import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2, History, ListC
 
 
 const TEMPLATE_ROUTES = {
-    "T-101": "Iligan - Cagayan de Oro",
-    "T-102": "Iligan - Pagadian",
-    "T-103": "Iligan - Zamboanga",
-    "T-104": "Iligan - Dipolog"
+    "T-101": "Zamboanga - Cagayan de Oro",
+    "T-102": "Zamboanga - Cagayan de Oro",
+    "T-103": "Zamboanga - Cagayan de Oro",
+    "T-104": "Zamboanga - Cagayan de Oro",
+    "J-101": "Zamboanga - Pagadian",
+    "J-102": "Zamboanga - Pagadian",
+    "J-103": "Zamboanga - Pagadian",
+    "J-104": "Zamboanga - Pagadian"
+    
 };
 
 const BusTrips = () => {
@@ -676,7 +681,7 @@ const BusTrips = () => {
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-2">Company</label>
                                     <div className="flex p-1 bg-slate-100 rounded-lg">
-                                        {["Dindo", "Alga Ceres", "Lizamae"].map((company) => (
+                                        {["Dindo", "Alga",  "Ceres", "Lizamae"].map((company) => (
                                             <button
                                                 type="button"
                                                 key={company}
