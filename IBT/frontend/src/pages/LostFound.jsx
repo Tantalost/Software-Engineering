@@ -506,14 +506,14 @@ const LostFound = () => {
                                 <button
                                     onClick={() => setShowSubmitModal(true)}
                                     disabled={isReporting}
-                                    className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+                                    className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto cursor-pointer"
                                 >
                                     <FileText size={18} />
                                     <span>Submit Report</span>
                                 </button>
                             )}
                             
-                            <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center w-full sm:w-auto">
+                            <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center w-full sm:w-auto cursor-pointer">
                                 + Add New
                             </button>
 
@@ -533,7 +533,7 @@ const LostFound = () => {
                         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                             <button 
                                 onClick={() => setShowLogModal(true)} 
-                                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer"
                                 title="View Logs"
                             >
                                 <History size={18} /> 
@@ -618,10 +618,10 @@ const LostFound = () => {
                                     onEdit={() => setEditRow(selectedRecord)}
                                     onDelete={() => setDeleteRow(selectedRecord)}
                                 />
-                                <button onClick={() => handleArchive(selectedRecord)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                                <button onClick={() => handleArchive(selectedRecord)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer">
                                     <Archive size={16} />
                                 </button>
-                                {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
+                                {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" title="Delete">
                                                     <Trash2 size={16} />
                                 </button>)}
                                 </div>
@@ -738,7 +738,7 @@ const LostFound = () => {
 
                             </div>
                             <div className="flex gap-3 mt-6">
-                                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
+                                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">Cancel</button>
                                 <button type="submit" className="flex-1 py-3 bg-emerald-600 rounded-xl text-white font-medium shadow-md hover:bg-emerald-700 transition-all">Save Record</button>
                             </div>
                         </form>
@@ -810,7 +810,7 @@ const LostFound = () => {
                                         <button
                                             type="button"
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Claimed' })}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer${
                                                 editFormData.status === 'Claimed'
                                                     ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
                                                     : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
@@ -881,7 +881,7 @@ const LostFound = () => {
 
                             </div>
                             <div className="flex gap-3 mt-6">
-                                <button type="button" onClick={() => setEditRow(null)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
+                                <button type="button" onClick={() => setEditRow(null)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">Cancel</button>
                                 <button type="submit" className="flex-1 py-3 bg-blue-600 rounded-xl text-white font-medium shadow-md hover:bg-blue-700 transition-all flex justify-center items-center gap-2">
                                     <Save size={18} />
                                     Save Changes
@@ -914,11 +914,11 @@ const LostFound = () => {
                             </span>
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
-                            <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                            <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
                             <button
                                 onClick={handleSubmitReport}
                                 disabled={isReporting}
-                                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer" 
                             >
                                 {isReporting ? (
                                     <>

@@ -3,7 +3,10 @@ import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx'; // ADDED: Excel Library
 import jsPDF from 'jspdf'; // ADDED: PDF Library
 import autoTable from "jspdf-autotable"; // ADDED: PDF Table Plugin
-import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList } from "lucide-react";
+import { 
+    Archive, Trash2, Mail, Download, Store, MoonStar, Map, 
+    ClipboardList, CheckCircle, X // ADDED: For Notification Pop-up
+} from "lucide-react";
 
 // Layout & Components
 import Layout from "../components/layout/Layout";
@@ -71,6 +74,15 @@ const TenantLease = () => {
   const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
   const [remarksText, setRemarksText] = useState("");
 
+  // State for custom notifications (SUCCESS/ERROR) - ADDED duration
+  const [notificationState, setNotificationState] = useState({ 
+    isOpen: false, 
+    type: '', 
+    message: '', 
+    autoClose: true,
+    duration: 3000 // Default duration (3 seconds)
+  }); 
+
   // --- DATA FETCHING ---
  useEffect(() => {
     // 1. Initial Fetch
@@ -86,6 +98,24 @@ const TenantLease = () => {
     // 3. Cleanup on unmount (prevents memory leaks)
     return () => clearInterval(interval);
   }, []);
+
+  // --- Auto-close Notification Effect (CONDITIONAL & DYNAMIC DURATION) ---
+  useEffect(() => {
+    // Only auto-close if the notification is open AND autoClose is true
+    if (notificationState.isOpen && notificationState.autoClose) {
+        const timerDuration = notificationState.duration || 3000; // Use state duration or default
+
+        const timer = setTimeout(() => {
+            // Reset state back to defaults (3 seconds)
+            setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 }); 
+        }, timerDuration); 
+
+        // Cleanup function to clear the timeout
+        return () => clearTimeout(timer);
+    }
+  }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]); 
+  // -----------------------------------------------------------------
+
 
   const fetchTenants = async () => {
     try {
@@ -165,7 +195,7 @@ const TenantLease = () => {
   // 1. Manual Waitlist Add
   const handleAddToWaitlist = async () => {
     if (!waitlistForm.name || !waitlistForm.contact) { 
-        alert("Please fill in Name and Contact."); 
+        setNotificationState({ isOpen: true, type: 'error', message: "Please fill in Name and Contact.", autoClose: true, duration: 3000 });
         return; 
     }
     try {
@@ -180,15 +210,16 @@ const TenantLease = () => {
             body: JSON.stringify(payload)
         });
         if (response.ok) {
-            alert("Added to waitlist successfully!");
+            setNotificationState({ isOpen: true, type: 'success', message: "Added to waitlist successfully!", autoClose: true, duration: 3000 });
             fetchWaitlist();
             setWaitlistForm({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
             setShowWaitlistForm(false); 
         } else {
-            alert("Failed to add to waitlist");
+            setNotificationState({ isOpen: true, type: 'error', message: "Failed to add to waitlist", autoClose: true, duration: 3000 });
         }
     } catch (error) {
         console.error("Waitlist Error:", error);
+        setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not add to waitlist.", autoClose: true, duration: 3000 });
     }
   };
 
@@ -211,15 +242,16 @@ const TenantLease = () => {
         });
 
         if (response.ok) {
-            alert("Payment Unlocked! The applicant has been notified via email.");
+            setNotificationState({ isOpen: true, type: 'success', message: "Payment Unlocked! The applicant has been notified via email.", autoClose: true, duration: 3000 });
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
             fetchWaitlist(); 
         } else {
-            alert("Failed to update status.");
+            setNotificationState({ isOpen: true, type: 'error', message: "Failed to update status.", autoClose: true, duration: 3000 });
         }
     } catch (error) { 
         console.error("Error:", error); 
+        setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not unlock payment.", autoClose: true, duration: 3000 });
     }
   };
 
@@ -236,15 +268,16 @@ const TenantLease = () => {
         });
 
         if (response.ok) {
-            alert("Status updated to Contract Pending. Applicant notified via email.");
+            setNotificationState({ isOpen: true, type: 'success', message: "Status updated to Contract Pending. Applicant notified via email.", autoClose: true, duration: 3000 });
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
             fetchWaitlist(); 
         } else {
-            alert("Failed to update status.");
+            setNotificationState({ isOpen: true, type: 'error', message: "Failed to update status.", autoClose: true, duration: 3000 });
         }
     } catch (error) { 
         console.error("Error:", error); 
+        setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not request contract.", autoClose: true, duration: 3000 });
     }
   };
 
@@ -269,17 +302,17 @@ const TenantLease = () => {
 
       if (response.ok) {
           setShowAddModal(false);
-          alert("Tenant Added Successfully! Welcome email sent.");
+          setNotificationState({ isOpen: true, type: 'success', message: "Tenant Added Successfully! Welcome email sent.", autoClose: true, duration: 3000 });
           fetchTenants(); 
           fetchWaitlist(); 
           setTransferApplicant(null);
       } else {
           const err = await response.json();
-          alert(`Error saving to database: ${err.error || 'Unknown error'}`);
+          setNotificationState({ isOpen: true, type: 'error', message: `Error saving to database: ${err.error || 'Unknown error'}`, autoClose: true, duration: 3000 });
       }
     } catch (e) { 
         console.error(e); 
-        alert("Server Error"); 
+        setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not save tenant.", autoClose: true, duration: 3000 });
     }
   };
 
@@ -288,15 +321,15 @@ const TenantLease = () => {
       try {
         const response = await fetch(`${API_URL}/waitlist/${id}`, { method: 'DELETE' }); 
         if (response.ok) {
-            alert("Application removed.");
+            setNotificationState({ isOpen: true, type: 'success', message: "Application removed.", autoClose: true, duration: 3000 });
             fetchWaitlist(); 
             if(showReviewModal) setShowReviewModal(false);
         } else {
-            alert("Failed to delete application.");
+            setNotificationState({ isOpen: true, type: 'error', message: "Failed to delete application.", autoClose: true, duration: 3000 });
         }
       } catch (error) { 
           console.error(error); 
-          alert("Error removing application."); 
+          setNotificationState({ isOpen: true, type: 'error', message: "Error removing application.", autoClose: true, duration: 3000 });
       }
     }
   };
@@ -306,11 +339,17 @@ const TenantLease = () => {
     const idToDelete = deleteRow._id || deleteRow.id;
 
     try {
-      await fetch(`${API_URL}/tenants/${idToDelete}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/tenants/${idToDelete}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error("Failed to delete record.");
+      }
       setRecords(prev => prev.filter(item => (item._id || item.id) !== idToDelete));
       setDeleteRow(null);
-      alert("Successfully deleted!");
-    } catch (e) { console.error(e); alert(`Error: ${e.message}`); }
+      setNotificationState({ isOpen: true, type: 'success', message: "Record successfully deleted!", autoClose: true, duration: 3000 });
+    } catch (e) { 
+      console.error(e); 
+      setNotificationState({ isOpen: true, type: 'error', message: `Error deleting record: ${e.message}`, autoClose: true, duration: 3000 });
+    }
   };
 
   const handleSaveRemarks = () => {
@@ -319,12 +358,13 @@ const TenantLease = () => {
     remarks[remarksRow.id] = remarksText; 
     localStorage.setItem("ibt_tenantRemarks", JSON.stringify(remarks)); 
     setRemarksRow(null); 
+    setNotificationState({ isOpen: true, type: 'success', message: "Remarks saved successfully.", autoClose: true, duration: 3000 });
   };
   
   const handleBroadcast = () => {
     setShowNotify(false); 
     setNotifyDraft({ title: "", message: "" }); 
-    alert("Notification broadcasted!");
+    setNotificationState({ isOpen: true, type: 'success', message: "Notification broadcasted successfully!", autoClose: true, duration: 3000 });
   };
 
   // --- FILTERING ---
@@ -376,17 +416,24 @@ const TenantLease = () => {
 
   const handleExportExcel = () => {
     const data = getExportData();
-    if (!data.length) return alert("No data to export");
+    if (!data.length) {
+        setNotificationState({ isOpen: true, type: 'error', message: "No records to export.", autoClose: true, duration: 3000 });
+        return;
+    }
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Tenants");
     XLSX.writeFile(workbook, `Tenant_List_${new Date().toISOString().split('T')[0]}.xlsx`);
+    setNotificationState({ isOpen: true, type: 'success', message: "Exported records to Excel.", autoClose: true, duration: 3000 });
   };
 
   const handleExportPDF = () => {
     const data = getExportData();
-    if (!data.length) return alert("No data to export");
+    if (!data.length) {
+        setNotificationState({ isOpen: true, type: 'error', message: "No records to export.", autoClose: true, duration: 3000 });
+        return;
+    }
 
     const doc = new jsPDF();
     const tableColumn = Object.keys(data[0]);
@@ -407,6 +454,7 @@ const TenantLease = () => {
     });
 
     doc.save(`Tenant_List_${new Date().toISOString().split('T')[0]}.pdf`);
+    setNotificationState({ isOpen: true, type: 'success', message: "Exported records to PDF.", autoClose: true, duration: 3000 });
   };
 
   // ---------------------------
@@ -423,8 +471,8 @@ const TenantLease = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
-          <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center"> + Add New </button>
-          {role === "superadmin" && (<button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all"> Notify All </button>)}
+          <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center cursor-pointer"> + Add New </button>
+          {role === "superadmin" && (<button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer"> Notify All </button>)}
           
           {/* UPDATED: Export Menu with new handlers */}
           <ExportMenu 
@@ -440,17 +488,17 @@ const TenantLease = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
           <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
-            <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+            <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
               <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
             </button>
-            <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+            <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
               <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
             </button>
           </div>
-          <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all">
+          <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
             <Map size={18} /> <span className="hidden sm:inline">View Map</span>
           </button>
-          <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all">
+          <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
             <ClipboardList size={18} /> <span className="hidden sm:inline">Waitlist</span>
             {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
           </button>
@@ -479,15 +527,22 @@ const TenantLease = () => {
         actions={(row) => (
           <div className="flex justify-end items-center space-x-2">
             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
-            <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all" title="Download Rent Statement"><Download size={16} /></button>
-            <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all" title="Send Email"><Mail size={16} /></button>
-            <button onClick={() => { setRemarksRow(records.find(r => r.id === row.id)); setRemarksText(""); }} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all" title="Add Remarks"><Archive size={16} /></button>
-            <button onClick={() => setDeleteRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all" title="Delete"><Trash2 size={16} /></button>
+            <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Download Rent Statement"><Download size={16} /></button>
+            <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
+            <button onClick={() => { setRemarksRow(records.find(r => r.id === row.id)); setRemarksText(""); }} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all cursor-pointer" title="Add Remarks"><Archive size={16} /></button>
+            <button onClick={() => setDeleteRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer" title="Delete"><Trash2 size={16} /></button>
           </div>
         )}
       />
       
-      <Pagination currentPage={currentPage} totalPages={Math.ceil(filtered.length / itemsPerPage)} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} totalItems={filtered.length} onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }} />
+      <Pagination 
+        currentPage={currentPage} 
+        totalPages={Math.ceil(filtered.length / itemsPerPage)} 
+        onPageChange={setCurrentPage} 
+        itemsPerPage={itemsPerPage} 
+        totalItems={filtered.length} 
+        onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }} 
+      />
       
       {/* --- MODALS --- */}
 
@@ -512,7 +567,17 @@ const TenantLease = () => {
       />
 
       {/* Manual Email */}
-      <TenantEmailModal isOpen={showEmailModal} onClose={() => setShowEmailModal(false)} recipient={messagingRow} body={emailBody} setBody={setEmailBody} onSend={() => { /* Implement custom email logic if needed */ alert("Use backend controller for automated emails."); setShowEmailModal(false); }} />
+      <TenantEmailModal 
+        isOpen={showEmailModal} 
+        onClose={() => setShowEmailModal(false)} 
+        recipient={messagingRow} 
+        body={emailBody} 
+        setBody={setEmailBody} 
+        onSend={() => { 
+          setNotificationState({ isOpen: true, type: 'error', message: "Please use the automated email feature or implement backend logic.", autoClose: true, duration: 3000 });
+          setShowEmailModal(false); 
+        }} 
+      />
 
       {/* Application Review (The Main Flow) */}
       <ApplicationReviewModal 
@@ -560,7 +625,7 @@ const TenantLease = () => {
             try {
               const idToUpdate = updatedData._id || updatedData.id;
               if (!idToUpdate) {
-                alert("Error: No Tenant ID found to update.");
+                setNotificationState({ isOpen: true, type: 'error', message: "Error: No Tenant ID found to update.", autoClose: true, duration: 3000 });
                 return;
               }
               const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
@@ -572,25 +637,72 @@ const TenantLease = () => {
                 const errorData = await response.json();
                 throw new Error(errorData.error || "Update failed");
               }
-              alert("Tenant updated successfully!");
+              setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
               fetchTenants(); 
               setEditRow(null); 
             } catch (error) { 
               console.error("Update Error:", error); 
-              alert(`Failed to update record: ${error.message}`); 
+              setNotificationState({ isOpen: true, type: 'error', message: `Failed to update record: ${error.message}`, autoClose: true, duration: 3000 });
             }
           }}
         />
       )}
       
       {/* Delete Confirmation */}
-      <DeleteModal isOpen={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDeleteConfirm} title="Delete Record" message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion." itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} />
+      <DeleteModal 
+        isOpen={!!deleteRow} 
+        onClose={() => setDeleteRow(null)} 
+        onConfirm={handleDeleteConfirm} 
+        title="Delete Record" 
+        message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion." 
+        itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} 
+      />
 
       {/* Remarks */}
-      <RemarksModal isOpen={!!remarksRow} onClose={() => setRemarksRow(null)} onSave={handleSaveRemarks} remarksText={remarksText} setRemarksText={setRemarksText} />
+      <RemarksModal 
+        isOpen={!!remarksRow} 
+        onClose={() => setRemarksRow(null)} 
+        onSave={handleSaveRemarks} 
+        remarksText={remarksText} 
+        setRemarksText={setRemarksText} 
+      />
 
       {/* Broadcast Notification */}
-      <BroadcastModal isOpen={showNotify} onClose={() => setShowNotify(false)} onBroadcast={handleBroadcast} draft={notifyDraft} setDraft={setNotifyDraft} />
+      <BroadcastModal 
+        isOpen={showNotify} 
+        onClose={() => setShowNotify(false)} 
+        onBroadcast={handleBroadcast} 
+        draft={notifyDraft} 
+        setDraft={setNotifyDraft} 
+      />
+      
+      {/* Status Pop-up Component (For dynamic duration notifications) */}
+      {notificationState.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">
+            <div 
+                className={`flex items-center gap-4 ${notificationState.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} 
+                            text-white p-4 rounded-xl shadow-xl transition-all duration-300 transform 
+                            animate-in fade-in slide-in-from-top-10 pointer-events-auto`}
+                role="alert"
+            >
+                {notificationState.type === 'success' 
+                    ? <CheckCircle size={32} /> 
+                    : <X size={32} />
+                }
+                <div>
+                    <h4 className="font-bold text-lg">{notificationState.type === 'success' ? 'Success!' : 'Error'}</h4>
+                    <p className="text-sm">{notificationState.message}</p>
+                </div>
+                {/* Manual close button, visible for all notifications */}
+                <button 
+                    onClick={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })} 
+                    className="p-1 rounded-full text-white/80 hover:text-white transition-colors cursor-pointer"
+                >
+                    <X size={20} />
+                </button>
+            </div>
+        </div>
+      )}
 
     </Layout>
   );
