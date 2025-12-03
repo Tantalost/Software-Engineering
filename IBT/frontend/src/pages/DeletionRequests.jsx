@@ -15,7 +15,7 @@ const Modal = ({ title, onClose, children }) => (
     <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-slate-800">{title}</h3>
-        <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+        <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600 cursor-pointer"/></button>
       </div>
       {children}
     </div>
@@ -247,7 +247,7 @@ const DeletionRequests = () => {
                 <button
                   onClick={handleBulkDelete}
                   title="Delete Selected"
-                  className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                  className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
                 >
                 <Trash2 className="h-5 w-5" />
                 </button>
@@ -257,10 +257,10 @@ const DeletionRequests = () => {
             <button
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+              className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border cursor-pointer'${
               isSelectionMode
-              ? "bg-red-500 text-white shadow-md"
-              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+              ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
+              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
               }`}
               >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -307,14 +307,14 @@ const DeletionRequests = () => {
                 <div className="flex justify-end space-x-2">
                     <button
                     onClick={() => setViewData(fullReq)}
-                    className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600"
+                    className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
                     title="View Details"
                     >
                     <Eye size={18} />
                     </button>
                     <button
                     onClick={() => { setApproveData(fullReq); setAdminRemarks(""); }}
-                    className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200"
+                    className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 cursor-pointer"
                     title="Approve"
                     >
                     <Check size={18} />
@@ -322,7 +322,7 @@ const DeletionRequests = () => {
 
                     <button
                     onClick={() => { setDenyData(fullReq); setAdminRemarks(""); }}
-                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 cursor-pointer"
                     title="Deny"
                     >
                     <X size={18} />
@@ -356,7 +356,7 @@ const DeletionRequests = () => {
                 </div>
             </div>
             <div className="flex justify-end">
-               <button onClick={() => setViewData(null)} className="px-4 py-2 bg-slate-200 rounded-lg">Close</button>
+               <button onClick={() => setViewData(null)} className="px-4 py-2 bg-slate-200 rounded-lg cursor-pointer">Close</button>
             </div>
            </div>
         </Modal>
@@ -390,8 +390,8 @@ const DeletionRequests = () => {
              placeholder="Enter remarks to proceed..."
            />
            <div className="mt-4 flex justify-end gap-3">
-             <button onClick={() => setApproveData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg">Cancel</button>
-             <button onClick={handleApprove} disabled={!adminRemarks} className="px-4 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50">Approve & Delete</button>
+             <button onClick={() => setApproveData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg cusor-pointer">Cancel</button>
+             <button onClick={handleApprove} disabled={!adminRemarks} className="px-4 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50 cursor-pointer">Approve & Delete</button>
            </div>
         </Modal>
       )}
@@ -413,8 +413,8 @@ const DeletionRequests = () => {
              placeholder="Why are you denying this request?"
            />
            <div className="mt-4 flex justify-end gap-3">
-             <button onClick={() => setDenyData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg">Cancel</button>
-             <button onClick={handleDeny} disabled={!adminRemarks} className="px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50">Deny Request</button>
+             <button onClick={() => setDenyData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
+             <button onClick={handleDeny} disabled={!adminRemarks} className="px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50 cursor-pointer">Deny Request</button>
            </div>
         </Modal>
       )}
