@@ -10,11 +10,14 @@ import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
-import LogModal from "../components/common/LogModal"; // <--- 1. IMPORT LOG MODAL
+import LogModal from "../components/common/LogModal"; 
 import { submitPageReport } from "../utils/reportService.js"; 
-import { logActivity } from "../utils/logger"; // <--- 2. IMPORT LOGGER
-import { sendNotification } from "../utils/notificationService.js"; // <--- 3. IMPORT NOTIFICATION
-import { Trash2, LogOut, Car, Bike, Archive, ArrowLeft, FileText, Loader2, History, ListChecks, X } from "lucide-react"; 
+import { logActivity } from "../utils/logger"; 
+import { sendNotification } from "../utils/notificationService.js"; 
+import { 
+    Trash2, LogOut, Car, Bike, Archive, ArrowLeft, FileText, Loader2, 
+    History, ListChecks, X, Pencil, CheckCircle 
+} from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -26,7 +29,7 @@ const Parking = () => {
   const [activeType, setActiveType] = useState("All");
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showLogModal, setShowLogModal] = useState(false); // <--- 4. LOG STATE
+  const [showLogModal, setShowLogModal] = useState(false);
 
   // --- SELECTION STATE ---
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -37,6 +40,7 @@ const Parking = () => {
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [logoutRow, setLogoutRow] = useState(null);
+  const [archiveRow, setArchiveRow] = useState(null); // State for Archive Confirmation Modal
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -45,6 +49,15 @@ const Parking = () => {
   const plateInputRef = useRef(null);
 
   const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, message: "" });
+  
+  // State for custom notifications (SUCCESS/ERROR) - ADDED duration
+  const [notificationState, setNotificationState] = useState({ 
+    isOpen: false, 
+    type: '', 
+    message: '', 
+    autoClose: true,
+    duration: 2000 // Default duration (2 seconds)
+  }); 
 
   const [isReporting, setIsReporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -85,6 +98,80 @@ const Parking = () => {
   };
 
   useEffect(() => { fetchParkingTickets(); }, []);
+
+  // -----------------------------------------------------------------
+  // Auto-close Notification Effect (CONDITIONAL & DYNAMIC DURATION)
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    // Only auto-close if the notification is open AND autoClose is true
+    if (notificationState.isOpen && notificationState.autoClose) {
+      const timerDuration = notificationState.duration || 2000; // Use state duration or default
+
+      const timer = setTimeout(() => {
+        // Reset state back to defaults (3 seconds)
+        setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 2000 }); 
+      }, timerDuration); 
+
+      // Cleanup function to clear the timeout
+      return () => clearTimeout(timer);
+    }
+  }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]); 
+  // -----------------------------------------------------------------
+
+  // --- UPDATED EDIT HANDLER FUNCTION ---
+  const handleEditSave = async (updatedData) => {
+    try {
+        const payload = {
+            type: updatedData.type,
+            baseRate: updatedData.price,
+            timeIn: updatedData.timein,
+            timeOut: updatedData.timeout,
+            duration: updatedData.duration,
+            date: updatedData.date,
+            status: updatedData.status,
+        };
+
+        const response = await fetch(`${API_URL}/${updatedData.id}`, { 
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update parking record.');
+        }
+
+        // --- SUCCESS MESSAGE POP-UP (3s duration) ---
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'success', 
+            message: "Parking ticket updated successfully!", 
+            autoClose: true, 
+            duration: 2000 
+        }); 
+        // ------------------------------------------
+
+        logActivity(role, "EDIT_TICKET", `Updated Parking Ticket ID #${updatedData.id}`, "Parking");
+        
+        await fetchParkingTickets(); 
+        setEditRow(null); // Close the modal
+
+    } catch (error) {
+        console.error("Update Error:", error);
+        // --- ERROR MESSAGE POP-UP (3s duration) ---
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'error', 
+            message: `Error updating record: ${error.message}`, 
+            autoClose: true, 
+            duration: 2000 
+        });
+        // ----------------------------------------
+    }
+  };
 
   // --- Filtered & Paginated Data ---
   const filtered = records.filter(ticket => {
@@ -143,7 +230,6 @@ const Parking = () => {
     setIsLoading(true);
     try {
         if (role === "parking") {
-            // --- PARKING ADMIN: SEND REQUEST ---
             const requestPromises = selectedIds.map(async (id) => {
                 const item = records.find(r => r.id === id);
                 if (!item) return;
@@ -165,15 +251,20 @@ const Parking = () => {
         "Deletion Request: Parking", 
         `Parking Admin has requested to delete ${selectedIds.length} parking records.`,
         "Parking",
-        "superadmin" // <--- IMPORTANT: This tags the specific audience
+        "superadmin" 
     );
 
             await Promise.all(requestPromises);
             await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} parking tickets`, "Parking");
             
-            // --- NOTIFY SUPERADMIN ONLY ---
-
-            alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`);
+            // Notification Pop-up (3s duration)
+            setNotificationState({ 
+                isOpen: true, 
+                type: 'success', 
+                message: `Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`,
+                autoClose: true,
+                duration: 2000
+            });
             setSelectedIds([]);
             setIsSelectionMode(false);
 
@@ -186,7 +277,14 @@ const Parking = () => {
             await Promise.all(deletePromises);
             await logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} parking tickets via bulk action`, "Parking");
             
-            alert(`Successfully deleted ${selectedIds.length} records`);
+            // Notification Pop-up (3s duration)
+            setNotificationState({ 
+                isOpen: true, 
+                type: 'success', 
+                message: `Successfully deleted ${selectedIds.length} records`,
+                autoClose: true,
+                duration: 2000
+            });
             fetchParkingTickets();
             setSelectedIds([]);
             setIsSelectionMode(false);
@@ -194,7 +292,14 @@ const Parking = () => {
 
     } catch (error) {
       console.error("Bulk action failed", error);
-      alert("Failed to process some records.");
+      // Notification Pop-up (3s duration)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: "Failed to process some records.",
+        autoClose: true,
+        duration: 2000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -232,22 +337,23 @@ const Parking = () => {
   const handleCreateTicket = async (e) => {
     e.preventDefault(); 
     if (!newTicket.plateNo || !newTicket.ticketNo) {
-      alert("Please fill in both Ticket Number and Plate Number.");
+      // Notification Pop-up (3s duration)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: "Please fill in both Ticket Number and Plate Number.",
+        autoClose: true,
+        duration: 2000
+      });
       return;
     }
 
-    // 1. Check ONLY for duplicate Ticket Number
     const duplicateTicket = existingTicketNumbers.includes(newTicket.ticketNo);
-
-    // 2. We removed the 'duplicatePlate' check here so multiple entries 
-    // for the same plate are now allowed.
 
     if (duplicateTicket) {
       setDuplicateModal({ isOpen: true, message: `Ticket Number #${newTicket.ticketNo} already exists!` });
       return;
     }
-
-    // Note: The duplicate plate check block was removed here.
 
     try {
       const response = await fetch(API_URL, {
@@ -260,9 +366,25 @@ const Parking = () => {
         await logActivity(role, "CREATE_TICKET", `Created Parking Ticket #${newTicket.ticketNo}`, "Parking");
         fetchParkingTickets();
         setShowAddModal(false);
+        // Notification Pop-up (3s duration)
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'success', 
+            message: `Parking Ticket #${newTicket.ticketNo} created successfully.`,
+            autoClose: true,
+            duration: 2000
+        });
       }
     } catch (error) {
       console.error("Error creating ticket:", error);
+      // Notification Pop-up (3s duration)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: "Failed to create ticket.",
+        autoClose: true,
+        duration: 2000
+      });
     }
   };
 
@@ -274,14 +396,40 @@ const Parking = () => {
         await logActivity(role, "DELETE_TICKET", `Deleted Parking Ticket #${deleteRow.ticketNo}`, "Parking");
         setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
         setDeleteRow(null);
-      } else alert("Failed to delete record");
+        // Notification Pop-up (3s duration)
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'success', 
+            message: `Parking Ticket #${deleteRow.ticketNo} deleted successfully.`,
+            autoClose: true,
+            duration: 2000
+        });
+      } else {
+        // Notification Pop-up (3s duration)
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'error', 
+            message: "Failed to delete record.",
+            autoClose: true,
+            duration: 2000
+        });
+      }
     } catch (error) {
       console.error("Error deleting:", error);
     }
   };
 
-  const handleArchive = async (rowToArchive) => {
-    if (!window.confirm(`Are you sure you want to archive Ticket #${rowToArchive.ticketNo}?`)) return;
+  // --- NEW: Function to open custom archive confirmation modal ---
+  const handleArchive = (rowToArchive) => {
+    setArchiveRow(rowToArchive); // Open the custom confirmation modal
+  };
+
+  // --- NEW: Function to execute archive after confirmation ---
+  const confirmArchive = async () => {
+    if (!archiveRow) return;
+    const rowToArchive = archiveRow;
+    setArchiveRow(null); // Close the confirmation modal
+
     try {
       const idToDelete = rowToArchive._id || rowToArchive.id;
       if (!idToDelete) throw new Error("Record ID is missing.");
@@ -303,10 +451,26 @@ const Parking = () => {
 
       await logActivity(role, "ARCHIVE_TICKET", `Archived Parking Ticket #${rowToArchive.ticketNo}`, "Parking");
       setRecords(prev => prev.filter(r => r.id !== idToDelete));
-      alert("Ticket archived successfully!");
+      
+      // Notification Pop-up (autoClose: TRUE, 1-SECOND DURATION)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'success', 
+        message: `Ticket #${rowToArchive.ticketNo} was successfully moved to Archives.`, 
+        autoClose: true, 
+        duration: 1000 // <-- 1 second duration as requested
+      });
     } catch (e) {
       console.error("Failed to archive:", e);
-      alert("Failed to archive ticket.");
+      
+      // Notification Pop-up (autoClose: TRUE, 1-SECOND DURATION)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: `Failed to archive Ticket #${rowToArchive.ticketNo}. Please check network connection.`,
+        autoClose: true, 
+        duration: 1000 // <-- 1 second duration as requested
+      });
     }
   };
 
@@ -318,9 +482,25 @@ const Parking = () => {
         await logActivity(role, "VEHICLE_DEPART", `Vehicle Departed: Ticket #${logoutRow.ticketNo}`, "Parking");
         fetchParkingTickets();
         setLogoutRow(null);
+        // Notification Pop-up (3s duration)
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'success', 
+            message: `Vehicle departed. Total price calculated.`,
+            autoClose: true,
+            duration: 2000
+        });
       }
     } catch (error) {
       console.error("Error logging out:", error);
+      // Notification Pop-up (3s duration)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: "Failed to process departure.",
+        autoClose: true,
+        duration: 2000
+      });
     }
   };
 
@@ -337,33 +517,21 @@ const Parking = () => {
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-      // 1. Helper to format date/time to "11/30/2025, 2:30 PM"
       const formatDateTime = (dateStr) => {
         if (!dateStr) return "-";
         return new Date(dateStr).toLocaleString('en-US', {
-          year: 'numeric',
-          month: 'numeric',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
+          year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
         });
       };
 
-      // 2. Format Data & Remove Unwanted Columns
-     // Inside Parking.jsx -> handleSubmitReport function
-
-const formattedData = filtered.map(item => {
-  // FIND THIS LINE:
-  // Add 'isArchived' to this list to remove it from the final report
-  const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
-
-  return {
-    ...rest, 
-    timeIn: formatDateTime(rest.timeIn),
-    timeOut: rest.timeOut ? formatDateTime(rest.timeOut) : "Parked (Active)"
-  };
-});
+      const formattedData = filtered.map(item => {
+        const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item; 
+        return {
+          ...rest, 
+          timeIn: formatDateTime(rest.timeIn),
+          timeOut: rest.timeOut ? formatDateTime(rest.timeOut) : "Parked (Active)"
+        };
+      });
 
       const reportPayload = {
         screen: "Parking Management",
@@ -379,7 +547,7 @@ const formattedData = filtered.map(item => {
             totalVehicles: filtered.length,
             totalRevenue: revenue
         },
-        data: formattedData // <--- Send cleaned data
+        data: formattedData 
       };
 
       await submitPageReport("Parking", reportPayload, "Parking Admin");
@@ -391,7 +559,7 @@ const formattedData = filtered.map(item => {
           title: "Report Submitted: Parking Report",
           message: "A new Parking Management report has been generated and the active log has been cleared.",
           source: "Parking",
-          targetRole: "superadmin" // Optional: notify superadmin only?
+          targetRole: "superadmin" 
         }),
       });
 
@@ -400,13 +568,27 @@ const formattedData = filtered.map(item => {
       );
       
       await Promise.all(deletePromises);
-      alert("Report submitted successfully! The table has been cleared.");
+      // Notification Pop-up (3s duration)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'success', 
+        message: "Report submitted successfully! The table has been cleared.",
+        autoClose: true,
+        duration: 2000
+      });
       setShowSubmitModal(false);
       fetchParkingTickets();
 
     } catch (error) {
       console.error(error);
-      alert("Failed to submit report.");
+      // Notification Pop-up (3s duration)
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: "Failed to submit report.",
+        autoClose: true,
+        duration: 2000
+      });
     } finally {
       setIsReporting(false);
     }
@@ -417,106 +599,129 @@ const formattedData = filtered.map(item => {
     return "bg-orange-50 text-orange-500 border-orange-500";
   };
 
-  // New helper function to format the data consistently for all exports
-    const getExportData = (data) => {
-        return data.map(item => ({
-            "Ticket No": item.ticketNo || "-",
-            "Plate No": item.plateNo || "-",
-            "Type": item.type,
-            "Fee/Hr": item.baseRate ? `₱${item.baseRate}` : "-",
-            "Total": item.finalPrice ? `₱${item.finalPrice}` : "-",
-            "Time In": item.timeIn ? formatDateDisplay(item.timeIn) : "-",
-            "Time Out": item.timeOut ? formatDateDisplay(item.timeOut) : "-",
-            "Duration": item.duration || "-",
-            "Status": item.status
-        }));
-    };
+  const getExportData = (data) => {
+    return data.map(item => ({
+        "Ticket No": item.ticketNo || "-",
+        "Plate No": item.plateNo || "-",
+        "Type": item.type,
+        "Fee/Hr": item.baseRate ? `₱${item.baseRate}` : "-",
+        "Total": item.finalPrice ? `₱${item.finalPrice}` : "-",
+        "Time In": item.timeIn ? formatDateDisplay(item.timeIn) : "-",
+        "Time Out": item.timeOut ? formatDateDisplay(item.timeOut) : "-",
+        "Duration": item.duration || "-",
+        "Status": item.status
+    }));
+  };
 
-    const exportToCSV = () => {
-        if (filtered.length === 0) {
-            alert("No records to export.");
-            return;
-        }
-        const dataToExport = getExportData(filtered);
-
-        // Uses the dataToExport object keys for consistent headers
-        const headers = Object.keys(dataToExport[0]).join(',');
-        const rows = dataToExport.map(row => 
-            // Enclose all values in double quotes to handle commas/special chars in data
-            Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
-        ).join('\n');
-        
-        const csvContent = headers + '\n' + rows;
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `parking_records_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Parking records to CSV`, "Parking");
-    };
-
-    const exportToPDF = () => {
-        if (filtered.length === 0) {
-            alert("No records to export.");
-            return;
-        }
-        
-        const dataToExport = getExportData(filtered);
-        const headers = Object.keys(dataToExport[0]);
-        const body = dataToExport.map(item => Object.values(item));
-
-        const doc = new jsPDF('portrait', 'mm', 'a4');
-        
-        // 1. Title Styling (Cleaner Look)
-        doc.setFontSize(16);
-        doc.setTextColor(34, 34, 34); // Dark text
-        doc.text("Parking Records Report", 14, 15);
-        
-        // 2. Metadata Styling (Date Generated)
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100); // Gray text for metadata
-        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
-
-        // 3. Table Styling (The 'Clean' Layout)
-        autoTable(doc, {
-            startY: 30, // Start lower for the header text
-            head: [headers],
-            body: body,
-            theme: 'grid', // Uses clear borders for a clean look
-            headStyles: { 
-                fillColor: [16, 185, 129], // Emerald Green header color
-                textColor: [255, 255, 255],
-                fontSize: 9, 
-                halign: 'center'
-            }, 
-            styles: {
-                fontSize: 8, 
-                cellPadding: 3, // Increased padding for better spacing
-                valign: 'middle',
-                textColor: [51, 51, 51] // Dark body text
-            },
-            alternateRowStyles: {
-                fillColor: [240, 255, 240], // Light stripe for readability
-            }
+  const exportToCSV = () => {
+    if (filtered.length === 0) {
+        // Notification Pop-up (3s duration)
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'error', 
+            message: "No records to export.",
+            autoClose: true,
+            duration: 2000
         });
+        return;
+    }
+    const dataToExport = getExportData(filtered);
 
-        // 4. Summary Totals (Uses doc.lastAutoTable.finalY for positioning)
-        const finalY = doc.lastAutoTable.finalY;
-        doc.setFontSize(10);
-        doc.setTextColor(51, 51, 51);
-        doc.text(`Total Vehicles: ${filtered.length}`, 14, finalY + 10);
-        doc.text(`Total Revenue: ₱${revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, finalY + 16);
+    const headers = Object.keys(dataToExport[0]).join(',');
+    const rows = dataToExport.map(row => 
+        Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    
+    const csvContent = headers + '\n' + rows;
 
-        doc.save(`parking_records_${new Date().toISOString().split('T')[0]}.pdf`);
-        
-        logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Parking records to PDF`, "Parking");
-    };
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `parking_records_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Parking records to CSV`, "Parking");
+    // Notification Pop-up (3s duration)
+    setNotificationState({ 
+        isOpen: true, 
+        type: 'success', 
+        message: `Exported ${dataToExport.length} records to CSV.`,
+        autoClose: true,
+        duration: 2000
+    });
+  };
+
+  const exportToPDF = () => {
+    if (filtered.length === 0) {
+        // Notification Pop-up (3s duration)
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'error', 
+            message: "No records to export.",
+            autoClose: true,
+            duration: 2000
+        });
+        return;
+    }
+    
+    const dataToExport = getExportData(filtered);
+    const headers = Object.keys(dataToExport[0]);
+    const body = dataToExport.map(item => Object.values(item));
+
+    const doc = new jsPDF('portrait', 'mm', 'a4');
+    
+    doc.setFontSize(16);
+    doc.setTextColor(34, 34, 34);
+    doc.text("Parking Records Report", 14, 15);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+
+    autoTable(doc, {
+        startY: 30,
+        head: [headers],
+        body: body,
+        theme: 'grid',
+        headStyles: { 
+            fillColor: [16, 185, 129],
+            textColor: [255, 255, 255],
+            fontSize: 9, 
+            halign: 'center'
+        }, 
+        styles: {
+            fontSize: 8, 
+            cellPadding: 3,
+            valign: 'middle',
+            textColor: [51, 51, 51]
+        },
+        alternateRowStyles: {
+            fillColor: [240, 255, 240],
+        }
+    });
+
+    const finalY = doc.lastAutoTable.finalY;
+    doc.setFontSize(10);
+    doc.setTextColor(51, 51, 51);
+    doc.text(`Total Vehicles: ${filtered.length}`, 14, finalY + 10);
+    doc.text(`Total Revenue: ₱${revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, finalY + 16);
+
+    doc.save(`parking_records_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Parking records to PDF`, "Parking");
+    // Notification Pop-up (3s duration)
+    setNotificationState({ 
+        isOpen: true, 
+        type: 'success', 
+        message: `Exported ${dataToExport.length} records to PDF.`,
+        autoClose: true,
+        duration: 2000
+    });
+  };
 
   // --- 7. COLUMN CONFIG FOR SELECTION ---
   const tableColumns = isSelectionMode 
@@ -660,6 +865,7 @@ const formattedData = filtered.map(item => {
                     onView={() => setViewRow(selectedRecord)}
                     onEdit={() => setEditRow(selectedRecord)}
                   />
+                  {/* Updated to use custom modal */}
                   <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
                     <Archive size={16} />
                   </button>
@@ -682,12 +888,54 @@ const formattedData = filtered.map(item => {
         </>
       )}
 
+      {/* --- RENDER EDIT MODAL --- */}
+      {editRow && (
+        <EditParking
+          row={editRow}
+          onClose={() => setEditRow(null)}
+          onSave={handleEditSave}
+        />
+      )}
+      {/* ------------------------- */}
+
       {/* --- 9. LOG MODAL --- */}
       <LogModal 
         isOpen={showLogModal} 
         onClose={() => setShowLogModal(false)} 
       />
       {/* -------------------- */}
+
+      {/* NEW: ARCHIVE CONFIRMATION MODAL (Improved UI) */}
+      {archiveRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
+                <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Archive size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Confirm Archiving</h3>
+                <p className="text-slate-600 mt-2 text-sm">
+                    Are you sure you want to move Ticket <strong>#{archiveRow.ticketNo}</strong> to the Archives?
+                    <br />
+                    <span className="font-semibold text-xs text-red-500">
+                        This item will be permanently removed from the active parking list.
+                    </span>
+                </p>
+                <div className="mt-6 flex gap-3">
+                    <button onClick={() => setArchiveRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={confirmArchive} 
+                        className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg transition-colors"
+                    >
+                        Yes, Archive
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+      {/* END ARCHIVE CONFIRMATION MODAL */}
+
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -858,6 +1106,34 @@ const formattedData = filtered.map(item => {
                         )}
                     </button>
                 </div>
+            </div>
+        </div>
+      )}
+      
+      {/* Status Pop-up Component (For both dynamic duration notifications) */}
+      {notificationState.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">
+            <div 
+                className={`flex items-center gap-4 ${notificationState.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} 
+                            text-white p-4 rounded-xl shadow-xl transition-all duration-300 transform 
+                            animate-in fade-in slide-in-from-top-10 pointer-events-auto`}
+                role="alert"
+            >
+                {notificationState.type === 'success' 
+                    ? <CheckCircle size={32} /> 
+                    : <X size={32} />
+                }
+                <div>
+                    <h4 className="font-bold text-lg">{notificationState.type === 'success' ? 'Success!' : 'Error'}</h4>
+                    <p className="text-sm">{notificationState.message}</p>
+                </div>
+                {/* Manual close button, visible for all notifications */}
+                <button 
+                    onClick={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 2000 })} 
+                    className="p-1 rounded-full text-white/80 hover:text-white transition-colors"
+                >
+                    <X size={20} />
+                </button>
             </div>
         </div>
       )}

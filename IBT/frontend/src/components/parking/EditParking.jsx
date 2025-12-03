@@ -5,11 +5,13 @@ import Input from "../common/Input";
 import Select from "../common/Select";
 
 const EditParking = ({ row, onClose, onSave }) => {
+  // Use 'row.baseRate' instead of 'row.price' for initialization if your DB uses baseRate
   const parsePrice = (p) => parseFloat(String(p).replace(/[^0-9.]/g, "")) || 0;
   const [form, setForm] = React.useState({
     id: row.id,
     type: row.type,
-    price: parsePrice(row.price),
+    // Assuming 'baseRate' from the record is mapped to 'price' in the form
+    price: parsePrice(row.baseRate || row.price), 
     timein: row.timeIn,
     timeout: row.timeOut,
     duration: row.duration,
@@ -33,7 +35,21 @@ const EditParking = ({ row, onClose, onSave }) => {
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({ id: form.id, type: form.type, price: form.price, time: form.time, duration: form.duration, date: form.date, status: form.status })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
+          <button 
+            onClick={() => onSave({ 
+              id: form.id, 
+              type: form.type, 
+              price: form.price, // Mapped to baseRate in the handler
+              timein: form.timein, 
+              timeout: form.timeout, // Corrected to use timeout
+              duration: form.duration, 
+              date: form.date, 
+              status: form.status 
+            })} 
+            className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700"
+          >
+            Save
+          </button>
         </div>
       </div>
     </div>
