@@ -15,7 +15,12 @@ const Topbar = ({ title, onMenuClick }) => {
   role === "lostfound" ? "Lostfound Admin" : 
   role === "bus" ? "Bus Admin" :
   role === "ticket" ? "Ticket Admin" :
-  role === "lease" ? "Lease Admin" :  "Admin";
+  role === "lease" ? "Lease Admin" :  "Super Admin";
+  const userLetter = role === "parking" ? "A" :
+  role === "lostfound" ? "A" : 
+  role === "bus" ? "A" :
+  role === "ticket" ? "A" :
+  role === "lease" ? "A" :  "SA";
   const bellRef = useRef(null);
   const userRef = useRef(null);
 
@@ -135,7 +140,7 @@ const Topbar = ({ title, onMenuClick }) => {
                   className="flex items-center space-x-3 bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 shadow-sm cursor-pointer"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-semibold">
-                    A
+                    {userLetter}
                   </div>
                   <span className="text-sm font-medium text-gray-700">{userLabel}</span>
                   <ChevronDown size={18} className="text-gray-500" />
