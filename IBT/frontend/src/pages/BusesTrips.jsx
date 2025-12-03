@@ -124,66 +124,101 @@ const BusTrips = () => {
     };
 
     const getExportData = () => {
+        // Consolidated logic for formatting data consistently
         return filtered.map(item => ({
-            "Template No": item.templateNo || item.templateno,
+            "Template No": item.templateNo || item.templateno || "-",
             "Ticket Ref": item.ticketReferenceNo || "-",
-            "Route": item.route,
-            "Price": `₱${item.price || 75}`,
+            "Route": item.route || "-",
+            "Price": `₱${(item.price || 75).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             "Time": formatTimeExport(item.time),
             "Departure": formatTimeExport(item.departureTime),
-            "Date": item.date ? new Date(item.date).toLocaleDateString() : "",
-            "Company": item.company,
-            "Status": item.status
+            "Date": item.date ? new Date(item.date).toLocaleDateString() : "-",
+            "Company": item.company || "-",
+            "Status": item.status || "-"
         }));
     };
 
     // --- EXPORT TO EXCEL (CSV) ---
     const handleExportExcel = () => {
-        const data = getExportData();
-        if (!data || data.length === 0) return alert("No data to export");
+        if (filtered.length === 0) {
+            alert("No records to export.");
+            return;
+        }
+        const dataToExport = getExportData();
+        
+        const headers = Object.keys(dataToExport[0]).join(',');
+        const rows = dataToExport.map(row => 
+            // Escape quotes and wrap values in quotes for robust CSV
+            Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
+        ).join('\n');
+        
+        const csvContent = headers + '\n' + rows;
 
-        const headers = Object.keys(data[0]);
-        const csvContent = [
-            headers.join(","),
-            ...data.map(row => headers.map(header => `"${row[header]}"`).join(","))
-        ].join("\n");
-
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Bus_Trips_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = "hidden";
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Bus_Trips_Report_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        // Assuming logActivity is available in this scope
+        // logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Bus Trip records to CSV`, "BusTrips");
     };
 
-    // --- EXPORT TO PDF ---
+    // --- EXPORT TO PDF (Clean and Professional Look) ---
     const handleExportPDF = () => {
-        const doc = new jsPDF();
-        const data = getExportData();
+        if (filtered.length === 0) {
+            alert("No records to export.");
+            return;
+        }
 
-        if (!data || data.length === 0) return alert("No data to export");
+        const dataToExport = getExportData();
+        const headers = Object.keys(dataToExport[0]);
+        const body = dataToExport.map(item => Object.values(item));
 
-        const tableColumn = Object.keys(data[0]);
-        const tableRows = data.map(row => Object.values(row));
-
+        // Use landscape orientation for many columns
+        const doc = new jsPDF('landscape', 'mm', 'a4'); 
+        
+        // 1. Title Styling
+        doc.setFontSize(16);
+        doc.setTextColor(34, 34, 34); // Dark text
         doc.text("Bus Trips Report", 14, 15);
+        
+        // 2. Metadata Styling
         doc.setFontSize(10);
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+        doc.setTextColor(100, 100, 100); // Gray text for metadata
+        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
-        // FIXED: Using autoTable(doc, options) instead of doc.autoTable
+        // 3. Table Styling (Clean Layout)
         autoTable(doc, {
-            head: [tableColumn],
-            body: tableRows,
-            startY: 25,
-            theme: 'grid',
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [16, 185, 129] } // Emerald green
+            startY: 30,
+            head: [headers],
+            body: body,
+            theme: 'grid', // Uses clear borders
+            headStyles: { 
+                fillColor: [16, 185, 129], // Emerald Green header color
+                textColor: [255, 255, 255],
+                fontSize: 8, // Smaller font for landscape
+                halign: 'center'
+            }, 
+            styles: {
+                fontSize: 7, // Smaller body font
+                cellPadding: 2, 
+                valign: 'middle',
+                textColor: [51, 51, 51]
+            },
+            alternateRowStyles: {
+                fillColor: [240, 255, 240], // Light stripe
+            }
         });
 
-        doc.save(`Bus_Trips_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Bus_Trips_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+
+        // Assuming logActivity is available in this scope
+        // logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Bus Trip records to PDF`, "BusTrips");
     };
 
     // --- SELECTION HANDLERS ---
