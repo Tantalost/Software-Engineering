@@ -12,10 +12,10 @@ export const busCompanyRoutes = {
         "J-104": "Zamboanga - Pagadian"
     },
     ceres: {
-        "K-101": "Zamboanga - Ipil",
-        "K-102": "Zamboanga - Ipil",
-        "K-103": "Zamboanga - Ipil",
-        "K-104": "Zamboanga - Ipil"
+        "K-101": "Zamboanga - Dipolog",
+        "K-102": "Zamboanga - Dipolog",
+        "K-103": "Zamboanga - Dipolog",
+        "K-104": "Zamboanga - Dipolog"
     },
     lizamae: {
         "L-101": "Zamboanga - Iligan",
