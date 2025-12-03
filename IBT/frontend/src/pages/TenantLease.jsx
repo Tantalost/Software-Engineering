@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'; // ADDED: Excel Library
 import jsPDF from 'jspdf'; // ADDED: PDF Library
 import autoTable from "jspdf-autotable"; // ADDED: PDF Table Plugin
 import { 
-    Archive, Trash2, Mail, Download, Store, MoonStar, Map, 
+    Trash2, Mail, Download, Store, MoonStar, Map, NotebookPen, // MODIFIED: Replaced Archive with NotebookPen for Remarks
     ClipboardList, CheckCircle, X // ADDED: For Notification Pop-up
 } from "lucide-react";
 
@@ -529,7 +529,8 @@ const TenantLease = () => {
             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
             <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Download Rent Statement"><Download size={16} /></button>
             <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
-            <button onClick={() => { setRemarksRow(records.find(r => r.id === row.id)); setRemarksText(""); }} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all cursor-pointer" title="Add Remarks"><Archive size={16} /></button>
+            {/* UPDATED: Changed icon from Archive to NotebookPen */}
+            <button onClick={() => { setRemarksRow(records.find(r => r.id === row.id)); setRemarksText(""); }} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all cursor-pointer" title="Add Remarks"><NotebookPen size={16} /></button>
             <button onClick={() => setDeleteRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer" title="Delete"><Trash2 size={16} /></button>
           </div>
         )}
