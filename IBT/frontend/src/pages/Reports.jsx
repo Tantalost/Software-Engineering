@@ -8,14 +8,14 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditReport from "../components/reports/EditReport";
 import DeleteModal from "../components/common/DeleteModal";
-import LogModal from "../components/common/LogModal"; 
-import { logActivity } from "../utils/logger"; 
+import LogModal from "../components/common/LogModal";
+import { logActivity } from "../utils/logger";
 import { Archive, Trash2, Calendar, Tag, History, ListChecks, X, Loader2, FileSpreadsheet, FileText } from "lucide-react";
 
 // --- FIXED EXPORT IMPORTS ---
 import * as XLSX from "xlsx";
-import { jsPDF } from "jspdf"; 
-import autoTable from "jspdf-autotable"; 
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // --- HELPER COMPONENT FOR VIEWING REPORT DATA ---
 const DataRenderer = ({ reportPayload }) => {
@@ -111,7 +111,7 @@ const Reports = () => {
   // Removed activeStatus since we are removing status column/filtering focus
   
   const [showPreview, setShowPreview] = useState(false);
-  const [showLogModal, setShowLogModal] = useState(false); 
+  const [showLogModal, setShowLogModal] = useState(false);
 
   // Selection State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -446,12 +446,14 @@ const Reports = () => {
           setSelectedDate={setSelectedDate}
         />
         <div className="flex items-center justify-end gap-3">
+          {/* REMOVED: Add New Button
           <button
             onClick={() => setShowPreview(true)}
             className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center cursor-pointer"
           >
             + Add New
           </button>
+          */}
           
           <div className="h-[44px] flex items-center">
             <ExportMenu 
