@@ -796,7 +796,7 @@ const Parking = () => {
                 </div>
             )}
 
-            <button
+            {(role == "parking") &&(<button
                 onClick={toggleSelectionMode}
                 title={isSelectionMode ? "Cancel Selection" : "Select Records"}
                 className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
@@ -806,7 +806,7 @@ const Parking = () => {
                 }`}
             >
                 {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-            </button>
+            </button>)}
         </div>
     </div>
 

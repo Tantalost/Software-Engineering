@@ -6,14 +6,13 @@ import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
-import EditLostFound from "../components/lostfound/EditLostFound";
 import DeleteModal from "../components/common/DeleteModal";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
 import LogModal from "../components/common/LogModal"; 
 import { submitPageReport } from "../utils/reportService.js";
 import { logActivity } from "../utils/logger"; 
 import { sendNotification } from "../utils/notificationService.js"; 
-import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag } from "lucide-react";
+import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag, Save, Info, CheckCircle, XCircle } from "lucide-react";
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
@@ -41,7 +40,8 @@ const LostFound = () => {
     const [showLogModal, setShowLogModal] = useState(false); 
     
     const [viewRow, setViewRow] = useState(null);
-    const [editRow, setEditRow] = useState(null);
+    const [editRow, setEditRow] = useState(null); 
+    const [editFormData, setEditFormData] = useState({}); 
     const [deleteRow, setDeleteRow] = useState(null);
 
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -74,7 +74,6 @@ const LostFound = () => {
             if (!response.ok) throw new Error("Failed to fetch");
             const data = await response.json();
 
-            
             const formattedData = data.map(item => ({
                 ...item,
                 id: item._id
@@ -91,9 +90,23 @@ const LostFound = () => {
         fetchLostFound();
     }, []);
 
+    // Format helper for display
+    const formatDateTime = (dateStr) => {
+        if (!dateStr) return "-";
+        return new Date(dateStr).toLocaleDateString() + " " + new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    // When editRow changes, populate the form data
+    useEffect(() => {
+        if (editRow) {
+            setEditFormData({
+                ...editRow
+            });
+        }
+    }, [editRow]);
+
     
     const handleAddClick = () => {
-        
         const autoTracking = `LF-${Date.now().toString().slice(-6)}`;
         const now = new Date();
         const formattedNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
@@ -129,15 +142,16 @@ const LostFound = () => {
     };
 
     
-    const handleUpdateRecord = async (updatedData) => {
+    const handleSaveEdit = async (e) => {
+        e.preventDefault();
         try {
-            const response = await fetch(`${API_URL}/${updatedData.id}`, {
+            const response = await fetch(`${API_URL}/${editFormData.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updatedData),
+                body: JSON.stringify(editFormData),
             });
             if (response.ok) {
-                logActivity(role, "UPDATE_LOSTFOUND", `Updated Item #${updatedData.trackingNo}`, "LostFound");
+                logActivity(role, "UPDATE_LOSTFOUND", `Updated Item #${editFormData.trackingNo}`, "LostFound");
                 fetchLostFound();
                 setEditRow(null);
             }
@@ -355,12 +369,6 @@ const LostFound = () => {
             setIsReporting(false);
         }
     };
-
-    
-    const formatDateTime = (dateStr) => {
-        if (!dateStr) return "-";
-        return new Date(dateStr).toLocaleDateString() + " " + new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
         
     const getExportData = (data) => {
         return data.map(item => ({
@@ -368,7 +376,7 @@ const LostFound = () => {
             "Item Type": item.itemType || "-",
             "Description": item.description,
             "Location": item.location,
-            "DateTime": formatDateTimeForExport(item.dateTime), // CHANGED: Consistent header
+            "DateTime": formatDateTimeForExport(item.dateTime), 
             "Status": item.status,
         }));
     };
@@ -380,7 +388,6 @@ const LostFound = () => {
         }
         const dataToExport = getExportData(filtered);
         
-        // CSV headers now consistently match the table and PDF
         const headers = Object.keys(dataToExport[0]).join(',');
         const rows = dataToExport.map(row => 
             Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
@@ -413,36 +420,33 @@ const LostFound = () => {
 
         const doc = new jsPDF('portrait', 'mm', 'a4');
         
-        // 1. Title Styling (Cleaner Look)
         doc.setFontSize(16);
-        doc.setTextColor(34, 34, 34); // Dark text
+        doc.setTextColor(34, 34, 34); 
         doc.text("Lost & Found Records Report", 14, 15);
         
-        // 2. Metadata Styling (Cleaner Look)
         doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100); // Gray text for metadata
+        doc.setTextColor(100, 100, 100); 
         doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
-        // 3. Table Styling (The 'Clean' Layout)
         autoTable(doc, {
-            startY: 30, // Start lower for the header text
+            startY: 30, 
             head: [headers],
             body: body,
-            theme: 'grid', // Uses clear borders for a clean look
+            theme: 'grid', 
             headStyles: { 
-                fillColor: [16, 185, 129], // Emerald Green header color
+                fillColor: [16, 185, 129], 
                 textColor: [255, 255, 255],
                 fontSize: 9, 
                 halign: 'center'
             }, 
             styles: {
                 fontSize: 8, 
-                cellPadding: 3, // Increased padding for better spacing
+                cellPadding: 3, 
                 valign: 'middle',
-                textColor: [51, 51, 51] // Dark body text
+                textColor: [51, 51, 51] 
             },
             alternateRowStyles: {
-                fillColor: [240, 255, 240], // Light stripe for readability
+                fillColor: [240, 255, 240], 
             }
         });
 
@@ -551,7 +555,7 @@ const LostFound = () => {
                                 </div>
                             )}
 
-                            <button
+                            {(role == "lostfound") &&(<button
                                 onClick={toggleSelectionMode}
                                 title={isSelectionMode ? "Cancel Selection" : "Select Records"}
                                 className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
@@ -561,7 +565,7 @@ const LostFound = () => {
                                 }`}
                             >
                                 {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-                            </button>
+                            </button>)}
                         </div>
                     </div>
                 </div>
@@ -581,7 +585,7 @@ const LostFound = () => {
                             const baseData = {
                                 id: item.id,
                                 trackingno: item.trackingNo,
-                                itemType: item.itemType,
+                                itemtype: item.itemType, 
                                 description: item.description,
                                 location: item.location,
                                 datetime: formatDateTime(item.dateTime),
@@ -657,7 +661,6 @@ const LostFound = () => {
                         <form onSubmit={handleCreateItem}>
                             <div className="space-y-4">
 
-                                
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Item Type</label>
                                     <div className="relative">
@@ -673,7 +676,6 @@ const LostFound = () => {
                                     </div>
                                 </div>
                             
-
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
                                     <div className="relative">
@@ -732,7 +734,6 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
-                            
                                 <input type="hidden" name="status" value={newItem.status} />
 
                             </div>
@@ -746,6 +747,7 @@ const LostFound = () => {
             )}
 
             
+            {/* --- VIEW MODAL --- */}
             {viewRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
@@ -764,12 +766,130 @@ const LostFound = () => {
             )}
 
 
+            {/* --- EDIT MODAL (With Button Group Status) --- */}
             {editRow && (
-                <EditLostFound
-                    row={editRow}
-                    onClose={() => setEditRow(null)}
-                    onSave={handleUpdateRecord}
-                />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-slate-800">Edit Lost/Found Item</h3>
+                            <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                        </div>
+                        <form onSubmit={handleSaveEdit}>
+                            <div className="space-y-4">
+                                
+                                {/* Tracking No (Read Only) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
+                                    <div className="relative">
+                                        <Package size={16} className="absolute left-3 top-3 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={editFormData.trackingNo || ''}
+                                            disabled
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Status (EDITABLE BUTTONS) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Item Status</label>
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditFormData({ ...editFormData, status: 'Unclaimed' })}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                                                editFormData.status === 'Unclaimed'
+                                                    ? 'bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1'
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <XCircle size={18} />
+                                            Unclaimed
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditFormData({ ...editFormData, status: 'Claimed' })}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                                                editFormData.status === 'Claimed'
+                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <CheckCircle size={18} />
+                                            Claimed
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Item Type (EDITABLE) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Item Type</label>
+                                    <div className="relative">
+                                        <Tag size={16} className="absolute left-3 top-3 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={editFormData.itemType || ''}
+                                            onChange={(e) => setEditFormData({ ...editFormData, itemType: e.target.value })}
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* DateTime (Read Only - Display text instead of input) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time Found</label>
+                                    <div className="relative">
+                                        <Calendar size={16} className="absolute left-3 top-3 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={formatDateTime(editFormData.dateTime)}
+                                            disabled
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed" 
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Description (EDITABLE) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                                    <div className="relative">
+                                        <FileText size={16} className="absolute left-3 top-3 text-slate-400" />
+                                        <textarea
+                                            value={editFormData.description || ''}
+                                            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none min-h-[100px]"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Location (EDITABLE) */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                                    <div className="relative">
+                                        <MapPin size={16} className="absolute left-3 top-3 text-slate-400" />
+                                        <textarea
+                                            value={editFormData.location || ''}
+                                            onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button type="button" onClick={() => setEditRow(null)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
+                                <button type="submit" className="flex-1 py-3 bg-blue-600 rounded-xl text-white font-medium shadow-md hover:bg-blue-700 transition-all flex justify-center items-center gap-2">
+                                    <Save size={18} />
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
 
             

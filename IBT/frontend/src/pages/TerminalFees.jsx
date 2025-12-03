@@ -601,12 +601,12 @@ const TerminalFees = () => {
           {(role === "superadmin") && (
             <button 
             onClick={() => setShowPriceModal(true)} 
-            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+            className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
           >
             <Settings size={18} /> <span>Pricing</span>
           </button>)}
 
-          <button onClick={handleOpenAdd} className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+          <button onClick={handleOpenAdd} className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             <Plus size={18} /> <span>Add Fee</span>
           </button>
 
@@ -638,7 +638,7 @@ const TerminalFees = () => {
     {role === "superadmin" && (
       <button 
         onClick={() => setShowLogModal(true)} 
-        className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+        className="flex items-center cursor-pointer justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
         title="View Logs"
       >
         <History size={18} /> 
@@ -673,7 +673,7 @@ const TerminalFees = () => {
       </div>
     )}
 
-    <button
+    {(role == "ticket") &&(<button
       onClick={toggleSelectionMode}
       title={isSelectionMode ? "Cancel Selection" : "Select Records"}
       className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
@@ -683,7 +683,7 @@ const TerminalFees = () => {
       }`}
     >
       {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-    </button>
+    </button>)}
   </div>
 </div>
 
@@ -743,7 +743,7 @@ const TerminalFees = () => {
                       console.error("Error: Could not find record for ID:", row.id);
                     }
                   }} 
-                  className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                  className="p-1.5 rounded-lg bg-yellow-50 cursor-pointer text-yellow-600 hover:bg-yellow-100"
                   title="Archive">
                   <Archive size={16} />
                 </button>
@@ -753,7 +753,7 @@ const TerminalFees = () => {
                     setDeleteRow(selectedRecord); 
                     setDeleteRemarks(""); 
                   }} 
-                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                  className="p-1.5 rounded-lg bg-red-50 cursor-pointer text-red-600 hover:bg-red-100"
                   title="Delete">
                   <Trash2 size={16} />
                 </button>)}
