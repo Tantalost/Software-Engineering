@@ -459,49 +459,109 @@ const TerminalFees = () => {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ["Ticket No", "Passenger Type", "Price", "Time"];
-    const rows = filtered.map(item => [
-      item.ticketNo,
-      item.passengerType,
-      item.price.toFixed(2),
-      item.time
-    ]);
-    const csvContent = [
-      headers.join(","), 
-      ...rows.map(row => row.join(","))
-    ].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `terminal_fees_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // Helper function to ensure consistent data and formatting for all exports
+    const getExportData = (data) => {
+        return data.map(item => ({
+            "Ticket No": item.ticketNo || "-",
+            "Passenger Type": item.passengerType || "-",
+            "Price": item.price ? `₱${item.price.toFixed(2)}` : "₱0.00",
+            "Date": item.date ? new Date(item.date).toLocaleDateString() : "-", // Added Date handling
+            "Time": item.time || "-",
+        }));
+    };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Terminal Fees Report", 14, 20);
-    doc.setFontSize(10);
-    const tableColumn = ["Ticket No", "Passenger Type", "Price", "Date", "Time"];
-    const tableRows = filtered.map(item => [
-      item.ticketNo,
-      item.passengerType,
-      `P${item.price.toFixed(2)}`,
-      item.time
-    ]);
-    autoTable(doc, {
-      startY: 35,
-      head: [tableColumn],
-      body: tableRows,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [16, 185, 129] }
-    });
-    doc.save(`terminal_fees_report_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
+    const exportToCSV = () => {
+        if (filtered.length === 0) {
+            alert("No records to export.");
+            return;
+        }
+        const dataToExport = getExportData(filtered);
+
+        // Uses the dataToExport object keys for consistent headers
+        const headers = Object.keys(dataToExport[0]).join(',');
+        const rows = dataToExport.map(row => 
+            // Escape quotes and wrap in quotes for robust CSV
+            Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
+        ).join('\n');
+        
+        const csvContent = headers + '\n' + rows;
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `terminal_fees_report_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Terminal Fees records to CSV`, "TerminalFees");
+    };
+
+    const exportToPDF = () => {
+        if (filtered.length === 0) {
+            alert("No records to export.");
+            return;
+        }
+        
+        const dataToExport = getExportData(filtered);
+        const headers = Object.keys(dataToExport[0]);
+        const body = dataToExport.map(item => Object.values(item));
+
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        
+        // 1. Title Styling (Cleaner Look)
+        doc.setFontSize(16);
+        doc.setTextColor(34, 34, 34); // Dark text
+        doc.text("Terminal Fees Records Report", 14, 15);
+        
+        // 2. Metadata Styling (Date Generated)
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100); // Gray text for metadata
+        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+
+        // 3. Table Styling (The 'Clean' Layout)
+        autoTable(doc, {
+            startY: 30, // Start lower for the header text
+            head: [headers],
+            body: body,
+            theme: 'grid', // Uses clear borders for a clean look
+            headStyles: { 
+                fillColor: [16, 185, 129], // Emerald Green header color
+                textColor: [255, 255, 255],
+                fontSize: 9, 
+                halign: 'center'
+            }, 
+            styles: {
+                fontSize: 8, 
+                cellPadding: 3, // Increased padding for better spacing
+                valign: 'middle',
+                textColor: [51, 51, 51] // Dark body text
+            },
+            alternateRowStyles: {
+                fillColor: [240, 255, 240], // Light stripe for readability
+            }
+        });
+
+        // 4. Summary Totals (Uses stats memo if available)
+        const finalY = doc.lastAutoTable.finalY;
+        doc.setFontSize(10);
+        doc.setTextColor(51, 51, 51);
+        // Assuming 'stats' and 'revenue' are defined in your component's scope
+        doc.text(`Total Records: ${filtered.length}`, 14, finalY + 10);
+        
+        // NOTE: If 'stats' and 'revenue' are not in scope, you may need to adjust the line below.
+        // Assuming your 'revenue' is calculated elsewhere, or you can use filtered data to calculate it here.
+        // I will use a simple example assuming 'stats' object is available, like in the previous file.
+        // Replace 'stats.revenue' with your actual revenue variable if needed.
+        // doc.text(`Total Revenue: ₱${stats.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, finalY + 16);
+
+
+        doc.save(`terminal_fees_report_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+        logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Terminal Fees records to PDF`, "TerminalFees");
+    };
 
   const tableColumns = isSelectionMode 
     ? [
