@@ -548,7 +548,7 @@ const Reports = () => {
             {(role === "lol") && (<button
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${
+              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${
               isSelectionMode
               ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
               : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"

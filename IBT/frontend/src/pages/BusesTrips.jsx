@@ -578,7 +578,7 @@ const BusTrips = () => {
                                 <button
                                     onClick={() => setShowSubmitModal(true)}
                                     disabled={isReporting}
-                                    className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+                                    className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
                                 >
                                     <FileText size={18} />
                                     <span>Submit Report</span>
@@ -608,7 +608,7 @@ const BusTrips = () => {
                             {(role === "bus") && (<button
                                 onClick={toggleSelectionMode}
                                 title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-                                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
+                                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 cursor-pointer rounded-xl transition-all border ${isSelectionMode
                                     ? "bg-red-500 text-white shadow-md"
                                     : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                                     }`}
@@ -877,7 +877,7 @@ const BusTrips = () => {
 
             {showSubmitModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+                    <div className="w-full max-w-md cursor-pointer rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
                         <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
                         <p className="mt-2 text-sm text-slate-600">
                             Are you sure you want to capture and submit the current bus trips report?

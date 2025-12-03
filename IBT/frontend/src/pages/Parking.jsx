@@ -752,7 +752,7 @@ const Parking = () => {
             <button 
                 onClick={() => setShowSubmitModal(true)} 
                 disabled={isReporting}
-                className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+                className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
             >
               <FileText size={18} />
               <span>Submit Report</span>
@@ -799,7 +799,7 @@ const Parking = () => {
             {(role == "parking") &&(<button
                 onClick={toggleSelectionMode}
                 title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 cursor-pointer rounded-xl transition-all border ${
                     isSelectionMode
                         ? "bg-red-500 text-white shadow-md"
                         : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
