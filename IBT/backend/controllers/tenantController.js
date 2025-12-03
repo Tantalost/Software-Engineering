@@ -1,128 +1,109 @@
 import Tenant from "../models/Tenant.js";
-import Stall from "../models/Stall.js";
-import Waitlist from "../models/Waitlist.js";
+import TenantApplication from "../models/TenantApplication.js"; // <--- IMPORT THIS
+import sendEmail from "../utils/sendEmail.js";
 
-const calculateGridPosition = (slotLabel) => {
-    const numPart = parseInt(slotLabel.split('-')[1]);
-    const index = numPart > 100 ? numPart - 101 : numPart - 1; 
-    return { 
-        row: Math.floor(index / 5) + 1, 
-        col: (index % 5) + 1 
-    };
-};
-
+// 1. GET ALL TENANTS
 export const getTenants = async (req, res) => {
-    try {
-        const tenants = await Tenant.find().sort({ createdAt: -1 });
-        res.json(tenants);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const tenants = await Tenant.find().sort({ createdAt: -1 });
+    res.status(200).json(tenants);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
+// 2. GET SINGLE TENANT
+export const getTenantById = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+    res.status(200).json(tenant);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 3. CREATE TENANT (The Fix is here)
 export const createTenant = async (req, res) => {
-    try {
-        const { slotNo, tenantType, transferWaitlistId, ...tenantData } = req.body;
+  try {
+    // A. Save New Tenant
+    const newTenant = new Tenant(req.body);
+    const savedTenant = await newTenant.save();
 
-        const newTenant = new Tenant({
-            slotNo, 
-            tenantType,
-            ...tenantData
-        });
-        const savedTenant = await newTenant.save();
+    // B. CRITICAL FIX: Update the Application Status to 'TENANT'
+    // This tells the mobile app that the process is finished.
+    if (req.body.transferWaitlistId) {
+        await TenantApplication.findByIdAndUpdate(
+            req.body.transferWaitlistId,
+            { status: 'TENANT' } 
+        );
+    }
 
-        const slots = slotNo.split(', '); 
-        
-        for (const slot of slots) {
-            const { row, col } = calculateGridPosition(slot);
-            const stallId = `${tenantType}-${row}-${col}`; 
+    // C. Send Welcome Email
+    const subject = "Final Approval - Welcome to IBT Stalls!";
+    const message = `
+Congratulations ${savedTenant.tenantName}!
 
-            await Stall.findOneAndUpdate(
-                { stallId: stallId },
-                {
-                    stallId,
-                    slotNo: slot,
-                    floor: tenantType,
-                    row, 
-                    col,
-                    status: "Paid",
-                    tenantId: savedTenant._id
-                },
-                { upsert: true, new: true }
-            );
-        }
+You have been officially approved as a tenant at Zamboanga City IBT.
 
-        if (transferWaitlistId) {
-            await Waitlist.findOneAndDelete({ 
-                $or: [{ uid: transferWaitlistId }, { _id: transferWaitlistId }] 
+DETAILS:
+--------------------------------
+Stall Number: ${savedTenant.slotNo}
+Tenant Type:  ${savedTenant.tenantType}
+Rent Amount:  ₱${savedTenant.rentAmount}
+
+RULES AND REGULATIONS:
+1. Operating hours are from 8:00 AM to 10:00 PM.
+2. Keep your area clean at all times.
+3. No sub-leasing of stalls is allowed.
+4. Monthly rent is due on the ${new Date(savedTenant.StartDateTime).getDate()}th of every month.
+
+You may now start operating your business.
+
+Welcome aboard!
+IBT Management
+    `;
+
+    if (savedTenant.email) {
+        try {
+            await sendEmail({
+                email: savedTenant.email,
+                subject: subject,
+                message: message
             });
+        } catch (emailError) {
+            console.error("Welcome email failed:", emailError.message);
         }
-
-        res.status(201).json(savedTenant);
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to create tenant" });
     }
+
+    res.status(201).json(savedTenant);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
+// 4. UPDATE TENANT
 export const updateTenant = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-
-        const existingTenant = await Tenant.findById(id);
-        if (!existingTenant) {
-            return res.status(404).json({ error: "Tenant not found" });
-        }
-
-        const updatedTenant = await Tenant.findByIdAndUpdate(id, updateData, { new: true });
-
-        if (updateData.slotNo && updateData.slotNo !== existingTenant.slotNo) {
-            
-            await Stall.updateMany(
-                { tenantId: id }, 
-                { $set: { status: "Available", tenantId: null } }
-            );
-
-            const newSlots = updateData.slotNo.split(', ');
-            for (const slot of newSlots) {
-                const { row, col } = calculateGridPosition(slot);
-                const stallId = `${updatedTenant.tenantType}-${row}-${col}`; 
-                
-                await Stall.findOneAndUpdate(
-                    { stallId: stallId },
-                    {
-                        stallId,
-                        slotNo: slot,
-                        floor: updatedTenant.tenantType,
-                        row, 
-                        col,
-                        status: "Paid", 
-                        tenantId: updatedTenant._id
-                    },
-                    { upsert: true }
-                );
-            }
-        }
-
-        res.json(updatedTenant);
-
-    } catch (err) {
-        console.error("Update error:", err);
-        res.status(500).json({ error: "Failed to update tenant" });
-    }
+  try {
+    const updatedTenant = await Tenant.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedTenant) return res.status(404).json({ error: "Tenant not found" });
+    res.status(200).json(updatedTenant);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
+// 5. DELETE TENANT
 export const deleteTenant = async (req, res) => {
-    try {
-        const tenantId = req.params.id;
-
-        await Tenant.findByIdAndDelete(tenantId);
-        await Stall.deleteMany({ tenantId: tenantId });
-
-        res.json({ message: "Tenant deleted and stalls freed." });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    await Tenant.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Tenant deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
