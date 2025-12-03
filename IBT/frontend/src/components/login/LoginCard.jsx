@@ -28,7 +28,8 @@ export default function LoginCard({
        
         <div
           className="
-            relative 
+            relative
+            w-150 
             bg-white
             rounded-2xl sm:rounded-3xl 
             shadow-xl 
