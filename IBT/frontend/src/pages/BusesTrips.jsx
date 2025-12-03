@@ -10,23 +10,18 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditBusTrip from "../components/busTrips/EditBusTrip";
 import DeleteModal from "../components/common/DeleteModal";
-import LogModal from "../components/common/LogModal"; // Added LogModal
+import LogModal from "../components/common/LogModal";
 import { submitPageReport } from "../utils/reportService.js";
 import { sendNotification } from "../utils/notificationService.js";
-import { logActivity } from "../utils/logger"; // Added Logger
-import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2, History, ListChecks, X } from "lucide-react"; // Added Icons
-
+import { logActivity } from "../utils/logger";
+import { busCompanyRoutes } from '../data/busRoutes.js';
+import { Archive, Trash2, LogOut, CheckCircle, FileText, Loader2, History, ListChecks, X } from "lucide-react"; 
 
 const TEMPLATE_ROUTES = {
-    "T-101": "Zamboanga - Cagayan de Oro",
-    "T-102": "Zamboanga - Cagayan de Oro",
-    "T-103": "Zamboanga - Cagayan de Oro",
-    "T-104": "Zamboanga - Cagayan de Oro",
-    "J-101": "Zamboanga - Pagadian",
-    "J-102": "Zamboanga - Pagadian",
-    "J-103": "Zamboanga - Pagadian",
-    "J-104": "Zamboanga - Pagadian"
-    
+    ...busCompanyRoutes.dindo,
+    ...busCompanyRoutes.alga,
+    ...busCompanyRoutes.ceres,
+    ...busCompanyRoutes.lizamae,
 };
 
 const BusTrips = () => {
@@ -39,8 +34,8 @@ const BusTrips = () => {
     const [selectedCompany, setSelectedCompany] = useState("");
 
     const [showAddModal, setShowAddModal] = useState(false);
-    const [showLogModal, setShowLogModal] = useState(false); // Log Modal State
-    
+    const [showLogModal, setShowLogModal] = useState(false); 
+   
     // Selection Mode State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
@@ -54,7 +49,7 @@ const BusTrips = () => {
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const [isReporting, setIsReporting] = useState(false);
-    const [showSubmitModal, setShowSubmitModal] = useState(false); 
+    const [showSubmitModal, setShowSubmitModal] = useState(false);
 
     const role = localStorage.getItem("authRole") || "superadmin";
     const API_URL = "http://localhost:3000/api/bustrips";
@@ -114,7 +109,6 @@ const BusTrips = () => {
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
     // --- HELPER: FORMAT DATA FOR EXPORT ---
-    // Added this helper to format time correctly for export
     const formatTimeExport = (timeStr) => {
         if (!timeStr) return "";
         try {
@@ -129,7 +123,6 @@ const BusTrips = () => {
     };
 
     const getExportData = () => {
-        // Consolidated logic for formatting data consistently
         return filtered.map(item => ({
             "Template No": item.templateNo || item.templateno || "-",
             "Ticket Ref": item.ticketReferenceNo || "-",
@@ -152,8 +145,7 @@ const BusTrips = () => {
         const dataToExport = getExportData();
         
         const headers = Object.keys(dataToExport[0]).join(',');
-        const rows = dataToExport.map(row => 
-            // Escape quotes and wrap values in quotes for robust CSV
+        const rows = dataToExport.map(row =>
             Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
         
@@ -168,12 +160,9 @@ const BusTrips = () => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-
-        // Assuming logActivity is available in this scope
-        // logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Bus Trip records to CSV`, "BusTrips");
     };
 
-    // --- EXPORT TO PDF (Clean and Professional Look) ---
+    // --- EXPORT TO PDF ---
     const handleExportPDF = () => {
         if (filtered.length === 0) {
             alert("No records to export.");
@@ -184,52 +173,45 @@ const BusTrips = () => {
         const headers = Object.keys(dataToExport[0]);
         const body = dataToExport.map(item => Object.values(item));
 
-        // Use landscape orientation for many columns
-        const doc = new jsPDF('landscape', 'mm', 'a4'); 
+        const doc = new jsPDF('landscape', 'mm', 'a4');
         
-        // 1. Title Styling
         doc.setFontSize(16);
-        doc.setTextColor(34, 34, 34); // Dark text
+        doc.setTextColor(34, 34, 34); 
         doc.text("Bus Trips Report", 14, 15);
         
-        // 2. Metadata Styling
         doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100); // Gray text for metadata
+        doc.setTextColor(100, 100, 100); 
         doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
-        // 3. Table Styling (Clean Layout)
         autoTable(doc, {
             startY: 30,
             head: [headers],
             body: body,
-            theme: 'grid', // Uses clear borders
-            headStyles: { 
-                fillColor: [16, 185, 129], // Emerald Green header color
+            theme: 'grid', 
+            headStyles: {
+                fillColor: [16, 185, 129], 
                 textColor: [255, 255, 255],
-                fontSize: 8, // Smaller font for landscape
+                fontSize: 8, 
                 halign: 'center'
-            }, 
+            },
             styles: {
-                fontSize: 7, // Smaller body font
-                cellPadding: 2, 
+                fontSize: 7, 
+                cellPadding: 2,
                 valign: 'middle',
                 textColor: [51, 51, 51]
             },
             alternateRowStyles: {
-                fillColor: [240, 255, 240], // Light stripe
+                fillColor: [240, 255, 240], 
             }
         });
 
         doc.save(`Bus_Trips_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-
-        // Assuming logActivity is available in this scope
-        // logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Bus Trip records to PDF`, "BusTrips");
     };
 
     // --- SELECTION HANDLERS ---
     const toggleSelectionMode = () => {
         if (isSelectionMode) {
-            setSelectedIds([]); 
+            setSelectedIds([]);
         }
         setIsSelectionMode(!isSelectionMode);
     };
@@ -253,24 +235,17 @@ const BusTrips = () => {
     const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
 
     // --- BULK DELETE HANDLER ---
-   // --- UPDATED BULK DELETE HANDLER ---
     const handleBulkDelete = async () => {
-        // 1. Determine confirmation message based on role
-        const confirmMsg = role === "bus" 
-            ? `Request deletion for ${selectedIds.length} records?` 
+        const confirmMsg = role === "bus"
+            ? `Request deletion for ${selectedIds.length} records?`
             : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
 
-        // 2. Ask for confirmation
         if (!window.confirm(confirmMsg)) return;
 
         setIsLoading(true);
         try {
             if (role === "bus") {
-                // ============================================================
-                // BUS ADMIN: SEND DELETION REQUESTS & NOTIFY SUPERADMIN
-                // ============================================================
                 const requestPromises = selectedIds.map(async (id) => {
-                    // Find the item to send original data for reference
                     const item = records.find(r => r.id === id);
                     if (!item) return;
 
@@ -281,47 +256,34 @@ const BusTrips = () => {
                             itemType: "Bus Trip",
                             itemDescription: `Template: ${item.templateNo || item.templateno} - ${item.route}`,
                             requestedBy: "Bus Admin",
-                            originalData: item, 
+                            originalData: item,
                             reason: "Bulk deletion request"
                         })
                     });
                 });
 
                 await Promise.all(requestPromises);
-                
-                // Log the activity
                 await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} bus trips`, "BusTrips");
-                
-                // Notify Superadmin ONLY (Note the 4th argument "superadmin")
                 await sendNotification(
-                    "Deletion Request: Bus Trips", 
+                    "Deletion Request: Bus Trips",
                     `Bus Admin has requested to delete ${selectedIds.length} bus trip records. Please review in deletion requests.`,
                     "Bus Trips",
-                    "superadmin" 
+                    "superadmin"
                 );
 
                 alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin has been notified.`);
-                
-                // Clear selection (but do not remove from table until approved)
                 setSelectedIds([]);
                 setIsSelectionMode(false);
 
             } else {
-                // ============================================================
-                // SUPERADMIN: IMMEDIATE DELETE
-                // ============================================================
-                const deletePromises = selectedIds.map(id => 
+                const deletePromises = selectedIds.map(id =>
                     fetch(`${API_URL}/${id}`, { method: "DELETE" })
                 );
                 
                 await Promise.all(deletePromises);
-                
-                // Log the activity
                 await logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} bus trips via bulk action`, "BusTrips");
                 
                 alert(`Successfully deleted ${selectedIds.length} records`);
-
-                // Refresh the table and clear selection
                 await fetchBusTrips();
                 setSelectedIds([]);
                 setIsSelectionMode(false);
@@ -374,24 +336,24 @@ const BusTrips = () => {
                     totalRecords: records.length,
                     displayedRecords: filtered.length
                 },
-                data: formattedData 
+                data: formattedData
             };
 
             await submitPageReport("Bus Trips", reportPayload, "Admin");
 
             await sendNotification(
-                "Report Submitted: Bus Report", 
+                "Report Submitted: Bus Report",
                 `A Bus Trips report was successfully submitted by ${role === 'bus' ? 'Bus Admin' : 'Admin'}.`,
                 "Bus Trips"
             );
 
-            const deletePromises = filtered.map(item => 
+            const deletePromises = filtered.map(item =>
                 fetch(`${API_URL}/${item.id}`, { method: 'DELETE' })
             );
             
             await Promise.all(deletePromises);
             alert("Report submitted successfully!");
-            setShowSubmitModal(false); 
+            setShowSubmitModal(false);
             fetchBusTrips();
 
         } catch (error) {
@@ -519,12 +481,19 @@ const BusTrips = () => {
         }
     };
 
+    // --- HELPER FOR TEMPLATE FILTERING ---
+    const getTemplatesForCurrentCompany = () => {
+        const companyKey = newBusData.company.toLowerCase();
+        const routes = busCompanyRoutes[companyKey];
+        return routes ? Object.keys(routes) : [];
+    };
+
     // --- TABLE COLUMNS SETUP ---
-    const tableColumns = isSelectionMode 
+    const tableColumns = isSelectionMode
     ? [
         <div key="header-check" className="flex items-center">
-            <input 
-                type="checkbox" 
+            <input
+                type="checkbox"
                 checked={isAllSelected}
                 onChange={handleSelectAll}
                 className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
@@ -573,7 +542,6 @@ const BusTrips = () => {
                                 <button
                                     onClick={() => setShowSubmitModal(true)}
                                     disabled={isReporting}
-                                    // Standardized style
                                     className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
                                 >
                                     <FileText size={18} />
@@ -581,24 +549,22 @@ const BusTrips = () => {
                                 </button>
                             )}
 
-                            {/* Standardized style for Add Button */}
                             <button onClick={handleAddClick} className="flex items-center justify-center bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
                                 <span>+ Add Bus</span>
                             </button>
                             
-                            {/* UPDATED: Export Menu Passing Handlers */}
-                            <ExportMenu 
-                                onExportExcel={handleExportExcel} 
+                            <ExportMenu
+                                onExportExcel={handleExportExcel}
                                 onExportPDF={handleExportPDF}
                             />
                             
                             {/* LOGS BUTTON */}
-                            <button 
-                                onClick={() => setShowLogModal(true)} 
+                            <button
+                                onClick={() => setShowLogModal(true)}
                                 className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
                                 title="View Logs"
                             >
-                                <History size={18} /> 
+                                <History size={18} />
                                 <span className="hidden sm:inline">Logs</span>
                             </button>
 
@@ -650,7 +616,7 @@ const BusTrips = () => {
                                 return {
                                     select: (
                                         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                                            <input 
+                                            <input
                                                 type="checkbox"
                                                 checked={selectedIds.includes(bus.id)}
                                                 onChange={() => toggleSelect(bus.id)}
@@ -670,7 +636,6 @@ const BusTrips = () => {
                                     <button
                                         onClick={() => handleLogoutClick(row)}
                                         title="Log Out (Depart)"
-                                        // Cleaned up Depart button style
                                         className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all flex items-center gap-1 px-2"
                                     >
                                         <LogOut size={16} />
@@ -686,7 +651,7 @@ const BusTrips = () => {
                                     <Archive size={16} />
                                 </button>
                                 {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
-                                                                                    <Trash2 size={16} />
+                                                                                <Trash2 size={16} />
                                 </button>)}
                             </div>
                         )}
@@ -704,14 +669,14 @@ const BusTrips = () => {
 
             {/* --- MODALS --- */}
 
-            <LogModal 
-                isOpen={showLogModal} 
-                onClose={() => setShowLogModal(false)} 
+            <LogModal
+                isOpen={showLogModal}
+                onClose={() => setShowLogModal(false)}
             />
 
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"> {/* Standardized shadow to shadow-xl */}
+                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"> 
                         <h3 className="mb-4 text-xl font-bold text-slate-800">Add New Bus Trip</h3>
                         <form onSubmit={handleCreateRecord}>
                             <div className="space-y-4">
@@ -722,7 +687,13 @@ const BusTrips = () => {
                                             <button
                                                 type="button"
                                                 key={company}
-                                                onClick={() => setNewBusData({ ...newBusData, company })}
+                                                // MODIFIED: Reset template and route when switching company
+                                                onClick={() => setNewBusData({ 
+                                                    ...newBusData, 
+                                                    company,
+                                                    templateNo: "",
+                                                    route: ""
+                                                })}
                                                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${newBusData.company === company
                                                     ? "bg-white text-emerald-600 shadow-sm"
                                                     : "text-slate-500 hover:text-slate-700"
@@ -743,7 +714,8 @@ const BusTrips = () => {
                                         className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none"
                                     >
                                         <option value="">Select Template</option>
-                                        {Object.keys(TEMPLATE_ROUTES).map(key => (
+                                        {/* MODIFIED: Dynamically load templates based on selected company */}
+                                        {getTemplatesForCurrentCompany().map(key => (
                                             <option key={key} value={key}>{key}</option>
                                         ))}
                                     </select>
@@ -808,7 +780,7 @@ const BusTrips = () => {
 
             {logoutRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all"> {/* Standardized shadow to shadow-xl */}
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all"> 
                         <div className="mb-4 flex items-center gap-3 text-emerald-600">
                             <div className="p-2 bg-emerald-100 rounded-full">
                                 <CheckCircle size={24} />
