@@ -39,7 +39,7 @@ const Parking = () => {
   const [logoutRow, setLogoutRow] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const [step, setStep] = useState(1);
   const plateInputRef = useRef(null);

@@ -121,7 +121,7 @@ const Reports = () => {
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = "http://localhost:3000/api/reports";
