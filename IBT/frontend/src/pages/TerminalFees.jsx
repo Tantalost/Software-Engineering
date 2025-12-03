@@ -32,7 +32,7 @@ const TerminalFees = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   
   // Selection Mode State
   const [isSelectionMode, setIsSelectionMode] = useState(false);

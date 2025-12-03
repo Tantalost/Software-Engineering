@@ -39,7 +39,7 @@ const TenantLease = () => {
   const [activeTab, setActiveTab] = useState("permanent"); 
   const [activeStatus, setActiveStatus] = useState("All"); 
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   const role = localStorage.getItem("authRole") || "superadmin";
 
   const [records, setRecords] = useState([]); 

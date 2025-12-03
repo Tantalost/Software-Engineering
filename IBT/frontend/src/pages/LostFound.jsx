@@ -48,7 +48,7 @@ const LostFound = () => {
     const [selectedIds, setSelectedIds] = useState([]);
 
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [itemsPerPage, setItemsPerPage] = useState(25);
     
     const [isReporting, setIsReporting] = useState(false);
     
