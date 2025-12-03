@@ -10,12 +10,12 @@ import EditReport from "../components/reports/EditReport";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal"; 
 import { logActivity } from "../utils/logger"; 
-import { Archive, Trash2, Calendar, Tag, History, ListChecks, X, Loader2 } from "lucide-react";
+import { Archive, Trash2, Calendar, Tag, History, ListChecks, X, Loader2, FileSpreadsheet, FileText } from "lucide-react";
 
 // --- FIXED EXPORT IMPORTS ---
 import * as XLSX from "xlsx";
-import { jsPDF } from "jspdf"; // Changed to named import
-import autoTable from "jspdf-autotable"; // Changed to functional import
+import { jsPDF } from "jspdf"; 
+import autoTable from "jspdf-autotable"; 
 
 // --- HELPER COMPONENT FOR VIEWING REPORT DATA ---
 const DataRenderer = ({ reportPayload }) => {
@@ -108,8 +108,8 @@ const Reports = () => {
   // Filters
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [timeRange, setTimeRange] = useState("All");
-  const [activeStatus, setActiveStatus] = useState("All");
-
+  // Removed activeStatus since we are removing status column/filtering focus
+  
   const [showPreview, setShowPreview] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false); 
 
@@ -158,7 +158,6 @@ const Reports = () => {
         report.author?.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesDate = !selectedDate || reportDate.toDateString() === new Date(selectedDate).toDateString();
-      const matchesStatus = activeStatus === "All" || report.status?.toLowerCase() === activeStatus.toLowerCase();
       const matchesCategory = selectedCategory === "All" || report.type === selectedCategory;
 
       let matchesTimeRange = true;
@@ -171,16 +170,16 @@ const Reports = () => {
         else if (timeRange === "This Year") matchesTimeRange = reportDate.getFullYear() === now.getFullYear();
       }
 
-      return matchesSearch && matchesDate && matchesStatus && matchesCategory && matchesTimeRange;
+      return matchesSearch && matchesDate && matchesCategory && matchesTimeRange;
     });
-  }, [records, searchQuery, selectedDate, activeStatus, selectedCategory, timeRange]);
+  }, [records, searchQuery, selectedDate, selectedCategory, timeRange]);
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-  // --- EXPORT FUNCTIONS ---
+  // --- MAIN EXPORT FUNCTIONS (List) ---
 
   const handleExportExcel = () => {
     const dataToExport = filtered.map((item) => ({
@@ -188,7 +187,7 @@ const Reports = () => {
       "Type": item.type,
       "Author": item.author,
       "Date": new Date(item.createdAt || item.date).toLocaleDateString(),
-      "Status": item.status,
+      // Removed Status
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -199,36 +198,122 @@ const Reports = () => {
   };
 
   const handleExportPDF = () => {
-    // 1. Initialize jsPDF
     const doc = new jsPDF();
 
-    // 2. Define Headers and Title
     doc.text("Reports List", 14, 15);
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
-    const tableColumn = ["Report ID", "Type", "Author", "Date", "Status"];
+    // Removed Status from columns
+    const tableColumn = ["Report ID", "Type", "Author", "Date"];
     
-    // 3. Map data
     const tableRows = filtered.map((item) => [
       item.id,
       item.type,
       item.author,
       new Date(item.createdAt || item.date).toLocaleDateString(),
-      item.status,
     ]);
 
-    // 4. Generate Table using functional approach
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 25,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [16, 185, 129] }, // Emerald color
+      headStyles: { fillColor: [16, 185, 129] },
     });
 
-    // 5. Save file
     doc.save(`Reports_Export_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // --- SINGLE REPORT EXPORT FUNCTIONS (Details) ---
+
+  const handleSingleExportExcel = (report) => {
+    const wb = XLSX.utils.book_new();
+
+    // 1. Summary Sheet (Meta + Stats)
+    const summaryData = [
+      ["Report Details"],
+      ["ID", report.id],
+      ["Type", report.type],
+      ["Author", report.author],
+      ["Date", new Date(report.createdAt || report.date).toLocaleDateString()],
+      [],
+      ["Statistics"]
+    ];
+
+    if (report.data?.statistics) {
+      Object.entries(report.data.statistics).forEach(([key, value]) => {
+        summaryData.push([key, value]);
+      });
+    }
+
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    // 2. Data Sheet
+    if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
+      const wsData = XLSX.utils.json_to_sheet(report.data.data);
+      XLSX.utils.book_append_sheet(wb, wsData, "Data");
+    }
+
+    XLSX.writeFile(wb, `${report.type}_Report_${report.id}.xlsx`);
+  };
+
+  const handleSingleExportPDF = (report) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(16);
+    doc.text("Report Details", 14, 15);
+    
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+
+    // Metadata
+    doc.setFontSize(11);
+    doc.text(`ID: ${report.id}`, 14, 30);
+    doc.text(`Type: ${report.type}`, 14, 36);
+    doc.text(`Author: ${report.author}`, 14, 42);
+    doc.text(`Date: ${new Date(report.createdAt || report.date).toLocaleDateString()}`, 14, 48);
+
+    let currentY = 60;
+
+    // Statistics
+    if (report.data?.statistics) {
+        doc.setFontSize(12);
+        doc.text("Statistics", 14, currentY);
+        currentY += 10;
+        
+        const statsData = Object.entries(report.data.statistics).map(([k, v]) => [k, v]);
+        autoTable(doc, {
+            startY: currentY,
+            head: [['Metric', 'Value']],
+            body: statsData,
+            theme: 'grid',
+            headStyles: { fillColor: [240, 240, 240], textColor: 50 },
+            styles: { fontSize: 10 }
+        });
+        currentY = doc.lastAutoTable.finalY + 15;
+    }
+
+    // Data Table
+    if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
+        doc.setFontSize(12);
+        doc.text("Data Records", 14, currentY);
+        
+        const headers = Object.keys(report.data.data[0]);
+        const rows = report.data.data.map(row => Object.values(row));
+
+        autoTable(doc, {
+            startY: currentY + 5,
+            head: [headers],
+            body: rows,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [16, 185, 129] }
+        });
+    }
+
+    doc.save(`${report.type}_Report_${report.id}.pdf`);
   };
 
   // --- SELECTION HANDLERS ---
@@ -335,7 +420,7 @@ const Reports = () => {
     }
   };
 
-  // --- TABLE COLUMNS ---
+  // --- TABLE COLUMNS (Updated: Removed Status) ---
   const tableColumns = isSelectionMode 
     ? [
         <div key="header-check" className="flex items-center">
@@ -346,9 +431,9 @@ const Reports = () => {
                 className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
             />
         </div>,
-        "Report ID", "Type", "Author", "Date", "Status"
+        "Report ID", "Type", "Author", "Date"
       ]
-    : ["Report ID", "Type", "Author", "Date", "Status"];
+    : ["Report ID", "Type", "Author", "Date"];
 
   return (
     <Layout title="Reports Management">
@@ -483,8 +568,8 @@ const Reports = () => {
                 reportid: report.id ? report.id.substring(0, 8).toUpperCase() : "ERR",
                 type: report.type,
                 author: report.author,
-                date: new Date(report.createdAt || report.date).toLocaleDateString(),
-                status: report.status
+                date: new Date(report.createdAt || report.date).toLocaleDateString()
+                // Removed status from data object
             };
 
             if (isSelectionMode) {
@@ -512,7 +597,7 @@ const Reports = () => {
               <div className="flex justify-end items-center space-x-2">
                 <TableActions 
                   onView={() => setViewRow(fullRecord)} 
-                  onEdit={() => setEditRow(fullRecord)} 
+                    // Edit button removed here
                   onDelete={() => setDeleteRow(fullRecord)} 
                 />
                 <button
@@ -554,7 +639,7 @@ const Reports = () => {
         onClose={() => setShowLogModal(false)} 
       />
 
-      {/* View Modal */}
+      {/* View Modal (Updated with Exports) */}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
@@ -565,13 +650,7 @@ const Reports = () => {
                   ID: <span className="font-mono text-slate-700">{viewRow.id}</span>
                 </p>
               </div>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
-                  viewRow.status === "Submitted" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"
-                }`}
-              >
-                {viewRow.status}
-              </span>
+              {/* Removed Status Badge here as requested */}
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -582,7 +661,26 @@ const Reports = () => {
                 <hr className="border-slate-100 mb-6" />
                 <DataRenderer reportPayload={viewRow.data} />
             </div>
-            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end">
+            
+            {/* Modal Footer with Export Buttons */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-between items-center">
+              <div className="flex gap-2">
+                <button
+                    onClick={() => handleSingleExportExcel(viewRow)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors"
+                >
+                    <FileSpreadsheet size={16} />
+                    Export Excel
+                </button>
+                <button
+                    onClick={() => handleSingleExportPDF(viewRow)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors"
+                >
+                    <FileText size={16} />
+                    Export PDF
+                </button>
+              </div>
+
               <button
                 onClick={() => setViewRow(null)}
                 className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
@@ -594,16 +692,6 @@ const Reports = () => {
         </div>
       )}
 
-      {editRow && (
-        <EditReport
-          row={editRow}
-          onClose={() => setEditRow(null)}
-          onSave={(updated) => {
-            setRecords(records.map((r) => (r.id === updated.id ? updated : r)));
-            setEditRow(null);
-          }}
-        />
-      )}
 
       <DeleteModal
         isOpen={!!deleteRow}
