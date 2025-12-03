@@ -368,7 +368,7 @@ const LostFound = () => {
             "Item Type": item.itemType || "-",
             "Description": item.description,
             "Location": item.location,
-            "DateTime": formatDateTimeForExport(item.dateTime), // CHANGED: Consistent header
+            "DateTime": formatDateTimeForExport(item.dateTime), 
             "Status": item.status,
         }));
     };
@@ -581,7 +581,8 @@ const LostFound = () => {
                             const baseData = {
                                 id: item.id,
                                 trackingno: item.trackingNo,
-                                itemType: item.itemType,
+                                // IMPORTANT: Use 'itemtype' here to match the column header 'Item Type'
+                                itemtype: item.itemType, 
                                 description: item.description,
                                 location: item.location,
                                 datetime: formatDateTime(item.dateTime),
