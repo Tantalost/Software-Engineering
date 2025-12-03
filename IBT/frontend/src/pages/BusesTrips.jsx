@@ -645,7 +645,9 @@ const BusTrips = () => {
                                 <button onClick={() => handleArchive(row)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
                                     <Archive size={16} />
                                 </button>
-                                {/* Removed redundant Trash2 button */}
+                                {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
+                                                                                    <Trash2 size={16} />
+                                </button>)}
                             </div>
                         )}
                     />

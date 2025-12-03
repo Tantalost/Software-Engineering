@@ -748,7 +748,7 @@ const TerminalFees = () => {
                   <Archive size={16} />
                 </button>
 
-                <button 
+                {(role == "superadmin") && (<button 
                   onClick={() => { 
                     setDeleteRow(selectedRecord); 
                     setDeleteRemarks(""); 
@@ -756,7 +756,7 @@ const TerminalFees = () => {
                   className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
                   title="Delete">
                   <Trash2 size={16} />
-                </button>
+                </button>)}
               </div>
             );
           }}
