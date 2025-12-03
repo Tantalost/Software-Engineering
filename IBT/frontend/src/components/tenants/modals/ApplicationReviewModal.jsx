@@ -86,7 +86,11 @@ const ApplicationReviewModal = ({
                 <p className="text-sm text-slate-500 font-mono">ID: {displayId}</p>
               </div>
             </div>
-            <div className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border bg-slate-100 text-slate-600 border-slate-200">
+            <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+              (status === 'PAYMENT_REVIEW' || status === 'CONTRACT_REVIEW') 
+                ? 'bg-amber-100 text-amber-700 border-amber-200' 
+                : 'bg-slate-100 text-slate-600 border-slate-200'
+            }`}>
               {status}
             </div>
           </div>
@@ -121,14 +125,32 @@ const ApplicationReviewModal = ({
                   <div 
                     key={idx} 
                     className="group relative aspect-[4/3] bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => doc.url && setPreviewImage(doc.url)}
                   >
                     {doc.url ? (
                       <>
-                        <img src={doc.url} alt={doc.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                          <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" size={28} />
-                        </div>
+                        {/* 1. PDF LOGIC: If file is PDF, show icon instead of image */}
+                        {(doc.url.startsWith("data:application/pdf") || doc.url.toLowerCase().endsWith(".pdf")) ? (
+                            <div 
+                                className="w-full h-full flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 transition-colors"
+                                onClick={() => {
+                                    // Open PDF in new tab
+                                    const pdfWindow = window.open("");
+                                    if (pdfWindow) pdfWindow.document.write(`<iframe width='100%' height='100%' src='${doc.url}'></iframe>`);
+                                }} 
+                            >
+                                <FileText size={40} className="text-red-500 mb-2" />
+                                <span className="text-xs font-bold text-red-700">PDF Document</span>
+                                <span className="text-[10px] text-red-400">(Click to Open)</span>
+                            </div>
+                        ) : (
+                            /* 2. IMAGE LOGIC: Standard Preview */
+                            <div className="w-full h-full" onClick={() => setPreviewImage(doc.url)}>
+                                <img src={doc.url} alt={doc.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" size={28} />
+                                </div>
+                            </div>
+                        )}
                       </>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-2 text-center"><FileText size={24} className="mb-2 opacity-50" /><span className="text-xs italic">Not Uploaded</span></div>

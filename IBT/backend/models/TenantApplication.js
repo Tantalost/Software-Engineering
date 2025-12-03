@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
 const TenantApplicationSchema = new mongoose.Schema({
-  deviceId: { type: String, required: true, unique: true },
+  userId: { type: String, required: true },
+  
   name: String,
   contact: String,
   email: String,
