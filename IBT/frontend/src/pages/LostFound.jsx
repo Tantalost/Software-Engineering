@@ -548,7 +548,7 @@ const LostFound = () => {
                                     <button
                                         onClick={handleBulkDelete}
                                         title="Delete Selected"
-                                        className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                                        className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
                                     >
                                         <Trash2 className="h-5 w-5" />
                                     </button>
@@ -560,8 +560,8 @@ const LostFound = () => {
                                 title={isSelectionMode ? "Cancel Selection" : "Select Records"}
                                 className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
                                     isSelectionMode
-                                        ? "bg-red-500 text-white shadow-md"
-                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                        ? "bg-red-500 text-white shadow-md cursor-pointer"
+                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
                                 }`}
                             >
                                 {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
