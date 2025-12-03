@@ -54,6 +54,7 @@ const TenantLease = () => {
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
+  const [archiveRow, setArchiveRow] = useState(null);
   const [remarksRow, setRemarksRow] = useState(null);
   const [messagingRow, setMessagingRow] = useState(null);      
   
@@ -208,6 +209,41 @@ const TenantLease = () => {
     setShowNotify(false); setNotifyDraft({ title: "", message: "" }); alert("Notification broadcasted!");
   };
 
+  const handleArchive = async (rowToArchive) => {
+    if (!rowToArchive) return;
+
+    try {
+      const rawArchive = localStorage.getItem("ibt_archive");
+      const archiveList = rawArchive ? JSON.parse(rawArchive) : [];
+
+      const archiveItem = {
+        id: `archive-${Date.now()}-${rowToArchive.id}`,
+        type: "Tenant/Lease",
+        description: `Slot #${rowToArchive.slotNo || rowToArchive.slotno} - ${rowToArchive.tenantName || rowToArchive.name}`,
+        dateArchived: new Date().toISOString(),
+        originalStatus: rowToArchive.status,
+        originalData: rowToArchive
+      };
+      
+      archiveList.push(archiveItem);
+      localStorage.setItem("ibt_archive", JSON.stringify(archiveList));
+
+      // Update Firebase to mark as archived (soft delete)
+      try {
+        await updateDoc(doc(db, "tenants", rowToArchive.id), { 
+          status: "Archived",
+          archivedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Failed to update Firebase:", e);
+      }
+
+    } catch (e) {
+      console.error("Failed to add to archive:", e);
+      return;
+    }
+  };
+
   const handleSaveRemarks = () => {
     const storedRemarks = localStorage.getItem("ibt_tenantRemarks"); 
     const remarks = storedRemarks ? JSON.parse(storedRemarks) : {}; 
@@ -289,7 +325,18 @@ const TenantLease = () => {
             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
             <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"><Download size={16} /></button>
             <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all"><Mail size={16} /></button>
-            <button onClick={() => { setRemarksRow(records.find(r => r.id === row.id)); setRemarksText(""); }} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all"><Archive size={16} /></button>
+            <button onClick={() => { setRemarksRow(records.find(r => r.id === row.id)); setRemarksText(""); }} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all" title="Remarks"><Archive size={16} /></button>
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setArchiveRow(records.find(r => r.id === row.id));
+              }}
+              title="Archive"
+              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+            >
+              <Archive size={16} />
+            </button>
             <button onClick={() => setDeleteRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"><Trash2 size={16} /></button>
           </div>
         )}
@@ -379,6 +426,69 @@ const TenantLease = () => {
       <RemarksModal isOpen={!!remarksRow} onClose={() => setRemarksRow(null)} onSave={handleSaveRemarks} remarksText={remarksText} setRemarksText={setRemarksText} />
 
       <BroadcastModal isOpen={showNotify} onClose={() => setShowNotify(false)} onBroadcast={handleBroadcast} draft={notifyDraft} setDraft={setNotifyDraft} />
+
+      {archiveRow && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setArchiveRow(null);
+            }
+          }}
+        >
+          <div 
+            className="w-full max-w-md rounded-2xl bg-white px-8 py-7 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                <Archive size={24} />
+              </div>
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Confirm Archiving
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-700">
+                Are you sure you want to move{" "}
+                <span className="font-semibold">
+                  Slot #{archiveRow.slotno || archiveRow.slotNo}
+                </span>{" "}
+                to the Archives?
+              </p>
+
+              <p className="mt-1 text-xs font-medium text-red-500">
+                This item will be permanently removed from the active tenants
+                list.
+              </p>
+
+              <div className="mt-6 flex w-full justify-center gap-3">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setArchiveRow(null);
+                  }}
+                  className="w-32 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleArchive(archiveRow);
+                    setArchiveRow(null);
+                  }}
+                  className="w-32 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-500"
+                >
+                  Yes, Archive
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </Layout>
   );

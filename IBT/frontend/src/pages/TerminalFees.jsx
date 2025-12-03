@@ -35,7 +35,8 @@ const TerminalFees = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null); 
+  const [deleteRow, setDeleteRow] = useState(null);
+  const [archiveRow, setArchiveRow] = useState(null); 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false); 
   const [showNotify, setShowNotify] = useState(false);
@@ -336,7 +337,14 @@ const TerminalFees = () => {
                   onView={() => setViewRow(records.find(r => r.id == row.id))}
                   onEdit={() => setEditRow(records.find(r => r.id == row.id))}
                 />
-                <button onClick={() => handleArchive(records.find(r => r.id == row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100">
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setArchiveRow(records.find(r => r.id == row.id));
+                  }} 
+                  className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                >
                   <Archive size={16} />
                 </button>
                 <button onClick={() => { setDeleteRow(records.find(r => r.id == row.id)); setDeleteRemarks(""); }} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
@@ -509,6 +517,69 @@ const TerminalFees = () => {
         </div>
       )}
       
+      {archiveRow && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setArchiveRow(null);
+            }
+          }}
+        >
+          <div 
+            className="w-full max-w-md rounded-2xl bg-white px-8 py-7 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                <Archive size={24} />
+              </div>
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Confirm Archiving
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-700">
+                Are you sure you want to move{" "}
+                <span className="font-semibold">
+                  Ticket #{archiveRow.ticketNo}
+                </span>{" "}
+                to the Archives?
+              </p>
+
+              <p className="mt-1 text-xs font-medium text-red-500">
+                This item will be permanently removed from the active terminal fees
+                list.
+              </p>
+
+              <div className="mt-6 flex w-full justify-center gap-3">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setArchiveRow(null);
+                  }}
+                  className="w-32 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleArchive(archiveRow);
+                    setArchiveRow(null);
+                  }}
+                  className="w-32 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-500"
+                >
+                  Yes, Archive
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {role === "ticket" && showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">

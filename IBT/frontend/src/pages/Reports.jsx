@@ -19,7 +19,8 @@ const Reports = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
-  const [deleteRow, setDeleteRow] = useState(null); 
+  const [deleteRow, setDeleteRow] = useState(null);
+  const [archiveRow, setArchiveRow] = useState(null); 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [activeStatus, setActiveStatus] = useState("All");
@@ -147,7 +148,11 @@ const Reports = () => {
               onDelete={() => setDeleteRow(row)} 
             />
             <button
-              onClick={() => handleArchive(row)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setArchiveRow(row);
+              }}
               title="Archive"
               className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
             >
@@ -204,17 +209,64 @@ const Reports = () => {
         />
       )}
       
-      {deleteRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow">
-            <h3 className="text-base font-semibold text-slate-800">Archive Report</h3>
-            <p className="mt-2 text-sm text-slate-600">Are you sure you want to archive report {deleteRow.reportid}?</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={() => { 
-                handleArchive(deleteRow); 
-                setDeleteRow(null); 
-              }} className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white shadow hover:bg-red-700">Archive</button>
+      {archiveRow && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setArchiveRow(null);
+            }
+          }}
+        >
+          <div 
+            className="w-full max-w-md rounded-2xl bg-white px-8 py-7 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                <Archive size={24} />
+              </div>
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Confirm Archiving
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-700">
+                Are you sure you want to move{" "}
+                <span className="font-semibold">
+                  Report #{archiveRow.reportid}
+                </span>{" "}
+                to the Archives?
+              </p>
+
+              <p className="mt-1 text-xs font-medium text-red-500">
+                This item will be permanently removed from the active reports
+                list.
+              </p>
+
+              <div className="mt-6 flex w-full justify-center gap-3">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setArchiveRow(null);
+                  }}
+                  className="w-32 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleArchive(archiveRow);
+                    setArchiveRow(null);
+                  }}
+                  className="w-32 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-500"
+                >
+                  Yes, Archive
+                </button>
+              </div>
             </div>
           </div>
         </div>
