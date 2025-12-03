@@ -611,9 +611,9 @@ const formattedData = filtered.map(item => {
                   <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
                     <Archive size={16} />
                   </button>
-                  <button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
+                  {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
                     <Trash2 size={16} />
-                  </button>
+                  </button>)}
                 </div>
               );
             }}
