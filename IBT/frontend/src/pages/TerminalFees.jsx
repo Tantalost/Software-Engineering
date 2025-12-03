@@ -407,7 +407,6 @@ const TerminalFees = () => {
     setNewTicket({
       ticketNo: maxTicket + 1,
       passengerType: "Regular",
-      // 3. USE DYNAMIC PRICE
       price: basePrices.regular, 
       date: now.toISOString().split('T')[0], 
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
@@ -871,7 +870,7 @@ const TerminalFees = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Passenger Type</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 ">
                   {["Regular", "Student", "Senior Citizen / PWD"].map((type) => (
                     <button key={type} onClick={() => {
                         // 6. USE DYNAMIC PRICE IN ADD MODAL
