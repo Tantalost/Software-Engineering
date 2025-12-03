@@ -481,7 +481,7 @@ const Reports = () => {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 hover:border-slate-400 transition-all appearance-none cursor-pointer"
           >
-            {["All", "Buses", "Tickets", "Tenant/Lease", "Parking", "Lost & Found"].map((cat) => (
+            {["All", "Bus Trips", "Terminal Fees", "Tenant/Lease", "Parking", "Lost & Found"].map((cat) => (
               <option key={cat} value={cat}>
                 {cat === "All" ? "All Categories" : cat}
               </option>
@@ -544,7 +544,7 @@ const Reports = () => {
                 </div>
             )}
            
-            <button
+            {(role === "lol") && (<button
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
               className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${
@@ -554,7 +554,7 @@ const Reports = () => {
               }`}
               >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-            </button>
+            </button>)}
         </div>
 
       </div>

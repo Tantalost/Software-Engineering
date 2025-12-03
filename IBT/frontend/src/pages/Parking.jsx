@@ -759,7 +759,7 @@ const Parking = () => {
             </button>
           )}
 
-          <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+          <button onClick={handleAddClick} className="bg-gradient-to-r cursor-pointer from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
             + Add New
           </button>
           <ExportMenu onExportExcel={exportToCSV} onExportPDF={exportToPDF} />
@@ -774,11 +774,11 @@ const Parking = () => {
         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
             <button
                 onClick={() => setShowLogModal(true)}
-                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
                 title="View Logs"
             >
                 <History size={18} />
-                <span className="hidden sm:inline">Logs</span>
+                <span className="hidden sm:inline cursor-pointer">Logs</span>
             </button>
 
             {isSelectionMode && selectedIds.length > 0 && (
@@ -858,7 +858,7 @@ const Parking = () => {
                 <div className="flex justify-end items-center space-x-2">
                   {row.status === "Parked" && (
                     <button onClick={() => setLogoutRow(selectedRecord)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all flex items-center gap-1 px-2">
-                      <LogOut size={16} /> <span className="text-xs font-medium">Depart</span>
+                      <LogOut size={16} /> <span className="text-xs cursor-pointer font-medium">Depart</span>
                     </button>
                   )}
                   <TableActions
@@ -866,10 +866,10 @@ const Parking = () => {
                     onEdit={() => setEditRow(selectedRecord)}
                   />
                   {/* Updated to use custom modal */}
-                  <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
+                  <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 cursor-pointer hover:bg-yellow-100" title="Archive">
                     <Archive size={16} />
                   </button>
-                  {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
+                  {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 cursor-pointer text-red-600 hover:bg-red-100" title="Delete">
                     <Trash2 size={16} />
                   </button>)}
                 </div>

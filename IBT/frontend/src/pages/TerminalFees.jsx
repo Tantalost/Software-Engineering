@@ -736,7 +736,7 @@ const TerminalFees = () => {
     {role === "superadmin" && (
       <button 
         onClick={() => setShowLogModal(true)} 
-        className="flex items-center cursor-pointer justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+        className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
         title="View Logs"
       >
         <History size={18} /> 
@@ -747,7 +747,7 @@ const TerminalFees = () => {
     {role === "ticket" && (
       <button 
         onClick={() => setShowLogModal(true)} 
-        className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+        className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
         title="View Logs"
       >
         <History size={18} /> 

@@ -597,7 +597,7 @@ const BusTrips = () => {
                             {/* LOGS BUTTON */}
                             <button
                                 onClick={() => setShowLogModal(true)}
-                                className="flex cursor-pointer items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                                className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
                                 title="View Logs"
                             >
                                 <History size={18} />
@@ -685,7 +685,7 @@ const BusTrips = () => {
                                         onEdit={() => setEditRow(row)}
                                         onDelete={() => setDeleteRow(row)}
                                     />
-                                    <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
+                                    <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 cursor-pointer hover:bg-yellow-100" title="Archive">
                                         <Archive size={16} />
                                     </button>
 
@@ -997,7 +997,7 @@ const BusTrips = () => {
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        confirmArchive(); // FIXED: Called the correct execution function
+                                        confirmArchive(); 
                                     }}
                                     className="w-32 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-500"
                                 >

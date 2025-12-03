@@ -750,7 +750,7 @@ const TenantLease = () => {
                     title="View Logs"
                 >
                     <History size={18} />
-                    <span className="hidden sm:inline">Logs</span>
+                    <span className="hidden sm:inline cursor-pointer">Logs</span>
                 </button>
             )}
 
