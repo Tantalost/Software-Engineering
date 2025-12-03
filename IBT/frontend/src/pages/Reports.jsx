@@ -363,7 +363,7 @@ const Reports = () => {
         <div className="flex items-center justify-end gap-3">
           <button
             onClick={() => setShowPreview(true)}
-            className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+            className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center cursor-pointer"
           >
             + Add New
           </button>
@@ -431,7 +431,7 @@ const Reports = () => {
             {/* Logs Button */}
             <button 
                 onClick={() => setShowLogModal(true)} 
-                className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all"
+                className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
                 title="View Logs"
             >
                 <History size={18} /> 
@@ -446,7 +446,7 @@ const Reports = () => {
                   <button
                     onClick={handleBulkDelete}
                     title="Delete Selected"
-                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-button"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
@@ -456,10 +456,10 @@ const Reports = () => {
             <button
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+              className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${
               isSelectionMode
-              ? "bg-red-500 text-white shadow-md"
-              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+              ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
+              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
               }`}
               >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -517,14 +517,14 @@ const Reports = () => {
                 />
                 <button
                   onClick={() => handleArchive(fullRecord)}
-                  className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
+                  className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer"
                   title="Archive"
                 >
                   <Archive size={16} />
                 </button>
                 <button
                   onClick={() => setDeleteRow(fullRecord)}
-                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
                   title="Delete"
                 >
                   <Trash2 size={16} />
@@ -585,7 +585,7 @@ const Reports = () => {
             <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end">
               <button
                 onClick={() => setViewRow(null)}
-                className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
+                className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all cursor-pointer"
               >
                 Close Report
               </button>
