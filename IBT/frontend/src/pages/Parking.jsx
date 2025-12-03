@@ -417,54 +417,106 @@ const formattedData = filtered.map(item => {
     return "bg-orange-50 text-orange-500 border-orange-500";
   };
 
-  const exportToCSV = () => {
-    const headers = ["Ticket No","Plate No","Type","Fee/Hr","Total","Time In","Time Out","Duration","Status"];
-    const rows = filtered.map(item => [
-      item.ticketNo || "",
-      item.plateNo || "",
-      item.type || "",
-      item.baseRate ? `₱${item.baseRate}` : "",
-      item.finalPrice ? `₱${item.finalPrice}` : "",
-      item.timeIn ? formatDateDisplay(item.timeIn) : "",
-      item.timeOut ? formatDateDisplay(item.timeOut) : "",
-      item.duration || "",
-      item.status || ""
-    ]);
-    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `parking_records_${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // New helper function to format the data consistently for all exports
+    const getExportData = (data) => {
+        return data.map(item => ({
+            "Ticket No": item.ticketNo || "-",
+            "Plate No": item.plateNo || "-",
+            "Type": item.type,
+            "Fee/Hr": item.baseRate ? `₱${item.baseRate}` : "-",
+            "Total": item.finalPrice ? `₱${item.finalPrice}` : "-",
+            "Time In": item.timeIn ? formatDateDisplay(item.timeIn) : "-",
+            "Time Out": item.timeOut ? formatDateDisplay(item.timeOut) : "-",
+            "Duration": item.duration || "-",
+            "Status": item.status
+        }));
+    };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Parking Records Report", 14, 20);
-    autoTable(doc, {
-      startY: 30,
-      head: [["Ticket No","Plate No","Type","Fee/Hr","Total","Time In","Time Out","Duration","Status"]],
-      body: filtered.map(item => [
-        item.ticketNo || "",
-        item.plateNo || "",
-        item.type || "",
-        item.baseRate ? `₱${item.baseRate}` : "",
-        item.finalPrice ? `₱${item.finalPrice}` : "",
-        item.timeIn ? formatDateDisplay(item.timeIn) : "",
-        item.timeOut ? formatDateDisplay(item.timeOut) : "",
-        item.duration || "",
-        item.status || ""
-      ]),
-      theme: "grid",
-      headStyles: { fillColor: [16,185,129] },
-      styles: { fontSize: 10, cellPadding: 3 }
-    });
-    doc.text(`Total Vehicles: ${filtered.length}`, 14, doc.lastAutoTable.finalY + 10);
-    doc.text(`Total Revenue: ₱${revenue}`, 14, doc.lastAutoTable.finalY + 16);
-    doc.save(`parking_records_${new Date().toISOString().split("T")[0]}.pdf`);
-  };
+    const exportToCSV = () => {
+        if (filtered.length === 0) {
+            alert("No records to export.");
+            return;
+        }
+        const dataToExport = getExportData(filtered);
+
+        // Uses the dataToExport object keys for consistent headers
+        const headers = Object.keys(dataToExport[0]).join(',');
+        const rows = dataToExport.map(row => 
+            // Enclose all values in double quotes to handle commas/special chars in data
+            Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
+        ).join('\n');
+        
+        const csvContent = headers + '\n' + rows;
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `parking_records_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Parking records to CSV`, "Parking");
+    };
+
+    const exportToPDF = () => {
+        if (filtered.length === 0) {
+            alert("No records to export.");
+            return;
+        }
+        
+        const dataToExport = getExportData(filtered);
+        const headers = Object.keys(dataToExport[0]);
+        const body = dataToExport.map(item => Object.values(item));
+
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        
+        // 1. Title Styling (Cleaner Look)
+        doc.setFontSize(16);
+        doc.setTextColor(34, 34, 34); // Dark text
+        doc.text("Parking Records Report", 14, 15);
+        
+        // 2. Metadata Styling (Date Generated)
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100); // Gray text for metadata
+        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+
+        // 3. Table Styling (The 'Clean' Layout)
+        autoTable(doc, {
+            startY: 30, // Start lower for the header text
+            head: [headers],
+            body: body,
+            theme: 'grid', // Uses clear borders for a clean look
+            headStyles: { 
+                fillColor: [16, 185, 129], // Emerald Green header color
+                textColor: [255, 255, 255],
+                fontSize: 9, 
+                halign: 'center'
+            }, 
+            styles: {
+                fontSize: 8, 
+                cellPadding: 3, // Increased padding for better spacing
+                valign: 'middle',
+                textColor: [51, 51, 51] // Dark body text
+            },
+            alternateRowStyles: {
+                fillColor: [240, 255, 240], // Light stripe for readability
+            }
+        });
+
+        // 4. Summary Totals (Uses doc.lastAutoTable.finalY for positioning)
+        const finalY = doc.lastAutoTable.finalY;
+        doc.setFontSize(10);
+        doc.setTextColor(51, 51, 51);
+        doc.text(`Total Vehicles: ${filtered.length}`, 14, finalY + 10);
+        doc.text(`Total Revenue: ₱${revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, finalY + 16);
+
+        doc.save(`parking_records_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+        logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Parking records to PDF`, "Parking");
+    };
 
   // --- 7. COLUMN CONFIG FOR SELECTION ---
   const tableColumns = isSelectionMode 
@@ -611,9 +663,9 @@ const formattedData = filtered.map(item => {
                   <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
                     <Archive size={16} />
                   </button>
-                  <button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
+                  {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
                     <Trash2 size={16} />
-                  </button>
+                  </button>)}
                 </div>
               );
             }}

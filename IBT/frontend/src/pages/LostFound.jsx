@@ -368,7 +368,7 @@ const LostFound = () => {
             "Item Type": item.itemType || "-",
             "Description": item.description,
             "Location": item.location,
-            "Date & Time": formatDateTimeForExport(item.dateTime),
+            "DateTime": formatDateTimeForExport(item.dateTime), // CHANGED: Consistent header
             "Status": item.status,
         }));
     };
@@ -380,6 +380,7 @@ const LostFound = () => {
         }
         const dataToExport = getExportData(filtered);
         
+        // CSV headers now consistently match the table and PDF
         const headers = Object.keys(dataToExport[0]).join(',');
         const rows = dataToExport.map(row => 
             Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
@@ -412,24 +413,36 @@ const LostFound = () => {
 
         const doc = new jsPDF('portrait', 'mm', 'a4');
         
-        doc.setFontSize(14);
+        // 1. Title Styling (Cleaner Look)
+        doc.setFontSize(16);
+        doc.setTextColor(34, 34, 34); // Dark text
         doc.text("Lost & Found Records Report", 14, 15);
+        
+        // 2. Metadata Styling (Cleaner Look)
         doc.setFontSize(10);
-        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 20);
+        doc.setTextColor(100, 100, 100); // Gray text for metadata
+        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
+        // 3. Table Styling (The 'Clean' Layout)
         autoTable(doc, {
-            startY: 25,
+            startY: 30, // Start lower for the header text
             head: [headers],
             body: body,
-            theme: 'striped',
+            theme: 'grid', // Uses clear borders for a clean look
             headStyles: { 
-                fillColor: [30, 144, 255], 
-                fontSize: 8,
+                fillColor: [16, 185, 129], // Emerald Green header color
+                textColor: [255, 255, 255],
+                fontSize: 9, 
                 halign: 'center'
             }, 
             styles: {
-                fontSize: 7,
-                cellPadding: 2
+                fontSize: 8, 
+                cellPadding: 3, // Increased padding for better spacing
+                valign: 'middle',
+                textColor: [51, 51, 51] // Dark body text
+            },
+            alternateRowStyles: {
+                fillColor: [240, 255, 240], // Light stripe for readability
             }
         });
 
@@ -604,6 +617,9 @@ const LostFound = () => {
                                 <button onClick={() => handleArchive(selectedRecord)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
                                     <Archive size={16} />
                                 </button>
+                                {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
+                                                    <Trash2 size={16} />
+                                </button>)}
                                 </div>
                             );
                         }}
