@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom"; 
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -97,6 +98,7 @@ const DataRenderer = ({ reportPayload }) => {
 
 // --- MAIN PAGE COMPONENT ---
 const Reports = () => {
+  const location = useLocation(); 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -107,7 +109,6 @@ const Reports = () => {
   // Filters
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [timeRange, setTimeRange] = useState("All");
-  // Removed activeStatus since we are removing status column/filtering focus
   
   const [showLogModal, setShowLogModal] = useState(false);
 
@@ -143,6 +144,21 @@ const Reports = () => {
   useEffect(() => {
     fetchReports();
   }, []);
+
+  
+  useEffect(() => {
+    if (records.length > 0 && location.state?.openReportId) {
+      const targetId = location.state.openReportId;
+      
+      const reportToOpen = records.find(r => r.id === targetId || r._id === targetId);
+      
+      if (reportToOpen) {
+        setViewRow(reportToOpen); 
+        
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [records, location.state]); 
 
   // Filtered data logic
   const filtered = useMemo(() => {
@@ -185,7 +201,6 @@ const Reports = () => {
       "Type": item.type,
       "Author": item.author,
       "Date": new Date(item.createdAt || item.date).toLocaleDateString(),
-      // Removed Status
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -202,7 +217,6 @@ const Reports = () => {
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
-    // Removed Status from columns
     const tableColumn = ["Report ID", "Type", "Author", "Date"];
     
     const tableRows = filtered.map((item) => [
@@ -228,7 +242,7 @@ const Reports = () => {
   const handleSingleExportExcel = (report) => {
     const wb = XLSX.utils.book_new();
 
-    // 1. Summary Sheet (Meta + Stats)
+    // Summary Sheet (Meta + Stats)
     const summaryData = [
       ["Report Details"],
       ["ID", report.id],
@@ -248,7 +262,7 @@ const Reports = () => {
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
 
-    // 2. Data Sheet
+    // Data Sheet
     if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
       const wsData = XLSX.utils.json_to_sheet(report.data.data);
       XLSX.utils.book_append_sheet(wb, wsData, "Data");
@@ -348,7 +362,6 @@ const Reports = () => {
             const report = records.find(r => r.id === id);
             if (!report) return;
 
-            // 1. AUTO-ARCHIVE
             await fetch(ARCHIVE_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -359,8 +372,7 @@ const Reports = () => {
                     archivedBy: role
                 })
             });
-
-            // 2. PERMANENT DELETE
+            
             await fetch(`${API_URL}/${id}`, { method: "DELETE" });
         });
 
@@ -394,8 +406,6 @@ const Reports = () => {
   };
 
   // Single Archive
-  // REPLACE handleArchive with this:
-  // REPLACE handleArchive with this:
   const confirmArchive = async () => {
     if (!archiveRow) return;
     const row = archiveRow;
@@ -424,7 +434,7 @@ const Reports = () => {
     }
   };
 
-  // --- TABLE COLUMNS (Updated: Removed Status) ---
+  // --- TABLE COLUMNS ---
   const tableColumns = isSelectionMode 
     ? [
         <div key="header-check" className="flex items-center">
@@ -441,7 +451,7 @@ const Reports = () => {
 
   return (
     <Layout title="Reports Management">
-      {/* Top Header Section (Search & Main Actions) */}
+      {/* (Search & Main Actions) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
@@ -450,15 +460,6 @@ const Reports = () => {
           setSelectedDate={setSelectedDate}
         />
         <div className="flex items-center justify-end gap-3">
-          {/* REMOVED: Add New Button
-          <button
-            onClick={() => setShowPreview(true)}
-            className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center cursor-pointer"
-          >
-            + Add New
-          </button>
-          */}
-          
           <div className="h-[44px] flex items-center">
             <ExportMenu 
               onExportExcel={handleExportExcel} 
@@ -468,10 +469,10 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Secondary Filter Grid (Filters, Logs & Selection Controls) */}
+      {/* Filter Grid (Filters, Logs & Selection Controls) */}
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         
-        {/* 1. Category Dropdown */}
+        {/* Category Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Tag size={16} />
@@ -494,7 +495,7 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* 2. Time Range Dropdown */}
+        {/* Time Range Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Calendar size={16} />
@@ -516,7 +517,7 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* 3. Action Buttons (Logs & Selection) */}
+        {/* Action Buttons (Logs & Selection) */}
         <div className="flex items-center justify-end gap-2">
             
             {/* Logs Button */}
@@ -575,7 +576,6 @@ const Reports = () => {
                 type: report.type,
                 author: report.author,
                 date: new Date(report.createdAt || report.date).toLocaleDateString()
-                // Removed status from data object
             };
 
             if (isSelectionMode) {
@@ -603,7 +603,6 @@ const Reports = () => {
               <div className="flex justify-end items-center space-x-2">
                 <TableActions 
                   onView={() => setViewRow(fullRecord)} 
-                    // Edit button removed here
                   onDelete={() => setDeleteRow(fullRecord)} 
                 />
                 <button onClick={() => setArchiveRow(fullRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
@@ -653,7 +652,6 @@ const Reports = () => {
                   ID: <span className="font-mono text-slate-700">{viewRow.id}</span>
                 </p>
               </div>
-              {/* Removed Status Badge here as requested */}
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -717,7 +715,6 @@ const Reports = () => {
             </div>
         </div>
       )}
-
 
       <DeleteModal
         isOpen={!!deleteRow}

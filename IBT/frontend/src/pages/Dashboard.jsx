@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // <--- 1. Import useNavigate
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Layout from "../components/layout/Layout";
@@ -9,6 +10,8 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import DashboardToolbar from "../components/dashboard/DashboardToolbar";
 
 const Dashboard = () => {
+  const navigate = useNavigate(); // <--- 2. Initialize Hook
+
   // 1. Raw Data State
   const [rawData, setRawData] = useState({
     tickets: [],
@@ -89,7 +92,6 @@ const Dashboard = () => {
 
   // --- HELPER 4: Target Quota Calculator ---
   const calculateQuota = (moduleName, view, date) => {
-    // DEFINED DAILY TARGETS (You can adjust these)
     const dailyTargets = {
         tickets: 5000,  
         bus: 4000,      
@@ -177,11 +179,18 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  // --- 6. NAVIGATION HANDLER ---
+  const handleReportClick = (reportId) => {
+    // Navigate to reports page, passing the report ID in the "state"
+    // Your Reports component must check location.state.openReportId to trigger the modal
+    navigate('/reports', { state: { openReportId: reportId } });
+  };
+
   // --- PROCESS DATA ---
   useEffect(() => {
     if (loading) return;
 
-    // 1. Generate Stat Cards (Actual vs Target)
+    // 1. Generate Stat Cards
     const generateStat = (label, items, color, moduleKey) => {
       const currentItems = items.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
       const currentRev = calculateRevenue(currentItems);
@@ -232,13 +241,13 @@ const Dashboard = () => {
       { name: "Parking", value: calculateRevenue(filteredParking), color: "#3B82F6" },
     ]);
 
-    // 3. Recent Activity
+    // 3. Recent Activity (Ensuring ID is passed correctly)
     const filteredReports = rawData.reports.filter(r => isDateInView(r.createdAt || r.date, filterView, filterDate));
     const processedActivity = filteredReports
       .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
       .slice(0, 5)
       .map(r => ({
-        id: r._id || r.id,
+        id: r._id || r.id, // Ensure ID is present
         type: r.status === 'Resolved' ? 'success' : 'warning',
         message: `${r.type} Report Submitted`,
         date: r.createdAt || r.date,
@@ -270,15 +279,15 @@ const Dashboard = () => {
          const dayTenants = rawData.tenants.filter(isMatch);
 
          chartPoints.push({
-            name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-            ticketsRevenue: calculateRevenue(dayTickets),
-            busRevenue: calculateRevenue(dayBus),
-            parkingRevenue: calculateRevenue(dayParking),
-            tenantsRevenue: calculateRevenue(dayTenants),
-            ticketsVolume: dayTickets.length,
-            busVolume: dayBus.length,
-            parkingVolume: dayParking.length,
-            tenantsVolume: dayTenants.length,
+           name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+           ticketsRevenue: calculateRevenue(dayTickets),
+           busRevenue: calculateRevenue(dayBus),
+           parkingRevenue: calculateRevenue(dayParking),
+           tenantsRevenue: calculateRevenue(dayTenants),
+           ticketsVolume: dayTickets.length,
+           busVolume: dayBus.length,
+           parkingVolume: dayParking.length,
+           tenantsVolume: dayTenants.length,
          });
        }
     } 
@@ -349,6 +358,7 @@ const Dashboard = () => {
      setFilterView(view);
   };
 
+  // ... (Keeping your existing handleDownload function exactly as is - removed for brevity but keep it in your file) ...
    const handleDownload = (format) => {
     if (format === 'csv') {
       const headers = ["Date/Label", "Tickets Rev", "Bus Rev", "Parking Rev", "Tenants Rev", "Total Rev"];
@@ -356,7 +366,7 @@ const Dashboard = () => {
       const rows = analyticsData.map(row => {
         const total = (row.ticketsRevenue || 0) + (row.busRevenue || 0) + (row.parkingRevenue || 0) + (row.tenantsRevenue || 0);
         return [
-          row.name, // Date or Month
+          row.name, 
           row.ticketsRevenue || 0,
           row.busRevenue || 0,
           row.parkingRevenue || 0,
@@ -389,17 +399,14 @@ const Dashboard = () => {
       link.click();
       document.body.removeChild(link);
     } 
-    // --- EXECUTIVE PDF REPORT START ---
     else if (format === 'pdf') {
       const doc = new jsPDF();
       
-      // --- COLOR PALETTE ---
-      const primaryColor = [16, 185, 129]; // Emerald 500
-      const lightBg = [236, 253, 245];     // Emerald 50
-      const slateDark = [30, 41, 59];      // Slate 800
-      const slateLight = [100, 116, 139];  // Slate 500
+      const primaryColor = [16, 185, 129]; 
+      const lightBg = [236, 253, 245];    
+      const slateDark = [30, 41, 59];     
+      const slateLight = [100, 116, 139]; 
 
-      // --- 1. HEADER SECTION ---
       doc.setFontSize(18);
       doc.setTextColor(...primaryColor);
       doc.setFont("helvetica", "bold");
@@ -414,14 +421,11 @@ const Dashboard = () => {
       doc.setLineWidth(0.1);
       doc.line(14, 30, 196, 30);
 
-      // --- 2. CONTEXT & TOTALS ---
-      // Left side: Context
       doc.setFontSize(10);
       doc.setTextColor(...slateDark);
       doc.text(`Period View: ${filterView.toUpperCase()}`, 14, 40);
       doc.text(`Anchor Date: ${filterDate.toLocaleDateString()}`, 14, 46);
 
-      // Right side: Grand Total Box
       const allRevenue = donutData.reduce((acc, curr) => acc + curr.value, 0);
       
       doc.setFillColor(...lightBg);
@@ -437,7 +441,6 @@ const Dashboard = () => {
       doc.setFont("helvetica", "bold");
       doc.text(`P ${allRevenue.toLocaleString('en-US', {minimumFractionDigits: 2})}`, 135, 49);
 
-      // --- 3. PERFORMANCE SUMMARY (The Stat Cards) ---
       const summaryCols = ["Revenue Stream", "Actual Revenue", "Target Status"];
       const summaryRows = stats.map(s => [
         s.label.replace(" Revenue", ""), 
@@ -459,7 +462,6 @@ const Dashboard = () => {
         }
       });
 
-      // --- 4. DETAILED ANALYTICS (The Chart Data) ---
       doc.setFontSize(12);
       doc.setTextColor(...slateDark);
       doc.text("Detailed Revenue Breakdown", 14, doc.lastAutoTable.finalY + 12);
@@ -480,7 +482,6 @@ const Dashboard = () => {
         ];
       });
 
-      // Append Total Row
       detailRows.push([
         "GRAND TOTAL", 
         "", "", "", "", 
@@ -503,7 +504,6 @@ const Dashboard = () => {
             5: { halign: 'right', fontStyle: 'bold', textColor: slateDark }
         },
         didParseCell: function (data) {
-            // Style the last "Grand Total" row
             if (data.row.index === detailRows.length - 1) {
                 data.cell.styles.fontStyle = 'bold';
                 data.cell.styles.fillColor = [241, 245, 249];
@@ -511,7 +511,6 @@ const Dashboard = () => {
         }
       });
 
-      // --- 5. FOOTER ---
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -543,7 +542,12 @@ const Dashboard = () => {
           <SummaryDonut data={donutData} quota={totalQuota} loading={loading} />
         </div>
         
-        <RecentActivity data={recentActivity} loading={loading} />
+        {/* Pass the click handler to RecentActivity */}
+        <RecentActivity 
+            data={recentActivity} 
+            loading={loading} 
+            onItemClick={handleReportClick} // <--- 3. PASS THE HANDLER
+        />
 
       </div>
     </Layout>
