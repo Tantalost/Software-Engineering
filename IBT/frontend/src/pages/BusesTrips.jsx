@@ -549,7 +549,7 @@ const BusTrips = () => {
                                 </button>
                             )}
 
-                            <button onClick={handleAddClick} className="flex items-center justify-center bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+                            <button onClick={handleAddClick} className="flex items-center cursor-pointer justify-center bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
                                 <span>+ Add Bus</span>
                             </button>
 
@@ -561,7 +561,7 @@ const BusTrips = () => {
                             {/* LOGS BUTTON */}
                             <button
                                 onClick={() => setShowLogModal(true)}
-                                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                                className="flex cursor-pointer items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
                                 title="View Logs"
                             >
                                 <History size={18} />
@@ -629,37 +629,45 @@ const BusTrips = () => {
                             return baseData;
                         })}
 
-                        actions={(row) => (
-                            <div className="flex justify-end items-center space-x-2">
-                                {row.status === "Pending" && (
-                                    <button
-                                        onClick={() => handleLogoutClick(row)}
-                                        title="Log Out (Depart)"
-                                        className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all flex items-center gap-1 px-2"
-                                    >
-                                        <LogOut size={16} />
-                                        <span className="text-xs font-medium">Depart</span>
+                        actions={(row) => {
+                            // --- FIX: OPTION B APPLIED HERE ---
+                            // Explicitly find the original record matching this row's ID
+                            const selectedRecord = records.find(r => r.id === row.id) || row;
+
+                            return (
+                                <div className="flex justify-end items-center space-x-2">
+                                    {row.status === "Pending" && (
+                                        <button
+                                            onClick={() => handleLogoutClick(row)}
+                                            title="Log Out (Depart)"
+                                            className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all flex items-center gap-1 px-2"
+                                        >
+                                            <LogOut size={16} />
+                                            <span className="text-xs font-medium">Depart</span>
+                                        </button>
+                                    )}
+                                    <TableActions
+                                        onView={() => setViewRow(row)}
+                                        onEdit={() => setEditRow(row)}
+                                        onDelete={() => setDeleteRow(row)}
+                                    />
+                                    <button onClick={() => handleArchive(row)} title="Archive" className="p-1.5 rounded-lg cursor-pointer bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
+                                        <Archive size={16} />
                                     </button>
-                                )}
-                                <TableActions
-                                    onView={() => setViewRow(row)}
-                                    onEdit={() => setEditRow(row)}
-                                    onDelete={() => setDeleteRow(row)}
-                                />
-                                <button onClick={() => handleArchive(row)} title="Archive" className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all">
-                                    <Archive size={16} />
-                                </button>
-                                {(role == "superadmin") && (<button
-                                    onClick={() => {
-                                        setDeleteRow(selectedRecord);
-                                        setDeleteRemarks("");
-                                    }}
-                                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
-                                    title="Delete">
-                                    <Trash2 size={16} />
-                                </button>)}
-                            </div>
-                        )}
+                                    
+                                    {(role === "superadmin") && (
+                                        <button 
+                                            // selectedRecord is now defined above
+                                            onClick={() => setDeleteRow(selectedRecord)} 
+                                            className="p-1.5 rounded-lg bg-red-50 text-red-600  cursor-pointer hover:bg-red-100" 
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        }}
                     />
                 )}
                 <Pagination
@@ -911,7 +919,7 @@ const BusTrips = () => {
                 onConfirm={handleDeleteConfirm}
                 title="Delete Record"
                 message="Are you sure you want to remove this bus record? This action cannot be undone."
-                itemName={deleteRow ? `Template #${deleteRow.templateno}` : ""}
+                itemName={deleteRow ? (deleteRow.templateNo ? `Plate #${deleteRow.templateNo}` : "this item") : ""}
             />
 
         </Layout>

@@ -11,7 +11,7 @@ const ExportMenu = ({ onExportExcel, onExportPDF }) => {
     <div className="relative inline-block text-left">
       <button
         onClick={handleToggle}
-        className="flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+        className="flex cursor-pointer items-center space-x-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
       >
         <Download size={18} />
         <span>Export</span>

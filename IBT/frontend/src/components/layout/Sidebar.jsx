@@ -39,8 +39,8 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
                 className={`flex flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${sidebarExpanded ? "w-64" : "w-20"
                     }`}
             >
-                <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center space-x-3">
+                <div className="p-6 border-b border-gray-200 ">
+                    <div className="flex items-center space-x-3 ">
                         <button
                             onClick={handleMenuClick}
                             className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
@@ -48,7 +48,7 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
                             <Menu className="text-white" size={24} />
                         </button>
                         {sidebarExpanded && (
-                            <div className="overflow-hidden">
+                            <div className="overflow-hidden ">
                                 <h1 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent whitespace-nowrap">
                                     IBT
                                 </h1>
