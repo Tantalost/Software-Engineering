@@ -1,7 +1,7 @@
 import React from "react";
-import { Eye, Edit, } from "lucide-react";
+import { Eye, Edit } from "lucide-react";
 
-const TableActions = ({ onView, onEdit,}) => {
+const TableActions = ({ onView, onEdit }) => {
   return (
     <div className="flex justify-end space-x-2">
       <button
@@ -11,13 +11,17 @@ const TableActions = ({ onView, onEdit,}) => {
       >
         <Eye size={16} />
       </button>
-      <button
-        onClick={onEdit}
-        title="Edit"
-        className="p-1.5 cursor-pointer rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
-      >
-        <Edit size={16} />
-      </button>
+
+      {/* FIX: Conditionally render the Edit button only if onEdit is provided */}
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          title="Edit"
+          className="p-1.5 cursor-pointer rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+        >
+          <Edit size={16} />
+        </button>
+      )}
     </div>
   );
 };

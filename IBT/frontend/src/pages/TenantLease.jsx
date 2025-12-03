@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
-import emailjs from '@emailjs/browser';
-import * as XLSX from 'xlsx'; // ADDED: Excel Library
-import jsPDF from 'jspdf'; // ADDED: PDF Library
-import autoTable from "jspdf-autotable"; // ADDED: PDF Table Plugin
+import * as XLSX from 'xlsx'; 
+import jsPDF from 'jspdf'; 
+import autoTable from "jspdf-autotable"; 
 import { 
     Archive, Trash2, Mail, Download, Store, MoonStar, Map, 
-    ClipboardList, CheckCircle, X // ADDED: For Notification Pop-up
+    ClipboardList, CheckCircle, X, Bell, Calendar, Clock, Filter, Wand2,
+    History, ListChecks 
 } from "lucide-react";
 
 // Layout & Components
@@ -16,6 +16,7 @@ import StatCardGroup from "../components/tenants/StatCardGroup";
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
+import LogModal from "../components/common/LogModal"; 
 
 // Modals
 import EditTenantLease from "../components/tenants/EditTenantLease";
@@ -27,12 +28,121 @@ import TenantMapModal from "../components/tenants/modals/TenantMapModal";
 import WaitlistModal from "../components/tenants/modals/WaitlistModal";
 import TenantEmailModal from "../components/tenants/modals/TenantEmailModal";
 import ApplicationReviewModal from "../components/tenants/modals/ApplicationReviewModal";
-import BroadcastModal from "../components/tenants/modals/BroadcastModal";
-import RemarksModal from "../components/tenants/modals/RemarksModal";
 
 import { generateRentStatementPDF } from "../utils/tenantUtils";
+import { logActivity } from "../utils/logger"; 
+import { sendNotification } from "../utils/notificationService.js"; 
 
 const API_URL = "http://localhost:3000/api";
+const ARCHIVE_URL = "http://localhost:3000/api/archives"; 
+
+// --- LOCAL BROADCAST MODAL ---
+const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft, tenantCount }) => {
+    if (!isOpen) return null;
+
+    const handleTemplateClick = () => {
+        setDraft(prev => ({
+            ...prev,
+            title: "Payment Reminder: Due Date Approaching",
+            message: "Dear Tenant,\n\nThis is a friendly reminder that your rent payment is due within the next 5 days. Please ensure your payment is settled to avoid penalties.\n\nThank you!",
+            templateApplied: true
+        }));
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+                <div className="flex items-center justify-between mb-5 border-b pb-3">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Bell className="text-emerald-600" size={24} /> 
+                        Broadcast Notification
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                            <Filter size={14} /> Target Audience
+                        </label>
+                        <select 
+                            value={draft.targetGroup}
+                            onChange={(e) => setDraft({...draft, targetGroup: e.target.value})}
+                            className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                        >
+                            <option value="All">All Tenants</option>
+                            <option value="Permanent">Permanent Tenants Only</option>
+                            <option value="Night Market">Night Market Only</option>
+                        </select>
+                    </div>
+
+                    <div className="flex justify-end">
+                        <button 
+                            type="button"
+                            onClick={handleTemplateClick}
+                            className="text-xs flex items-center gap-1 text-emerald-600 font-semibold hover:text-emerald-700 transition-colors bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100"
+                        >
+                            <Wand2 size={12} /> Auto-fill "Due Near" Template
+                        </button>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Title / Subject</label>
+                        <input 
+                            type="text" 
+                            value={draft.title}
+                            onChange={(e) => setDraft({...draft, title: e.target.value})}
+                            placeholder="e.g. Important Announcement"
+                            className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Message Body</label>
+                        <textarea 
+                            value={draft.message}
+                            onChange={(e) => setDraft({...draft, message: e.target.value})}
+                            placeholder="Type your message here..."
+                            rows={4}
+                            className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                        />
+                    </div>
+
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
+                            <Clock size={14} /> Schedule Send (Optional)
+                        </label>
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                            <input 
+                                type="datetime-local"
+                                value={draft.scheduleTime}
+                                onChange={(e) => setDraft({...draft, scheduleTime: e.target.value})}
+                                className="w-full pl-10 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                            />
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1 pl-1">
+                            Leave blank to send immediately.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+                    <button onClick={onClose} className="px-4 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={onBroadcast}
+                        className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-md transition-all flex items-center gap-2"
+                    >
+                        {draft.scheduleTime ? "Schedule Broadcast" : "Send Now"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const TenantLease = () => {
 
@@ -57,6 +167,13 @@ const TenantLease = () => {
   const [showWaitlistForm, setShowWaitlistForm] = useState(false); 
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false); 
+  
+  // LOGS STATE
+  const [showLogModal, setShowLogModal] = useState(false);
+
+  // SELECTION STATE
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Data States
   const [waitlistForm, setWaitlistForm] = useState({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
@@ -67,55 +184,49 @@ const TenantLease = () => {
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
-  const [remarksRow, setRemarksRow] = useState(null);
   const [messagingRow, setMessagingRow] = useState(null);      
+  const [archiveRow, setArchiveRow] = useState(null); 
   
   const [emailBody, setEmailBody] = useState("");             
-  const [notifyDraft, setNotifyDraft] = useState({ title: "", message: "" });
-  const [remarksText, setRemarksText] = useState("");
+  
+  const [notifyDraft, setNotifyDraft] = useState({ 
+    title: "", 
+    message: "", 
+    targetGroup: "All", 
+    scheduleTime: "",
+    templateApplied: false
+  });
 
-  // State for custom notifications (SUCCESS/ERROR) - ADDED duration
   const [notificationState, setNotificationState] = useState({ 
     isOpen: false, 
     type: '', 
     message: '', 
     autoClose: true,
-    duration: 3000 // Default duration (3 seconds)
+    duration: 3000 
   }); 
 
   // --- DATA FETCHING ---
  useEffect(() => {
-    // 1. Initial Fetch
     fetchTenants();
     fetchWaitlist();
 
-    // 2. Set up Auto-Refresh (Polling) every 5 seconds
     const interval = setInterval(() => {
         fetchTenants();
         fetchWaitlist();
-    }, 5000); // 5000ms = 5 seconds
+    }, 5000); 
 
-    // 3. Cleanup on unmount (prevents memory leaks)
     return () => clearInterval(interval);
   }, []);
 
-  // --- Auto-close Notification Effect (CONDITIONAL & DYNAMIC DURATION) ---
   useEffect(() => {
-    // Only auto-close if the notification is open AND autoClose is true
     if (notificationState.isOpen && notificationState.autoClose) {
-        const timerDuration = notificationState.duration || 3000; // Use state duration or default
-
+        const timerDuration = notificationState.duration || 3000;
         const timer = setTimeout(() => {
-            // Reset state back to defaults (3 seconds)
             setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 }); 
         }, timerDuration); 
-
-        // Cleanup function to clear the timeout
         return () => clearTimeout(timer);
     }
   }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]); 
-  // -----------------------------------------------------------------
-
 
   const fetchTenants = async () => {
     try {
@@ -123,7 +234,6 @@ const TenantLease = () => {
       if (!res.ok) throw new Error("Failed to fetch tenants");
       const data = await res.json();
       const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
-      // Sort newest first
       formatted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       setRecords(formatted);
     } catch (err) {
@@ -136,28 +246,18 @@ const TenantLease = () => {
       const res = await fetch(`${API_URL}/waitlist`);
       if (!res.ok) throw new Error("Failed to fetch waitlist");
       const data = await res.json();
-      
       const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
       const activeWaitlist = formatted.filter(app => app.status !== 'TENANT');
-      
       setWaitlistData(activeWaitlist);
-
-      // --- ADD THIS BLOCK ---
-      // If the admin is currently viewing an application, update it live!
       if (reviewData) {
           const updatedRecord = activeWaitlist.find(r => r.id === reviewData.id);
-          if (updatedRecord) {
-              setReviewData(updatedRecord);
-          }
+          if (updatedRecord) setReviewData(updatedRecord);
       }
-      // ----------------------
-
     } catch (err) {
       console.error("Error fetching waitlist:", err);
     }
   };
 
-  // --- ALERTS LOGIC ---
   useEffect(() => {
     const newAlerts = [];
     records.forEach(t => {
@@ -171,11 +271,33 @@ const TenantLease = () => {
     setAlerts(newAlerts);
   }, [records]);
 
+  // --- FILTERING & PAGINATION (Must be before Selection Handlers) ---
+  const filtered = records.filter((t) => {
+    const name = t.tenantName || t.name || "";
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || (t.referenceNo || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = activeTab === "permanent" ? (t.tenantType === "Permanent" || !t.tenantType) : t.tenantType === "Night Market"; 
+    const matchesDate = !selectedDate || new Date(t.StartDateTime).toDateString() === new Date(selectedDate).toDateString(); 
+    const matchesStatus = activeStatus === "All" || t.status.toLowerCase() === activeStatus.toLowerCase();
+    return matchesSearch && matchesTab && matchesDate && matchesStatus;
+  });
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+    });
+  };
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
+
   // --- STATS CALCULATION ---
   const mapStats = useMemo(() => {
     let available = 0; let paid = 0; let revenue = 0;
     const SECTION_CAPACITY = 30; 
-
     for (let i = 0; i < SECTION_CAPACITY; i++) {
       let slotLabel = activeTab === "permanent" ? `A-${101 + i}` : `NM-${(i + 1).toString().padStart(2, '0')}`;
       const tenant = records.find(r => 
@@ -190,9 +312,88 @@ const TenantLease = () => {
     return { availableSlots: available, nonAvailableSlots: paid, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
   }, [records, activeTab]); 
 
-  // --- HANDLERS ---
+  // --- SELECTION HANDLERS ---
+  const toggleSelectionMode = () => {
+    if (isSelectionMode) setSelectedIds([]);
+    setIsSelectionMode(!isSelectionMode);
+  };
 
-  // 1. Manual Waitlist Add
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const ids = paginatedData.map(item => item.id);
+      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+    } else {
+      const pageIds = paginatedData.map(item => item.id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+  
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
+
+  // --- BULK DELETE HANDLER (Lease Admin Only) ---
+  const handleBulkDelete = async () => {
+    // Logic restricted to Tenant/Lease Admin requesting deletion
+    const confirmMsg = `Request deletion for ${selectedIds.length} tenants?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+        if (role === "lease") {
+            const requestPromises = selectedIds.map(async (id) => {
+                const item = records.find(r => r.id === id);
+                if (!item) return;
+
+                return fetch("http://localhost:3000/api/deletion-requests", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        itemType: "Tenant Lease",
+                        itemDescription: `Slot ${item.slotNo} - ${item.tenantName || item.name}`,
+                        requestedBy: "Tenant Admin",
+                        originalData: item, 
+                        reason: "Bulk deletion request"
+                    })
+                });
+            });
+
+             await sendNotification(
+                "Deletion Request: Tenants", 
+                `Tenant Admin has requested to delete ${selectedIds.length} tenant records.`,
+                "Tenants",
+                "superadmin" 
+            );
+
+            await Promise.all(requestPromises);
+            await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} tenants`, "Tenants");
+            
+            setNotificationState({ 
+                isOpen: true, 
+                type: 'success', 
+                message: `Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`,
+                autoClose: true,
+                duration: 3000
+            });
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+        } 
+    } catch (error) {
+      console.error("Bulk action failed", error);
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: "Failed to process some records.",
+        autoClose: true,
+        duration: 3000
+      });
+    }
+  };
+
+  // --- HANDLERS ---
   const handleAddToWaitlist = async () => {
     if (!waitlistForm.name || !waitlistForm.contact) { 
         setNotificationState({ isOpen: true, type: 'error', message: "Please fill in Name and Contact.", autoClose: true, duration: 3000 });
@@ -211,6 +412,7 @@ const TenantLease = () => {
         });
         if (response.ok) {
             setNotificationState({ isOpen: true, type: 'success', message: "Added to waitlist successfully!", autoClose: true, duration: 3000 });
+            await logActivity(role, "ADD_WAITLIST", `Added ${waitlistForm.name} to waitlist`, "Tenants");
             fetchWaitlist();
             setWaitlistForm({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
             setShowWaitlistForm(false); 
@@ -229,20 +431,18 @@ const TenantLease = () => {
     setShowReviewModal(true); 
   };
 
-  // 2. Unlock Payment (Step 3)
   const handleUnlockPayment = async () => {
     if (!reviewData?.id) return; 
     const idToUpdate = reviewData.id; 
-
     try {
         const response = await fetch(`${API_URL}/waitlist/${idToUpdate}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: "PAYMENT_UNLOCKED" })
         });
-
         if (response.ok) {
             setNotificationState({ isOpen: true, type: 'success', message: "Payment Unlocked! The applicant has been notified via email.", autoClose: true, duration: 3000 });
+            await logActivity(role, "UNLOCK_PAYMENT", `Unlocked payment for waitlist applicant ID #${idToUpdate}`, "Tenants");
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
             fetchWaitlist(); 
@@ -255,20 +455,18 @@ const TenantLease = () => {
     }
   };
 
-  // 3. Request Contract (Step 7 - Permanent)
   const handleRequestContract = async () => {
     if (!reviewData?.id) return; 
     const idToUpdate = reviewData.id; 
-
     try {
         const response = await fetch(`${API_URL}/waitlist/${idToUpdate}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: "CONTRACT_PENDING" })
         });
-
         if (response.ok) {
             setNotificationState({ isOpen: true, type: 'success', message: "Status updated to Contract Pending. Applicant notified via email.", autoClose: true, duration: 3000 });
+            await logActivity(role, "REQUEST_CONTRACT", `Requested contract for waitlist applicant ID #${idToUpdate}`, "Tenants");
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
             fetchWaitlist(); 
@@ -281,28 +479,23 @@ const TenantLease = () => {
     }
   };
 
-  // 4. Prepare for Final Approval
   const handleProceedToLease = () => {
     setTransferApplicant(reviewData);
     setShowReviewModal(false);
     setShowAddModal(true);
   };
 
-  // 5. Add Tenant & Send Welcome Email (Step 9)
   const handleAddTenant = async (newTenant) => {
     try {
       const response = await fetch(`${API_URL}/tenants`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              ...newTenant,
-              transferWaitlistId: transferApplicant?.id 
-          })
+          body: JSON.stringify({ ...newTenant, transferWaitlistId: transferApplicant?.id })
       });
-
       if (response.ok) {
           setShowAddModal(false);
           setNotificationState({ isOpen: true, type: 'success', message: "Tenant Added Successfully! Welcome email sent.", autoClose: true, duration: 3000 });
+          await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
           fetchTenants(); 
           fetchWaitlist(); 
           setTransferApplicant(null);
@@ -322,6 +515,7 @@ const TenantLease = () => {
         const response = await fetch(`${API_URL}/waitlist/${id}`, { method: 'DELETE' }); 
         if (response.ok) {
             setNotificationState({ isOpen: true, type: 'success', message: "Application removed.", autoClose: true, duration: 3000 });
+            await logActivity(role, "REJECT_APPLICANT", `Rejected/Deleted waitlist applicant ID #${id}`, "Tenants");
             fetchWaitlist(); 
             if(showReviewModal) setShowReviewModal(false);
         } else {
@@ -334,15 +528,57 @@ const TenantLease = () => {
     }
   };
 
+  const confirmArchive = async () => {
+    if (!archiveRow) return;
+    const rowToArchive = archiveRow;
+    setArchiveRow(null); 
+    try {
+      const idToDelete = rowToArchive._id || rowToArchive.id;
+      if (!idToDelete) throw new Error("Record ID is missing.");
+      const archiveRes = await fetch(ARCHIVE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Tenant Lease", 
+          description: `Slot ${rowToArchive.slotNo} - ${rowToArchive.tenantName || rowToArchive.name}`,
+          originalData: rowToArchive,
+          archivedBy: role
+        })
+      });
+      if (!archiveRes.ok) throw new Error("Failed to save to archive");
+      const deleteRes = await fetch(`${API_URL}/tenants/${idToDelete}`, { method: "DELETE" });
+      if (!deleteRes.ok) throw new Error("Failed to remove from active list");
+
+      await logActivity(role, "ARCHIVE_TENANT", `Archived tenant: ${rowToArchive.tenantName || rowToArchive.name}`, "Tenants");
+
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'success', 
+        message: "Tenant moved to Archives successfully.", 
+        autoClose: true, 
+        duration: 2000 
+      });
+      fetchTenants(); 
+    } catch (e) {
+      console.error("Failed to archive:", e);
+      setNotificationState({ 
+        isOpen: true, 
+        type: 'error', 
+        message: "Failed to archive record.", 
+        autoClose: true, 
+        duration: 2000 
+      });
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteRow?.id && !deleteRow?._id) return; 
     const idToDelete = deleteRow._id || deleteRow.id;
-
     try {
       const response = await fetch(`${API_URL}/tenants/${idToDelete}`, { method: 'DELETE' });
-      if (!response.ok) {
-        throw new Error("Failed to delete record.");
-      }
+      if (!response.ok) throw new Error("Failed to delete record.");
+      
+      await logActivity(role, "DELETE_TENANT", `Permanently deleted tenant ID #${idToDelete}`, "Tenants");
       setRecords(prev => prev.filter(item => (item._id || item.id) !== idToDelete));
       setDeleteRow(null);
       setNotificationState({ isOpen: true, type: 'success', message: "Record successfully deleted!", autoClose: true, duration: 3000 });
@@ -352,53 +588,44 @@ const TenantLease = () => {
     }
   };
 
-  const handleSaveRemarks = () => {
-    const storedRemarks = localStorage.getItem("ibt_tenantRemarks"); 
-    const remarks = storedRemarks ? JSON.parse(storedRemarks) : {}; 
-    remarks[remarksRow.id] = remarksText; 
-    localStorage.setItem("ibt_tenantRemarks", JSON.stringify(remarks)); 
-    setRemarksRow(null); 
-    setNotificationState({ isOpen: true, type: 'success', message: "Remarks saved successfully.", autoClose: true, duration: 3000 });
-  };
-  
-  const handleBroadcast = () => {
+  const handleBroadcast = async () => {
+    let targetTenants = records;
+    if (notifyDraft.targetGroup !== "All") {
+        targetTenants = records.filter(t => t.tenantType === notifyDraft.targetGroup);
+    }
+    if (notifyDraft.templateApplied) {
+        const today = new Date();
+        const next5Days = new Date();
+        next5Days.setDate(today.getDate() + 5);
+        targetTenants = targetTenants.filter(t => {
+            if (!t.DueDateTime) return false;
+            const due = new Date(t.DueDateTime);
+            return due >= today && due <= next5Days;
+        });
+        if (targetTenants.length === 0) {
+            setNotificationState({ isOpen: true, type: 'error', message: "No tenants found with due dates in the next 5 days.", autoClose: true, duration: 3000 });
+            return;
+        }
+    }
+    const payload = {
+        title: notifyDraft.title,
+        message: notifyDraft.message,
+        recipients: targetTenants.map(t => t.email).filter(Boolean),
+        recipientIds: targetTenants.map(t => t.id),
+        scheduleTime: notifyDraft.scheduleTime || null, 
+        source: "Tenant Lease",
+    };
+    await logActivity(role, "BROADCAST_MSG", `Sent broadcast to ${targetTenants.length} tenants`, "Tenants");
     setShowNotify(false); 
-    setNotifyDraft({ title: "", message: "" }); 
-    setNotificationState({ isOpen: true, type: 'success', message: "Notification broadcasted successfully!", autoClose: true, duration: 3000 });
+    setNotifyDraft({ title: "", message: "", targetGroup: "All", scheduleTime: "", templateApplied: false }); 
+    if (payload.scheduleTime) {
+        setNotificationState({ isOpen: true, type: 'success', message: `Broadcast scheduled for ${new Date(payload.scheduleTime).toLocaleString()}`, autoClose: true, duration: 4000 });
+    } else {
+        setNotificationState({ isOpen: true, type: 'success', message: `Broadcast sent to ${targetTenants.length} tenants!`, autoClose: true, duration: 3000 });
+    }
   };
-
-  // --- FILTERING ---
-  const filtered = records.filter((t) => {
-    const name = t.tenantName || t.name || "";
-    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || (t.referenceNo || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = activeTab === "permanent" ? (t.tenantType === "Permanent" || !t.tenantType) : t.tenantType === "Night Market"; 
-    const matchesDate = !selectedDate || new Date(t.StartDateTime).toDateString() === new Date(selectedDate).toDateString(); 
-    const matchesStatus = activeStatus === "All" || t.status.toLowerCase() === activeStatus.toLowerCase();
-    return matchesSearch && matchesTab && matchesDate && matchesStatus;
-  });
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      month: 'numeric', 
-      day: 'numeric', 
-      year: 'numeric', 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
-
-  // --- ADDED: EXPORT LOGIC ---
 
   const getExportData = () => {
-      // Use the filtered data to ensure what the user sees is what gets exported
       return filtered.map(t => ({
           "Slot No": t.slotNo,
           "Ref No": t.referenceNo || t.referenceno || "-",
@@ -420,11 +647,11 @@ const TenantLease = () => {
         setNotificationState({ isOpen: true, type: 'error', message: "No records to export.", autoClose: true, duration: 3000 });
         return;
     }
-
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Tenants");
     XLSX.writeFile(workbook, `Tenant_List_${new Date().toISOString().split('T')[0]}.xlsx`);
+    logActivity(role, "EXPORT_EXCEL", "Exported tenant list to Excel", "Tenants");
     setNotificationState({ isOpen: true, type: 'success', message: "Exported records to Excel.", autoClose: true, duration: 3000 });
   };
 
@@ -434,30 +661,39 @@ const TenantLease = () => {
         setNotificationState({ isOpen: true, type: 'error', message: "No records to export.", autoClose: true, duration: 3000 });
         return;
     }
-
     const doc = new jsPDF();
     const tableColumn = Object.keys(data[0]);
     const tableRows = data.map(row => Object.values(row));
-
     doc.text("Tenant Management Report", 14, 15);
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
-
-    // FIX APPLIED: Using autoTable(doc, options)
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 25,
       theme: 'grid',
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [16, 185, 129] } // Emerald green matches your theme
+      headStyles: { fillColor: [16, 185, 129] } 
     });
-
     doc.save(`Tenant_List_${new Date().toISOString().split('T')[0]}.pdf`);
+    logActivity(role, "EXPORT_PDF", "Exported tenant list to PDF", "Tenants");
     setNotificationState({ isOpen: true, type: 'success', message: "Exported records to PDF.", autoClose: true, duration: 3000 });
   };
 
-  // ---------------------------
+  // --- COLUMN CONFIG FOR SELECTION ---
+  const tableColumns = isSelectionMode 
+    ? [
+        <div key="header-check" className="flex items-center">
+            <input 
+                type="checkbox" 
+                checked={isAllSelected}
+                onChange={handleSelectAll}
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+        </div>,
+        "Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"
+      ]
+    : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"];
 
   return (
     <Layout title="Tenants/Lease Management">
@@ -474,13 +710,11 @@ const TenantLease = () => {
           <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center cursor-pointer"> + Add New </button>
           {role === "superadmin" && (<button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer"> Notify All </button>)}
           
-          {/* UPDATED: Export Menu with new handlers */}
           <ExportMenu 
             onPrint={() => window.print()} 
             onExportExcel={handleExportExcel}
             onExportPDF={handleExportPDF}
           />
-
         </div>
       </div>
 
@@ -503,36 +737,107 @@ const TenantLease = () => {
             {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
           </button>
         </div>
-        <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+        
+        {/* RIGHT SIDE CONTROLS: FILTER + LOGS + SELECTION */}
+        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+            <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+            
+            {/* LOGS BUTTON (Superadmin & Tenant/Lease Admin Only) */}
+            {(role === "superadmin" || role === "lease") && (
+                <button
+                    onClick={() => setShowLogModal(true)}
+                    className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                    title="View Logs"
+                >
+                    <History size={18} />
+                    <span className="hidden sm:inline">Logs</span>
+                </button>
+            )}
+
+            {/* SELECTION ACTION BAR (Visible if items selected) */}
+            {isSelectionMode && selectedIds.length > 0 && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                    <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                        {selectedIds.length} Selected
+                    </span>
+                    <button
+                        onClick={handleBulkDelete}
+                        title="Request Delete"
+                        className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                    >
+                        <Trash2 className="h-5 w-5" />
+                    </button>
+                </div>
+            )}
+
+            {/* SELECT MODE TOGGLE (Tenant/Lease Admin Only - HIDDEN FOR SUPERADMIN) */}
+            {(role === "lease") && (
+                <button
+                    onClick={toggleSelectionMode}
+                    title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                    className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                        isSelectionMode
+                            ? "bg-red-500 text-white shadow-md"
+                            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}
+                >
+                    {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+                </button>
+            )}
+        </div>
       </div>
 
       {/* 4. Table */}
       <Table
-        columns={["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"]}
-        data={paginatedData.map((t) => ({
-        id: t.id,
-        slotno: t.slotNo,
-        refno: t.referenceNo || t.referenceno,
-        name: t.tenantName || t.name,
-        email: t.email,
-        contactno: t.contactNo,
-        startdate: formatDate(t.StartDateTime), 
-        duedate: formatDate(t.DueDateTime || t.EndDateTime),
-        rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
-        util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
-        totaldue: t.totalAmount ? `₱${t.totalAmount.toLocaleString()}` : (t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-"),
-        status: t.status,
-        }))}
+        columns={tableColumns}
+        data={paginatedData.map((t) => {
+            const baseData = {
+                id: t.id,
+                slotno: t.slotNo,
+                refno: t.referenceNo || t.referenceno,
+                name: t.tenantName || t.name,
+                email: t.email,
+                contactno: t.contactNo,
+                startdate: formatDate(t.StartDateTime), 
+                duedate: formatDate(t.DueDateTime || t.EndDateTime),
+                rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
+                util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
+                totaldue: t.totalAmount ? `₱${t.totalAmount.toLocaleString()}` : (t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-"),
+                status: t.status,
+            };
 
-        actions={(row) => (
-          <div className="flex justify-end items-center space-x-2">
-            <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
-            <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Download Rent Statement"><Download size={16} /></button>
-            <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
-            <button onClick={() => { setRemarksRow(records.find(r => r.id === row.id)); setRemarksText(""); }} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all cursor-pointer" title="Add Remarks"><Archive size={16} /></button>
-            <button onClick={() => setDeleteRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer" title="Delete"><Trash2 size={16} /></button>
-          </div>
-        )}
+            // Add Checkbox if in selection mode
+            if (isSelectionMode) {
+                return {
+                    select: (
+                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                                type="checkbox"
+                                checked={selectedIds.includes(t.id)}
+                                onChange={() => toggleSelect(t.id)}
+                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                        </div>
+                    ),
+                    ...baseData
+                };
+            }
+            return baseData;
+        })}
+        actions={(row) => {
+            if (isSelectionMode) return null;
+            return (
+              <div className="flex justify-end items-center space-x-2">
+                <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
+                <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Download Rent Statement"><Download size={16} /></button>
+                <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
+                <button onClick={() => setArchiveRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer" title="Archive Record"><Archive size={16} /></button>
+                {(role === "superadmin") && (
+                    <button onClick={() => setDeleteRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer" title="Delete"><Trash2 size={16} /></button>
+                )}
+              </div>
+            )
+        }}
       />
       
       <Pagination 
@@ -545,14 +850,10 @@ const TenantLease = () => {
       />
       
       {/* --- MODALS --- */}
-
-      {/* View Details */}
       <TenantViewModal viewRow={viewRow} onClose={() => setViewRow(null)} />
-      
-      {/* Map View */}
       <TenantMapModal isOpen={showMapModal} onClose={() => setShowMapModal(false)} activeTab={activeTab} records={records} onSelectSlot={(tenant) => setViewRow(tenant)} />
+      <LogModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} />
 
-      {/* Waitlist (Applications) */}
       <WaitlistModal 
         isOpen={showWaitlistModal} 
         onClose={() => setShowWaitlistModal(false)} 
@@ -566,7 +867,6 @@ const TenantLease = () => {
         onReject={handleRejectApplicant} 
       />
 
-      {/* Manual Email */}
       <TenantEmailModal 
         isOpen={showEmailModal} 
         onClose={() => setShowEmailModal(false)} 
@@ -579,18 +879,16 @@ const TenantLease = () => {
         }} 
       />
 
-      {/* Application Review (The Main Flow) */}
       <ApplicationReviewModal 
         isOpen={showReviewModal}
         reviewData={reviewData}
         onClose={() => setShowReviewModal(false)}
         onBack={() => { setShowReviewModal(false); setShowWaitlistModal(true); }}
         onUnlockPayment={handleUnlockPayment}
-        onRequestContract={handleRequestContract} // <--- Passed Correctly
+        onRequestContract={handleRequestContract} 
         onProceedToLease={handleProceedToLease}
       />
 
-      {/* Add New Tenant */}
       <AddTenantModal 
         isOpen={showAddModal} 
         onClose={() => { setShowAddModal(false); setTransferApplicant(null); }} 
@@ -610,12 +908,11 @@ const TenantLease = () => {
               validID: transferApplicant.validIdUrl,
               barangayClearance: transferApplicant.clearanceUrl,
               proofOfReceipt: transferApplicant.receiptUrl,
-              contract: transferApplicant.contractUrl // Pass contract if exists
+              contract: transferApplicant.contractUrl 
           }
         } : null}
       />
 
-      {/* Edit Tenant */}
       {editRow && (
         <EditTenantLease 
           row={editRow} 
@@ -638,6 +935,7 @@ const TenantLease = () => {
                 throw new Error(errorData.error || "Update failed");
               }
               setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
+              await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
               fetchTenants(); 
               setEditRow(null); 
             } catch (error) { 
@@ -648,7 +946,6 @@ const TenantLease = () => {
         />
       )}
       
-      {/* Delete Confirmation */}
       <DeleteModal 
         isOpen={!!deleteRow} 
         onClose={() => setDeleteRow(null)} 
@@ -658,25 +955,46 @@ const TenantLease = () => {
         itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} 
       />
 
-      {/* Remarks */}
-      <RemarksModal 
-        isOpen={!!remarksRow} 
-        onClose={() => setRemarksRow(null)} 
-        onSave={handleSaveRemarks} 
-        remarksText={remarksText} 
-        setRemarksText={setRemarksText} 
-      />
-
-      {/* Broadcast Notification */}
       <BroadcastModal 
         isOpen={showNotify} 
         onClose={() => setShowNotify(false)} 
         onBroadcast={handleBroadcast} 
         draft={notifyDraft} 
         setDraft={setNotifyDraft} 
+        tenantCount={records.length}
       />
+
+      {/* --- ARCHIVE CONFIRMATION MODAL --- */}
+      {archiveRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
+                <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Archive size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Confirm Archiving</h3>
+                <p className="text-slate-600 mt-2 text-sm">
+                    Are you sure you want to move <strong>{archiveRow.tenantName || archiveRow.name}</strong> to the Archives?
+                    <br />
+                    <span className="font-semibold text-xs text-red-500">
+                        This will remove them from the active tenant list.
+                    </span>
+                </p>
+                <div className="mt-6 flex gap-3">
+                    <button onClick={() => setArchiveRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={confirmArchive} 
+                        className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg transition-colors"
+                    >
+                        Yes, Archive
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
       
-      {/* Status Pop-up Component (For dynamic duration notifications) */}
+      {/* Status Pop-up */}
       {notificationState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">
             <div 
@@ -685,15 +1003,11 @@ const TenantLease = () => {
                             animate-in fade-in slide-in-from-top-10 pointer-events-auto`}
                 role="alert"
             >
-                {notificationState.type === 'success' 
-                    ? <CheckCircle size={32} /> 
-                    : <X size={32} />
-                }
+                {notificationState.type === 'success' ? <CheckCircle size={32} /> : <X size={32} />}
                 <div>
                     <h4 className="font-bold text-lg">{notificationState.type === 'success' ? 'Success!' : 'Error'}</h4>
                     <p className="text-sm">{notificationState.message}</p>
                 </div>
-                {/* Manual close button, visible for all notifications */}
                 <button 
                     onClick={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })} 
                     className="p-1 rounded-full text-white/80 hover:text-white transition-colors cursor-pointer"
@@ -703,7 +1017,6 @@ const TenantLease = () => {
             </div>
         </div>
       )}
-
     </Layout>
   );
 };

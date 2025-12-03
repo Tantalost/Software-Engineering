@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { X, Upload, FileText, PhilippinePeso, Map, Check, ChevronDown } from "lucide-react";
+// ADDED: Eye icon for the view button
+import { X, Upload, FileText, PhilippinePeso, Map, Check, ChevronDown, Eye } from "lucide-react";
 
 const FormInput = ({ label, type = "text", readOnly = false, ...props }) => (
   <div className="flex flex-col gap-1">
@@ -87,19 +88,16 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   });
 
   const [status, setStatus] = useState(row.status || "Paid");
-  
   const [totalAmount, setTotalAmount] = useState(0);
 
   useEffect(() => {
     if (formData.editStart) {
       const d = new Date(formData.editStart);
-      
       if (formData.tenantType === "Permanent") {
          d.setMonth(d.getMonth() + 1); 
       } else {
          d.setDate(d.getDate() + 7);   
       }
-      
       const newDueDate = formatDateTimeForInput(d);
       setFormData(prev => ({ ...prev, editDue: newDueDate }));
     }
@@ -278,14 +276,36 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
             </div>
           </div>
 
+          {/* --- UPDATED DOCUMENTS SECTION --- */}
           <div className="pt-4 border-t border-slate-100">
              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-blue-500">Documents (Upload)</h4>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {['businessPermit', 'validID', 'barangayClearance', 'proofOfReceipt'].map((key) => {
                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                    const currentFile = documents[key];
+                   
+                   // Check if the current file is a String (meaning it's a URL from Cloudinary)
+                   const isExistingFile = typeof currentFile === 'string';
+
                    return (
-                    <div key={key} className="border border-dashed border-slate-300 rounded-lg p-3 hover:bg-slate-50 transition-colors">
+                    <div key={key} className="relative border border-dashed border-slate-300 rounded-lg p-3 hover:bg-slate-50 transition-colors group">
+                      
+                      {/* View Button: Only shows if it's an existing URL */}
+                      {isExistingFile && (
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault(); // Prevents opening the file upload window
+                            e.stopPropagation();
+                            window.open(currentFile, '_blank', 'noopener,noreferrer');
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all z-10"
+                          title="View Current File"
+                        >
+                           <Eye size={16} />
+                        </button>
+                      )}
+
                       <label className="block cursor-pointer">
                         <span className="block text-xs font-semibold text-slate-600 mb-1">{label}</span>
                         <input type="file" className="hidden" onChange={(e) => handleFileChange(e, key)} />
@@ -293,8 +313,8 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                             <div className={`p-1.5 rounded-md ${currentFile ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
                                 {currentFile ? <FileText size={16} /> : <Upload size={16} />}
                             </div>
-                            <div className="flex flex-col overflow-hidden">
-                                <span className="text-xs text-slate-700 truncate w-32 font-medium">{currentFile ? (currentFile.name || "Existing File") : "No file uploaded"}</span>
+                            <div className="flex flex-col overflow-hidden pr-6"> {/* Added padding-right to avoid overlap with view button */}
+                                <span className="text-xs text-slate-700 truncate w-32 font-medium">{currentFile ? (currentFile.name || "File Attached") : "No file uploaded"}</span>
                                 <span className="text-[10px] text-slate-400">{currentFile ? "Click to replace" : "Click to upload"}</span>
                             </div>
                         </div>

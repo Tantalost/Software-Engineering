@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Eye, Loader2, ZoomIn } from "lucide-react";
 
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/ibt_tenants/image/upload";
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dqgt2uxfe/auto/upload";
 const UPLOAD_PRESET = "ibt_upload";
 
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
