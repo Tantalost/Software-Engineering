@@ -33,7 +33,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, total
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
     return (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm">
+        // CHANGED: Added w-fit, mx-auto, and swapped justify-between for justify-center
+        <div className="w-fit flex flex-col sm:flex-row items-center gap-4 mt-4 px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>Showing</span>
                 <select
@@ -97,4 +98,3 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, total
 };
 
 export default Pagination;
-
