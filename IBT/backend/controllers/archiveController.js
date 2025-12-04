@@ -1,5 +1,9 @@
 import Archive from "../models/Archive.js";
 import TerminalFee from "../models/TerminalFee.js";
+import Parking from "../models/Parking.js"
+import BusTrip from "../models/BusTrips.js"
+import LostFound from "../models/LostFound.js"
+import Report from "../models/Report.js"
  
 export const getArchives = async (req, res) => {
   try {
@@ -33,6 +37,30 @@ export const restoreArchive = async (req, res) => {
        
         const { _id, ...restdata } = originalData; 
         const restored = new TerminalFee(restdata);
+        await restored.save();
+    }
+    if (type === "Parking") {
+       
+        const { _id, ...restdata } = originalData; 
+        const restored = new Parking(restdata);
+        await restored.save();
+    }
+    if (type === "Bus Trip") {
+       
+        const { _id, ...restdata } = originalData; 
+        const restored = new BusTrip(restdata);
+        await restored.save();
+    }
+    if (type === "LostFound") {
+       
+        const { _id, ...restdata } = originalData; 
+        const restored = new LostFound(restdata);
+        await restored.save();
+    }
+    if (type === "Report") {
+       
+        const { _id, ...restdata } = originalData; 
+        const restored = new Report(restdata);
         await restored.save();
     }
     
