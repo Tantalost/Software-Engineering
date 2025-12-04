@@ -1,5 +1,5 @@
 import React from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react"; // Ensure you have lucide-react or use your own icons
+import { Mail, Lock, Eye, EyeOff } from "lucide-react"; 
 
 export default function LoginInput({
   type,

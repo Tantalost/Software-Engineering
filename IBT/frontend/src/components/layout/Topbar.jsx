@@ -30,21 +30,12 @@ const Topbar = ({ title, onMenuClick }) => {
       if (res.ok) {
         const data = await res.json();
         
-        // ============================================================
-        // 🛑 CRITICAL FIX: FILTER DATA BEFORE SETTING STATE
-        // ============================================================
-        // 1. Get current user role
         const myRole = localStorage.getItem("authRole") || "superadmin";
 
-        // 2. Filter: Keep only notifications that are:
-        //    a) Missing a targetRole (legacy data)
-        //    b) Explicitly for "all"
-        //    c) Explicitly for MY role
         const filteredData = data.filter(n => {
            return !n.targetRole || n.targetRole === "all" || n.targetRole === myRole;
         });
 
-        // 3. Update state with FILTERED data only
         setNotifications(filteredData.slice(0, 5)); 
         
         const unread = filteredData.filter(n => !n.read).length;
@@ -57,8 +48,8 @@ const Topbar = ({ title, onMenuClick }) => {
   };
   
   useEffect(() => {
-    fetchNotifications(); // Initial fetch
-    const interval = setInterval(fetchNotifications, 10000); // Poll every 10 seconds
+    fetchNotifications(); 
+    const interval = setInterval(fetchNotifications, 10000); 
     return () => clearInterval(interval);
   }, []);
 

@@ -3,16 +3,13 @@ import Sidebar from "../layout/sidebar/Sidebar";
 import Topbar from "./Topbar";
 
 const Layout = ({ title, children }) => {
-  // 1. Initialize State from LocalStorage
   const [sidebarExpanded, setSidebarExpanded] = useState(() => {
     const saved = localStorage.getItem("sidebarExpanded");
-    // Explicit check for the string "false"
     return saved === "false" ? false : true;
   });
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // 2. KEY FIX: Automatically save to LocalStorage whenever state changes
   useEffect(() => {
     localStorage.setItem("sidebarExpanded", sidebarExpanded);
   }, [sidebarExpanded]);
@@ -41,7 +38,7 @@ const Layout = ({ title, children }) => {
       {/* Mobile Sidebar (Drawer) */}
       <div className={`fixed inset-y-0 left-0 bg-white z-50 transform transition-transform duration-300 lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <Sidebar 
-            sidebarExpanded={true} // Mobile is always "expanded" visually inside the drawer
+            sidebarExpanded={true} 
             setSidebarExpanded={setSidebarExpanded} 
             onMobileClose={() => setMobileOpen(false)} 
         />

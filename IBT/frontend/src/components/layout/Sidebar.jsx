@@ -9,12 +9,9 @@ import {
 const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
     const location = useLocation();
 
-    // Simplified Handler: Just update state. 
-    // The Layout's useEffect will handle the LocalStorage saving.
     const handleMenuClick = () => {
         setSidebarExpanded(!sidebarExpanded);
 
-        // Only close mobile drawer if we are on mobile
         if (window.innerWidth < 1024 && onMobileClose) {
             onMobileClose();
         }
