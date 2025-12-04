@@ -5,7 +5,7 @@ import autoTable from "jspdf-autotable";
 import { 
     Archive, Trash2, Mail, Download, Store, MoonStar, Map, 
     ClipboardList, CheckCircle, X, Bell, Calendar, Clock, Filter, Wand2,
-    History, ListChecks 
+    History, ListChecks, FileText, Loader2 
 } from "lucide-react";
 
 // Layout & Components
@@ -32,6 +32,7 @@ import ApplicationReviewModal from "../components/tenants/modals/ApplicationRevi
 import { generateRentStatementPDF } from "../utils/tenantUtils";
 import { logActivity } from "../utils/logger"; 
 import { sendNotification } from "../utils/notificationService.js"; 
+import { submitPageReport } from "../utils/reportService.js"; // Added Import
 
 const API_URL = "http://localhost:3000/api";
 const ARCHIVE_URL = "http://localhost:3000/api/archives"; 
@@ -171,6 +172,10 @@ const TenantLease = () => {
   // LOGS STATE
   const [showLogModal, setShowLogModal] = useState(false);
 
+  // REPORTING STATE
+  const [isReporting, setIsReporting] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+
   // SELECTION STATE
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -271,7 +276,7 @@ const TenantLease = () => {
     setAlerts(newAlerts);
   }, [records]);
 
-  // --- FILTERING & PAGINATION (Must be before Selection Handlers) ---
+  // --- FILTERING & PAGINATION ---
   const filtered = records.filter((t) => {
     const name = t.tenantName || t.name || "";
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || (t.referenceNo || "").toLowerCase().includes(searchQuery.toLowerCase());
@@ -312,6 +317,80 @@ const TenantLease = () => {
     return { availableSlots: available, nonAvailableSlots: paid, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
   }, [records, activeTab]); 
 
+  // --- REPORT SUBMISSION HANDLER ---
+  const handleSubmitReport = async () => {
+    setIsReporting(true);
+    try {
+        // 1. Format data for the report (Clean up internal IDs)
+        const formattedData = filtered.map(t => ({
+            "Slot": t.slotNo,
+            "Name": t.tenantName || t.name,
+            "Type": t.tenantType || "Permanent",
+            "Contact": t.contactNo || "-",
+            "Status": t.status,
+            "Start Date": formatDate(t.StartDateTime),
+            "Due Date": formatDate(t.DueDateTime || t.EndDateTime),
+            "Rent": t.rentAmount || 0,
+            "Utility": t.utilityAmount || 0,
+            "Total Due": t.totalAmount || 0
+        }));
+
+        // 2. Build Payload
+        const reportPayload = {
+            screen: "Tenant Lease Management",
+            generatedDate: new Date().toLocaleString(),
+            filters: {
+                searchQuery,
+                activeTab, 
+                activeStatus,
+                dateFilter: selectedDate || "None"
+            },
+            statistics: {
+                totalRecords: records.length,
+                displayedRecords: filtered.length,
+                totalRevenue: mapStats.totalRevenue,
+                occupancy: `${mapStats.nonAvailableSlots}/${mapStats.totalSlots}`
+            },
+            data: formattedData
+        };
+
+        // 3. Submit to Report Service
+        await submitPageReport("Tenant Lease", reportPayload, role === "lease" ? "Tenant Admin" : "Admin");
+
+        // 4. Notify Superadmin
+        await sendNotification(
+            "Report Submitted: Tenant Lease", 
+            `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}.`,
+            "Tenants",
+            "superadmin" 
+        );
+
+        await logActivity(role, "SUBMIT_REPORT", "Submitted Tenant Lease Report", "Tenants");
+
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'success', 
+            message: "Report submitted successfully!", 
+            autoClose: true, 
+            duration: 3000 
+        });
+        
+        setShowSubmitModal(false);
+
+    } catch (error) {
+        console.error("Report Error:", error);
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'error', 
+            message: "Failed to submit report.", 
+            autoClose: true, 
+            duration: 3000 
+        });
+    } finally {
+        setIsReporting(false);
+    }
+  };
+
   // --- SELECTION HANDLERS ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
@@ -338,7 +417,6 @@ const TenantLease = () => {
 
   // --- BULK DELETE HANDLER (Lease Admin Only) ---
   const handleBulkDelete = async () => {
-    // Logic restricted to Tenant/Lease Admin requesting deletion
     const confirmMsg = `Request deletion for ${selectedIds.length} tenants?`;
     if (!window.confirm(confirmMsg)) return;
 
@@ -707,6 +785,19 @@ const TenantLease = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
+          
+          {/* SUBMIT REPORT BUTTON (New) */}
+          {(role === "lease" ) && (
+            <button
+                onClick={() => setShowSubmitModal(true)}
+                disabled={isReporting}
+                className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
+                <FileText size={18} />
+                <span className="hidden sm:inline">Submit Report</span>
+            </button>
+          )}
+
           <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center cursor-pointer"> + Add New </button>
           {role === "superadmin" && (<button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer"> Notify All </button>)}
           
@@ -988,6 +1079,46 @@ const TenantLease = () => {
                         className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg transition-colors"
                     >
                         Yes, Archive
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* --- REPORT SUBMIT MODAL (New) --- */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md cursor-pointer rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
+                <h3 className="text-lg font-bold text-slate-800">Submit Monthly Report</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                    Are you sure you want to generate and submit the current Tenant Lease report?
+                    <br />
+                    <span className="text-emerald-600 font-semibold text-xs">
+                        This will capture the current status of {filtered.length} records.
+                    </span>
+                </p>
+
+                <div className="mt-6 flex justify-end gap-3">
+                    <button
+                        onClick={() => setShowSubmitModal(false)}
+                        disabled={isReporting}
+                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSubmitReport}
+                        disabled={isReporting}
+                        className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {isReporting ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span>Submitting...</span>
+                            </>
+                        ) : (
+                            <span>Confirm Submit</span>
+                        )}
                     </button>
                 </div>
             </div>

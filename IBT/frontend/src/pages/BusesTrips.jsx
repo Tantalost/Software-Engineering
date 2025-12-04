@@ -11,6 +11,9 @@ import Field from "../components/common/Field";
 import EditBusTrip from "../components/busTrips/EditBusTrip";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
+// --- NEW IMPORT ---
+import StatCardGroupBus from "../components/busTrips/StatCardGroupBus"; 
+// ------------------
 import { submitPageReport } from "../utils/reportService.js";
 import { sendNotification } from "../utils/notificationService.js";
 import { logActivity } from "../utils/logger";
@@ -103,6 +106,18 @@ const BusTrips = () => {
         const matchesDate = !selectedDate || new Date(bus.date).toDateString() === new Date(selectedDate).toDateString();
         return matchesSearch && matchesCompany && matchesDate;
     });
+
+    // --- NEW: ANALYTICS CALCULATIONS ---
+    const totalTrips = filtered.length;
+    // Assuming "Paid" status means they have departed/logged out
+    const paidTrips = filtered.filter(t => t.status === "Paid").length;
+    const pendingTrips = filtered.filter(t => t.status === "Pending").length;
+    
+    // Calculate revenue only for "Paid" (departed) trips to ensure accuracy
+    const totalRevenue = filtered
+        .filter(t => t.status === "Paid")
+        .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
+    // -----------------------------------
 
     const paginatedData = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
@@ -541,7 +556,18 @@ const BusTrips = () => {
 
     return (
         <Layout title="Bus Trips Management">
-            <div className="px-4 lg:px-8 mt-4">
+             {/* --- NEW: ANALYTICS SECTION --- */}
+            <div className="mb-6">
+                <StatCardGroupBus
+                    totalTrips={totalTrips}
+                    paidTrips={paidTrips}
+                    pendingTrips={pendingTrips}
+                    totalRevenue={totalRevenue}
+                />
+            </div>
+            {/* ------------------------------- */}
+
+            <div className="px-4 lg:px-8">
                 <div className="flex flex-col gap-4 w-full">
                     <BusTripFilters
                         searchQuery={searchQuery}
