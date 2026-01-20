@@ -29,7 +29,6 @@ const Dashboard = () => {
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [targets, setTargets] = useState(() => {
     const saved = localStorage.getItem("dashboardTargets");
-    // Default values (You can change these to higher numbers if they are now Total Period targets)
     return saved ? JSON.parse(saved) : {
       tickets: 5000,
       bus: 4000,
@@ -84,7 +83,6 @@ const Dashboard = () => {
   };
 
   // --- UPDATED HELPER 4: Target Quota Calculator ---
-  // FIXED: Removed multiplication. Returns the exact number you set in the modal.
   const calculateQuota = (moduleName) => {
     return targets[moduleName] || 0;
   };
@@ -155,12 +153,9 @@ const Dashboard = () => {
   useEffect(() => {
     if (loading) return;
 
-    // 1. Generate Stat Cards
     const generateStat = (label, items, color, moduleKey) => {
       const currentItems = items.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
       const currentRev = calculateRevenue(currentItems);
-      
-      // Pass moduleKey only. No view/date needed since we want the exact value.
       const targetRev = calculateQuota(moduleKey); 
 
       let percent = 0;
@@ -187,13 +182,11 @@ const Dashboard = () => {
       generateStat("Parking Revenue", rawData.parking, "blue", "parking"),
     ]);
 
-    // 2. Donut Data
     const filteredTickets = rawData.tickets.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
     const filteredBus = rawData.bus.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
     const filteredParking = rawData.parking.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
     const filteredTenants = rawData.tenants.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
 
-    // Calculate total quota as sum of inputs
     const calculatedTotalQuota = 
         calculateQuota("tickets") +
         calculateQuota("bus") +
@@ -209,7 +202,6 @@ const Dashboard = () => {
       { name: "Parking", value: calculateRevenue(filteredParking), color: "#3B82F6" },
     ]);
 
-    // 3. Recent Activity
     const filteredReports = rawData.reports.filter(r => isDateInView(r.createdAt || r.date, filterView, filterDate));
     const processedActivity = filteredReports
       .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
@@ -223,7 +215,6 @@ const Dashboard = () => {
       }));
     setRecentActivity(processedActivity);
 
-    // 4. Analytics Chart Data
     let chartPoints = [];
     if (filterView === 'week') {
        const startOfWeek = new Date(filterDate);
@@ -233,16 +224,12 @@ const Dashboard = () => {
          d.setDate(startOfWeek.getDate() + i);
          const dateStr = d.toISOString().split('T')[0];
          const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dateStr); };
-         const dayTickets = rawData.tickets.filter(isMatch);
-         const dayBus = rawData.bus.filter(isMatch);
-         const dayParking = rawData.parking.filter(isMatch);
-         const dayTenants = rawData.tenants.filter(isMatch);
          chartPoints.push({
            name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-           ticketsRevenue: calculateRevenue(dayTickets),
-           busRevenue: calculateRevenue(dayBus),
-           parkingRevenue: calculateRevenue(dayParking),
-           tenantsRevenue: calculateRevenue(dayTenants),
+           ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
+           busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
+           parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
+           tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
          });
        }
     } else if (filterView === 'month') {
@@ -250,32 +237,24 @@ const Dashboard = () => {
         for(let i=1; i<=daysInMonth; i++) {
             const dStr = `${filterDate.getFullYear()}-${String(filterDate.getMonth()+1).padStart(2, '0')}-${String(i).padStart(2,'0')}`;
             const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dStr); };
-            const dayTickets = rawData.tickets.filter(isMatch);
-            const dayBus = rawData.bus.filter(isMatch);
-            const dayParking = rawData.parking.filter(isMatch);
-            const dayTenants = rawData.tenants.filter(isMatch);
             chartPoints.push({
                 name: i.toString(),
-                ticketsRevenue: calculateRevenue(dayTickets),
-                busRevenue: calculateRevenue(dayBus),
-                parkingRevenue: calculateRevenue(dayParking),
-                tenantsRevenue: calculateRevenue(dayTenants),
+                ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
+                busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
+                parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
+                tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
             });
         }
     } else if (filterView === 'year') {
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       chartPoints = months.map((m, idx) => {
         const monthFilter = (item) => { const dVal = getItemDate(item); if(!dVal) return false; const d = new Date(dVal); return d.getMonth() === idx && d.getFullYear() === filterDate.getFullYear(); };
-        const mTickets = rawData.tickets.filter(monthFilter);
-        const mBus = rawData.bus.filter(monthFilter);
-        const mParking = rawData.parking.filter(monthFilter);
-        const mTenants = rawData.tenants.filter(monthFilter);
         return {
           name: m,
-          ticketsRevenue: calculateRevenue(mTickets),
-          busRevenue: calculateRevenue(mBus),
-          parkingRevenue: calculateRevenue(mParking),
-          tenantsRevenue: calculateRevenue(mTenants),
+          ticketsRevenue: calculateRevenue(rawData.tickets.filter(monthFilter)),
+          busRevenue: calculateRevenue(rawData.bus.filter(monthFilter)),
+          parkingRevenue: calculateRevenue(rawData.parking.filter(monthFilter)),
+          tenantsRevenue: calculateRevenue(rawData.tenants.filter(monthFilter)),
         };
       });
     }
@@ -289,15 +268,14 @@ const Dashboard = () => {
   };
 
   const handleDownload = (format) => {
-      // (This logic remains the same)
-      if (format === 'csv') {
-          // ... 
-      } 
+      // (Download logic placeholder)
   };
 
   return (
     <Layout title="Dashboard">
-      <div className="px-4 pt-0 lg:px-2 lg:pt-0 space-y-8">
+      <div className="px-4 pt-0 lg:px-2 lg:pt-0 space-y-6">
+        
+        {/* Step 1: Filter Bar */}
         <DashboardToolbar 
           onRefresh={fetchDashboardData} 
           onDownload={handleDownload}    
@@ -305,7 +283,8 @@ const Dashboard = () => {
           loading={loading}              
         />
 
-        <div className="flex justify-end -mb-6 relative z-10">
+        {/* Step 2: Set Target Button - Placed below toolbar, above cards */}
+        <div className="flex justify-end">
           <button 
             onClick={() => setIsTargetModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-full shadow-sm hover:bg-gray-50 hover:text-teal-600 transition-colors"
@@ -315,6 +294,7 @@ const Dashboard = () => {
           </button>
         </div>
         
+        {/* Step 3: Stat Cards */}
         <StatCards statsData={stats} />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
