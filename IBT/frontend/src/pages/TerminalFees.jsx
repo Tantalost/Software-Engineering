@@ -698,13 +698,15 @@ const TerminalFees = () => {
         <div className="flex items-center justify-end gap-3">
           {(role === "superadmin") && (
             <button 
+            title='Price Setting'
             onClick={handleOpenPriceModal} 
             className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
           >
             <Settings size={18} /> <span>Pricing</span>
           </button>)}
 
-          <button onClick={handleOpenAdd} className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+          <button onClick={handleOpenAdd} className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+          title='Add Ticket'>
             <Plus size={18} /> <span>Add Fee</span>
           </button>
 
