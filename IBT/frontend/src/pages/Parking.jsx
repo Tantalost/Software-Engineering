@@ -759,7 +759,8 @@ const Parking = () => {
             </button>
           )}
 
-          <button onClick={handleAddClick} className="bg-gradient-to-r cursor-pointer from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+          <button onClick={handleAddClick} className="bg-gradient-to-r cursor-pointer from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+          title ='Add New Ticket' >
             + Add New
           </button>
           <ExportMenu onExportExcel={exportToCSV} onExportPDF={exportToPDF} />

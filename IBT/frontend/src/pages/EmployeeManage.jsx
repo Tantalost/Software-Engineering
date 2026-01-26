@@ -120,7 +120,8 @@ export default function EmployeeManage() {
                     <section className="space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-semibold text-gray-800">Manage / View Admins</h2>
-                            <button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer">Create Admin</button>
+                            <button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+                                title='Create Account'>Create Admin</button>
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
                             <div className="overflow-x-auto">

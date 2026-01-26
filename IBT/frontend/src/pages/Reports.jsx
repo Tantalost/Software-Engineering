@@ -460,7 +460,8 @@ const Reports = () => {
           setSelectedDate={setSelectedDate}
         />
         <div className="flex items-center justify-end gap-3">
-          <div className="h-[44px] flex items-center">
+          <div className="h-[44px] flex items-center"
+          title='Download Reports'>
             <ExportMenu 
               onExportExcel={handleExportExcel} 
               onExportPDF={handleExportPDF} 

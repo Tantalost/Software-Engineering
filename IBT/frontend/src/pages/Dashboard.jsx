@@ -288,7 +288,7 @@ const Dashboard = () => {
           <button 
             onClick={() => setIsTargetModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-full shadow-sm hover:bg-gray-50 hover:text-teal-600 transition-colors cursor-pointer"
-            title="Open settings to adjust revenue goals"
+            title="Set Revenue Targets"
           >
             <Settings size={14} />
             Set Targets
