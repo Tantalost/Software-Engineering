@@ -611,11 +611,13 @@ const BusTrips = () => {
                                 </button>
                             )}
 
-                            <button onClick={handleAddClick} className="flex items-center cursor-pointer justify-center bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all">
+                            <button onClick={handleAddClick} className="flex items-center cursor-pointer justify-center bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+                            title='Add Bus'>
                                 <span>+ Add Bus</span>
                             </button>
 
                             <ExportMenu
+                                title='Download Options'
                                 onExportExcel={handleExportExcel}
                                 onExportPDF={handleExportPDF}
                             />
