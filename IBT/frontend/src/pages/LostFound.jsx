@@ -51,7 +51,7 @@ const LostFound = () => {
 
     const [isReporting, setIsReporting] = useState(false);
 
-    // --- MOVED UP: Selection State (Fixes ReferenceError) ---
+    // Selection State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     
@@ -93,13 +93,11 @@ const LostFound = () => {
         fetchLostFound();
     }, []);
 
-    // Format helper for display
     const formatDateTime = (dateStr) => {
         if (!dateStr) return "-";
         return new Date(dateStr).toLocaleDateString() + " " + new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    // When editRow changes, populate the form data
     useEffect(() => {
         if (editRow) {
             setEditFormData({
@@ -163,7 +161,6 @@ const LostFound = () => {
         }
     };
 
-    // REPLACE handleArchive with this:
     const confirmArchive = async () => {
         if (!archiveRow) return;
         const row = archiveRow;
@@ -212,36 +209,6 @@ const LostFound = () => {
         }
     };
 
-    const handleArchive = async (row) => {
-        if (!window.confirm(`Are you sure you want to archive Item #${row.trackingNo}?`)) return;
-        
-        try {
-            const archiveRes = await fetch("http://localhost:3000/api/archives", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    type: "LostFound",
-                    description: `Item #${row.trackingNo} - ${row.description}`,
-                    originalData: row,
-                    archivedBy: role
-                })
-            });
-            if (!archiveRes.ok) throw new Error("Failed to archive");
-
-            const deleteRes = await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
-            if (!deleteRes.ok) throw new Error("Failed to remove from active list");
-
-            logActivity(role, "ARCHIVE_LOSTFOUND", `Archived Item #${row.trackingNo}`, "LostFound");
-            setRecords(prev => prev.filter(r => r.id !== row.id));
-            alert("Item archived successfully!");
-
-        } catch (error) {
-            console.error("Error archiving:", error);
-            alert("Failed to archive item.");
-        }
-    };
-
-    
     const filtered = records.filter((item) => {
         const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -355,7 +322,6 @@ const LostFound = () => {
                 const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
                 return {
                     ...rest,
-                    ...rest,
                     dateTime: rest.dateTime ? new Date(rest.dateTime).toLocaleString('en-US', {
                         year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
                     }) : "-"
@@ -422,14 +388,11 @@ const LostFound = () => {
             return;
         }
         const dataToExport = getExportData(filtered);
-        
         const headers = Object.keys(dataToExport[0]).join(',');
         const rows = dataToExport.map(row => 
             Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
-        
         const csvContent = headers + '\n' + rows;
-
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -439,7 +402,6 @@ const LostFound = () => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        
         logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Lost & Found records to CSV`, "LostFound");
     };
 
@@ -448,45 +410,26 @@ const LostFound = () => {
             alert("No records to export.");
             return;
         }
-        
         const dataToExport = getExportData(filtered);
         const headers = Object.keys(dataToExport[0]);
         const body = dataToExport.map(item => Object.values(item));
-
         const doc = new jsPDF('portrait', 'mm', 'a4');
-        
         doc.setFontSize(16);
         doc.setTextColor(34, 34, 34); 
         doc.text("Lost & Found Records Report", 14, 15);
-        
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100); 
         doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
-
         autoTable(doc, {
             startY: 30, 
             head: [headers],
             body: body,
             theme: 'grid', 
-            headStyles: { 
-                fillColor: [16, 185, 129], 
-                textColor: [255, 255, 255],
-                fontSize: 9, 
-                halign: 'center'
-            }, 
-            styles: {
-                fontSize: 8, 
-                cellPadding: 3, 
-                valign: 'middle',
-                textColor: [51, 51, 51] 
-            },
-            alternateRowStyles: {
-                fillColor: [240, 255, 240], 
-            }
+            headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontSize: 9, halign: 'center' }, 
+            styles: { fontSize: 8, cellPadding: 3, valign: 'middle', textColor: [51, 51, 51] },
+            alternateRowStyles: { fillColor: [240, 255, 240] }
         });
-
         doc.save(`LostFound_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-        
         logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Lost & Found records to PDF`, "LostFound");
     };
 
@@ -496,14 +439,10 @@ const LostFound = () => {
             return;
         }
         const dataToExport = getExportData(filtered);
-
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
-        
         XLSX.utils.book_append_sheet(workbook, worksheet, "LostFound_Records");
-
         XLSX.writeFile(workbook, `LostFound_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-
         logActivity(role, "EXPORT_EXCEL", `Exported ${dataToExport.length} Lost & Found records to Excel`, "LostFound");
     };
 
@@ -512,6 +451,7 @@ const LostFound = () => {
             <div key="header-check" className="flex items-center">
                 <input 
                     type="checkbox" 
+                    title="Select All Records on Page"
                     checked={isAllSelected}
                     onChange={handleSelectAll}
                     className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
@@ -540,6 +480,7 @@ const LostFound = () => {
                                 <button
                                     onClick={() => setShowSubmitModal(true)}
                                     disabled={isReporting}
+                                    title="Submit Current Report and Clear Table"
                                     className="flex items-center justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto cursor-pointer"
                                 >
                                     <FileText size={18} />
@@ -547,11 +488,16 @@ const LostFound = () => {
                                 </button>
                             )}
                             
-                            <button onClick={handleAddClick} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center w-full sm:w-auto cursor-pointer">
+                            <button 
+                                onClick={handleAddClick} 
+                                title="Add New Item"
+                                className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center w-full sm:w-auto cursor-pointer"
+                            >
                                 + Add New
                             </button>
 
-                            <div className="h-[44px] flex items-center">
+                            <div className="h-[44px] flex items-center"
+                            title = "Download">
                                 <ExportMenu 
                                     onExportCSV={handleExportCSV} 
                                     onExportPDF={handleExportPDF} 
@@ -568,7 +514,7 @@ const LostFound = () => {
                             <button 
                                 onClick={() => setShowLogModal(true)} 
                                 className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
-                                title="View Logs"
+                                title="View System Activity Logs"
                             >
                                 <History size={18} /> 
                                 <span className="hidden sm:inline">Logs</span>
@@ -581,7 +527,7 @@ const LostFound = () => {
                                     </span>
                                     <button
                                         onClick={handleBulkDelete}
-                                        title="Delete Selected"
+                                        title="Delete or Request Deletion for Selected Records"
                                         className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
                                     >
                                         <Trash2 className="h-5 w-5" />
@@ -591,11 +537,11 @@ const LostFound = () => {
 
                             {(role == "lostfound") &&(<button
                                 onClick={toggleSelectionMode}
-                                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                                title={isSelectionMode ? "Exit Multi-Selection Mode" : "Enter Multi-Selection Mode"}
                                 className={`flex items-center justify-center h-10 cursor-pointer w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
                                     isSelectionMode
-                                        ? "bg-red-500 text-white shadow-md cursor-pointer"
-                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
+                                        ? "bg-red-500 text-white shadow-md"
+                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                                 }`}
                             >
                                 {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -632,6 +578,7 @@ const LostFound = () => {
                                         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
                                             <input 
                                                 type="checkbox"
+                                                title={`Select item #${item.trackingNo}`}
                                                 checked={selectedIds.includes(item.id)}
                                                 onChange={() => toggleSelect(item.id)}
                                                 className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
@@ -653,15 +600,21 @@ const LostFound = () => {
                                     onDelete={() => setDeleteRow(selectedRecord)}
                                 />
                                 <button 
-                                    onClick={() => setArchiveRow(selectedRecord)} // <--- CHANGE THIS
-                                    title="Archive" 
+                                    onClick={() => setArchiveRow(selectedRecord)} 
+                                    title="Move Record to Archives" 
                                     className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer">
                                     <Archive size={16} />
-                                    </button>
+                                </button>
 
-                                {(role == "superadmin") &&(<button onClick={() => setDeleteRow(selectedRecord)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" title="Delete">
-                                                    <Trash2 size={16} />
-                                </button>)}
+                                {(role == "superadmin") &&(
+                                    <button 
+                                        onClick={() => setDeleteRow(selectedRecord)} 
+                                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
+                                        title="Permanently Delete Record"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
                                 </div>
                             );
                         }}
@@ -682,19 +635,17 @@ const LostFound = () => {
                 }}
             />
 
-            {/* --- LOG MODAL --- */}
             <LogModal 
                 isOpen={showLogModal} 
                 onClose={() => setShowLogModal(false)} 
             />
 
-            {/* --- ADD NEW MODAL --- */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-slate-800">Log Lost/Found Item</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                            <button onClick={() => setShowAddModal(false)} title="Close Modal" className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
                         </div>
                         <form onSubmit={handleCreateItem}>
                             <div className="space-y-4">
@@ -721,7 +672,6 @@ const LostFound = () => {
                                         <input
                                             type="text"
                                             value={newItem.trackingNo}
-                                            onChange={(e) => setNewItem({ ...newItem, trackingNo: e.target.value })}
                                             disabled className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 "
                                             placeholder="LF-123456"
                                             required
@@ -738,7 +688,7 @@ const LostFound = () => {
                                             type="datetime-local"
                                             value={newItem.dateTime}
                                             onChange={(e) => setNewItem({ ...newItem, dateTime: e.target.value })}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white" 
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white cursor-pointer" 
                                             required
                                         />
                                     </div>
@@ -776,8 +726,8 @@ const LostFound = () => {
 
                             </div>
                             <div className="flex gap-3 mt-6">
-                                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">Cancel</button>
-                                <button type="submit" className="flex-1 py-3 bg-emerald-600 rounded-xl text-white font-medium shadow-md hover:bg-emerald-700 transition-all">Save Record</button>
+                                <button type="button" onClick={() => setShowAddModal(false)} title="Discard Changes" className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">Cancel</button>
+                                <button type="submit" title="Save New Record to System" className="flex-1 py-3 bg-emerald-600 rounded-xl text-white font-medium shadow-md hover:bg-emerald-700 transition-all cursor-pointer">Save Record</button>
                             </div>
                         </form>
                     </div>
@@ -785,11 +735,10 @@ const LostFound = () => {
             )}
 
             
-            {/* --- VIEW MODAL --- */}
             {viewRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-                        <h3 className="mb-4 text-base font-semibold text-slate-800">View Lost/Found</h3>
+                        <h3 className="mb-4 text-base font-semibold text-slate-800">View Lost/Found Details</h3>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
                             <Field label="Tracking No" value={viewRow.trackingNo} />
                             <Field label="Type" value={viewRow.itemType} /> 
@@ -798,22 +747,29 @@ const LostFound = () => {
                             <div className="md:col-span-2"><Field label="Description" value={viewRow.description} /></div>
                             <div className="md:col-span-2"><Field label="Location" value={viewRow.location} /></div>
                         </div>
-                        <div className="mt-4 flex justify-end"><button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button></div>
+                        <div className="mt-4 flex justify-end">
+                            <button 
+                                onClick={() => setViewRow(null)} 
+                                title="Close Details View"
+                                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 cursor-pointer"
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
 
-                  {editRow && (
+            {editRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-slate-800">Edit Lost/Found Item</h3>
-                            <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                            <button onClick={() => setEditRow(null)} title="Close Modal" className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
                         </div>
                         <form onSubmit={handleSaveEdit}>
                             <div className="space-y-4">
                                 
-                                {/* Tracking No (Read Only) */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
                                     <div className="relative">
@@ -827,14 +783,14 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
-                                {/* Status (EDITABLE BUTTONS) */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-2">Item Status</label>
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Unclaimed' })}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                                            title="Mark Item as Unclaimed"
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${
                                                 editFormData.status === 'Unclaimed'
                                                     ? 'bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1'
                                                     : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
@@ -846,7 +802,8 @@ const LostFound = () => {
                                         <button
                                             type="button"
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Claimed' })}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer${
+                                            title="Mark Item as Claimed"
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${
                                                 editFormData.status === 'Claimed'
                                                     ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
                                                     : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
@@ -858,7 +815,6 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
-                                {/* Item Type (EDITABLE) */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Item Type</label>
                                     <div className="relative">
@@ -873,7 +829,6 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
-                                {/* DateTime (Read Only - Display text instead of input) */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time Found</label>
                                     <div className="relative">
@@ -887,7 +842,6 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
-                                {/* Description (EDITABLE) */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                                     <div className="relative">
@@ -901,7 +855,6 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
-                                {/* Location (EDITABLE) */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
                                     <div className="relative">
@@ -917,8 +870,8 @@ const LostFound = () => {
 
                             </div>
                             <div className="flex gap-3 mt-6">
-                                <button type="button" onClick={() => setEditRow(null)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">Cancel</button>
-                                <button type="submit" className="flex-1 py-3 bg-blue-600 rounded-xl text-white font-medium shadow-md hover:bg-blue-700 transition-all flex justify-center items-center gap-2">
+                                <button type="button" onClick={() => setEditRow(null)} title="Cancel Edits" className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">Cancel</button>
+                                <button type="submit" title="Commit Changes to Database" className="flex-1 py-3 bg-blue-600 rounded-xl text-white font-medium shadow-md hover:bg-blue-700 transition-all flex justify-center items-center gap-2 cursor-pointer">
                                     <Save size={18} />
                                     Save Changes
                                 </button>
@@ -928,7 +881,6 @@ const LostFound = () => {
                 </div>
             )}
 
-            {/* --- ARCHIVE MODAL --- */}
             {archiveRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                     <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
@@ -940,10 +892,10 @@ const LostFound = () => {
                             Move Item <strong>#{archiveRow.trackingNo}</strong> to archives?
                         </p>
                         <div className="mt-6 flex gap-3">
-                            <button onClick={() => setArchiveRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50">
+                            <button onClick={() => setArchiveRow(null)} title="Cancel Archive Action" className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">
                                 Cancel
                             </button>
-                            <button onClick={confirmArchive} className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg">
+                            <button onClick={confirmArchive} title="Confirm and Archive Item" className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg cursor-pointer">
                                 Yes, Archive
                             </button>
                         </div>
@@ -973,10 +925,11 @@ const LostFound = () => {
                             </span>
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
-                            <button onClick={() => setShowSubmitModal(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
+                            <button onClick={() => setShowSubmitModal(false)} title="Go Back to Table" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
                             <button
                                 onClick={handleSubmitReport}
                                 disabled={isReporting}
+                                title="Confirm Submission and Reset Table"
                                 className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer" 
                             >
                                 {isReporting ? (

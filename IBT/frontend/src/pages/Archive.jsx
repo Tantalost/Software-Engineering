@@ -27,7 +27,6 @@ const Archive = () => {
   // Modal States
   const [viewRow, setViewRow] = useState(null);
   const [restoreRow, setRestoreRow] = useState(null);
-  // Removed deleteRow state for single delete as requested
   
   // Pagination & Data
   const [currentPage, setCurrentPage] = useState(1);
@@ -152,7 +151,6 @@ const Archive = () => {
     }
   };
 
-  // Bulk Delete (This is the only way to delete now)
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.length} items? \n\nThis action cannot be undone.`)) return;
     setIsLoading(true);
@@ -186,6 +184,7 @@ const Archive = () => {
       <div key="header-check" className="flex items-center">
           <input 
               type="checkbox" 
+              title="Select All on this page"
               checked={isAllSelected}
               onChange={handleSelectAll}
               className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
@@ -208,7 +207,7 @@ const Archive = () => {
           />
         </div>
         
-        <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm">
+        <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm" title="Filter by time range">
           <CalendarDays size={18} className="text-slate-500" />
           <select
             value={timeRange}
@@ -235,7 +234,8 @@ const Archive = () => {
                 setCurrentPage(1); 
                 setSelectedIds([]);
               }}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 ${
+              title={`Switch to ${tab} view`}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 cursor-pointer ${
                 activeTab === tab
                   ? "bg-white text-emerald-700 shadow-md"
                   : "text-slate-600 hover:bg-slate-200 hover:text-slate-800"
@@ -254,7 +254,7 @@ const Archive = () => {
                   </span>
                   <button
                     onClick={handleBulkDelete}
-                    title="Delete Selected"
+                    title="Permanently Delete Selected Items"
                     className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
                   >
                     <Trash2 className="h-5 w-5" />
@@ -264,11 +264,11 @@ const Archive = () => {
           
           <button
             onClick={toggleSelectionMode}
-            title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+            title={isSelectionMode ? "Cancel Selection Mode" : "Enable Multi-Selection Mode"}
             className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
             isSelectionMode
-            ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
-            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
+            ? "bg-red-500 text-white shadow-md hover:bg-red-600 border-red-600"
+            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
             }`}
           >
             {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -287,14 +287,12 @@ const Archive = () => {
                 const rowData = {
                   ...item,
                   id: id,
-                  // FIX: Removed seconds using toLocaleString options
                   datearchived: item.dateArchived ? new Date(item.dateArchived).toLocaleString(undefined, {
                     year: 'numeric',
                     month: 'numeric',
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit',
-                    // second: '2-digit' // Removed this
                   }) : "N/A",
                 };
 
@@ -304,6 +302,7 @@ const Archive = () => {
                         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
                             <input 
                                 type="checkbox"
+                                title={`Select item ${id}`}
                                 checked={selectedIds.includes(id)}
                                 onChange={() => handleToggleSelect(id)}
                                 className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
@@ -322,19 +321,18 @@ const Archive = () => {
                 <div className="flex justify-end items-center space-x-2">
                     <button
                     onClick={() => setViewRow(fullItem)}
-                    title="View"
-                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+                    title="View Detailed Information"
+                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
                     >
                     <Eye size={16} />
                     </button>
                     <button
                     onClick={() => setRestoreRow(fullItem)}
-                    title="Restore"
-                    className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all"
+                    title="Restore to Active Status"
+                    className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all cursor-pointer"
                     >
                     <RotateCcw size={16} />
                     </button>
-                    {/* DELETE BUTTON REMOVED FROM HERE */}
                 </div>
              );
             }}
@@ -358,7 +356,13 @@ const Archive = () => {
           <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-base font-semibold text-slate-800">View Archived Item</h3>
-                <button onClick={() => setViewRow(null)} className="text-slate-500 hover:text-slate-700"><X size={20}/></button>
+                <button 
+                  onClick={() => setViewRow(null)} 
+                  title="Close Modal"
+                  className="text-slate-500 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={20}/>
+                </button>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
               <Field label="Archive ID" value={viewRow._id || viewRow.id} />
@@ -368,7 +372,13 @@ const Archive = () => {
             </div>
             
             <div className="mt-4 flex justify-end">
-              <button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300">Close</button>
+              <button 
+                onClick={() => setViewRow(null)} 
+                title="Close Modal"
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -383,8 +393,20 @@ const Archive = () => {
               Are you sure you want to restore <strong>{restoreRow.description}</strong>? It will be moved back to active status.
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setRestoreRow(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-              <button onClick={handleRestore} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700">Restore</button>
+              <button 
+                onClick={() => setRestoreRow(null)} 
+                title="Cancel and Go Back"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleRestore} 
+                title="Confirm Restoration"
+                className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700 cursor-pointer"
+              >
+                Restore
+              </button>
             </div>
           </div>
         </div>
