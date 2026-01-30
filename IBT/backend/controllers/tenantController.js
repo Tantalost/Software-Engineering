@@ -1,5 +1,5 @@
 import Tenant from "../models/Tenant.js";
-import TenantApplication from "../models/TenantApplication.js"; // <--- IMPORT THIS
+import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
 
 // GET ALL TENANTS

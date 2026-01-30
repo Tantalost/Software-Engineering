@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import Select from "../common/Select";
-// 1. IMPORT ROUTES (Adjust path if your folder structure is different)
 import { busCompanyRoutes } from '../../data/busRoutes.js'; 
 
-const EditBusTrip = ({ row, onClose, onSave }) => { // Removed 'templates' from props
-   
+const EditBusTrip = ({ row, onClose, onSave }) => {
     const formatDateForInput = (isoDate) => {
         if (!isoDate) return "";
         return new Date(isoDate).toISOString().split('T')[0];
@@ -22,33 +20,21 @@ const EditBusTrip = ({ row, onClose, onSave }) => { // Removed 'templates' from 
         departureTime: row.rawDepartureTime || "" 
     });
 
-    // 2. HELPER TO GET TEMPLATES SAFELY
     const getTemplates = (companyName) => {
         if (!companyName) return {};
-        
-        // Convert "Dindo" -> "dindo" to match data keys
         const key = companyName.toLowerCase();
-        
-        // Handle "Alga Ceres" specific case if it exists, or fallback to first word
-        // This prevents crash if key is not found
         if (busCompanyRoutes[key]) return busCompanyRoutes[key];
-        
-        // Fallback: try splitting "Alga Ceres" -> "alga"
         const firstWord = key.split(" ")[0];
         if (busCompanyRoutes[firstWord]) return busCompanyRoutes[firstWord];
-
-        return {}; // Return empty object instead of undefined to prevent crash
+        return {}; 
     };
 
-    // Calculate templates based on current form state
     const currentTemplates = getTemplates(form.company);
-
     const handleTemplateChange = (e) => {
         const selectedTemplate = e.target.value;
         setForm(prev => ({
             ...prev,
             templateNo: selectedTemplate,
-            // Look up route in the safely calculated currentTemplates
             route: currentTemplates[selectedTemplate] || "" 
         }));
     };
@@ -71,7 +57,7 @@ const EditBusTrip = ({ row, onClose, onSave }) => { // Removed 'templates' from 
                                     onClick={() => setForm({ 
                                         ...form, 
                                         company: comp, 
-                                        templateNo: "", // Reset template when company changes
+                                        templateNo: "",
                                         route: "" 
                                     })}
                                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${

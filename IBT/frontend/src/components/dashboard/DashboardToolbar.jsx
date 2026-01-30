@@ -1,15 +1,10 @@
 import React, { useState, useMemo } from 'react';
-// Added FileText and Table for the dropdown icons
 import { RefreshCw, Download, ChevronLeft, ChevronRight, Calendar, FileText, Table } from 'lucide-react';
 
 const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
   const [date, setDate] = useState(new Date());
   const [view, setView] = useState('week'); 
-  
-  // New state to manage the download dropdown visibility
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-
-  // Navigation Logic (Prev/Next)
   const navigate = (direction) => {
     const newDate = new Date(date);
     

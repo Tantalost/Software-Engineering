@@ -1,15 +1,12 @@
 import React from "react";
 import { Bus, CheckCircle, Clock, TrendingUp } from "lucide-react";
 
-// Reusable Stat Card Component matching the image design
 const StatCard = ({ title, value, icon: Icon, styles }) => (
   <div className={`flex items-center gap-5 rounded-[2rem] p-6 transition-all hover:shadow-md ${styles.bg}`}>
-    {/* Icon Container */}
     <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${styles.iconBg} ${styles.iconColor}`}>
       <Icon size={32} strokeWidth={2} />
     </div>
     
-    {/* Text Content */}
     <div>
       <p className={`text-sm font-bold ${styles.titleColor} mb-0.5`}>{title}</p>
       <h3 className={`text-3xl font-extrabold ${styles.valueColor}`}>{value}</h3>
@@ -21,7 +18,6 @@ const StatCardGroupBus = ({ totalTrips, paidTrips, pendingTrips, totalRevenue })
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
       
-      {/* 1. Total Trips - Cyan/Blue Style */}
       <StatCard
         title="Total Trips"
         value={totalTrips}
@@ -35,7 +31,6 @@ const StatCardGroupBus = ({ totalTrips, paidTrips, pendingTrips, totalRevenue })
         }}
       />
 
-      {/* 2. Pending - Red/Pink Style */}
       <StatCard
         title="Pending"
         value={pendingTrips}
@@ -49,7 +44,6 @@ const StatCardGroupBus = ({ totalTrips, paidTrips, pendingTrips, totalRevenue })
         }}
       />
 
-      {/* 3. Departed (Paid) - Green Style */}
       <StatCard
         title="Departed (Paid)"
         value={paidTrips}
@@ -63,7 +57,6 @@ const StatCardGroupBus = ({ totalTrips, paidTrips, pendingTrips, totalRevenue })
         }}
       />
 
-      {/* 4. Total Revenue - Orange Style */}
       <StatCard
         title="Total Revenue"
         value={`₱${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}

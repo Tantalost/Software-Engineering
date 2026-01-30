@@ -4,7 +4,7 @@ import {
     getAllReports, 
     getReportById, 
     deleteReport 
-} from '../controllers/reportController.js'; // Ensure .js extension is here
+} from '../controllers/reportController.js';
 
 const router = express.Router();
 
