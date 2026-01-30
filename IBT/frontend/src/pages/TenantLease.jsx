@@ -2,13 +2,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import * as XLSX from 'xlsx'; 
 import jsPDF from 'jspdf'; 
 import autoTable from "jspdf-autotable"; 
-import { 
-    Archive, Trash2, Mail, Download, Store, MoonStar, Map, 
-    ClipboardList, CheckCircle, X, Bell, Calendar, Clock, Filter, Wand2,
-    History, ListChecks, FileText, Loader2 
-} from "lucide-react";
+import {Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, CheckCircle, X, Bell, Calendar, Clock, Filter, Wand2, History, ListChecks, FileText, Loader2} from "lucide-react";
 
-// Layout & Components
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
@@ -18,7 +13,6 @@ import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import LogModal from "../components/common/LogModal"; 
 
-// Modals
 import EditTenantLease from "../components/tenants/EditTenantLease";
 import DeleteModal from "../components/common/DeleteModal";
 import TenantStatusFilter from "../components/tenants/TenantStatusFilter"; 
@@ -28,16 +22,14 @@ import TenantMapModal from "../components/tenants/modals/TenantMapModal";
 import WaitlistModal from "../components/tenants/modals/WaitlistModal";
 import TenantEmailModal from "../components/tenants/modals/TenantEmailModal";
 import ApplicationReviewModal from "../components/tenants/modals/ApplicationReviewModal";
-
 import { generateRentStatementPDF } from "../utils/tenantUtils";
 import { logActivity } from "../utils/logger"; 
 import { sendNotification } from "../utils/notificationService.js"; 
-import { submitPageReport } from "../utils/reportService.js"; // Added Import
+import { submitPageReport } from "../utils/reportService.js";
 
 const API_URL = "http://localhost:3000/api";
 const ARCHIVE_URL = "http://localhost:3000/api/archives"; 
 
-// --- LOCAL BROADCAST MODAL ---
 const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft, tenantCount }) => {
     if (!isOpen) return null;
 
@@ -146,8 +138,6 @@ const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft, tenantC
 };
 
 const TenantLease = () => {
-
-  // --- STATE MANAGEMENT ---
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeTab, setActiveTab] = useState("permanent"); 
@@ -160,7 +150,6 @@ const TenantLease = () => {
   const [waitlistData, setWaitlistData] = useState([]);
   const [alerts, setAlerts] = useState([]);
 
-  // Modal Visibility States
   const [showAddModal, setShowAddModal] = useState(false);
   const [showNotify, setShowNotify] = useState(false); 
   const [showMapModal, setShowMapModal] = useState(false);
@@ -169,23 +158,18 @@ const TenantLease = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false); 
   
-  // LOGS STATE
   const [showLogModal, setShowLogModal] = useState(false);
 
-  // REPORTING STATE
   const [isReporting, setIsReporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-  // SELECTION STATE
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // Data States
   const [waitlistForm, setWaitlistForm] = useState({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
   const [reviewData, setReviewData] = useState(null);
   const [transferApplicant, setTransferApplicant] = useState(null);
   
-  // Row Actions States
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
@@ -210,7 +194,6 @@ const TenantLease = () => {
     duration: 3000 
   }); 
 
-  // --- DATA FETCHING ---
  useEffect(() => {
     fetchTenants();
     fetchWaitlist();
@@ -276,7 +259,7 @@ const TenantLease = () => {
     setAlerts(newAlerts);
   }, [records]);
 
-  // --- FILTERING & PAGINATION ---
+  // FILTERER & PAGINATION
   const filtered = records.filter((t) => {
     const name = t.tenantName || t.name || "";
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || (t.referenceNo || "").toLowerCase().includes(searchQuery.toLowerCase());
@@ -299,7 +282,7 @@ const TenantLease = () => {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-  // --- STATS CALCULATION ---
+  // STATS CALCULATION
   const mapStats = useMemo(() => {
     let available = 0; let paid = 0; let revenue = 0;
     const SECTION_CAPACITY = 30; 
@@ -317,11 +300,9 @@ const TenantLease = () => {
     return { availableSlots: available, nonAvailableSlots: paid, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
   }, [records, activeTab]); 
 
-  // --- REPORT SUBMISSION HANDLER ---
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
-        // 1. Format data for the report (Clean up internal IDs)
         const formattedData = filtered.map(t => ({
             "Slot": t.slotNo,
             "Name": t.tenantName || t.name,
@@ -335,7 +316,6 @@ const TenantLease = () => {
             "Total Due": t.totalAmount || 0
         }));
 
-        // 2. Build Payload
         const reportPayload = {
             screen: "Tenant Lease Management",
             generatedDate: new Date().toLocaleString(),
@@ -354,10 +334,7 @@ const TenantLease = () => {
             data: formattedData
         };
 
-        // 3. Submit to Report Service
         await submitPageReport("Tenant Lease", reportPayload, role === "lease" ? "Tenant Admin" : "Admin");
-
-        // 4. Notify Superadmin
         await sendNotification(
             "Report Submitted: Tenant Lease", 
             `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}.`,
@@ -391,7 +368,6 @@ const TenantLease = () => {
     }
   };
 
-  // --- SELECTION HANDLERS ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
     setIsSelectionMode(!isSelectionMode);
@@ -415,7 +391,7 @@ const TenantLease = () => {
   
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
 
-  // --- BULK DELETE HANDLER (Lease Admin Only) ---
+  // BULK DELETE HANDLER (Lease Admin Only)
   const handleBulkDelete = async () => {
     const confirmMsg = `Request deletion for ${selectedIds.length} tenants?`;
     if (!window.confirm(confirmMsg)) return;
@@ -471,7 +447,6 @@ const TenantLease = () => {
     }
   };
 
-  // --- HANDLERS ---
   const handleAddToWaitlist = async () => {
     if (!waitlistForm.name || !waitlistForm.contact) { 
         setNotificationState({ isOpen: true, type: 'error', message: "Please fill in Name and Contact.", autoClose: true, duration: 3000 });
@@ -758,7 +733,6 @@ const TenantLease = () => {
     setNotificationState({ isOpen: true, type: 'success', message: "Exported records to PDF.", autoClose: true, duration: 3000 });
   };
 
-  // --- COLUMN CONFIG FOR SELECTION ---
   const tableColumns = isSelectionMode 
     ? [
         <div key="header-check" className="flex items-center">
@@ -899,7 +873,6 @@ const TenantLease = () => {
                 status: t.status,
             };
 
-            // Add Checkbox if in selection mode
             if (isSelectionMode) {
                 return {
                     select: (

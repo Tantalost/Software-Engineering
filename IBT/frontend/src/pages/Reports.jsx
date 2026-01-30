@@ -11,13 +11,11 @@ import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
 import { logActivity } from "../utils/logger";
 import { Archive, Trash2, Calendar, Tag, History, ListChecks, X, Loader2, FileSpreadsheet, FileText } from "lucide-react";
-
-// --- FIXED EXPORT IMPORTS ---
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// --- HELPER COMPONENT FOR VIEWING REPORT DATA ---
+// HELPER COMPONENT FOR VIEWING REPORT DATA
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload) return <div className="text-gray-400 italic p-4">No report data available</div>;
 
@@ -96,23 +94,19 @@ const DataRenderer = ({ reportPayload }) => {
   );
 };
 
-// --- MAIN PAGE COMPONENT ---
 const Reports = () => {
   const location = useLocation(); 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Basic search & date
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
-  // Filters
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [timeRange, setTimeRange] = useState("All");
   
   const [showLogModal, setShowLogModal] = useState(false);
 
-  // Selection State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -126,7 +120,6 @@ const Reports = () => {
   const API_URL = "http://localhost:3000/api/reports";
   const ARCHIVE_URL = "http://localhost:3000/api/archives";
 
-  // Fetch reports
   const fetchReports = async () => {
     try {
       setLoading(true);
@@ -160,7 +153,6 @@ const Reports = () => {
     }
   }, [records, location.state]); 
 
-  // Filtered data logic
   const filtered = useMemo(() => {
     return records.filter((report) => {
       const reportDate = new Date(report.createdAt || report.date);
@@ -193,8 +185,7 @@ const Reports = () => {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-  // --- MAIN EXPORT FUNCTIONS (List) ---
-
+  // MAIN EXPORT FUNCTIONS (List)
   const handleExportExcel = () => {
     const dataToExport = filtered.map((item) => ({
       "Report ID": item.id,
@@ -237,12 +228,10 @@ const Reports = () => {
     doc.save(`Reports_Export_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // --- SINGLE REPORT EXPORT FUNCTIONS (Details) ---
-
+  // SINGLE REPORT EXPORT
   const handleSingleExportExcel = (report) => {
     const wb = XLSX.utils.book_new();
 
-    // Summary Sheet (Meta + Stats)
     const summaryData = [
       ["Report Details"],
       ["ID", report.id],
@@ -258,11 +247,8 @@ const Reports = () => {
         summaryData.push([key, value]);
       });
     }
-
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-
-    // Data Sheet
     if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
       const wsData = XLSX.utils.json_to_sheet(report.data.data);
       XLSX.utils.book_append_sheet(wb, wsData, "Data");
@@ -272,16 +258,11 @@ const Reports = () => {
   };
 
   const handleSingleExportPDF = (report) => {
-    const doc = new jsPDF();
-    
-    // Header
+    const doc = new jsPDF();    
     doc.setFontSize(16);
     doc.text("Report Details", 14, 15);
-    
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
-
-    // Metadata
     doc.setFontSize(11);
     doc.text(`ID: ${report.id}`, 14, 30);
     doc.text(`Type: ${report.type}`, 14, 36);
@@ -289,8 +270,6 @@ const Reports = () => {
     doc.text(`Date: ${new Date(report.createdAt || report.date).toLocaleDateString()}`, 14, 48);
 
     let currentY = 60;
-
-    // Statistics
     if (report.data?.statistics) {
         doc.setFontSize(12);
         doc.text("Statistics", 14, currentY);
@@ -308,7 +287,6 @@ const Reports = () => {
         currentY = doc.lastAutoTable.finalY + 15;
     }
 
-    // Data Table
     if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
         doc.setFontSize(12);
         doc.text("Data Records", 14, currentY);
@@ -328,7 +306,6 @@ const Reports = () => {
     doc.save(`${report.type}_Report_${report.id}.pdf`);
   };
 
-  // --- SELECTION HANDLERS ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
     setIsSelectionMode(!isSelectionMode);
@@ -352,7 +329,7 @@ const Reports = () => {
 
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
 
-  // --- BULK ACTION: ARCHIVE & DELETE (SUPERADMIN) ---
+  // BULK ARCHIVE & DELETE (SUPERADMIN)
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} reports? \n\nThey will be moved to the Archives before deletion.`)) return;
 
@@ -392,7 +369,7 @@ const Reports = () => {
     }
   };
 
-  // Single Delete
+  // SINGLE DELETE
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
@@ -405,7 +382,7 @@ const Reports = () => {
     }
   };
 
-  // Single Archive
+  // SINGLE ARCHIVE
   const confirmArchive = async () => {
     if (!archiveRow) return;
     const row = archiveRow;
@@ -434,7 +411,6 @@ const Reports = () => {
     }
   };
 
-  // --- TABLE COLUMNS ---
   const tableColumns = isSelectionMode 
     ? [
         <div key="header-check" className="flex items-center">

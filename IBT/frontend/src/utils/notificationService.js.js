@@ -1,6 +1,4 @@
 // src/utils/notificationService.js
-
-// 1. ADD 'targetRole' here -------------------👇
 export const sendNotification = async (title, message, source, targetRole = "all") => {
     try {
         const response = await fetch("http://localhost:3000/api/notifications", {
@@ -10,11 +8,10 @@ export const sendNotification = async (title, message, source, targetRole = "all
                 title,
                 message,
                 source,
-                targetRole // 2. SEND IT TO BACKEND ---👇
+                targetRole
             }),
         });
         
-        // Debugging line: Check if it's sending correctly
         console.log("Notification Sent:", { title, targetRole }); 
 
         if (!response.ok) {
@@ -25,7 +22,6 @@ export const sendNotification = async (title, message, source, targetRole = "all
     }
 };
 
-// ... keep existing fetchNotifications, markRead, etc.
 export const fetchNotifications = async () => {
     try {
         const response = await fetch("http://localhost:3000/api/notifications");

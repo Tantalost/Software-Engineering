@@ -6,8 +6,8 @@ export const submitPageReport = async (type, pageData, author = "Admin") => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        type: type, // e.g., "Bus Module"
-        data: pageData, // The entire state object of that page
+        type: type, 
+        data: pageData,
         author: author,
         status: "Submitted"
       }),
