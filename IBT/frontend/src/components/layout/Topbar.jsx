@@ -78,7 +78,6 @@ const Topbar = ({ title, onMenuClick }) => {
 
             <div className="flex items-center space-x-3">
               <div className="hidden sm:block relative" ref={bellRef}>
-                {/* Notification Bell Button with Tooltip and Cursor Fix */}
                 <button
                   onClick={() => setShowBell((s) => !s)}
                   className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative cursor-pointer"

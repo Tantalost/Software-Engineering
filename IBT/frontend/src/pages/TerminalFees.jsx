@@ -896,7 +896,6 @@ const TerminalFees = () => {
             </p>
 
             <div className="space-y-5">
-               {/* REGULAR PRICE INPUT */}
                <div>
                   <label htmlFor="regular-price" className="block text-sm font-semibold text-slate-700 mb-1">Regular Passenger Price</label>
                   <div className="relative">
@@ -912,7 +911,6 @@ const TerminalFees = () => {
                   </div>
                </div>
 
-               {/* DISCOUNTED PRICE INPUT - FIXED: Changed type to text and added custom handler */}
                <div>
                   <label htmlFor="discounted-price" className="block text-sm font-semibold text-slate-700 mb-1">Student / Senior / PWD Price</label>
                   <div className="relative">
@@ -1065,7 +1063,6 @@ const TerminalFees = () => {
       </div>
     )}
 
-    {/* --- ARCHIVE MODAL --- */}
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">

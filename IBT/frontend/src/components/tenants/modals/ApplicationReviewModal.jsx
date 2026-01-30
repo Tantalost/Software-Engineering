@@ -40,7 +40,6 @@ const ApplicationReviewModal = ({
 
   return (
     <>
-      {/* --- IMAGE PREVIEW OVERLAY --- */}
       {previewImage && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -61,7 +60,6 @@ const ApplicationReviewModal = ({
         </div>
       )}
 
-      {/* --- MAIN MODAL --- */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
         <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
           
@@ -88,7 +86,6 @@ const ApplicationReviewModal = ({
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            {/* Applicant Details */}
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <User size={18} className="text-emerald-600" /> Applicant Information
@@ -107,7 +104,6 @@ const ApplicationReviewModal = ({
               </div>
             </section>
 
-            {/* Documents */}
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <FileText size={18} className="text-emerald-600" /> Submitted Documents
@@ -150,7 +146,6 @@ const ApplicationReviewModal = ({
               </div>
             </section>
 
-            {/* Verification Status */}
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <CreditCard size={18} className="text-emerald-600" /> Verification Status
@@ -175,7 +170,6 @@ const ApplicationReviewModal = ({
             </section>
           </div>
 
-          {/* Footer Actions */}
           <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
             {showUnlockBtn && (
               <button onClick={onUnlockPayment} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2 active:scale-95">

@@ -62,7 +62,6 @@ const StatCards = ({ statsData }) => {
             key={idx}
             className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden"
           >
-            {/* Background Blob */}
             <div
               className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-br ${color.bgMedium} ${color.bgStrong} rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700`}
             ></div>

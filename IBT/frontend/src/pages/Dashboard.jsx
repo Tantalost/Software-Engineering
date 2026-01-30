@@ -267,8 +267,6 @@ const Dashboard = () => {
           onFilterChange={handleFilterChange}
           loading={loading}              
         />
-
-        {/* Step 2: Set Target Button - Updated with Tooltip and Cursor Fix */}
         <div className="flex justify-end">
           <button 
             onClick={() => setIsTargetModalOpen(true)}
@@ -280,7 +278,6 @@ const Dashboard = () => {
           </button>
         </div>
         
-        {/* Step 3: Stat Cards */}
         <StatCards statsData={stats} />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

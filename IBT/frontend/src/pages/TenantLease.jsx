@@ -749,18 +749,14 @@ const TenantLease = () => {
 
   return (
     <Layout title="Tenants/Lease Management">
-      
-      {/* 1. Statistics Cards */}
       <div className="mb-6">
         <StatCardGroup {...mapStats} />
       </div>
 
-      {/* 2. Filter & Action Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
-          
-          {/* SUBMIT REPORT BUTTON (New) */}
+    
           {(role === "lease" ) && (
             <button
                 onClick={() => setShowSubmitModal(true)}
@@ -785,7 +781,6 @@ const TenantLease = () => {
         </div>
       </div>
 
-      {/* 3. Tabs & Status Filters */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
           <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
@@ -805,11 +800,8 @@ const TenantLease = () => {
           </button>
         </div>
         
-        {/* RIGHT SIDE CONTROLS: FILTER + LOGS + SELECTION */}
         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
             <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
-            
-            {/* LOGS BUTTON (Superadmin & Tenant/Lease Admin Only) */}
             {(role === "superadmin" || role === "lease") && (
                 <button
                     onClick={() => setShowLogModal(true)}
@@ -821,7 +813,6 @@ const TenantLease = () => {
                 </button>
             )}
 
-            {/* SELECTION ACTION BAR (Visible if items selected) */}
             {isSelectionMode && selectedIds.length > 0 && (
                 <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                     <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
@@ -837,7 +828,6 @@ const TenantLease = () => {
                 </div>
             )}
 
-            {/* SELECT MODE TOGGLE (Tenant/Lease Admin Only - HIDDEN FOR SUPERADMIN) */}
             {(role === "lease") && (
                 <button
                     onClick={toggleSelectionMode}
@@ -854,7 +844,6 @@ const TenantLease = () => {
         </div>
       </div>
 
-      {/* 4. Table */}
       <Table
         columns={tableColumns}
         data={paginatedData.map((t) => {
@@ -915,7 +904,6 @@ const TenantLease = () => {
         onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }} 
       />
       
-      {/* --- MODALS --- */}
       <TenantViewModal viewRow={viewRow} onClose={() => setViewRow(null)} />
       <TenantMapModal isOpen={showMapModal} onClose={() => setShowMapModal(false)} activeTab={activeTab} records={records} onSelectSlot={(tenant) => setViewRow(tenant)} />
       <LogModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} />
@@ -1030,7 +1018,6 @@ const TenantLease = () => {
         tenantCount={records.length}
       />
 
-      {/* --- ARCHIVE CONFIRMATION MODAL --- */}
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
@@ -1060,7 +1047,6 @@ const TenantLease = () => {
         </div>
       )}
 
-      {/* --- REPORT SUBMIT MODAL (New) --- */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-md cursor-pointer rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
@@ -1100,7 +1086,6 @@ const TenantLease = () => {
         </div>
       )}
       
-      {/* Status Pop-up */}
       {notificationState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">
             <div 

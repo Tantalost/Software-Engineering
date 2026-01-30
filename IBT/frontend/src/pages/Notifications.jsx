@@ -81,7 +81,6 @@ const loadData = async () => {
     return (
         <Layout title="Notifications">
             <div className="mb-2 flex items-center justify-between px-1 h-8">
-                {/* Header Controls (Select All, Delete, etc) - SAME AS BEFORE */}
                 <div>
                     {isSelectionMode && (
                         <div className="flex items-center gap-3 animate-in fade-in duration-200">
@@ -122,7 +121,6 @@ const loadData = async () => {
                 </div>
             </div>
 
-            {/* Content Area */}
             <div className="space-y-3">
                 {isLoading ? (
                     <div className="flex justify-center py-10 text-slate-400">

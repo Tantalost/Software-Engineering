@@ -220,8 +220,6 @@ const DeletionRequests = () => {
 
   return (
     <Layout title="Deletion Requests">
-      
-      {/* 1. Alert Box (Full Width) */}
       <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-4 rounded-r flex items-start gap-3">
          <AlertCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={20} />
          <div>
@@ -230,7 +228,6 @@ const DeletionRequests = () => {
          </div>
       </div>
 
-      {/* 2. Action Buttons Row (Below Alert Box) */}
       <div className="flex items-center justify-end gap-2 mb-4">
            {isSelectionMode && selectedIds.length > 0 && (
               <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
@@ -260,7 +257,6 @@ const DeletionRequests = () => {
             </button>
       </div>
 
-      {/* 3. Table Section */}
       {isLoading ? (
         <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" /></div>
       ) : (

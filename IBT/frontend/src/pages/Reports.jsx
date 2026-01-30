@@ -427,7 +427,6 @@ const Reports = () => {
 
   return (
     <Layout title="Reports Management">
-      {/* (Search & Main Actions) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
@@ -446,10 +445,7 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Filter Grid (Filters, Logs & Selection Controls) */}
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* Category Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Tag size={16} />
@@ -472,7 +468,6 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Time Range Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Calendar size={16} />
@@ -494,10 +489,7 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Action Buttons (Logs & Selection) */}
         <div className="flex items-center justify-end gap-2">
-            
-            {/* Logs Button */}
             <button 
                 onClick={() => setShowLogModal(true)} 
                 className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
@@ -537,7 +529,6 @@ const Reports = () => {
 
       </div>
 
-      {/* Table Section */}
       {loading ? (
         <div className="p-8 text-center text-slate-500 flex flex-col items-center">
             <Loader2 className="animate-spin mb-2" />
@@ -599,7 +590,6 @@ const Reports = () => {
         />
       )}
 
-      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalPages={Math.ceil(filtered.length / itemsPerPage)}
@@ -612,13 +602,11 @@ const Reports = () => {
         }}
       />
 
-      {/* LOG MODAL */}
       <LogModal 
         isOpen={showLogModal} 
         onClose={() => setShowLogModal(false)} 
       />
 
-      {/* View Modal (Updated with Exports) */}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
@@ -640,7 +628,6 @@ const Reports = () => {
                 <DataRenderer reportPayload={viewRow.data} />
             </div>
             
-            {/* Modal Footer with Export Buttons */}
             <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-between items-center">
               <div className="flex gap-2">
                 <button
@@ -670,7 +657,6 @@ const Reports = () => {
         </div>
       )}
 
-      {/* --- ARCHIVE MODAL --- */}
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">

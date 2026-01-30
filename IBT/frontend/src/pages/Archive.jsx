@@ -341,7 +341,6 @@ const Archive = () => {
         }}
       />
 
-      {/* View Modal */}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
@@ -375,7 +374,6 @@ const Archive = () => {
         </div>
       )}
 
-      {/* Restore Modal */}
       {restoreRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">

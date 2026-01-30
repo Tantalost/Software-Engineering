@@ -534,7 +534,6 @@ const BusTrips = () => {
 
     return (
         <Layout title="Bus Trips Management">
-             {/* --- NEW: ANALYTICS SECTION --- */}
             <div className="mb-6">
                 <StatCardGroupBus
                     totalTrips={totalTrips}
@@ -543,8 +542,6 @@ const BusTrips = () => {
                     totalRevenue={totalRevenue}
                 />
             </div>
-            {/* ------------------------------- */}
-
             <div className="px-4 lg:px-8">
                 <div className="flex flex-col gap-4 w-full">
                     <BusTripFilters
@@ -556,11 +553,7 @@ const BusTrips = () => {
                         setSelectedCompany={setSelectedCompany}
                         uniqueCompanies={uniqueCompanies}
                     />
-
-                    {/* CONSOLIDATED ACTION BAR */}
                     <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
-
-                        {/* BULK DELETE BUTTON (Left) */}
                         {isSelectionMode && selectedIds.length > 0 && (
                             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                                 <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
@@ -576,7 +569,6 @@ const BusTrips = () => {
                             </div>
                         )}
 
-                        {/* PRIMARY/SECONDARY ACTIONS (Right) */}
                         <div className={`flex flex-wrap items-center justify-end gap-3 ${isSelectionMode ? 'ml-auto' : 'w-full'}`}>
                             {(role === "bus") && (
                                 <button
@@ -600,7 +592,6 @@ const BusTrips = () => {
                                 onExportPDF={handleExportPDF}
                             />
 
-                            {/* LOGS BUTTON */}
                             <button
                                 onClick={() => setShowLogModal(true)}
                                 className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
@@ -610,7 +601,6 @@ const BusTrips = () => {
                                 <span className="hidden sm:inline">Logs</span>
                             </button>
 
-                            {/* TOGGLE SELECTION BUTTON */}
                             {(role === "bus") && (<button
                                 onClick={toggleSelectionMode}
                                 title={isSelectionMode ? "Cancel Selection" : "Select Records"}
@@ -717,8 +707,6 @@ const BusTrips = () => {
                     onItemsPerPageChange={setItemsPerPage}
                 />
             </div>
-
-            {/* --- MODALS --- */}
 
             <LogModal
                 isOpen={showLogModal}
@@ -1027,7 +1015,6 @@ const BusTrips = () => {
                     <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
                         <h3 className="mb-4 text-base font-semibold text-slate-800">Send Notification</h3>
                         <div className="space-y-3">
-                            {/* FIXED: Replaced undefined Input/Textarea with standard HTML + Tailwind */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
                                 <input

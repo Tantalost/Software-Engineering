@@ -62,7 +62,6 @@ const SummaryDonut = ({ data = [], quota = 0 }) => {
               })}
             </svg>
 
-            {/* Center Text */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center bg-white rounded-full w-40 h-40 flex flex-col items-center justify-center shadow-2xl border-4 border-white/50 backdrop-blur-md">
                 <p className="text-5xl font-extrabold bg-gradient-to-br from-gray-900 to-gray-700 bg-clip-text text-transparent">
@@ -76,7 +75,6 @@ const SummaryDonut = ({ data = [], quota = 0 }) => {
             </div>
           </div>
 
-          {/* Legend */}
           <div className="grid grid-cols-2 gap-4 mt-10 text-white w-full">
             {processedData.map((item, idx) => (
               <div key={idx} className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/25 text-center hover:bg-white/30 transition-all duration-300">

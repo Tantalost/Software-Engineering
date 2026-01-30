@@ -36,7 +36,6 @@ const TenantViewModal = ({ viewRow, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-xl bg-white p-0 shadow-2xl ring-1 ring-slate-900/5 flex flex-col max-h-[90vh]">
         
-        {/* --- HEADER --- */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
           <div>
             <h3 className="text-lg font-bold text-slate-800">Tenant Details</h3>
@@ -50,10 +49,7 @@ const TenantViewModal = ({ viewRow, onClose }) => {
           </button>
         </div>
 
-        {/* --- SCROLLABLE CONTENT --- */}
         <div className="overflow-y-auto p-6 space-y-6">
-          
-          {/* 1. Basic Information */}
           <section>
             <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -69,7 +65,6 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             </div>
           </section>
 
-          {/* 2. Financial Details */}
           <section>
             <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -82,7 +77,6 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             </div>
           </section>
 
-          {/* 3. DOCUMENTS (The Fixed Part) */}
           <section>
             <div className="flex items-center justify-between mb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-2">
@@ -126,7 +120,6 @@ const TenantViewModal = ({ viewRow, onClose }) => {
                             </>
                         )}
                         
-                        {/* Label Overlay */}
                         <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-100 py-2 px-1">
                             <p className="text-[10px] font-bold text-center text-slate-700 truncate">
                                 {doc.label}
@@ -146,7 +139,6 @@ const TenantViewModal = ({ viewRow, onClose }) => {
 
         </div>
         
-        {/* --- FOOTER --- */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-xl flex justify-end">
           <button 
             onClick={onClose} 

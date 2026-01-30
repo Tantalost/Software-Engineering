@@ -134,7 +134,6 @@ export default function EmployeeManage() {
                                                     <td className="px-6 py-3">
                                                         <div className="flex justify-end gap-2">
                                                             <button onClick={() => { setEditTarget(a); setEditPassword(""); }} className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-green-50 transition-all cursor-pointer">Change Password</button>
-                                                            {/* MODIFIED: Changed onClick to trigger the DeleteModal by setting deleteTarget */}
                                                             <button onClick={() => setDeleteTarget(a)} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition-all cursor-pointer">Remove</button>
                                                         </div>
                                                     </td>

@@ -49,7 +49,6 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Company</label>
                         <div className="flex p-1 bg-slate-100 rounded-lg">
-                            {/* Ensure these names match what you expect in your logic */}
                             {["Dindo", "Alga", "Ceres", "Lizamae"].map((comp) => (
                                 <button
                                     type="button"
@@ -82,7 +81,6 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                                 className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
                             >
                                 <option value="">Select Template</option>
-                                {/* 3. SAFELY MAP KEYS (This was causing the crash) */}
                                 {Object.keys(currentTemplates).map((key) => (
                                     <option key={key} value={key}>{key}</option>
                                 ))}

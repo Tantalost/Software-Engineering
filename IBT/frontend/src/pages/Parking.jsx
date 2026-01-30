@@ -819,7 +819,6 @@ const Parking = () => {
                     onView={() => setViewRow(selectedRecord)}
                     onEdit={() => setEditRow(selectedRecord)}
                   />
-                  {/* Updated to use custom modal */}
                   <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 cursor-pointer hover:bg-yellow-100" title="Archive">
                     <Archive size={16} />
                   </button>
@@ -842,7 +841,6 @@ const Parking = () => {
         </>
       )}
 
-      {/* --- RENDER EDIT MODAL --- */}
       {editRow && (
         <EditParking
           row={editRow}
@@ -850,16 +848,12 @@ const Parking = () => {
           onSave={handleEditSave}
         />
       )}
-      {/* ------------------------- */}
 
-      {/* --- 9. LOG MODAL --- */}
       <LogModal 
         isOpen={showLogModal} 
         onClose={() => setShowLogModal(false)} 
       />
-      {/* -------------------- */}
 
-      {/* NEW: ARCHIVE CONFIRMATION MODAL (Improved UI) */}
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
@@ -888,8 +882,6 @@ const Parking = () => {
             </div>
         </div>
       )}
-      {/* END ARCHIVE CONFIRMATION MODAL */}
-
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -1064,7 +1056,6 @@ const Parking = () => {
         </div>
       )}
       
-      {/* Status Pop-up Component (For both dynamic duration notifications) */}
       {notificationState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">
             <div 
@@ -1081,7 +1072,6 @@ const Parking = () => {
                     <h4 className="font-bold text-lg">{notificationState.type === 'success' ? 'Success!' : 'Error'}</h4>
                     <p className="text-sm">{notificationState.message}</p>
                 </div>
-                {/* Manual close button, visible for all notifications */}
                 <button 
                     onClick={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 2000 })} 
                     className="p-1 rounded-full text-white/80 hover:text-white transition-colors"
