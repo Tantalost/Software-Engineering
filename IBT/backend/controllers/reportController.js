@@ -1,6 +1,6 @@
 import Report from '../models/Report.js';
 
-// Create a new report
+// CREATE
 export const createReport = async (req, res) => {
   try {
     const { type, data, author, status } = req.body;
@@ -19,7 +19,7 @@ export const createReport = async (req, res) => {
   }
 };
 
-// Get all reports
+// GET ALL
 export const getAllReports = async (req, res) => {
   try {
     const reports = await Report.find().sort({ createdAt: -1 });
@@ -29,7 +29,7 @@ export const getAllReports = async (req, res) => {
   }
 };
 
-// Get single report by ID
+// GET SPECIFIC REPORT
 export const getReportById = async (req, res) => {
   try {
     const report = await Report.findById(req.params.id);
@@ -40,7 +40,7 @@ export const getReportById = async (req, res) => {
   }
 };
 
-// Delete report
+// DELETE
 export const deleteReport = async (req, res) => {
     try {
         await Report.findByIdAndDelete(req.params.id);

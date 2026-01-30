@@ -2,7 +2,7 @@ import Tenant from "../models/Tenant.js";
 import TenantApplication from "../models/TenantApplication.js"; // <--- IMPORT THIS
 import sendEmail from "../utils/sendEmail.js";
 
-// 1. GET ALL TENANTS
+// GET ALL TENANTS
 export const getTenants = async (req, res) => {
   try {
     const tenants = await Tenant.find().sort({ createdAt: -1 });
@@ -12,7 +12,7 @@ export const getTenants = async (req, res) => {
   }
 };
 
-// 2. GET SINGLE TENANT
+// GET SINGLE TENANT
 export const getTenantById = async (req, res) => {
   try {
     const tenant = await Tenant.findById(req.params.id);
@@ -23,15 +23,12 @@ export const getTenantById = async (req, res) => {
   }
 };
 
-// 3. CREATE TENANT (The Fix is here)
+// CREATE TENANT
 export const createTenant = async (req, res) => {
   try {
-    // A. Save New Tenant
     const newTenant = new Tenant(req.body);
     const savedTenant = await newTenant.save();
 
-    // B. CRITICAL FIX: Update the Application Status to 'TENANT'
-    // This tells the mobile app that the process is finished.
     if (req.body.transferWaitlistId) {
         await TenantApplication.findByIdAndUpdate(
             req.body.transferWaitlistId,
@@ -39,7 +36,6 @@ export const createTenant = async (req, res) => {
         );
     }
 
-    // C. Send Welcome Email
     const subject = "Final Approval - Welcome to IBT Stalls!";
     const message = `
 Congratulations ${savedTenant.tenantName}!
@@ -83,7 +79,7 @@ IBT Management
   }
 };
 
-// 4. UPDATE TENANT
+// UPDATE TENANT
 export const updateTenant = async (req, res) => {
   try {
     const updatedTenant = await Tenant.findByIdAndUpdate(
@@ -98,7 +94,7 @@ export const updateTenant = async (req, res) => {
   }
 };
 
-// 5. DELETE TENANT
+// DELETE TENANT
 export const deleteTenant = async (req, res) => {
   try {
     await Tenant.findByIdAndDelete(req.params.id);
