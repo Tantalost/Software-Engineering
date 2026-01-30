@@ -42,16 +42,12 @@ const StatCards = ({ statsData }) => {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
       {stats.map((stat, idx) => {
         const color = colorMap[stat.color] || colorMap.red;
-        
-        // 1. Determine Status Type safely
         const changeText = stat.change || ""; 
         const isPositive = changeText.startsWith("+");
         const isNegative = changeText.startsWith("-");
         const cleanChange = changeText.replace("+", "").replace("-", "");
-
-        // 2. Define Styles based on status
-        let badgeStyle = "bg-blue-50 text-blue-600"; // Default Neutral
-        let Icon = Activity; // Default Icon
+        let badgeStyle = "bg-blue-50 text-blue-600";
+        let Icon = Activity;
 
         if (isPositive) {
             badgeStyle = "bg-green-100 text-green-700";

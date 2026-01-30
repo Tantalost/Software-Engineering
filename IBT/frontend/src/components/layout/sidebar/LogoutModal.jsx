@@ -1,4 +1,3 @@
-// /components/sidebar/LogoutModal.js
 import React from "react";
 import { X, AlertTriangle } from "lucide-react";
 

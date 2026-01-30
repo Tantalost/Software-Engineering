@@ -39,7 +39,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     validID: null,
     barangayClearance: null,
     proofOfReceipt: null,
-    contract: null, // ADDED: Contract field
+    contract: null,
   });
 
   const formatDateTimeForInput = (dateObj) => {
@@ -49,14 +49,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     return localISOTime;
   };
 
-  // --- INITIALIZATION ---
   useEffect(() => {
     if (isOpen) {
-      // Helper to generate Auto Ref
       const generateRef = () => `REF-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
 
       if (initialData) {
-        // NAME SPLITTING LOGIC
         const fullName = initialData.name || initialData.tenantName || "";
         const nameParts = fullName.split(" ");
         let fName = "", mName = "", lName = "";
@@ -88,14 +85,14 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             setTempSelectedSlots(initialData.slotNo.split(', '));
         }
 
-        // LOAD DOCUMENTS (Including Contract if present)
+        // DOCUMENT LOADER
         if (initialData.documents) {
             setDocuments({
                 businessPermit: initialData.documents.businessPermit || null,
                 validID: initialData.documents.validID || null,
                 barangayClearance: initialData.documents.barangayClearance || null,
                 proofOfReceipt: initialData.documents.proofOfReceipt || null,
-                contract: initialData.documents.contract || null, // Load contract
+                contract: initialData.documents.contract || null,
             });
         }
 
@@ -109,7 +106,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         }
 
       } else {
-        // Reset for New Entry
         setFormData({
             slotNo: "",
             firstName: "",
@@ -128,7 +124,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             validID: null,
             barangayClearance: null,
             proofOfReceipt: null,
-            contract: null, // Reset contract
+            contract: null,
         });
         setTempSelectedSlots([]); 
       }
@@ -139,7 +135,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [isOpen, initialData]); 
 
-  // --- MAP SYNC ---
+  // MAPPER
   useEffect(() => {
     if (showMapModal) {
       const currentSlots = formData.slotNo ? formData.slotNo.split(', ') : [];
@@ -147,7 +143,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [showMapModal, formData.slotNo]);
 
-  // --- CALCULATIONS ---
+  // CALCULATIONS
   useEffect(() => {
     let baseRent = 0;
     let calculatedDueDate = "";
@@ -203,7 +199,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   };
 
-  // --- SUBMIT HANDLER ---
+  // SUBMIT
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -219,8 +215,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         };
 
         const processedDocuments = { ...documents };
-        
-        // Remove contract from payload if Night Market (optional cleanup)
         if (formData.tenantType !== "Permanent") {
             delete processedDocuments.contract;
         }
@@ -537,7 +531,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
                 {(() => {
-                  // Base Documents
                   const docFields = [
                     { label: 'Business Permit', key: 'businessPermit' },
                     { label: 'Valid ID', key: 'validID' },
@@ -545,7 +538,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                     { label: 'Proof of Receipt', key: 'proofOfReceipt' }
                   ];
 
-                  // Only show Contract if Permanent
                   if (formData.tenantType === "Permanent") {
                     docFields.push({ label: 'Signed Contract', key: 'contract' });
                   }

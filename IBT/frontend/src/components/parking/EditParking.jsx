@@ -1,25 +1,19 @@
 import React, { useState, useEffect } from "react";
-// Adjust these import paths based on your file structure
 import Input from "../common/Input";
 import Select from "../common/Select";
 
 const EditParking = ({ row, onClose, onSave }) => {
   
-  // Helper: Extract YYYY-MM-DD from ISO string for the Date Input
   const extractDate = (isoString) => {
     if (!isoString) return "";
-    // uses en-CA to force YYYY-MM-DD format which is required for input type="date"
     return new Date(isoString).toLocaleDateString('en-CA'); 
   };
 
-  // Helper: Extract HH:MM from ISO string for the Time Input
   const extractTime = (isoString) => {
     if (!isoString) return "";
-    // uses en-GB to force HH:mm (24h) format required for value of input type="time"
     return new Date(isoString).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Helper: Parse currency/number safely
   const parsePrice = (p) => parseFloat(String(p).replace(/[^0-9.]/g, "")) || 0;
 
   const [form, setForm] = useState({

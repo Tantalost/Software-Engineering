@@ -1,9 +1,6 @@
 import React from "react";
-// We don't strictly need useNavigate here anymore since the parent passes the handler
-// but keeping it doesn't hurt.
 import { FileCheck } from "lucide-react"; 
 
-// 1. Add onItemClick to the props
 const RecentActivity = ({ data = [], onItemClick }) => {
 
   const typeColors = {
@@ -29,7 +26,6 @@ const RecentActivity = ({ data = [], onItemClick }) => {
           return (
             <div
               key={activity.id || idx}
-              // 2. Add the onClick handler here
               onClick={() => onItemClick && onItemClick(activity.id)}
               className="flex items-center justify-between py-5 px-6 bg-gradient-to-r from-gray-50 to-white border border-gray-200 hover:border-emerald-300 rounded-2xl hover:shadow-md transition-all duration-300 cursor-pointer group"
             >

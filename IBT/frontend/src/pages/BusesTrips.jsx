@@ -11,9 +11,7 @@ import Field from "../components/common/Field";
 import EditBusTrip from "../components/busTrips/EditBusTrip";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
-// --- NEW IMPORT ---
-import StatCardGroupBus from "../components/busTrips/StatCardGroupBus"; 
-// ------------------
+import StatCardGroupBus from "../components/busTrips/StatCardGroupBus";
 import { submitPageReport } from "../utils/reportService.js";
 import { sendNotification } from "../utils/notificationService.js";
 import { logActivity } from "../utils/logger";
@@ -28,18 +26,13 @@ const TEMPLATE_ROUTES = {
 };
 
 const BusTrips = () => {
-    // 1. STATE DECLARATIONS
     const [records, setRecords] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
     const [selectedCompany, setSelectedCompany] = useState("");
-
     const [showAddModal, setShowAddModal] = useState(false);
     const [showLogModal, setShowLogModal] = useState(false);
-
-    // Selection Mode State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
 
@@ -71,7 +64,6 @@ const BusTrips = () => {
 
     const [ticketRefInput, setTicketRefInput] = useState("");
 
-    // 2. DATA FETCHING
     const fetchBusTrips = async () => {
         setIsLoading(true);
         try {
@@ -94,7 +86,6 @@ const BusTrips = () => {
         fetchBusTrips();
     }, []);
 
-    // 3. COMPUTED VALUES (FILTERING)
     const uniqueCompanies = [...new Set(records.map((bus) => bus.company))];
 
     const filtered = records.filter((bus) => {
@@ -107,17 +98,12 @@ const BusTrips = () => {
         return matchesSearch && matchesCompany && matchesDate;
     });
 
-    // --- NEW: ANALYTICS CALCULATIONS ---
     const totalTrips = filtered.length;
-    // Assuming "Paid" status means they have departed/logged out
     const paidTrips = filtered.filter(t => t.status === "Paid").length;
     const pendingTrips = filtered.filter(t => t.status === "Pending").length;
-    
-    // Calculate revenue only for "Paid" (departed) trips to ensure accuracy
     const totalRevenue = filtered
         .filter(t => t.status === "Paid")
         .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
-    // -----------------------------------
 
     const paginatedData = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
@@ -125,8 +111,6 @@ const BusTrips = () => {
     }, [filtered, currentPage, itemsPerPage]);
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-    // --- HELPER: FORMAT DATA FOR EXPORT ---
     const formatTimeExport = (timeStr) => {
         if (!timeStr) return "";
         try {
@@ -154,7 +138,7 @@ const BusTrips = () => {
         }));
     };
 
-    // --- EXPORT TO EXCEL (CSV) ---
+    // EXPORT TO EXCEL (CSV)
     const handleExportExcel = () => {
         if (filtered.length === 0) {
             alert("No records to export.");
@@ -180,7 +164,7 @@ const BusTrips = () => {
         URL.revokeObjectURL(url);
     };
 
-    // --- EXPORT TO PDF ---
+    // EXPORT TO PDF
     const handleExportPDF = () => {
         if (filtered.length === 0) {
             alert("No records to export.");
@@ -226,7 +210,6 @@ const BusTrips = () => {
         doc.save(`Bus_Trips_Report_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
-    // --- SELECTION HANDLERS ---
     const toggleSelectionMode = () => {
         if (isSelectionMode) {
             setSelectedIds([]);
@@ -252,7 +235,7 @@ const BusTrips = () => {
 
     const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
 
-    // --- BULK DELETE HANDLER ---
+    // BULK DELETE
     const handleBulkDelete = async () => {
         const confirmMsg = role === "bus"
             ? `Request deletion for ${selectedIds.length} records?`
@@ -315,7 +298,6 @@ const BusTrips = () => {
         }
     };
 
-    // --- EXISTING HANDLERS ---
     const handleSubmitReport = async () => {
         setIsReporting(true);
         try {
@@ -482,7 +464,6 @@ const BusTrips = () => {
     };
 
     const handleArchive = async (rowToArchive) => {
-        // Just set the state to open the modal
         setArchiveRow(rowToArchive);
     };
 
@@ -491,7 +472,6 @@ const BusTrips = () => {
         const row = archiveRow;
         
         try {
-            // 1. Archive
             const archiveRes = await fetch("http://localhost:3000/api/archives", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -504,7 +484,7 @@ const BusTrips = () => {
             });
             if (!archiveRes.ok) throw new Error("Failed to archive");
 
-            // 2. Delete
+            // DELETE
             const deleteRes = await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
             if (!deleteRes.ok) throw new Error("Failed to delete");
 
@@ -532,14 +512,12 @@ const BusTrips = () => {
         }
     };
 
-    // --- HELPER FOR TEMPLATE FILTERING ---
     const getTemplatesForCurrentCompany = () => {
         const companyKey = newBusData.company.toLowerCase();
         const routes = busCompanyRoutes[companyKey];
         return routes ? Object.keys(routes) : [];
     };
 
-    // --- TABLE COLUMNS SETUP ---
     const tableColumns = isSelectionMode
         ? [
             <div key="header-check" className="flex items-center">
@@ -674,7 +652,6 @@ const BusTrips = () => {
                                 ticketref: bus.ticketReferenceNo || "-"
                             };
 
-                            // Add selection checkbox if in selection mode
                             if (isSelectionMode) {
                                 return {
                                     select: (
@@ -968,7 +945,6 @@ const BusTrips = () => {
                     row={editRow}
                     onClose={() => setEditRow(null)}
                     onSave={(updated) => {
-                        // FIXED: Replaced 'persist(next)' with setRecords to avoid undefined error
                         setRecords(prev => prev.map((r) => (r.id === updated.id ? updated : r)));
                         setEditRow(null);
                     }}

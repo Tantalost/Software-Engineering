@@ -13,9 +13,8 @@ import {
 import { PhilippinePeso, BarChart3 } from "lucide-react";
 
 const OperationsAnalytics = ({ data }) => {
-  const [viewMode, setViewMode] = useState("revenue"); // 'revenue' or 'volume'
+  const [viewMode, setViewMode] = useState("revenue");
 
-  // 1. Add 'tenants' to keys
   const keys = {
     tickets: viewMode === "revenue" ? "ticketsRevenue" : "ticketsVolume",
     bus: viewMode === "revenue" ? "busRevenue" : "busVolume",

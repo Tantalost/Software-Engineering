@@ -4,10 +4,6 @@ import Field from "../../common/Field";
 
 const TenantViewModal = ({ viewRow, onClose }) => {
   if (!viewRow) return null;
-
-  // --- HELPER: Build the list of documents safely ---
-  // We check BOTH the nested 'documents' object AND the top-level keys
-  // to ensure compatibility with all data versions.
   const documentList = [
     { 
       key: 'permit', 
@@ -34,7 +30,7 @@ const TenantViewModal = ({ viewRow, onClose }) => {
       label: "Signed Contract", 
       url: viewRow.documents?.contract || viewRow.contractUrl 
     }
-  ].filter(doc => doc.url); // Only show documents that actually have a URL
+  ].filter(doc => doc.url);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -101,7 +97,6 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             {documentList.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {documentList.map((doc) => {
-                    // Check if PDF
                     const isPDF = doc.url.toLowerCase().includes("application/pdf") || doc.url.toLowerCase().endsWith(".pdf");
 
                     return (

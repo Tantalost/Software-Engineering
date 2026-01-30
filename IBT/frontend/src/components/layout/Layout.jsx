@@ -14,7 +14,6 @@ const Layout = ({ title, children }) => {
     localStorage.setItem("sidebarExpanded", sidebarExpanded);
   }, [sidebarExpanded]);
 
-  // Handle Document Title
   useEffect(() => {
     document.title = title ? `${title}` : "IBT Management";
   }, [title]);

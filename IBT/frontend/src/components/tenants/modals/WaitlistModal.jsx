@@ -4,17 +4,15 @@ import { X, ClipboardList, UserCheck, CreditCard, Eye, Filter } from "lucide-rea
 const WaitlistModal = ({ 
   isOpen, onClose, waitlistData, onApprove, onReject 
 }) => {
-  // 1. ADD STATE FOR FILTER
   const [statusFilter, setStatusFilter] = useState("All"); 
 
   if (!isOpen) return null;
 
-  // 2. FILTER LOGIC
+  // FILTER
   const filteredData = waitlistData.filter((app) => {
     if (statusFilter === "All") return true;
     
     if (statusFilter === "Verification Pending") {
-        // Show if status is missing OR explicitly pending
         return !app.status || app.status === "VERIFICATION_PENDING";
     }
     

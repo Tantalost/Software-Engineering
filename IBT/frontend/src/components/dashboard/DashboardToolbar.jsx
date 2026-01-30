@@ -25,7 +25,6 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
     }
   };
 
-  // View Switching Logic
   const handleViewChange = (newView) => {
     setView(newView);
     if(onFilterChange) {

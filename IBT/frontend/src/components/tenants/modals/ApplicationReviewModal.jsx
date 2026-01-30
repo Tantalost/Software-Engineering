@@ -21,22 +21,14 @@ const ApplicationReviewModal = ({
   const status = reviewData.status || "Pending";
   const isPermanent = (reviewData.floor === "Permanent" || reviewData.tenantType === "Permanent");
 
-  // Determine State
   const isPaymentReview = status === "PAYMENT_REVIEW"; 
   const isContractReview = status === "CONTRACT_REVIEW";
   
-  // Logic for Step 7 Buttons
   const showUnlockBtn = status === "VERIFICATION_PENDING";
-  
-  // Show "Request Contract" ONLY if: Payment Reviewed + Permanent + Not yet waiting for contract
   const showRequestContractBtn = isPaymentReview && isPermanent;
-
-  // Show "Add Tenant" IF:
-  // 1. Night Market AND Payment Reviewed (Skip Contract)
-  // 2. OR Permanent AND Contract Reviewed
   const showAddTenantBtn = (isPaymentReview && !isPermanent) || isContractReview;
 
-  // Documents Logic
+  // DOCUMENT LOGIC
   const showContractSlot = isPermanent || reviewData.contractUrl;
   const documents = [
     { label: "Valid ID", url: reviewData.validIdUrl },
@@ -128,12 +120,10 @@ const ApplicationReviewModal = ({
                   >
                     {doc.url ? (
                       <>
-                        {/* 1. PDF LOGIC: If file is PDF, show icon instead of image */}
                         {(doc.url.startsWith("data:application/pdf") || doc.url.toLowerCase().endsWith(".pdf")) ? (
                             <div 
                                 className="w-full h-full flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 transition-colors"
                                 onClick={() => {
-                                    // Open PDF in new tab
                                     const pdfWindow = window.open("");
                                     if (pdfWindow) pdfWindow.document.write(`<iframe width='100%' height='100%' src='${doc.url}'></iframe>`);
                                 }} 
@@ -143,7 +133,6 @@ const ApplicationReviewModal = ({
                                 <span className="text-[10px] text-red-400">(Click to Open)</span>
                             </div>
                         ) : (
-                            /* 2. IMAGE LOGIC: Standard Preview */
                             <div className="w-full h-full" onClick={() => setPreviewImage(doc.url)}>
                                 <img src={doc.url} alt={doc.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">

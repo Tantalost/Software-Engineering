@@ -1,11 +1,9 @@
-// components/dashboard/TargetModal.jsx
 import React, { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
 
 const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
   const [localTargets, setLocalTargets] = useState(currentTargets);
 
-  // Sync local state when prop changes
   useEffect(() => {
     if (isOpen) {
       setLocalTargets(currentTargets);

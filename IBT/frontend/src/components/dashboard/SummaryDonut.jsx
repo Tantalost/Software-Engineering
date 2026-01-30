@@ -1,24 +1,20 @@
 import React from "react";
 
 const SummaryDonut = ({ data = [], quota = 0 }) => {
-  // 1. Calculate Total Revenue
+  // CALC TOTAL REV
   const totalValue = data.reduce((sum, item) => sum + item.value, 0);
   
-  // 2. Calculate Overall Percentage against Quota
-  // If quota is 0, avoid division by zero
+  // CALC OV PERC vs Quota
   const overallPercent = quota > 0 ? Math.round((totalValue / quota) * 100) : 0;
   
-  // 3. Process Data segments based on Quota
+  // PROCESS DATA FOR DONUT
   const processedData = data.map(item => ({
     ...item,
-    // Each slice represents its contribution to the GOAL, not just the total
     percent: quota > 0 ? (item.value / quota) * 100 : 0
   }));
 
   const radius = 85;
   const circumference = 2 * Math.PI * radius;
-
-  // Visual cap for the "Unfilled" background circle (so it doesn't look broken if > 100%)
   const displayPercent = overallPercent > 100 ? 100 : overallPercent;
 
   return (
@@ -35,7 +31,6 @@ const SummaryDonut = ({ data = [], quota = 0 }) => {
         <div className="flex flex-col items-center">
           <div className="relative">
             <svg className="w-56 h-56 transform -rotate-90 drop-shadow-xl">
-              {/* Background Circle (Track) */}
               <circle
                 cx="112" cy="112" r={radius}
                 fill="none"
@@ -43,13 +38,11 @@ const SummaryDonut = ({ data = [], quota = 0 }) => {
                 strokeWidth="32"
               />
 
-              {/* Data Segments */}
               {processedData.map((segment, idx) => {
                 const offset = processedData
                   .slice(0, idx)
                   .reduce((acc, s) => acc + s.percent, 0);
                 
-                // Calculate dash array based on circumference
                 const dashArray = `${(segment.percent / 100) * circumference} ${circumference}`;
                 const dashOffset = -((offset / 100) * circumference);
 

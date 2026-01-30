@@ -1,33 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { Logs, X, MailOpen, Trash2, Loader2 } from "lucide-react";
 import Layout from "../components/layout/Layout";
-// Import the service functions
 import { fetchNotifications, markNotificationAsRead, deleteNotification } from "../utils/notificationService.js";
 
 export default function Notifications() {
     const [notes, setNotes] = useState([]);
-    const [isLoading, setIsLoading] = useState(true); // Add loading state
+    const [isLoading, setIsLoading] = useState(true);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
 
-    // 1. Load from MongoDB on mount
-    // 1. Load from MongoDB on mount
 const loadData = async () => {
         setIsLoading(true);
-        const data = await fetchNotifications(); // Fetches raw data
-
-        // ============================================================
-        // 🛑 CRITICAL FIX: FILTER DATA HERE TOO
-        // ============================================================
+        const data = await fetchNotifications();
         const userRole = localStorage.getItem("authRole") || "superadmin";
         
         const filteredNotes = data.filter(n => {
             return !n.targetRole || n.targetRole === "all" || n.targetRole === userRole;
         });
         
-        setNotes(filteredNotes);
-        // ============================================================
-        
+        setNotes(filteredNotes);        
         setIsLoading(false);
     };
 
@@ -54,14 +45,10 @@ const loadData = async () => {
         }
     };
 
-    // 2. Updated Delete Logic (API call)
     const handleDeleteSelected = async () => {
         if (confirm(`Delete ${selectedIds.length} selected notification(s)?`)) {
-            // Optimistic UI update
             const remainingNotes = notes.filter((n) => !selectedIds.includes(n.id));
             setNotes(remainingNotes);
-            
-            // Backend calls
             await Promise.all(selectedIds.map(id => deleteNotification(id)));
             
             setSelectedIds([]);
@@ -69,28 +56,21 @@ const loadData = async () => {
         }
     };
 
-    // 3. Updated Mark Read Logic (API call)
     const handleMarkSelectedRead = async () => {
-        // Optimistic UI update
         setNotes(prev => prev.map(n => selectedIds.includes(n.id) ? { ...n, read: true } : n));
-        
-        // Backend calls
         await Promise.all(selectedIds.map(id => markNotificationAsRead(id)));
         
         setSelectedIds([]); 
         setIsSelectionMode(false);
     };
 
-    // 4. Updated Single Item Click (API call)
     const handleItemClick = async (id) => {
         if (isSelectionMode) {
             toggleSelect(id);
         } else {
             const note = notes.find(n => n.id === id);
             if (!note.read) {
-                // Optimistic update
                 setNotes(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-                // Backend update
                 await markNotificationAsRead(id);
             }
         }

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/layout/Layout";
-// ADDED: Imports for DeleteModal and Icons
 import DeleteModal from "../components/common/DeleteModal"; 
 import { Trash2, CheckCircle, XCircle, X, UserX } from "lucide-react"; 
 
@@ -33,8 +32,6 @@ export default function EmployeeManage() {
     const [createForm, setCreateForm] = useState({ email: "", password: "", role: "parking" }); 
     const [editTarget, setEditTarget] = useState(null);
     const [editPassword, setEditPassword] = useState("");
-    
-    // ADDED: State for Delete Modal and Notification
     const [deleteTarget, setDeleteTarget] = useState(null); 
     const [notificationState, setNotificationState] = useState({ 
       isOpen: false, 
@@ -48,7 +45,6 @@ export default function EmployeeManage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(admins));
     }, [admins]);
 
-    // ADDED: Auto-close Notification Effect
     useEffect(() => {
         if (notificationState.isOpen && notificationState.autoClose) {
             const timerDuration = notificationState.duration || 3000; 
@@ -65,7 +61,6 @@ export default function EmployeeManage() {
         if (!createForm.email || !createForm.password) return;
         const exists = admins.some((a) => a.email.toLowerCase() === createForm.email.toLowerCase());
         if (exists) {
-            // FIXED: Replaced alert() with custom notification
             setNotificationState({ isOpen: true, type: 'error', message: "Email already exists.", autoClose: true, duration: 3000 });
             return;
         } 
@@ -76,13 +71,8 @@ export default function EmployeeManage() {
         setAdmins(next);
         setShowCreate(false);
         setCreateForm({ email: "", password: "", role: "parking" });
-        // ADDED: Success notification for creation
         setNotificationState({ isOpen: true, type: 'success', message: `${createForm.email} created successfully.`, autoClose: true, duration: 3000 });
     };
-
-    // MODIFIED: Replaced original removeAdmin with logic to trigger the modal
-    // Actual deletion logic moved to handleDeleteConfirm
-    // const removeAdmin = (id) => { ... } // REMOVED
 
     const handleDeleteConfirm = () => {
         if (!deleteTarget) return;
@@ -91,7 +81,6 @@ export default function EmployeeManage() {
             const adminEmail = deleteTarget.email; 
             const next = admins.filter((a) => a.id !== deleteTarget.id);
             setAdmins(next);
-            // ADDED: Success notification for deletion
             setNotificationState({ isOpen: true, type: 'success', message: `${adminEmail} has been successfully removed.`, autoClose: true, duration: 3000 });
         } catch (error) {
             console.error("Error removing admin:", error);
@@ -107,7 +96,6 @@ export default function EmployeeManage() {
         setAdmins(next);
         setEditTarget(null);
         setEditPassword("");
-        // ADDED: Success notification for password change
         setNotificationState({ isOpen: true, type: 'success', message: `Password for ${editTarget.email} updated.`, autoClose: true, duration: 3000 });
     };
 
@@ -204,19 +192,16 @@ export default function EmployeeManage() {
                 </div>
             )}
             
-            {/* ADDED: Delete Confirmation Modal */}
             <DeleteModal 
                 isOpen={!!deleteTarget} 
                 onClose={() => setDeleteTarget(null)} 
                 onConfirm={handleDeleteConfirm} 
-                title="Remove Admin Account" 
-                // Using an icon prop for consistency with other modals (optional)
+                title="Remove Admin Account"
                 icon={<UserX size={28} className="text-red-500" />} 
                 message={`Are you sure you want to PERMANENTLY remove the admin account for ${deleteTarget?.email || 'this user'}? This action cannot be undone.`} 
                 itemName={deleteTarget?.email || ""}
             />
 
-            {/* ADDED: Status Pop-up Component */}
             {notificationState.isOpen && (
                 <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none cursor-pointer">
                     <div 
