@@ -69,6 +69,11 @@ const BusTrips = () => {
         status: "Pending"
     });
 
+    const [companies, setCompanies] = useState(["Dindo", "Alga", "Ceres", "Lizamae"]);
+    const [showCompanyModal, setShowCompanyModal] = useState(false);
+    const [newCompanyName, setNewCompanyName] = useState("");
+
+
     const [ticketRefInput, setTicketRefInput] = useState("");
 
     // 2. DATA FETCHING
@@ -755,9 +760,19 @@ const BusTrips = () => {
                         <form onSubmit={handleCreateRecord}>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Company</label>
+                                    <div className="flex items-center justify-between mb-2">
+    <label className="block text-sm font-medium text-slate-700">Company</label>
+    <button
+        type="button"
+        onClick={() => setShowCompanyModal(true)}
+        className="text-xs text-emerald-600 hover:underline"
+    >
+        Manage
+    </button>
+</div>
+
                                     <div className="flex p-1 bg-slate-100 rounded-lg">
-                                        {["Dindo", "Alga", "Ceres", "Lizamae"].map((company) => (
+                                        {companies.map((company) => (
                                             <button
                                                 type="button"
                                                 key={company}
@@ -849,6 +864,69 @@ const BusTrips = () => {
                     </div>
                 </div>
             )}
+
+            {showCompanyModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                  <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                   <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Manage Companies</h3>
+                    <button onClick={() => setShowCompanyModal(false)}>
+                    <X className="w-5 h-5 text-slate-500" />
+                    </button>
+                    </div>
+
+                   <div className="space-y-4">
+                     <div className="flex gap-2">
+                     <input
+                          type="text"
+                          value={newCompanyName}
+                          onChange={(e) => setNewCompanyName(e.target.value)}
+                          placeholder="New company name"
+                          className="flex-1 rounded-lg border px-3 py-2 text-sm"
+                        />
+                         <button
+                        type="button"
+                        onClick={() => {
+                            if (!newCompanyName.trim()) return;
+                            if (companies.includes(newCompanyName)) return;
+                            setCompanies([...companies, newCompanyName]);
+                            setNewCompanyName("");
+                        }}
+                        className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white"
+                        title="Add Company"
+                    >
+                        Add
+                    </button>
+                </div>
+
+                {/* Company List */}
+                <div className="space-y-2">
+                    {companies.map((company) => (
+                        <div
+                            key={company}
+                            className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2"
+                        >
+                            <span className="text-sm">{company}</span>
+                            <button
+                                type="button"
+                                title="Delete Company"
+                                onClick={() => {
+                                    setCompanies(companies.filter(c => c !== company));
+                                    if (newBusData.company === company) {
+                                        setNewBusData({ ...newBusData, company: "" });
+                                    }
+                                }}
+                                className="text-red-500 hover:text-red-700"
+                            >
+                                <Trash2 className="w-4 h-4"/>
+                            </button>
+                         </div>
+                         ))}
+                       </div>
+                     </div>
+                   </div>
+               </div>
+              )}
 
             {logoutRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
