@@ -3,14 +3,10 @@ import StatusBadge from "./StatusBadge";
 import TableActions from "./TableActions";
 
 const Table = ({ columns = [], data = [], actions }) => {
-  
-  // 1. Helper to safely generate a key from a column header
   const keyFromCol = (col) => {
-    // If it is a string (e.g., "Ticket No"), format it to "ticket-no"
     if (typeof col === 'string') {
       return col.toLowerCase().replace(/\s+/g, '-');
     }
-    // If it is a React element (the Checkbox), use its key or a default
     if (React.isValidElement(col)) {
       return col.key || 'select';
     }
@@ -56,16 +52,9 @@ const Table = ({ columns = [], data = [], actions }) => {
                   >
                     {columns.map((col, i) => {
                       const key = keyFromCol(col);
-                      
-                      // Data Mapping Logic:
-                      // 1. Try exact key match
-                      // 2. If fails, try matching "select" for the first column (checkbox)
-                      // 3. If fails, try removing dashes (e.g., "ticket-no" -> "ticketno")
                       let value = row[key];
                       if (value === undefined && i === 0) value = row.select;
                       if (value === undefined) value = row[key.replace(/-/g, '')];
-
-                      // Safe String Check: Only run string methods if col is text
                       const colName = typeof col === 'string' ? col : "";
 
                       if (colName.toLowerCase().includes("status")) {

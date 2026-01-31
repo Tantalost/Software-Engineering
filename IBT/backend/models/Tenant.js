@@ -23,7 +23,7 @@ const TenantSchema = new mongoose.Schema({
     validID: String,
     barangayClearance: String,
     proofOfReceipt: String,
-    contract: String // <--- Added this field
+    contract: String
   },
   
   uid: String, 

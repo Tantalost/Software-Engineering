@@ -25,16 +25,12 @@ const Modal = ({ title, onClose, children }) => (
 const DeletionRequests = () => {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
   const [viewData, setViewData] = useState(null); 
   const [approveData, setApproveData] = useState(null);
   const [denyData, setDenyData] = useState(null); 
   const [adminRemarks, setAdminRemarks] = useState("");
-
-  // --- SELECTION STATE ---
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -66,7 +62,6 @@ const DeletionRequests = () => {
 
   const totalPages = Math.ceil(requests.length / itemsPerPage);
 
-  // --- SELECTION HANDLERS ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
     setIsSelectionMode(!isSelectionMode);
@@ -90,7 +85,7 @@ const DeletionRequests = () => {
 
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item._id || item.id));
 
-  // --- BULK APPROVE (ARCHIVE & DELETE) ---
+  // BULK APPROVE (SOFT DELETE)
   const handleBulkApprove = async () => {
     if (!window.confirm(`Are you sure you want to approve deletion for ${selectedIds.length} items? \n\nThey will be moved to the Archives before deletion.`)) return;
 
@@ -100,7 +95,7 @@ const DeletionRequests = () => {
             const reqItem = requests.find(r => (r._id || r.id) === id);
             if (!reqItem) return;
 
-            // 1. AUTO-ARCHIVE
+            // AUTO-ARCHIVE
             if (reqItem.originalData) {
                 await fetch(ARCHIVE_URL, {
                     method: "POST",
@@ -114,7 +109,7 @@ const DeletionRequests = () => {
                 });
             }
 
-            // 2. APPROVE DELETION
+            // APPROVE DELETION
             await fetch(`${API_URL}/deletion-requests/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -142,7 +137,6 @@ const DeletionRequests = () => {
     }
   };
 
-  // --- INDIVIDUAL HANDLERS ---
   const handleApprove = async () => {
     if (!approveData || !adminRemarks) return;
 
@@ -210,7 +204,6 @@ const DeletionRequests = () => {
     }
   };
 
-  // --- COLUMNS ---
   const columns = isSelectionMode 
   ? [
       <div key="header-check" className="flex items-center">
@@ -227,8 +220,6 @@ const DeletionRequests = () => {
 
   return (
     <Layout title="Deletion Requests">
-      
-      {/* 1. Alert Box (Full Width) */}
       <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-4 rounded-r flex items-start gap-3">
          <AlertCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={20} />
          <div>
@@ -237,7 +228,6 @@ const DeletionRequests = () => {
          </div>
       </div>
 
-      {/* 2. Action Buttons Row (Below Alert Box) */}
       <div className="flex items-center justify-end gap-2 mb-4">
            {isSelectionMode && selectedIds.length > 0 && (
               <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
@@ -267,7 +257,6 @@ const DeletionRequests = () => {
             </button>
       </div>
 
-      {/* 3. Table Section */}
       {isLoading ? (
         <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" /></div>
       ) : (

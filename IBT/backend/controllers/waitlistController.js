@@ -1,7 +1,7 @@
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js"; 
 
-// 1. GET ALL (Required by router)
+// GET ALL
 export const getWaitlist = async (req, res) => {
   try {
     const list = await TenantApplication.find().sort({ createdAt: -1 });
@@ -11,7 +11,7 @@ export const getWaitlist = async (req, res) => {
   }
 };
 
-// 2. GET BY ID (Required by router)
+// GET BY ID
 export const getWaitlistById = async (req, res) => {
   try {
     const entry = await TenantApplication.findById(req.params.id);
@@ -22,7 +22,7 @@ export const getWaitlistById = async (req, res) => {
   }
 };
 
-// 3. CREATE (Required by router)
+// CREATE
 export const createWaitlistEntry = async (req, res) => {
   try {
     const newEntry = new TenantApplication(req.body);
@@ -33,8 +33,7 @@ export const createWaitlistEntry = async (req, res) => {
   }
 };
 
-// 4. UPDATE (Matches 'updateWaitlistEntry' in routes)
-// *** This contains your Email Logic ***
+// UPDATE
 export const updateWaitlistEntry = async (req, res) => {
   try {
     const { id } = req.params;
@@ -42,7 +41,7 @@ export const updateWaitlistEntry = async (req, res) => {
 
     const applicant = await TenantApplication.findByIdAndUpdate(
       id, 
-      req.body, // Update all fields passed (including status)
+      req.body,
       { new: true }
     );
 
@@ -50,16 +49,14 @@ export const updateWaitlistEntry = async (req, res) => {
       return res.status(404).json({ error: "Applicant not found" });
     }
 
-    // --- EMAIL LOGIC ---
+    // EMAIL LOGIC
     let message = "";
     let subject = "";
 
-    // CASE 1: UNLOCK PAYMENT
     if (status === "PAYMENT_UNLOCKED") {
         subject = "Application Approved - Payment Unlocked";
         message = `Dear ${applicant.name},\n\nYour application has been approved!\n\nPlease open the app to view the "Stall Order of Payment".\nYou are required to upload your payment receipt photo for final verification.\n\nThank you!`;
     } 
-    // CASE 2: REQUEST CONTRACT
     else if (status === "CONTRACT_PENDING") {
         subject = "Action Required: Upload Contract";
         message = `Dear ${applicant.name},\n\nWe have verified your payment.\nSince you applied for a Permanent slot, please upload your Signed Contract document via the app to proceed.\n\nThank you!`;
@@ -78,15 +75,13 @@ export const updateWaitlistEntry = async (req, res) => {
             console.error("Email failed:", emailError);
         }
     }
-    // -------------------
-
     res.status(200).json(applicant);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// 5. DELETE (Required by router)
+// DELETE
 export const deleteWaitlistEntry = async (req, res) => {
   try {
     await TenantApplication.findByIdAndDelete(req.params.id);

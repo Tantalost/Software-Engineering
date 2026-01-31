@@ -3,7 +3,6 @@ import { Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
 
 const ExportMenu = ({ onExportExcel, onExportPDF }) => {
   const [open, setOpen] = useState(false);
-
   const handleToggle = () => setOpen(!open);
   const handleClose = () => setOpen(false);
 
@@ -51,7 +50,6 @@ const ExportMenu = ({ onExportExcel, onExportPDF }) => {
                 <FileText size={16} className="text-emerald-600" />
                 <span>Export PDF</span>
               </button>
-
             </div>
           </div>
         </>

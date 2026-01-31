@@ -52,7 +52,6 @@ const NotifyModal = ({ onClose }) => {
             onChange={(e) => setDraft({ ...draft, message: e.target.value })}
           />
         </div>
-
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm">
             Cancel

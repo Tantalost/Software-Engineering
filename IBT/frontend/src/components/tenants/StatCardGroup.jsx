@@ -1,11 +1,9 @@
 
 import React from "react";
 import StatCard from "./StatCard";
-import { Store, Grid, PhilippinePeso } from "lucide-react"; // Changed PhilippinePesoIcon to PhilippinePeso
+import { Store, Grid, PhilippinePeso } from "lucide-react";
 
 const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots, totalRevenue }) => {
-  
-  // Format the passed revenue prop
   const formattedRevenue = (totalRevenue || 0).toLocaleString("en-PH", {
     style: 'currency',
     currency: 'PHP',

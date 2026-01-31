@@ -1,15 +1,10 @@
 import React, { useState, useMemo } from 'react';
-// Added FileText and Table for the dropdown icons
 import { RefreshCw, Download, ChevronLeft, ChevronRight, Calendar, FileText, Table } from 'lucide-react';
 
 const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
   const [date, setDate] = useState(new Date());
   const [view, setView] = useState('week'); 
-  
-  // New state to manage the download dropdown visibility
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-
-  // Navigation Logic (Prev/Next)
   const navigate = (direction) => {
     const newDate = new Date(date);
     
@@ -30,7 +25,6 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
     }
   };
 
-  // View Switching Logic
   const handleViewChange = (newView) => {
     setView(newView);
     if(onFilterChange) {
@@ -41,19 +35,15 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
   const dateLabel = useMemo(() => {
     if (view === 'year') return date.getFullYear().toString();
     if (view === 'month') return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
     if (view === 'week') {
       const current = new Date(date);
       const day = current.getDay(); 
       const start = new Date(current);
       start.setDate(current.getDate() - day); 
-      
       const end = new Date(start);
       end.setDate(start.getDate() + 6); 
-
       const sameYear = start.getFullYear() === end.getFullYear();
       const sameMonth = start.getMonth() === end.getMonth();
-
       if (sameMonth && sameYear) {
          return `${start.toLocaleDateString('en-US', { month: 'long' })} ${start.getDate()} - ${end.getDate()}, ${end.getFullYear()}`;
       }
@@ -64,8 +54,6 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-200 shadow-sm relative z-20">
-      
-      {/* View Switcher */}
       <div className="flex bg-gray-100/80 p-1 rounded-lg w-full sm:w-auto">
         {['week', 'month', 'year'].map((v) => (
           <button
@@ -83,7 +71,6 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
         ))}
       </div>
 
-      {/* Date Navigator */}
       <div className="flex items-center bg-white border border-gray-100 rounded-lg px-1 py-1 shadow-sm">
         <button 
             onClick={() => navigate('prev')}
@@ -104,14 +91,9 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
             <ChevronRight size={18} />
         </button>
       </div>
-
-      {/* Action Buttons */}
       <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
         <div className="h-5 w-px bg-gray-200 mx-1 hidden sm:block"></div>
         
-      
-
-        {/* --- MODIFIED DOWNLOAD BUTTON (Dropdown) --- */}
         <div className="relative">
           <button 
               onClick={() => setShowDownloadMenu(!showDownloadMenu)}
@@ -123,16 +105,12 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
             <Download size={18} />
           </button>
 
-          {/* Dropdown Menu */}
           {showDownloadMenu && (
             <>
-              {/* Invisible Backdrop to close menu when clicking outside */}
               <div 
                 className="fixed inset-0 z-30 cursor-default" 
                 onClick={() => setShowDownloadMenu(false)}
               ></div>
-
-              {/* The Menu */}
               <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-40 animate-in fade-in slide-in-from-top-2">
                 <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Export As</span>

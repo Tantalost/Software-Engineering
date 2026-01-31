@@ -8,9 +8,7 @@ const StatCards = ({ statsData }) => {
     { label: "Tenants/Lease", value: "0", change: "+0%", subtitle: "No Data", color: "green" },
     { label: "Parking", value: "0", change: "+0%", subtitle: "No Data", color: "blue" },
   ];
-
   const stats = statsData && statsData.length > 0 ? statsData : defaultStats;
-
   const colorMap = {
     red: {
       bgLight: "bg-red-100",
@@ -42,16 +40,12 @@ const StatCards = ({ statsData }) => {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
       {stats.map((stat, idx) => {
         const color = colorMap[stat.color] || colorMap.red;
-        
-        // 1. Determine Status Type safely
         const changeText = stat.change || ""; 
         const isPositive = changeText.startsWith("+");
         const isNegative = changeText.startsWith("-");
         const cleanChange = changeText.replace("+", "").replace("-", "");
-
-        // 2. Define Styles based on status
-        let badgeStyle = "bg-blue-50 text-blue-600"; // Default Neutral
-        let Icon = Activity; // Default Icon
+        let badgeStyle = "bg-blue-50 text-blue-600";
+        let Icon = Activity;
 
         if (isPositive) {
             badgeStyle = "bg-green-100 text-green-700";
@@ -66,7 +60,6 @@ const StatCards = ({ statsData }) => {
             key={idx}
             className="group bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 relative overflow-hidden"
           >
-            {/* Background Blob */}
             <div
               className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-br ${color.bgMedium} ${color.bgStrong} rounded-full -mr-20 -mt-20 opacity-20 group-hover:scale-125 transition-transform duration-700`}
             ></div>

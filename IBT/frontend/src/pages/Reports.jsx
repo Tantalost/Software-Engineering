@@ -11,13 +11,11 @@ import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
 import { logActivity } from "../utils/logger";
 import { Archive, Trash2, Calendar, Tag, History, ListChecks, X, Loader2, FileSpreadsheet, FileText } from "lucide-react";
-
-// --- FIXED EXPORT IMPORTS ---
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// --- HELPER COMPONENT FOR VIEWING REPORT DATA ---
+// HELPER COMPONENT FOR VIEWING REPORT DATA
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload) return <div className="text-gray-400 italic p-4">No report data available</div>;
 
@@ -96,23 +94,19 @@ const DataRenderer = ({ reportPayload }) => {
   );
 };
 
-// --- MAIN PAGE COMPONENT ---
 const Reports = () => {
   const location = useLocation(); 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Basic search & date
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
-  // Filters
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [timeRange, setTimeRange] = useState("All");
   
   const [showLogModal, setShowLogModal] = useState(false);
 
-  // Selection State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -126,7 +120,6 @@ const Reports = () => {
   const API_URL = "http://localhost:3000/api/reports";
   const ARCHIVE_URL = "http://localhost:3000/api/archives";
 
-  // Fetch reports
   const fetchReports = async () => {
     try {
       setLoading(true);
@@ -160,7 +153,6 @@ const Reports = () => {
     }
   }, [records, location.state]); 
 
-  // Filtered data logic
   const filtered = useMemo(() => {
     return records.filter((report) => {
       const reportDate = new Date(report.createdAt || report.date);
@@ -193,8 +185,7 @@ const Reports = () => {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-  // --- MAIN EXPORT FUNCTIONS (List) ---
-
+  // MAIN EXPORT FUNCTIONS (List)
   const handleExportExcel = () => {
     const dataToExport = filtered.map((item) => ({
       "Report ID": item.id,
@@ -237,12 +228,10 @@ const Reports = () => {
     doc.save(`Reports_Export_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // --- SINGLE REPORT EXPORT FUNCTIONS (Details) ---
-
+  // SINGLE REPORT EXPORT
   const handleSingleExportExcel = (report) => {
     const wb = XLSX.utils.book_new();
 
-    // Summary Sheet (Meta + Stats)
     const summaryData = [
       ["Report Details"],
       ["ID", report.id],
@@ -258,11 +247,8 @@ const Reports = () => {
         summaryData.push([key, value]);
       });
     }
-
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-
-    // Data Sheet
     if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
       const wsData = XLSX.utils.json_to_sheet(report.data.data);
       XLSX.utils.book_append_sheet(wb, wsData, "Data");
@@ -272,16 +258,11 @@ const Reports = () => {
   };
 
   const handleSingleExportPDF = (report) => {
-    const doc = new jsPDF();
-    
-    // Header
+    const doc = new jsPDF();    
     doc.setFontSize(16);
     doc.text("Report Details", 14, 15);
-    
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
-
-    // Metadata
     doc.setFontSize(11);
     doc.text(`ID: ${report.id}`, 14, 30);
     doc.text(`Type: ${report.type}`, 14, 36);
@@ -289,8 +270,6 @@ const Reports = () => {
     doc.text(`Date: ${new Date(report.createdAt || report.date).toLocaleDateString()}`, 14, 48);
 
     let currentY = 60;
-
-    // Statistics
     if (report.data?.statistics) {
         doc.setFontSize(12);
         doc.text("Statistics", 14, currentY);
@@ -308,7 +287,6 @@ const Reports = () => {
         currentY = doc.lastAutoTable.finalY + 15;
     }
 
-    // Data Table
     if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
         doc.setFontSize(12);
         doc.text("Data Records", 14, currentY);
@@ -328,7 +306,6 @@ const Reports = () => {
     doc.save(`${report.type}_Report_${report.id}.pdf`);
   };
 
-  // --- SELECTION HANDLERS ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
     setIsSelectionMode(!isSelectionMode);
@@ -352,7 +329,7 @@ const Reports = () => {
 
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
 
-  // --- BULK ACTION: ARCHIVE & DELETE (SUPERADMIN) ---
+  // BULK ARCHIVE & DELETE (SUPERADMIN)
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} reports? \n\nThey will be moved to the Archives before deletion.`)) return;
 
@@ -392,7 +369,7 @@ const Reports = () => {
     }
   };
 
-  // Single Delete
+  // SINGLE DELETE
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
@@ -405,7 +382,7 @@ const Reports = () => {
     }
   };
 
-  // Single Archive
+  // SINGLE ARCHIVE
   const confirmArchive = async () => {
     if (!archiveRow) return;
     const row = archiveRow;
@@ -434,7 +411,6 @@ const Reports = () => {
     }
   };
 
-  // --- TABLE COLUMNS ---
   const tableColumns = isSelectionMode 
     ? [
         <div key="header-check" className="flex items-center">
@@ -451,7 +427,6 @@ const Reports = () => {
 
   return (
     <Layout title="Reports Management">
-      {/* (Search & Main Actions) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar
           searchQuery={searchQuery}
@@ -470,10 +445,7 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Filter Grid (Filters, Logs & Selection Controls) */}
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* Category Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Tag size={16} />
@@ -496,7 +468,6 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Time Range Dropdown */}
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Calendar size={16} />
@@ -518,10 +489,7 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Action Buttons (Logs & Selection) */}
         <div className="flex items-center justify-end gap-2">
-            
-            {/* Logs Button */}
             <button 
                 onClick={() => setShowLogModal(true)} 
                 className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
@@ -561,7 +529,6 @@ const Reports = () => {
 
       </div>
 
-      {/* Table Section */}
       {loading ? (
         <div className="p-8 text-center text-slate-500 flex flex-col items-center">
             <Loader2 className="animate-spin mb-2" />
@@ -623,7 +590,6 @@ const Reports = () => {
         />
       )}
 
-      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalPages={Math.ceil(filtered.length / itemsPerPage)}
@@ -636,13 +602,11 @@ const Reports = () => {
         }}
       />
 
-      {/* LOG MODAL */}
       <LogModal 
         isOpen={showLogModal} 
         onClose={() => setShowLogModal(false)} 
       />
 
-      {/* View Modal (Updated with Exports) */}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
@@ -664,7 +628,6 @@ const Reports = () => {
                 <DataRenderer reportPayload={viewRow.data} />
             </div>
             
-            {/* Modal Footer with Export Buttons */}
             <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-between items-center">
               <div className="flex gap-2">
                 <button
@@ -694,7 +657,6 @@ const Reports = () => {
         </div>
       )}
 
-      {/* --- ARCHIVE MODAL --- */}
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">

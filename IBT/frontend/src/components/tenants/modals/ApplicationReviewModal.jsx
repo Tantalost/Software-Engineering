@@ -21,22 +21,14 @@ const ApplicationReviewModal = ({
   const status = reviewData.status || "Pending";
   const isPermanent = (reviewData.floor === "Permanent" || reviewData.tenantType === "Permanent");
 
-  // Determine State
   const isPaymentReview = status === "PAYMENT_REVIEW"; 
   const isContractReview = status === "CONTRACT_REVIEW";
   
-  // Logic for Step 7 Buttons
   const showUnlockBtn = status === "VERIFICATION_PENDING";
-  
-  // Show "Request Contract" ONLY if: Payment Reviewed + Permanent + Not yet waiting for contract
   const showRequestContractBtn = isPaymentReview && isPermanent;
-
-  // Show "Add Tenant" IF:
-  // 1. Night Market AND Payment Reviewed (Skip Contract)
-  // 2. OR Permanent AND Contract Reviewed
   const showAddTenantBtn = (isPaymentReview && !isPermanent) || isContractReview;
 
-  // Documents Logic
+  // DOCUMENT LOGIC
   const showContractSlot = isPermanent || reviewData.contractUrl;
   const documents = [
     { label: "Valid ID", url: reviewData.validIdUrl },
@@ -48,7 +40,6 @@ const ApplicationReviewModal = ({
 
   return (
     <>
-      {/* --- IMAGE PREVIEW OVERLAY --- */}
       {previewImage && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -69,7 +60,6 @@ const ApplicationReviewModal = ({
         </div>
       )}
 
-      {/* --- MAIN MODAL --- */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
         <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
           
@@ -96,7 +86,6 @@ const ApplicationReviewModal = ({
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            {/* Applicant Details */}
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <User size={18} className="text-emerald-600" /> Applicant Information
@@ -115,7 +104,6 @@ const ApplicationReviewModal = ({
               </div>
             </section>
 
-            {/* Documents */}
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <FileText size={18} className="text-emerald-600" /> Submitted Documents
@@ -128,12 +116,10 @@ const ApplicationReviewModal = ({
                   >
                     {doc.url ? (
                       <>
-                        {/* 1. PDF LOGIC: If file is PDF, show icon instead of image */}
                         {(doc.url.startsWith("data:application/pdf") || doc.url.toLowerCase().endsWith(".pdf")) ? (
                             <div 
                                 className="w-full h-full flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 transition-colors"
                                 onClick={() => {
-                                    // Open PDF in new tab
                                     const pdfWindow = window.open("");
                                     if (pdfWindow) pdfWindow.document.write(`<iframe width='100%' height='100%' src='${doc.url}'></iframe>`);
                                 }} 
@@ -143,7 +129,6 @@ const ApplicationReviewModal = ({
                                 <span className="text-[10px] text-red-400">(Click to Open)</span>
                             </div>
                         ) : (
-                            /* 2. IMAGE LOGIC: Standard Preview */
                             <div className="w-full h-full" onClick={() => setPreviewImage(doc.url)}>
                                 <img src={doc.url} alt={doc.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
@@ -161,7 +146,6 @@ const ApplicationReviewModal = ({
               </div>
             </section>
 
-            {/* Verification Status */}
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <CreditCard size={18} className="text-emerald-600" /> Verification Status
@@ -186,7 +170,6 @@ const ApplicationReviewModal = ({
             </section>
           </div>
 
-          {/* Footer Actions */}
           <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
             {showUnlockBtn && (
               <button onClick={onUnlockPayment} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2 active:scale-95">

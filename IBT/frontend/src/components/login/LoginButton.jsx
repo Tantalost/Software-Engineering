@@ -8,25 +8,17 @@ export default function LoginButton({ handleSubmit, isLoading, text = "Sign In" 
       className={`
         w-full 
         relative 
-        flex items-center justify-center 
-        
-        /* Spacing & Typography */
+        flex items-center justify-center
         py-3.5 px-4 
         rounded-xl 
         text-white font-bold text-lg sm:text-base tracking-wide
-        
-        /* Visuals & Gradient */
         bg-gradient-to-r from-teal-500 to-emerald-600 
         hover:from-teal-600 hover:to-emerald-700 
-        shadow-lg shadow-teal-500/30 
-        
-        /* Interactive States */
+        shadow-lg shadow-teal-500/30
         transition-all duration-200 
         transform 
         active:scale-[0.98] 
         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500
-        
-        /* Disabled State */
         disabled:opacity-70 
         disabled:cursor-not-allowed 
         disabled:shadow-none
@@ -34,7 +26,6 @@ export default function LoginButton({ handleSubmit, isLoading, text = "Sign In" 
     >
       {isLoading ? (
         <>
-      
           <svg 
             className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" 
             xmlns="http://www.w3.org/2000/svg" 

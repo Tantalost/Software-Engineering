@@ -13,9 +13,8 @@ import {
 import { PhilippinePeso, BarChart3 } from "lucide-react";
 
 const OperationsAnalytics = ({ data }) => {
-  const [viewMode, setViewMode] = useState("revenue"); // 'revenue' or 'volume'
+  const [viewMode, setViewMode] = useState("revenue");
 
-  // 1. Add 'tenants' to keys
   const keys = {
     tickets: viewMode === "revenue" ? "ticketsRevenue" : "ticketsVolume",
     bus: viewMode === "revenue" ? "busRevenue" : "busVolume",
@@ -123,7 +122,6 @@ const OperationsAnalytics = ({ data }) => {
           <Tooltip content={renderCustomTooltip} cursor={{ fill: 'transparent' }} />
           <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }}/>
 
-          {/* Tickets (Red Area) */}
           <Area 
             type="monotone" 
             name="Tickets"
@@ -133,8 +131,6 @@ const OperationsAnalytics = ({ data }) => {
             fillOpacity={1}
             strokeWidth={3} 
           />
-          
-          {/* Tenants (Green Area) - ADDED THIS */}
           <Area 
             type="monotone" 
             name="Tenants"
@@ -144,8 +140,6 @@ const OperationsAnalytics = ({ data }) => {
             fillOpacity={1}
             strokeWidth={3} 
           />
-
-          {/* Bus (Yellow Line) */}
           <Area 
             type="monotone" 
             name="Bus Trips"
@@ -154,8 +148,6 @@ const OperationsAnalytics = ({ data }) => {
             strokeWidth={3} 
             fill="transparent"
           />
-          
-          {/* Parking (Blue Line) */}
           <Area 
             type="monotone" 
             name="Parking"

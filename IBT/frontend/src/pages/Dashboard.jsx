@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Settings } from "lucide-react"; 
-
-// Components
 import Layout from "../components/layout/Layout";
 import StatCards from "../components/dashboard/StatCards";
 import OperationsAnalytics from "../components/dashboard/OperationsAnalytics";
@@ -16,16 +14,14 @@ import TargetModal from "../components/dashboard/TargetModal";
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  // 1. Raw Data State
+  // RAW DATA
   const [rawData, setRawData] = useState({
     tickets: [], bus: [], tenants: [], parking: [], reports: []
   });
 
-  // 2. Filter State
   const [filterDate, setFilterDate] = useState(new Date());
   const [filterView, setFilterView] = useState("week");
 
-  // --- Target State ---
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [targets, setTargets] = useState(() => {
     const saved = localStorage.getItem("dashboardTargets");
@@ -42,7 +38,6 @@ const Dashboard = () => {
     localStorage.setItem("dashboardTargets", JSON.stringify(newTargets));
   };
 
-  // 3. Display Data State
   const [stats, setStats] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [analyticsData, setAnalyticsData] = useState([]);
@@ -50,13 +45,11 @@ const Dashboard = () => {
   const [totalQuota, setTotalQuota] = useState(0); 
   const [loading, setLoading] = useState(true);
 
-  // --- HELPER 1: Get Date ---
   const getItemDate = (item) => {
     if (!item) return null;
     return item.date || item.timeIn || item.createdAt || item.startDate || item.leaseStart || item.joinedAt;
   };
 
-  // --- HELPER 2: Smart Revenue Finder ---
   const getSmartValue = (item) => {
     if (!item) return 0;
     const exactMatch = item.amount || item.Amount || item.fee || item.Fee || item.price || item.Price || item.total || item.Total || item.rent || item.Rent || item.monthlyRent || item.leaseAmount || item.cost || item.Cost || item.amountPaid;
@@ -76,18 +69,15 @@ const Dashboard = () => {
     }, 0);
   };
 
-  // --- HELPER 3: Currency Formatter ---
   const formatCurrency = (value) => {
     if (value >= 1000) return `₱${(value / 1000).toFixed(1).replace(/\.0$/, '')}K`;
     return `₱${value.toLocaleString()}`;
   };
 
-  // --- UPDATED HELPER 4: Target Quota Calculator ---
   const calculateQuota = (moduleName) => {
     return targets[moduleName] || 0;
   };
 
-  // --- HELPER 5: Date Logic ---
   const isDateInView = (dateString, view, anchorDate) => {
     if (!dateString) return false;
     const target = new Date(dateString);
@@ -109,7 +99,6 @@ const Dashboard = () => {
     return false;
   };
 
-  // --- FETCH DATA ---
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -149,7 +138,6 @@ const Dashboard = () => {
     navigate('/reports', { state: { openReportId: reportId } });
   };
 
-  // --- PROCESS DATA ---
   useEffect(() => {
     if (loading) return;
 
@@ -268,22 +256,17 @@ const Dashboard = () => {
   };
 
   const handleDownload = (format) => {
-      // (Download logic placeholder)
   };
 
   return (
     <Layout title="Dashboard">
       <div className="px-4 pt-0 lg:px-2 lg:pt-0 space-y-6">
-        
-        {/* Step 1: Filter Bar */}
         <DashboardToolbar 
           onRefresh={fetchDashboardData} 
           onDownload={handleDownload}    
           onFilterChange={handleFilterChange}
           loading={loading}              
         />
-
-        {/* Step 2: Set Target Button - Updated with Tooltip and Cursor Fix */}
         <div className="flex justify-end">
           <button 
             onClick={() => setIsTargetModalOpen(true)}
@@ -295,7 +278,6 @@ const Dashboard = () => {
           </button>
         </div>
         
-        {/* Step 3: Stat Cards */}
         <StatCards statsData={stats} />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

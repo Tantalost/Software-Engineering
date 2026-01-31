@@ -5,10 +5,8 @@ const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dqgt2uxfe/auto/upload";
 const UPLOAD_PRESET = "ibt_upload";
 
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
-
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null); // State for Image Viewer
-
+  const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
     slotNo: "",
     firstName: "", 
@@ -39,7 +37,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     validID: null,
     barangayClearance: null,
     proofOfReceipt: null,
-    contract: null, // ADDED: Contract field
+    contract: null,
   });
 
   const formatDateTimeForInput = (dateObj) => {
@@ -49,14 +47,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     return localISOTime;
   };
 
-  // --- INITIALIZATION ---
   useEffect(() => {
     if (isOpen) {
-      // Helper to generate Auto Ref
       const generateRef = () => `REF-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
 
       if (initialData) {
-        // NAME SPLITTING LOGIC
         const fullName = initialData.name || initialData.tenantName || "";
         const nameParts = fullName.split(" ");
         let fName = "", mName = "", lName = "";
@@ -88,14 +83,14 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             setTempSelectedSlots(initialData.slotNo.split(', '));
         }
 
-        // LOAD DOCUMENTS (Including Contract if present)
+        // DOCUMENT LOADER
         if (initialData.documents) {
             setDocuments({
                 businessPermit: initialData.documents.businessPermit || null,
                 validID: initialData.documents.validID || null,
                 barangayClearance: initialData.documents.barangayClearance || null,
                 proofOfReceipt: initialData.documents.proofOfReceipt || null,
-                contract: initialData.documents.contract || null, // Load contract
+                contract: initialData.documents.contract || null,
             });
         }
 
@@ -109,7 +104,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         }
 
       } else {
-        // Reset for New Entry
         setFormData({
             slotNo: "",
             firstName: "",
@@ -128,7 +122,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             validID: null,
             barangayClearance: null,
             proofOfReceipt: null,
-            contract: null, // Reset contract
+            contract: null,
         });
         setTempSelectedSlots([]); 
       }
@@ -139,7 +133,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [isOpen, initialData]); 
 
-  // --- MAP SYNC ---
+  // MAPPER
   useEffect(() => {
     if (showMapModal) {
       const currentSlots = formData.slotNo ? formData.slotNo.split(', ') : [];
@@ -147,7 +141,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [showMapModal, formData.slotNo]);
 
-  // --- CALCULATIONS ---
+  // CALCULATIONS
   useEffect(() => {
     let baseRent = 0;
     let calculatedDueDate = "";
@@ -203,7 +197,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   };
 
-  // --- SUBMIT HANDLER ---
+  // SUBMIT
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -219,8 +213,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         };
 
         const processedDocuments = { ...documents };
-        
-        // Remove contract from payload if Night Market (optional cleanup)
         if (formData.tenantType !== "Permanent") {
             delete processedDocuments.contract;
         }
@@ -302,7 +294,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
   return (
     <>
-    {/* --- IMAGE PREVIEW OVERLAY --- */}
     {previewImage && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
@@ -336,7 +327,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         <div className="overflow-y-auto p-6 flex-1">
           <form id="addTenantForm" onSubmit={handleSubmit} className="space-y-8">
             
-            {/* ... SECTION 1 ... */}
             <section>
               <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2">
                 <FileText size={16} /> 1. Tenant Details
@@ -391,7 +381,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                    </div>
                 </div>
 
-                {/* MAP MODAL UI */}
                 {showMapModal && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                         <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -446,7 +435,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                     </div>
                 )}
                
-                {/* SPLIT NAMES */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:col-span-2">
                     <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-slate-600">First Name</label>
@@ -476,7 +464,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
               </div>
             </section>
 
-            {/* ... SECTIONS 2, 3, 4 (Unchanged) ... */}
             <section className="pt-4 border-t border-slate-100">
               <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><FileText size={16} /> 2. Products to be Sold</h3>
               <div className="grid grid-cols-1 gap-4">
@@ -529,7 +516,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
               </div>
             </section>
 
-            {/* --- 5. UPDATED UPLOAD DOCUMENTS (CONDITIONAL RENDER) --- */}
             <section className="pt-4 border-t border-slate-100">
               <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2">
                 <Upload size={16} /> 5. Upload Documents
@@ -537,7 +523,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
                 {(() => {
-                  // Base Documents
                   const docFields = [
                     { label: 'Business Permit', key: 'businessPermit' },
                     { label: 'Valid ID', key: 'validID' },
@@ -545,7 +530,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                     { label: 'Proof of Receipt', key: 'proofOfReceipt' }
                   ];
 
-                  // Only show Contract if Permanent
                   if (formData.tenantType === "Permanent") {
                     docFields.push({ label: 'Signed Contract', key: 'contract' });
                   }
@@ -556,7 +540,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
                    return (
                     <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${isString ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
-                      
                       {isString && (
                         <div className="absolute top-2 right-2 z-10">
                             <button 
@@ -593,14 +576,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                    );
                   });
                 })()}
-
               </div>
             </section>
-
           </form>
         </div>
 
-        {/* --- FOOTER (Disabled when submitting) --- */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
           <button 
             onClick={onClose} 

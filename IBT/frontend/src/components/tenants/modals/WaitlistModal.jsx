@@ -4,17 +4,15 @@ import { X, ClipboardList, UserCheck, CreditCard, Eye, Filter } from "lucide-rea
 const WaitlistModal = ({ 
   isOpen, onClose, waitlistData, onApprove, onReject 
 }) => {
-  // 1. ADD STATE FOR FILTER
   const [statusFilter, setStatusFilter] = useState("All"); 
 
   if (!isOpen) return null;
 
-  // 2. FILTER LOGIC
+  // FILTER
   const filteredData = waitlistData.filter((app) => {
     if (statusFilter === "All") return true;
     
     if (statusFilter === "Verification Pending") {
-        // Show if status is missing OR explicitly pending
         return !app.status || app.status === "VERIFICATION_PENDING";
     }
     
@@ -28,8 +26,6 @@ const WaitlistModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div className="w-full max-w-5xl rounded-xl bg-white p-6 shadow-2xl flex flex-col max-h-[85vh]">
-        
-        {/* HEADER */}
         <div className="flex justify-between items-center mb-4 border-b pb-4">
           <div>
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -39,8 +35,6 @@ const WaitlistModal = ({
           </div>
           <button onClick={onClose} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200"><X size={20}/></button>
         </div>
-
-        {/* 3. FILTER BUTTONS UI */}
         <div className="flex gap-2 mb-4">
             <button 
                 onClick={() => setStatusFilter("All")}
@@ -85,7 +79,6 @@ const WaitlistModal = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {/* 4. MAP FILTERED DATA */}
                 {filteredData.map((app) => (
                   <tr key={app._id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3">

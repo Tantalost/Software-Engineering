@@ -10,7 +10,6 @@ const TenantApplicationSchema = new mongoose.Schema({
   targetSlot: String,
   floor: String,
   
-  // Status Enum
   status: { 
     type: String, 
     enum: [
@@ -23,16 +22,12 @@ const TenantApplicationSchema = new mongoose.Schema({
     ],
     default: 'VERIFICATION_PENDING'
   },
-  
-  // Images
   permitUrl: String,
   validIdUrl: String,
   clearanceUrl: String,
   receiptUrl: String,
-  contractUrl: String,         
-  contractSubmittedAt: Date,   
-
-  // Payment Details
+  contractUrl: String,   
+  contractSubmittedAt: Date,
   paymentReference: String,
   paymentAmount: String,
   paymentSubmittedAt: Date,

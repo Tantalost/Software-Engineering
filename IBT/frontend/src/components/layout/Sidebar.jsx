@@ -38,7 +38,6 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
 
     const menuItems = allMenus.filter((m) => m.roles.includes(role));
 
-    // Tooltip Component
     const NavTooltip = ({ label }) => (
         <div
             className="absolute left-14 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-md"
@@ -55,7 +54,6 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
                 className={`flex flex-col bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${sidebarExpanded ? "w-64" : "w-20"
                     }`}
             >
-                {/* Header Section */}
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center space-x-3">
                         <button
@@ -77,7 +75,6 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
                     </div>
                 </div>
 
-                {/* Main Menu Items */}
                 <div className="flex-1 overflow-y-auto py-4 px-3 overflow-x-hidden">
                     <div className="space-y-1">
                         {menuItems.map((item) => {
@@ -119,7 +116,6 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
                     </div>
                 </div>
 
-                {/* Bottom Menu Items */}
                 <div className="border-t border-gray-200 p-3 space-y-1">
                     {bottomMenuItems.map((item) => (
                         <NavLink

@@ -11,8 +11,6 @@ const TableActions = ({ onView, onEdit }) => {
       >
         <Eye size={16} />
       </button>
-
-      {/* FIX: Conditionally render the Edit button only if onEdit is provided */}
       {onEdit && (
         <button
           onClick={onEdit}

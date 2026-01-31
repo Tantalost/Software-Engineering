@@ -3,12 +3,10 @@ import React, { useState } from "react";
 const EditModal = ({ title, initialData, fields, onClose, onSave }) => {
   const [form, setForm] = useState(initialData);
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
-
   const handleSave = () => {
     if (onSave) {
         onSave(form); 
     }
-    
     onClose();
   };
 

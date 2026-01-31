@@ -10,7 +10,7 @@ export const getNotifications = async (req, res) => {
             date: n.date,
             read: n.read,
             source: n.source,
-            targetRole: n.targetRole // <--- FIX 1: RETURN THIS FIELD
+            targetRole: n.targetRole 
         }));
         res.status(200).json(formatted);
     } catch (err) {
@@ -24,7 +24,6 @@ export const createNotification = async (req, res) => {
             title: req.body.title,
             message: req.body.message,
             source: req.body.source,
-            // 👇 FIX 2: SAVE THIS FIELD FROM THE REQUEST
             targetRole: req.body.targetRole || "all", 
             date: new Date().toISOString().split('T')[0]
         });

@@ -5,9 +5,7 @@ const notificationSchema = new mongoose.Schema({
   message: String,
   source: String,
   read: { type: Boolean, default: false },
-  date: { type: String, default: new Date().toLocaleString() },
-  
-  // 👇 YOU MUST ADD THIS FIELD 👇
+  date: { type: String, default: new Date().toLocaleString() },  
   targetRole: { type: String, default: "all" } 
 });
 

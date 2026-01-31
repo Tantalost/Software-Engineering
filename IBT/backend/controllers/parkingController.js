@@ -19,10 +19,10 @@ export const createParking = async (req, res) => {
       ticketNo,
       plateNo,
       type,
-      baseRate, // Store the rate (e.g. 50 or 20)
-      timeIn: timeIn || new Date(), // Use provided time or current server time
+      baseRate, 
+      timeIn: timeIn || new Date(), 
       status: "Parked",
-      finalPrice: 0 // Price is 0 while parked
+      finalPrice: 0 
     });
 
     const savedTicket = await newTicket.save();
@@ -42,27 +42,14 @@ export const departParking = async (req, res) => {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    // 1. Get Current Time (Time Out)
     const timeOut = new Date();
     const timeIn = new Date(parkingRecord.timeIn);
-
-    // 2. Calculate Duration in Hours
-    // Difference in milliseconds
     const diffMs = timeOut - timeIn; 
-    // Convert to hours (ms / 1000 / 60 / 60)
     const diffHours = diffMs / (1000 * 60 * 60);
-    
-    // Round up to the nearest hour (e.g., 1.1 hours becomes 2 hours) 
-    // OR use Math.floor if you want exact hours. Standard parking is usually Math.ceil.
     const billedHours = Math.ceil(diffHours); 
-    
-    // Ensure minimum 1 hour charge
     const finalHours = billedHours < 1 ? 1 : billedHours;
-
-    // 3. Calculate Final Price
     const totalCost = finalHours * parkingRecord.baseRate;
 
-    // 4. Update Record
     parkingRecord.timeOut = timeOut;
     parkingRecord.duration = `${finalHours} hour(s)`;
     parkingRecord.finalPrice = totalCost;

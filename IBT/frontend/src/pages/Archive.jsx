@@ -18,27 +18,20 @@ const Archive = () => {
     return ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
   }, [role]);
 
-  // -- State Management --
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [timeRange, setTimeRange] = useState("All Time");
   const [activeTab, setActiveTab] = useState(role === "ticket" ? "Terminal Fee" : "All");
-  
-  // Modal States
   const [viewRow, setViewRow] = useState(null);
   const [restoreRow, setRestoreRow] = useState(null);
-  
-  // Pagination & Data
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [allArchivedItems, setAllArchivedItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // -- Selection State --
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // -- Fetch Data --
+  // FETCH
   const fetchArchives = async () => {
     setIsLoading(true);
     try {
@@ -58,7 +51,6 @@ const Archive = () => {
     fetchArchives();
   }, []);
 
-  // -- Timeline Logic --
   const checkTimeRange = (itemDate) => {
     if (!itemDate) return false;
     const date = new Date(itemDate);
@@ -112,7 +104,6 @@ const Archive = () => {
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-  // -- Selection Handlers --
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
     setIsSelectionMode(!isSelectionMode);
@@ -136,7 +127,7 @@ const Archive = () => {
 
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item._id || item.id));
 
-  // -- Action Handlers --
+  // ACTIONS
   const handleRestore = async () => {
     if (!restoreRow) return;
     try {
@@ -350,7 +341,6 @@ const Archive = () => {
         }}
       />
 
-      {/* View Modal */}
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
@@ -384,7 +374,6 @@ const Archive = () => {
         </div>
       )}
 
-      {/* Restore Modal */}
       {restoreRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">

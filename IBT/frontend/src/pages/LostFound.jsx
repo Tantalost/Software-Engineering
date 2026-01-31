@@ -27,20 +27,16 @@ const formatDateTimeForExport = (dateStr) => {
     });
 };
 
-
+// Need to clean
 const LostFound = () => {
-    // --- STATE DEFINITIONS ---
     const [records, setRecords] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
     const [activeStatus, setActiveStatus] = useState("All");
-    
     const [showAddModal, setShowAddModal] = useState(false);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [showLogModal, setShowLogModal] = useState(false); 
-    
     const [viewRow, setViewRow] = useState(null);
     const [editRow, setEditRow] = useState(null); 
     const [editFormData, setEditFormData] = useState({}); 
@@ -48,13 +44,9 @@ const LostFound = () => {
     const [archiveRow, setArchiveRow] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
-
     const [isReporting, setIsReporting] = useState(false);
-
-    // Selection State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
-    const [selectedIds, setSelectedIds] = useState([]);
-    
+    const [selectedIds, setSelectedIds] = useState([]);    
 
     const role = localStorage.getItem("authRole") || "superadmin";
     const API_URL = "http://localhost:3000/api/lostfound";

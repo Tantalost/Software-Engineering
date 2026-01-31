@@ -1,17 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
-// 1. IMPORT SETTINGS ICON
 import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks, FileText, Settings } from "lucide-react"; 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
 import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
-
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
-
 import ViewModal from "../components/common/ViewModal";
 import DeleteModal from "../components/common/DeleteModal"; 
 import LogModal from "../components/common/LogModal"; 
@@ -28,17 +24,14 @@ const getInitialBasePrices = () => {
     const storedPrices = localStorage.getItem("terminalBasePrices");
     if (storedPrices) {
       try {
-        // Use JSON.parse to retrieve the object from storage
         return JSON.parse(storedPrices);
       } catch (e) {
         console.error("Error parsing base prices from localStorage", e);
-        // Fallback to default in case of corruption
       }
     }
-    // Default values if nothing is in localStorage or if parsing fails
     return {
       regular: 15.00,
-      discounted: 10.00 // Student, Senior, PWD
+      discounted: 10.00 
     };
 };
 
@@ -50,24 +43,17 @@ const TerminalFees = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
-  
-  // Selection Mode State
+  const [itemsPerPage, setItemsPerPage] = useState(25);  
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [archiveRow, setArchiveRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null); 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showLogModal, setShowLogModal] = useState(false); 
-  
-  // FIX: Added missing state for Price Modal
+  const [showLogModal, setShowLogModal] = useState(false);   
   const [showPriceModal, setShowPriceModal] = useState(false);
-
   const [basePrices, setBasePrices] = useState(getInitialBasePrices);
-   
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -112,45 +98,31 @@ const TerminalFees = () => {
   });
 
    useEffect(() => {
-    // This runs on mount (to read from basePrices), and after every update via setBasePrices
     localStorage.setItem("terminalBasePrices", JSON.stringify(basePrices));
   }, [basePrices]);
 
-
-  // Input handler for modal price, using string to fix "01" issue
   const handleModalPriceChange = (key, value) => {
-      // 1. Allow empty string
       if (value === "") {
           setModalPrices(prev => ({ ...prev, [key]: "" }));
           return;
       }
 
-      // 2. Check for valid numeric/decimal input structure (allow "15", "15.", ".5", "15.50")
       const regex = /^\d*\.?\d*$/;
       if (!regex.test(value)) {
-          // Ignore invalid input (like letters or multiple decimals)
           return;
       }
-
-      // 3. FIX: Strip leading zero if it's immediately followed by a digit (e.g., "01" -> "1"), 
-      // but keep it for decimals (e.g., "0.5").
       if (value.length > 1 && value.startsWith("0") && value[1] !== '.') {
           value = value.substring(1); 
       }
-      
-      // 4. Update local state as a string
       setModalPrices(prev => ({ ...prev, [key]: value }));
   };
   
-  // Function to commit changes from modal local state to global basePrices state
   const handleSaveBasePrices = () => {
       const newPrices = {};
       let hasError = false;
 
       for (const key in modalPrices) {
           const priceString = String(modalPrices[key]);
-          
-          // Treat empty string or just a decimal point as 0.00
           if (priceString === "" || priceString === ".") {
               newPrices[key] = 0.00;
           } else {
@@ -161,22 +133,18 @@ const TerminalFees = () => {
                   hasError = true;
                   break;
               }
-              // Commit rounded value (optional, but good practice for currency)
               newPrices[key] = parseFloat(numValue.toFixed(2)); 
           }
       }
 
       if (!hasError) {
-          setBasePrices(newPrices); // Commit to parent state (triggers useEffect to save to localStorage)
+          setBasePrices(newPrices);
           setShowPriceModal(false);
           showToastMessage("Base prices updated successfully!");
       }
   };
   
-  // Function to open modal and sync local state
   const handleOpenPriceModal = () => {
-      // Set modalPrices to the string version of basePrices for input fields to work correctly with decimals
-      // Use toFixed(2) to ensure the decimal point is present for editing if the number is an integer
       setModalPrices({
           regular: basePrices.regular.toFixed(2),
           discounted: basePrices.discounted.toFixed(2)
@@ -528,14 +496,12 @@ const TerminalFees = () => {
     }
   };
 
-  // REPLACE the existing handleArchive function with this:
   const confirmArchive = async () => {
     if (!archiveRow) return;
     const rowToArchive = archiveRow;
-    setArchiveRow(null); // Close modal
+    setArchiveRow(null);
 
     try {
-      // 1. Send to Archives
       const archiveRes = await fetch(`${API_URL}/archives`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -548,7 +514,6 @@ const TerminalFees = () => {
       });
       if (!archiveRes.ok) throw new Error("Failed to archive");
 
-      // 2. Delete from Active List
       const idToDelete = rowToArchive._id || rowToArchive.id;
       if (!idToDelete) throw new Error("System Error: Record ID is missing.");
       
@@ -564,14 +529,12 @@ const TerminalFees = () => {
     }
   };
   
-
-  // Helper function to ensure consistent data and formatting for all exports
     const getExportData = (data) => {
         return data.map(item => ({
             "Ticket No": item.ticketNo || "-",
             "Passenger Type": item.passengerType || "-",
             "Price": item.price ? `₱${item.price.toFixed(2)}` : "₱0.00",
-            "Date": item.date ? new Date(item.date).toLocaleDateString() : "-", // Added Date handling
+            "Date": item.date ? new Date(item.date).toLocaleDateString() : "-",
             "Time": item.time || "-",
         }));
     };
@@ -583,10 +546,8 @@ const TerminalFees = () => {
         }
         const dataToExport = getExportData(filtered);
 
-        // Uses the dataToExport object keys for consistent headers
         const headers = Object.keys(dataToExport[0]).join(',');
         const rows = dataToExport.map(row => 
-            // Escape quotes and wrap in quotes for robust CSV
             Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
         
@@ -617,40 +578,37 @@ const TerminalFees = () => {
 
         const doc = new jsPDF('portrait', 'mm', 'a4');
         
-        // 1. Title Styling (Cleaner Look)
         doc.setFontSize(16);
-        doc.setTextColor(34, 34, 34); // Dark text
+        doc.setTextColor(34, 34, 34);
         doc.text("Terminal Fees Records Report", 14, 15);
         
-        // 2. Metadata Styling (Date Generated)
         doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100); // Gray text for metadata
+        doc.setTextColor(100, 100, 100);
         doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
 
-        // 3. Table Styling (The 'Clean' Layout)
         autoTable(doc, {
-            startY: 30, // Start lower for the header text
+            startY: 30,
             head: [headers],
             body: body,
-            theme: 'grid', // Uses clear borders for a clean look
+            theme: 'grid',
             headStyles: { 
-                fillColor: [16, 185, 129], // Emerald Green header color
+                fillColor: [16, 185, 129],
                 textColor: [255, 255, 255],
                 fontSize: 9, 
                 halign: 'center'
             }, 
             styles: {
                 fontSize: 8, 
-                cellPadding: 3, // Increased padding for better spacing
+                cellPadding: 3, 
                 valign: 'middle',
-                textColor: [51, 51, 51] // Dark body text
+                textColor: [51, 51, 51] 
             },
             alternateRowStyles: {
-                fillColor: [240, 255, 240], // Light stripe for readability
+                fillColor: [240, 255, 240], 
             }
         });
 
-        // 4. Summary Totals (Uses stats memo if available)
+        // SUMMARY TOTAL RECORDS
         const finalY = doc.lastAutoTable.finalY;
         doc.setFontSize(10);
         doc.setTextColor(51, 51, 51);
@@ -938,14 +896,13 @@ const TerminalFees = () => {
             </p>
 
             <div className="space-y-5">
-               {/* REGULAR PRICE INPUT - FIXED: Changed type to text and added custom handler */}
                <div>
                   <label htmlFor="regular-price" className="block text-sm font-semibold text-slate-700 mb-1">Regular Passenger Price</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
                     <input 
                       id="regular-price"
-                      type="text" // Use text for better decimal control
+                      type="text" 
                       value={modalPrices.regular} 
                       onChange={(e) => handleModalPriceChange('regular', e.target.value)}
                       className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
@@ -954,14 +911,13 @@ const TerminalFees = () => {
                   </div>
                </div>
 
-               {/* DISCOUNTED PRICE INPUT - FIXED: Changed type to text and added custom handler */}
                <div>
                   <label htmlFor="discounted-price" className="block text-sm font-semibold text-slate-700 mb-1">Student / Senior / PWD Price</label>
                   <div className="relative">
                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
                      <input 
                       id="discounted-price"
-                      type="text" // Use text for better decimal control
+                      type="text" 
                       value={modalPrices.discounted} 
                       onChange={(e) => handleModalPriceChange('discounted', e.target.value)}
                       className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
@@ -1006,7 +962,6 @@ const TerminalFees = () => {
                 <div className="grid grid-cols-3 gap-2 ">
                   {["Regular", "Student", "Senior Citizen / PWD"].map((type) => (
                     <button key={type} onClick={() => {
-                        // 6. USE DYNAMIC PRICE IN ADD MODAL
                         const price = (type === 'Student' || type === 'Senior Citizen / PWD') ? basePrices.discounted : basePrices.regular;
                         setNewTicket(prev => ({ ...prev, passengerType: type, price }));
                       }}
@@ -1046,7 +1001,6 @@ const TerminalFees = () => {
 
           <div className="grid grid-cols-3 gap-2 mb-4">
             {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
-              // 7. USE DYNAMIC PRICE IN EDIT MODAL
               const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? basePrices.discounted : basePrices.regular;
               const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
               return (
@@ -1109,7 +1063,6 @@ const TerminalFees = () => {
       </div>
     )}
 
-    {/* --- ARCHIVE MODAL --- */}
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">

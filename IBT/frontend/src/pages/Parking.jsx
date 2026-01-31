@@ -31,16 +31,14 @@ const Parking = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
 
-  // --- SELECTION STATE ---
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  // -----------------------
 
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [logoutRow, setLogoutRow] = useState(null);
-  const [archiveRow, setArchiveRow] = useState(null); // State for Archive Confirmation Modal
+  const [archiveRow, setArchiveRow] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -49,14 +47,12 @@ const Parking = () => {
   const plateInputRef = useRef(null);
 
   const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, message: "" });
-  
-  // State for custom notifications (SUCCESS/ERROR) - ADDED duration
   const [notificationState, setNotificationState] = useState({ 
     isOpen: false, 
     type: '', 
     message: '', 
     autoClose: true,
-    duration: 2000 // Default duration (2 seconds)
+    duration: 2000
   }); 
 
   const [isReporting, setIsReporting] = useState(false);
@@ -98,27 +94,18 @@ const Parking = () => {
   };
 
   useEffect(() => { fetchParkingTickets(); }, []);
-
-  // -----------------------------------------------------------------
-  // Auto-close Notification Effect (CONDITIONAL & DYNAMIC DURATION)
-  // -----------------------------------------------------------------
   useEffect(() => {
-    // Only auto-close if the notification is open AND autoClose is true
     if (notificationState.isOpen && notificationState.autoClose) {
-      const timerDuration = notificationState.duration || 2000; // Use state duration or default
+      const timerDuration = notificationState.duration || 2000;
 
       const timer = setTimeout(() => {
-        // Reset state back to defaults (3 seconds)
         setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 2000 }); 
       }, timerDuration); 
 
-      // Cleanup function to clear the timeout
       return () => clearTimeout(timer);
     }
   }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]); 
-  // -----------------------------------------------------------------
 
-  // --- UPDATED EDIT HANDLER FUNCTION ---
   const handleEditSave = async (updatedData) => {
     try {
         const payload = {
@@ -144,24 +131,21 @@ const Parking = () => {
             throw new Error(errorData.error || 'Failed to update parking record.');
         }
 
-        // --- SUCCESS MESSAGE POP-UP (3s duration) ---
         setNotificationState({ 
             isOpen: true, 
             type: 'success', 
             message: "Parking ticket updated successfully!", 
             autoClose: true, 
             duration: 2000 
-        }); 
-        // ------------------------------------------
+        });
 
         logActivity(role, "EDIT_TICKET", `Updated Parking Ticket ID #${updatedData.id}`, "Parking");
         
         await fetchParkingTickets(); 
-        setEditRow(null); // Close the modal
+        setEditRow(null);
 
     } catch (error) {
         console.error("Update Error:", error);
-        // --- ERROR MESSAGE POP-UP (3s duration) ---
         setNotificationState({ 
             isOpen: true, 
             type: 'error', 
@@ -169,11 +153,9 @@ const Parking = () => {
             autoClose: true, 
             duration: 2000 
         });
-        // ----------------------------------------
     }
   };
 
-  // --- Filtered & Paginated Data ---
   const filtered = records.filter(ticket => {
     const matchesSearch =
       (ticket.ticketNo && String(ticket.ticketNo).includes(searchQuery)) ||
@@ -195,7 +177,6 @@ const Parking = () => {
   const motoCount = filtered.filter(t => t.type === "Motorcycle").length;
   const revenue = filtered.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0);
 
-  // --- 5. SELECTION HANDLERS ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
     setIsSelectionMode(!isSelectionMode);
@@ -219,7 +200,7 @@ const Parking = () => {
 
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
 
-  // --- 6. BULK DELETE HANDLER ---
+  // BULK DELETE
   const handleBulkDelete = async () => {
     const confirmMsg = role === "parking" 
         ? `Request deletion for ${selectedIds.length} records?` 
@@ -257,7 +238,6 @@ const Parking = () => {
             await Promise.all(requestPromises);
             await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} parking tickets`, "Parking");
             
-            // Notification Pop-up (3s duration)
             setNotificationState({ 
                 isOpen: true, 
                 type: 'success', 
@@ -269,7 +249,7 @@ const Parking = () => {
             setIsSelectionMode(false);
 
         } else {
-            // --- SUPERADMIN: IMMEDIATE DELETE ---
+            // SUPERADMIN: INSTA DELETE
             const deletePromises = selectedIds.map(id => 
                 fetch(`${API_URL}/${id}`, { method: "DELETE" })
             );
@@ -277,7 +257,6 @@ const Parking = () => {
             await Promise.all(deletePromises);
             await logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} parking tickets via bulk action`, "Parking");
             
-            // Notification Pop-up (3s duration)
             setNotificationState({ 
                 isOpen: true, 
                 type: 'success', 
@@ -292,7 +271,6 @@ const Parking = () => {
 
     } catch (error) {
       console.error("Bulk action failed", error);
-      // Notification Pop-up (3s duration)
       setNotificationState({ 
         isOpen: true, 
         type: 'error', 
@@ -305,7 +283,6 @@ const Parking = () => {
     }
   };
 
-  // --- Handlers ---
   const handleAddClick = () => {
     const now = new Date();
     const formattedTimeIn = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
@@ -337,7 +314,6 @@ const Parking = () => {
   const handleCreateTicket = async (e) => {
     e.preventDefault(); 
     if (!newTicket.plateNo || !newTicket.ticketNo) {
-      // Notification Pop-up (3s duration)
       setNotificationState({ 
         isOpen: true, 
         type: 'error', 
@@ -366,7 +342,6 @@ const Parking = () => {
         await logActivity(role, "CREATE_TICKET", `Created Parking Ticket #${newTicket.ticketNo}`, "Parking");
         fetchParkingTickets();
         setShowAddModal(false);
-        // Notification Pop-up (3s duration)
         setNotificationState({ 
             isOpen: true, 
             type: 'success', 
@@ -377,7 +352,6 @@ const Parking = () => {
       }
     } catch (error) {
       console.error("Error creating ticket:", error);
-      // Notification Pop-up (3s duration)
       setNotificationState({ 
         isOpen: true, 
         type: 'error', 
@@ -396,7 +370,6 @@ const Parking = () => {
         await logActivity(role, "DELETE_TICKET", `Deleted Parking Ticket #${deleteRow.ticketNo}`, "Parking");
         setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
         setDeleteRow(null);
-        // Notification Pop-up (3s duration)
         setNotificationState({ 
             isOpen: true, 
             type: 'success', 
@@ -405,7 +378,6 @@ const Parking = () => {
             duration: 2000
         });
       } else {
-        // Notification Pop-up (3s duration)
         setNotificationState({ 
             isOpen: true, 
             type: 'error', 
@@ -419,16 +391,14 @@ const Parking = () => {
     }
   };
 
-  // --- NEW: Function to open custom archive confirmation modal ---
   const handleArchive = (rowToArchive) => {
-    setArchiveRow(rowToArchive); // Open the custom confirmation modal
+    setArchiveRow(rowToArchive);
   };
 
-  // --- NEW: Function to execute archive after confirmation ---
   const confirmArchive = async () => {
     if (!archiveRow) return;
     const rowToArchive = archiveRow;
-    setArchiveRow(null); // Close the confirmation modal
+    setArchiveRow(null);
 
     try {
       const idToDelete = rowToArchive._id || rowToArchive.id;
@@ -452,24 +422,22 @@ const Parking = () => {
       await logActivity(role, "ARCHIVE_TICKET", `Archived Parking Ticket #${rowToArchive.ticketNo}`, "Parking");
       setRecords(prev => prev.filter(r => r.id !== idToDelete));
       
-      // Notification Pop-up (autoClose: TRUE, 1-SECOND DURATION)
       setNotificationState({ 
         isOpen: true, 
         type: 'success', 
         message: `Ticket #${rowToArchive.ticketNo} was successfully moved to Archives.`, 
         autoClose: true, 
-        duration: 1000 // <-- 1 second duration as requested
+        duration: 1000
       });
     } catch (e) {
       console.error("Failed to archive:", e);
       
-      // Notification Pop-up (autoClose: TRUE, 1-SECOND DURATION)
       setNotificationState({ 
         isOpen: true, 
         type: 'error', 
         message: `Failed to archive Ticket #${rowToArchive.ticketNo}. Please check network connection.`,
         autoClose: true, 
-        duration: 1000 // <-- 1 second duration as requested
+        duration: 1000
       });
     }
   };
@@ -482,7 +450,6 @@ const Parking = () => {
         await logActivity(role, "VEHICLE_DEPART", `Vehicle Departed: Ticket #${logoutRow.ticketNo}`, "Parking");
         fetchParkingTickets();
         setLogoutRow(null);
-        // Notification Pop-up (3s duration)
         setNotificationState({ 
             isOpen: true, 
             type: 'success', 
@@ -493,7 +460,6 @@ const Parking = () => {
       }
     } catch (error) {
       console.error("Error logging out:", error);
-      // Notification Pop-up (3s duration)
       setNotificationState({ 
         isOpen: true, 
         type: 'error', 
@@ -568,7 +534,6 @@ const Parking = () => {
       );
       
       await Promise.all(deletePromises);
-      // Notification Pop-up (3s duration)
       setNotificationState({ 
         isOpen: true, 
         type: 'success', 
@@ -581,7 +546,6 @@ const Parking = () => {
 
     } catch (error) {
       console.error(error);
-      // Notification Pop-up (3s duration)
       setNotificationState({ 
         isOpen: true, 
         type: 'error', 
@@ -615,7 +579,6 @@ const Parking = () => {
 
   const exportToCSV = () => {
     if (filtered.length === 0) {
-        // Notification Pop-up (3s duration)
         setNotificationState({ 
             isOpen: true, 
             type: 'error', 
@@ -645,7 +608,6 @@ const Parking = () => {
     URL.revokeObjectURL(url);
     
     logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Parking records to CSV`, "Parking");
-    // Notification Pop-up (3s duration)
     setNotificationState({ 
         isOpen: true, 
         type: 'success', 
@@ -657,7 +619,6 @@ const Parking = () => {
 
   const exportToPDF = () => {
     if (filtered.length === 0) {
-        // Notification Pop-up (3s duration)
         setNotificationState({ 
             isOpen: true, 
             type: 'error', 
@@ -713,7 +674,6 @@ const Parking = () => {
     doc.save(`parking_records_${new Date().toISOString().split('T')[0]}.pdf`);
     
     logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Parking records to PDF`, "Parking");
-    // Notification Pop-up (3s duration)
     setNotificationState({ 
         isOpen: true, 
         type: 'success', 
@@ -723,7 +683,6 @@ const Parking = () => {
     });
   };
 
-  // --- 7. COLUMN CONFIG FOR SELECTION ---
   const tableColumns = isSelectionMode 
     ? [
         <div key="header-check" className="flex items-center">
@@ -769,9 +728,7 @@ const Parking = () => {
       </div>
 
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
-        
         <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
-
         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
             <button
                 onClick={() => setShowLogModal(true)}
@@ -811,9 +768,6 @@ const Parking = () => {
         </div>
     </div>
 
-
-      
-
       {isLoading ? (
         <div className="text-center py-10">Loading tickets...</div>
       ) : (
@@ -834,7 +788,6 @@ const Parking = () => {
                 status: ticket.status
               };
 
-              // Add Checkbox if in selection mode
               if (isSelectionMode) {
                   return {
                       select: (
@@ -866,7 +819,6 @@ const Parking = () => {
                     onView={() => setViewRow(selectedRecord)}
                     onEdit={() => setEditRow(selectedRecord)}
                   />
-                  {/* Updated to use custom modal */}
                   <button onClick={() => handleArchive(selectedRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 cursor-pointer hover:bg-yellow-100" title="Archive">
                     <Archive size={16} />
                   </button>
@@ -889,7 +841,6 @@ const Parking = () => {
         </>
       )}
 
-      {/* --- RENDER EDIT MODAL --- */}
       {editRow && (
         <EditParking
           row={editRow}
@@ -897,16 +848,12 @@ const Parking = () => {
           onSave={handleEditSave}
         />
       )}
-      {/* ------------------------- */}
 
-      {/* --- 9. LOG MODAL --- */}
       <LogModal 
         isOpen={showLogModal} 
         onClose={() => setShowLogModal(false)} 
       />
-      {/* -------------------- */}
 
-      {/* NEW: ARCHIVE CONFIRMATION MODAL (Improved UI) */}
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
@@ -935,8 +882,6 @@ const Parking = () => {
             </div>
         </div>
       )}
-      {/* END ARCHIVE CONFIRMATION MODAL */}
-
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -1111,7 +1056,6 @@ const Parking = () => {
         </div>
       )}
       
-      {/* Status Pop-up Component (For both dynamic duration notifications) */}
       {notificationState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">
             <div 
@@ -1128,7 +1072,6 @@ const Parking = () => {
                     <h4 className="font-bold text-lg">{notificationState.type === 'success' ? 'Success!' : 'Error'}</h4>
                     <p className="text-sm">{notificationState.message}</p>
                 </div>
-                {/* Manual close button, visible for all notifications */}
                 <button 
                     onClick={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 2000 })} 
                     className="p-1 rounded-full text-white/80 hover:text-white transition-colors"

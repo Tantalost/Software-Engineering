@@ -1,11 +1,9 @@
-// components/dashboard/TargetModal.jsx
 import React, { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
 
 const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
   const [localTargets, setLocalTargets] = useState(currentTargets);
 
-  // Sync local state when prop changes
   useEffect(() => {
     if (isOpen) {
       setLocalTargets(currentTargets);
@@ -31,8 +29,6 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        
-        {/* Header */}
         <div className="bg-gradient-to-r from-teal-500 to-emerald-600 p-6 flex justify-between items-center text-white">
           <h2 className="text-xl font-bold tracking-wide">Set Daily Targets</h2>
           <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition">
@@ -40,12 +36,10 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <p className="text-sm text-gray-500 mb-4">
             Adjust the daily revenue goals. Weekly, Monthly, and Yearly targets will be calculated automatically based on these values.
           </p>
-
           {[
             { label: "Tickets Target", name: "tickets", color: "text-red-500" },
             { label: "Bus Target", name: "bus", color: "text-yellow-500" },

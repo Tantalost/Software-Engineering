@@ -1,25 +1,16 @@
 import React, { useState, useEffect } from "react";
-// Adjust these import paths based on your file structure
 import Input from "../common/Input";
 import Select from "../common/Select";
 
 const EditParking = ({ row, onClose, onSave }) => {
-  
-  // Helper: Extract YYYY-MM-DD from ISO string for the Date Input
   const extractDate = (isoString) => {
     if (!isoString) return "";
-    // uses en-CA to force YYYY-MM-DD format which is required for input type="date"
     return new Date(isoString).toLocaleDateString('en-CA'); 
   };
-
-  // Helper: Extract HH:MM from ISO string for the Time Input
   const extractTime = (isoString) => {
     if (!isoString) return "";
-    // uses en-GB to force HH:mm (24h) format required for value of input type="time"
     return new Date(isoString).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   };
-
-  // Helper: Parse currency/number safely
   const parsePrice = (p) => parseFloat(String(p).replace(/[^0-9.]/g, "")) || 0;
 
   const [form, setForm] = useState({
@@ -28,8 +19,6 @@ const EditParking = ({ row, onClose, onSave }) => {
     plateNo: row.plateNo || "",
     type: row.type,
     baseRate: parsePrice(row.baseRate || row.price), 
-    
-    // Separate Date and Time for editing
     date: extractDate(row.timeIn),
     timeInVal: extractTime(row.timeIn),
     timeOutVal: extractTime(row.timeOut),
@@ -41,15 +30,13 @@ const EditParking = ({ row, onClose, onSave }) => {
   const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
 
   const handleSubmit = () => {
-    // Reconstruct the ISO DateTime strings before saving
-    // Format: YYYY-MM-DDTHH:mm
     const combinedTimeIn = form.date && form.timeInVal 
       ? new Date(`${form.date}T${form.timeInVal}`).toISOString() 
       : row.timeIn;
 
     const combinedTimeOut = form.date && form.timeOutVal 
       ? new Date(`${form.date}T${form.timeOutVal}`).toISOString() 
-      : null; // Null if no time out set
+      : null;
 
     onSave({ 
       id: form.id, 
@@ -60,7 +47,7 @@ const EditParking = ({ row, onClose, onSave }) => {
       timein: combinedTimeIn, 
       timeout: combinedTimeOut, 
       duration: form.duration, 
-      date: form.date, // Sending date separately just in case, but timein/out usually covers it
+      date: form.date,
       status: form.status 
     });
   };
@@ -69,9 +56,7 @@ const EditParking = ({ row, onClose, onSave }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg">
         <h3 className="mb-4 text-xl font-bold text-slate-800">Edit Parking Ticket</h3>
-        
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Ticket No - Read Only usually */}
             <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ticket No</label>
                 <input 
@@ -82,14 +67,12 @@ const EditParking = ({ row, onClose, onSave }) => {
                 />
             </div>
 
-            {/* Plate No */}
             <Input 
                 label="Plate No" 
                 value={form.plateNo} 
                 onChange={(e) => set("plateNo", e.target.value.toUpperCase())} 
             />
 
-            {/* Type */}
             <div className="md:col-span-1">
                  <Select 
                     label="Type" 
@@ -99,7 +82,6 @@ const EditParking = ({ row, onClose, onSave }) => {
                 />
             </div>
 
-            {/* Base Rate */}
             <Input 
                 label="Base Rate (₱)" 
                 type="number" 
@@ -107,7 +89,6 @@ const EditParking = ({ row, onClose, onSave }) => {
                 onChange={(e) => set("baseRate", Number(e.target.value))} 
             />
 
-            {/* Date - Read Only */}
             <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
                 <input 
@@ -118,14 +99,12 @@ const EditParking = ({ row, onClose, onSave }) => {
                 />
             </div>
             
-            {/* Duration */}
             <Input 
                 label="Duration" 
                 value={form.duration} 
                 onChange={(e) => set("duration", e.target.value)} 
             />
 
-            {/* Time In */}
             <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Time In</label>
                 <input 
@@ -136,7 +115,6 @@ const EditParking = ({ row, onClose, onSave }) => {
                 />
             </div>
 
-            {/* Time Out */}
             <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Time Out</label>
                 <input 
@@ -147,7 +125,6 @@ const EditParking = ({ row, onClose, onSave }) => {
                 />
             </div>
 
-            {/* Status */}
             <div className="md:col-span-2">
                  <Select 
                     label="Status" 
