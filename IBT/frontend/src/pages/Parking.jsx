@@ -47,20 +47,20 @@ const Parking = () => {
   useEffect(() => {
   if (showPriceModal) {
     setModalPrices({
-      car: priceSettings.carRate,
-      motorcycle: priceSettings.motorcycleRate,
-        });
-      }
-    }, [showPriceModal, priceSettings]);
-
-
+      car: priceSettings.carRate.toFixed(2),
+      motorcycle: priceSettings.motorcycleRate.toFixed(2),
+    });
+    }
+  }, [showPriceModal, priceSettings]);
 
   const handleModalPriceChange = (type, value) => {
-  setModalPrices(prev => ({
-    ...prev,
-    [type]: value
-  }));
-  };
+      if (!/^\d*\.?\d*$/.test(value)) return;
+
+      setModalPrices(prev => ({
+        ...prev,
+      [type]: value
+      }));
+    };
 
   const closePriceModal = () => {
   setModalPrices({
@@ -70,38 +70,36 @@ const Parking = () => {
   setShowPriceModal(false); 
   };
 
-
   const handleSaveBasePrices = () => {
-  const carRate = Number(modalPrices.car);
-  const motorcycleRate = Number(modalPrices.motorcycle);
+  const carRate = parseFloat(modalPrices.car);
+  const motorcycleRate = parseFloat(modalPrices.motorcycle);
 
-  if (carRate <= 0 || motorcycleRate <= 0) {
+  if (isNaN(carRate) || isNaN(motorcycleRate) || carRate <= 0 || motorcycleRate <= 0) {
     setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Prices must be greater than zero.",
-        autoClose: true,
-        duration: 2000
-      });
+      isOpen: true,
+      type: "error",
+      message: "Please enter valid prices greater than zero.",
+      autoClose: true,
+      duration: 2000
+    });
     return;
   }
 
   setPriceSettings({
-    carRate,
-    motorcycleRate,
+    carRate: Number(carRate.toFixed(2)),
+    motorcycleRate: Number(motorcycleRate.toFixed(2)),
   });
 
   setShowPriceModal(false);
 
   setNotificationState({
-      isOpen: true,
-      type: "success",
-      message: "Parking prices updated successfully.",
-      autoClose: true,
-      duration: 2000
-    });
-};
-
+    isOpen: true,
+    type: "success",
+    message: "Parking prices updated successfully.",
+    autoClose: true,
+    duration: 2000
+      });
+    };
 
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -1006,7 +1004,8 @@ const Parking = () => {
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
             <input
-              type="number"
+              type="text"
+              inputmode="decimal"
               value={modalPrices.car}
               onChange={(e) => handleModalPriceChange("car", e.target.value)}
               className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
@@ -1022,7 +1021,8 @@ const Parking = () => {
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
             <input
-              type="number"
+              type="text"
+              inputmode="decimal"
               value={modalPrices.motorcycle}
               onChange={(e) => handleModalPriceChange("motorcycle", e.target.value)}
               className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
