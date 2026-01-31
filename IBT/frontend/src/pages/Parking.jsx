@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Settings } from "lucide-react";
+
 
 const Parking = () => {
   const [records, setRecords] = useState([]);
@@ -30,6 +32,77 @@ const Parking = () => {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
+
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [modalPrices, setModalPrices] = useState({
+  car: 10,
+  motorcycle: 5,
+  });
+
+  const [priceSettings, setPriceSettings] = useState({
+  carRate: 10,
+  motorcycleRate: 5,
+  });
+
+  useEffect(() => {
+  if (showPriceModal) {
+    setModalPrices({
+      car: priceSettings.carRate,
+      motorcycle: priceSettings.motorcycleRate,
+        });
+      }
+    }, [showPriceModal, priceSettings]);
+
+
+
+  const handleModalPriceChange = (type, value) => {
+  setModalPrices(prev => ({
+    ...prev,
+    [type]: value
+  }));
+  };
+
+  const closePriceModal = () => {
+  setModalPrices({
+    car: priceSettings.carRate,
+    motorcycle: priceSettings.motorcycleRate,
+  });
+  setShowPriceModal(false); 
+  };
+
+
+  const handleSaveBasePrices = () => {
+  const carRate = Number(modalPrices.car);
+  const motorcycleRate = Number(modalPrices.motorcycle);
+
+  if (carRate <= 0 || motorcycleRate <= 0) {
+    setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Prices must be greater than zero.",
+        autoClose: true,
+        duration: 2000
+      });
+    return;
+  }
+
+  setPriceSettings({
+    carRate,
+    motorcycleRate,
+  });
+
+  setShowPriceModal(false);
+
+  setNotificationState({
+      isOpen: true,
+      type: "success",
+      message: "Parking prices updated successfully.",
+      autoClose: true,
+      duration: 2000
+    });
+};
+
+
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -301,10 +374,19 @@ const Parking = () => {
   };
 
   const handleSelectType = (type) => {
-    const rate = type === "Car" ? 10 : 5;
-    setNewTicket(prev => ({ ...prev, type, baseRate: rate }));
+  const rate =
+    type === "Car"
+      ? priceSettings.carRate
+      : priceSettings.motorcycleRate;
+  setNewTicket(prev => ({
+    ...prev,
+    type,
+    baseRate: rate
+    }));
     setStep(2);
   };
+
+
 
   const handleBack = () => {
     setStep(1);
@@ -717,6 +799,16 @@ const Parking = () => {
               <span>Submit Report</span>
             </button>
           )}
+          
+          <button 
+          onClick={() => setShowPriceModal(true)}
+          className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+          title="Price Setting"
+            >
+          <Settings size={18} className="text-slate-600" />
+          <span>Set Price</span>
+        </button>
+
 
           <button onClick={handleAddClick} className="bg-gradient-to-r cursor-pointer from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
           title ='Add New Ticket' >
@@ -883,6 +975,85 @@ const Parking = () => {
         </div>
       )}
 
+      {showPriceModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+      <div className="flex items-center justify-between mb-5 border-b pb-3">
+        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <Settings size={20} className="text-emerald-600" />
+          Parking Price Settings
+        </h3>
+        <button
+        onClick={closePriceModal}
+        className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"
+        title="Close"
+        >
+
+          <X size={20} />
+        </button>
+      </div>
+
+      <p className="text-sm text-slate-600 mb-5">
+        Set a new parking rates. These prices will apply to newly created tickets.
+      </p>
+
+      <div className="space-y-5">
+ 
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1">
+            Car / Jeep Rate (per hour)
+          </label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
+            <input
+              type="number"
+              value={modalPrices.car}
+              onChange={(e) => handleModalPriceChange("car", e.target.value)}
+              className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-1">
+            Motorcycle Rate (per hour)
+          </label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
+            <input
+              type="number"
+              value={modalPrices.motorcycle}
+              onChange={(e) => handleModalPriceChange("motorcycle", e.target.value)}
+              className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+      </div>
+
+      <div className="mt-8 flex justify-end gap-3 border-t pt-4">
+        <button
+        onClick={closePriceModal}
+        className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSaveBasePrices}
+          className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2"
+        >
+          <CheckCircle size={16} />
+          Save Changes
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
@@ -895,12 +1066,12 @@ const Parking = () => {
                 <button onClick={() => handleSelectType('Car')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-cyan-500 bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
                   <Car size={80} className="mb-4" />
                   <span className="text-2xl font-bold mt-2">CAR / JEEP</span>
-                  <span className="text-sm opacity-70 mt-1 font-medium">₱10.00 / hr</span>
+                  <span className="text-sm opacity-70 mt-1 font-medium"> ₱{priceSettings.carRate}.00 / hr</span>
                 </button>
                 <button onClick={() => handleSelectType('Motorcycle')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-red-500 bg-red-50 text-red-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
                   <Bike size={80} className="mb-4" />
                   <span className="text-2xl font-bold mt-2">MOTORCYCLE</span>
-                  <span className="text-sm opacity-70 mt-1 font-medium">₱5.00 / hr</span>
+                  <span className="text-sm opacity-70 mt-1 font-medium"> ₱{priceSettings.motorcycleRate}.00 / hr</span>
                 </button>
               </div>
             )}

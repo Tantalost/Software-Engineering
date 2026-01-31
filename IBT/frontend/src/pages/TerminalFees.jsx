@@ -660,7 +660,7 @@ const TerminalFees = () => {
             onClick={handleOpenPriceModal} 
             className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
           >
-            <Settings size={18} /> <span>Pricing</span>
+            <Settings size={18} /> <span>Set Price</span>
           </button>)}
 
           <button onClick={handleOpenAdd} className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
@@ -880,7 +880,7 @@ const TerminalFees = () => {
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between mb-5 border-b pb-3">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <Settings size={20} className="text-emerald-600"/> Base Price Settings
+                <Settings size={20} className="text-emerald-600"/> Ticket Price Settings
               </h3>
               <button 
                 onClick={() => setShowPriceModal(false)} 
@@ -892,7 +892,7 @@ const TerminalFees = () => {
             </div>
             
             <p className="text-sm text-slate-600 mb-5">
-                Adjust the default fees applied to new tickets. Changes take effect upon saving.
+                Set a new ticket rates. Changes take effect upon saving.
             </p>
 
             <div className="space-y-5">
