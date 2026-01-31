@@ -5,10 +5,8 @@ const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dqgt2uxfe/auto/upload";
 const UPLOAD_PRESET = "ibt_upload";
 
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
-
   const [formData, setFormData] = useState({
     slotNo: "",
     firstName: "", 
@@ -542,7 +540,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
                    return (
                     <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${isString ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
-                      
                       {isString && (
                         <div className="absolute top-2 right-2 z-10">
                             <button 
@@ -579,10 +576,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                    );
                   });
                 })()}
-
               </div>
             </section>
-
           </form>
         </div>
 

@@ -8,9 +8,7 @@ const StatCards = ({ statsData }) => {
     { label: "Tenants/Lease", value: "0", change: "+0%", subtitle: "No Data", color: "green" },
     { label: "Parking", value: "0", change: "+0%", subtitle: "No Data", color: "blue" },
   ];
-
   const stats = statsData && statsData.length > 0 ? statsData : defaultStats;
-
   const colorMap = {
     red: {
       bgLight: "bg-red-100",

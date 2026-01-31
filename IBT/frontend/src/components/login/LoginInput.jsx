@@ -12,9 +12,7 @@ export default function LoginInput({
   setShowPassword,
 }) {
   const isPassword = type === "password";
- 
   const inputType = isPassword ? (showPassword ? "text" : "password") : type;
-
   const renderIcon = () => {
     if (icon === "Mail") return <Mail size={20} />;
     if (icon === "Lock") return <Lock size={20} />;
@@ -26,9 +24,7 @@ export default function LoginInput({
       <label className="block text-gray-700 font-medium text-sm mb-2 ml-1">
         {label}
       </label>
-      
       <div className="relative group">
-        
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-teal-500 transition-colors duration-200">
           {renderIcon()}
         </div>
@@ -42,17 +38,13 @@ export default function LoginInput({
           className="
             w-full
             bg-gray-50 
-            text-gray-900 
-            /* text-base prevents iOS zoom on focus */
+            text-gray-900
             text-base sm:text-sm 
             placeholder-gray-400
             border border-gray-200 
-            rounded-xl 
-            /* Larger vertical padding for easier tapping on mobile */
+            rounded-xl
             py-3.5 sm:py-3
-            /* Padding left to make room for the icon */
-            pl-12 
-            /* Padding right to make room for password eye */
+            pl-12
             pr-12 
             focus:outline-none 
             focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 

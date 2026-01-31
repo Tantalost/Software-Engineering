@@ -2,12 +2,10 @@ import React from "react";
 import { FileCheck } from "lucide-react"; 
 
 const RecentActivity = ({ data = [], onItemClick }) => {
-
   const typeColors = {
     success: "from-emerald-400 to-teal-400",
     alert: "from-red-400 to-pink-400",
   };
-
   const limitedData = data.slice(0, 3);
 
   return (
@@ -15,7 +13,6 @@ const RecentActivity = ({ data = [], onItemClick }) => {
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-3xl font-bold text-gray-900">Recent Reports</h2>
       </div>
-
       <div className="space-y-3">
         {limitedData.length === 0 ? <p className="text-gray-500">No recent activity.</p> : null}
         

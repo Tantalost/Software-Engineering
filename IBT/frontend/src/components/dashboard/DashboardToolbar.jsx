@@ -35,19 +35,15 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
   const dateLabel = useMemo(() => {
     if (view === 'year') return date.getFullYear().toString();
     if (view === 'month') return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
     if (view === 'week') {
       const current = new Date(date);
       const day = current.getDay(); 
       const start = new Date(current);
       start.setDate(current.getDate() - day); 
-      
       const end = new Date(start);
       end.setDate(start.getDate() + 6); 
-
       const sameYear = start.getFullYear() === end.getFullYear();
       const sameMonth = start.getMonth() === end.getMonth();
-
       if (sameMonth && sameYear) {
          return `${start.toLocaleDateString('en-US', { month: 'long' })} ${start.getDate()} - ${end.getDate()}, ${end.getFullYear()}`;
       }

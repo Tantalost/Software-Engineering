@@ -25,7 +25,6 @@ export default function LoginCard({
           max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl
           transition-all duration-300 ease-in-out"
       >
-       
         <div
           className="
             relative
@@ -37,9 +36,7 @@ export default function LoginCard({
             px-6 py-8 sm:px-12 sm:py-12 lg:px-16 lg:py-14
           "
         >
-         
           <div className="text-center mb-8 lg:mb-10">
-        
             <div
               className="
                 inline-flex items-center justify-center 
@@ -47,12 +44,10 @@ export default function LoginCard({
                 bg-gradient-to-br from-teal-500 to-emerald-500 
                 rounded-full mb-4 shadow-md text-white overflow-hidden"
             >
-             
               <div className="flex items-center justify-center">
                  {icon}
               </div>
             </div>
-
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 tracking-tight">
               {title}
             </h1>
@@ -87,7 +82,6 @@ export default function LoginCard({
                 icon="Lock"
                 placeholder="Enter your password"
               />
-
               <div className="pt-2 lg:pt-4">
                 <LoginButton
                   handleSubmit={handleSubmit}

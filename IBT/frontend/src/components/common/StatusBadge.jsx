@@ -11,10 +11,8 @@ const StatusBadge = ({ status }) => {
     claimed: "bg-green-100 text-green-700 border border-green-200",
     completed: "bg-slate-100 text-slate-700 border border-slate-200",
   };
-
   const safeStatus = String(status || ""); 
   const key = safeStatus.toLowerCase();
-  
   const colorClass = colors[key] || "bg-gray-100 text-gray-700 border border-gray-200";
 
   return (

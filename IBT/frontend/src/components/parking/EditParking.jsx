@@ -3,17 +3,14 @@ import Input from "../common/Input";
 import Select from "../common/Select";
 
 const EditParking = ({ row, onClose, onSave }) => {
-  
   const extractDate = (isoString) => {
     if (!isoString) return "";
     return new Date(isoString).toLocaleDateString('en-CA'); 
   };
-
   const extractTime = (isoString) => {
     if (!isoString) return "";
     return new Date(isoString).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   };
-
   const parsePrice = (p) => parseFloat(String(p).replace(/[^0-9.]/g, "")) || 0;
 
   const [form, setForm] = useState({
@@ -59,7 +56,6 @@ const EditParking = ({ row, onClose, onSave }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg">
         <h3 className="mb-4 text-xl font-bold text-slate-800">Edit Parking Ticket</h3>
-        
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ticket No</label>

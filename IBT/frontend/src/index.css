@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-
-/* React DatePicker Custom Styles */
 .react-datepicker-wrapper {
   width: 100%;
 }
