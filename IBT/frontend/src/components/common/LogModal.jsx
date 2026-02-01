@@ -28,18 +28,6 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
     }
   };
 
-  const handleClearLogs = async () => {
-    if (window.confirm("Are you sure you want to clear the entire history? This cannot be undone.")) {
-      try {
-        await fetch(`${API_URL}/logs`, { method: 'DELETE' });
-        setLogs([]); 
-      } catch (e) {
-        console.error("Failed to clear logs", e);
-        alert("Failed to clear history");
-      }
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -53,15 +41,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            {logs.length > 0 && (
-              <button 
-                onClick={handleClearLogs}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100"
-              >
-                <Trash2 size={14} />
-                Clear History
-              </button>
-            )}
+            {logs.length > 0  }
             
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
               <X size={24} />

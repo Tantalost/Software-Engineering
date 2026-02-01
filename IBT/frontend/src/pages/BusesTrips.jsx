@@ -765,7 +765,7 @@ const BusTrips = () => {
     <button
         type="button"
         onClick={() => setShowCompanyModal(true)}
-        className="text-xs text-emerald-600 hover:underline"
+        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 cursor-pointer"
     >
         Manage
     </button>
