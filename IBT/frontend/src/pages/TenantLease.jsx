@@ -334,7 +334,8 @@ const TenantLease = () => {
             data: formattedData
         };
 
-        await submitPageReport("Tenant Lease", reportPayload, role === "lease" ? "Tenant Admin" : "Admin");
+        const adminName = localStorage.getItem("authName") || (role === "lease" ? "Tenant Admin" : "Admin");
+        await submitPageReport("Tenant Lease", reportPayload, adminName);
         await sendNotification(
             "Report Submitted: Tenant Lease", 
             `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}.`,

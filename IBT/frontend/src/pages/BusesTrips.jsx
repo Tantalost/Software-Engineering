@@ -11,9 +11,7 @@ import Field from "../components/common/Field";
 import EditBusTrip from "../components/busTrips/EditBusTrip";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
-// --- NEW IMPORT ---
-import StatCardGroupBus from "../components/busTrips/StatCardGroupBus"; 
-// ------------------
+import StatCardGroupBus from "../components/busTrips/StatCardGroupBus";
 import { submitPageReport } from "../utils/reportService.js";
 import { sendNotification } from "../utils/notificationService.js";
 import { logActivity } from "../utils/logger";
@@ -28,7 +26,6 @@ const TEMPLATE_ROUTES = {
 };
 
 const BusTrips = () => {
-    // 1. STATE DECLARATIONS
     const [records, setRecords] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -39,7 +36,6 @@ const BusTrips = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showLogModal, setShowLogModal] = useState(false);
 
-    // Selection Mode State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
 
@@ -362,7 +358,8 @@ const BusTrips = () => {
                 data: formattedData
             };
 
-            await submitPageReport("Bus Trips", reportPayload, "Admin");
+            const adminName = localStorage.getItem("authName") || "Admin";
+            await submitPageReport("Bus Trips", reportPayload, adminName);
 
             await sendNotification(
                 "Report Submitted: Bus Report",

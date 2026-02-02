@@ -337,7 +337,8 @@ const LostFound = () => {
                 data: formattedData
             };
 
-            await submitPageReport("Lost & Found", reportPayload, "LostFound Admin");
+            const adminName = localStorage.getItem("authName") || "Lost & Found Admin";
+            await submitPageReport("Lost & Found", reportPayload, adminName);
 
             sendNotification(
                 "Report Submitted: Lost & Found Report",

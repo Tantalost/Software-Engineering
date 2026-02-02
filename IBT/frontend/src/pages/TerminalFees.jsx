@@ -263,7 +263,8 @@ const TerminalFees = () => {
         data: formattedData 
       };
 
-      await submitPageReport("Terminal Fees", reportPayload, "Ticket Admin");
+      const adminName = localStorage.getItem("authName") || "Ticket Admin";
+      await submitPageReport("Terminal Fees", reportPayload, adminName);
       await fetch("http://localhost:3000/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

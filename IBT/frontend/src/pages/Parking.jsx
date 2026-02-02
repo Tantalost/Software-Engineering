@@ -596,7 +596,8 @@ const Parking = () => {
         data: formattedData 
       };
 
-      await submitPageReport("Parking", reportPayload, "Parking Admin");
+      const adminName = localStorage.getItem("authName") || "Parking Admin";
+      await submitPageReport("Parking", reportPayload, adminName);
 
       await fetch("http://localhost:3000/api/notifications", {
         method: "POST",

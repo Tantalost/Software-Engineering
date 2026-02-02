@@ -27,12 +27,12 @@ export default function AdminLogin() {
         const raw = localStorage.getItem(key);
         if (!raw) {
           localStorage.setItem(key, JSON.stringify([
-            { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin" },
-            { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking" },
-            { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound" },
-            { id: 4, email: "ticketadmin@example.com", password: "ticket123", role: "ticket" },
-            { id: 5, email: "busadmin@example.com", password: "bus123", role: "bus" },
-            { id: 6, email: "leaseadmin@example.com", password: "lease123", role: "lease" },
+            { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin", name: "Super Admin" },
+            { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking", name: "Parking Admin" },
+            { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound", name: "Lost & Found Admin" },
+            { id: 4, email: "ticketadmin@example.com", password: "ticket123", role: "ticket", name: "Ticket Admin" },
+            { id: 5, email: "busadmin@example.com", password: "bus123", role: "bus", name: "Bus Admin" },
+            { id: 6, email: "leaseadmin@example.com", password: "lease123", role: "lease", name: "Lease Admin" },
           ]));
         }
       } catch { }
@@ -43,6 +43,19 @@ export default function AdminLogin() {
         if (found) {
           localStorage.setItem("isAdminLoggedIn", "true");
           localStorage.setItem("authRole", found.role);
+          if (found.name) {
+            localStorage.setItem("authName", found.name);
+          } else {
+            const roleNames = {
+              superadmin: "Super Admin",
+              parking: "Parking Admin",
+              lostfound: "Lost & Found Admin",
+              ticket: "Ticket Admin",
+              bus: "Bus Admin",
+              lease: "Lease Admin"
+            };
+            localStorage.setItem("authName", roleNames[found.role] || "Admin");
+          }
           navigate(found.role === "parking" ? "/parking" : 
             found.role === "lostfound" ? "/lost-found" : 
             found.role === "bus" ? "/buses-trips" :

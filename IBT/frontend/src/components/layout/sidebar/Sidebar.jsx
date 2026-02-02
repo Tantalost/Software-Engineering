@@ -23,6 +23,9 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
 
   const handleLogout = () => {
     setShowLogoutModal(false);
+    localStorage.removeItem("isAdminLoggedIn");
+    localStorage.removeItem("authRole");
+    localStorage.removeItem("authName");
     navigate("/login");
   };
 

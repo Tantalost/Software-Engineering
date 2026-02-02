@@ -61,6 +61,7 @@ const Topbar = ({ title, onMenuClick }) => {
     setShowLogoutModal(false);
     localStorage.removeItem("isAdminLoggedIn");
     localStorage.removeItem("authRole");
+    localStorage.removeItem("authName");
     navigate("/login");
   };
 

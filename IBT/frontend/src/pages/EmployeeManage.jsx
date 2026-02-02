@@ -10,17 +10,31 @@ const ensureDefaultAdmins = () => {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) {
             const defaults = [
-                { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin" },
-                { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking" },
-                { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound" },
-                { id: 4, email: "ticketadmin@example.com", password: "ticket123", role: "ticket" },
-                { id: 5, email: "busadmin@example.com", password: "bus123", role: "bus" },
-                { id: 6, email: "leaseadmin@example.com", password: "lease123", role: "lease" },
+                { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin", name: "Super Admin" },
+                { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking", name: "Parking Admin" },
+                { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound", name: "Lost & Found Admin" },
+                { id: 4, email: "ticketadmin@example.com", password: "ticket123", role: "ticket", name: "Ticket Admin" },
+                { id: 5, email: "busadmin@example.com", password: "bus123", role: "bus", name: "Bus Admin" },
+                { id: 6, email: "leaseadmin@example.com", password: "lease123", role: "lease", name: "Lease Admin" },
             ];
             localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
             return defaults;
         }
-        return JSON.parse(raw);
+        const admins = JSON.parse(raw);
+        return admins.map(admin => {
+            if (!admin.name) {
+                const roleNames = {
+                    superadmin: "Super Admin",
+                    parking: "Parking Admin",
+                    lostfound: "Lost & Found Admin",
+                    ticket: "Ticket Admin",
+                    bus: "Bus Admin",
+                    lease: "Lease Admin"
+                };
+                admin.name = roleNames[admin.role] || "Admin";
+            }
+            return admin;
+        });
     } catch {
         return [];
     }
@@ -29,7 +43,7 @@ const ensureDefaultAdmins = () => {
 export default function EmployeeManage() {
     const [admins, setAdmins] = useState(() => ensureDefaultAdmins());
     const [showCreate, setShowCreate] = useState(false);
-    const [createForm, setCreateForm] = useState({ email: "", password: "", role: "parking" }); 
+    const [createForm, setCreateForm] = useState({ email: "", password: "", role: "parking", name: "" }); 
     const [editTarget, setEditTarget] = useState(null);
     const [editPassword, setEditPassword] = useState("");
     const [deleteTarget, setDeleteTarget] = useState(null); 
@@ -58,7 +72,10 @@ export default function EmployeeManage() {
     const isSuperAdmin = useMemo(() => (localStorage.getItem("authRole") || "superadmin") === "superadmin", []);
 
     const addAdmin = () => {
-        if (!createForm.email || !createForm.password) return;
+        if (!createForm.email || !createForm.password || !createForm.name.trim()) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Please fill in all required fields (Email, Password, and Name).", autoClose: true, duration: 3000 });
+            return;
+        }
         const exists = admins.some((a) => a.email.toLowerCase() === createForm.email.toLowerCase());
         if (exists) {
             setNotificationState({ isOpen: true, type: 'error', message: "Email already exists.", autoClose: true, duration: 3000 });
@@ -66,11 +83,11 @@ export default function EmployeeManage() {
         } 
         const next = [
             ...admins,
-            { id: Date.now(), email: createForm.email, password: createForm.password, role: createForm.role },
+            { id: Date.now(), email: createForm.email, password: createForm.password, role: createForm.role, name: createForm.name.trim() },
         ];
         setAdmins(next);
         setShowCreate(false);
-        setCreateForm({ email: "", password: "", role: "parking" });
+        setCreateForm({ email: "", password: "", role: "parking", name: "" });
         setNotificationState({ isOpen: true, type: 'success', message: `${createForm.email} created successfully.`, autoClose: true, duration: 3000 });
     };
 
@@ -116,6 +133,7 @@ export default function EmployeeManage() {
                                 <table className="min-w-full text-sm text-left text-gray-600">
                                     <thead className="bg-gray-50 text-gray-700 uppercase text-xs font-semibold">
                                         <tr>
+                                            <th className="px-6 py-3">Name</th>
                                             <th className="px-6 py-3">Email</th>
                                             <th className="px-6 py-3">Role</th>
                                             <th className="px-6 py-3 text-right">Actions</th>
@@ -124,11 +142,12 @@ export default function EmployeeManage() {
                                     <tbody>
                                         {admins.length === 0 ? (
                                             <tr>
-                                                <td className="px-6 py-4" colSpan={3}>No admins found.</td>
+                                                <td className="px-6 py-4" colSpan={4}>No admins found.</td>
                                             </tr>
                                         ) : (
                                             admins.map((a) => (
                                                 <tr key={a.id} className="border-b border-gray-100 hover:bg-gray-50 transition-all">
+                                                    <td className="px-6 py-3 font-medium">{a.name || "N/A"}</td>
                                                     <td className="px-6 py-3">{a.email}</td>
                                                     <td className="px-6 py-3 capitalize">{a.role}</td>
                                                     <td className="px-6 py-3">
@@ -151,10 +170,11 @@ export default function EmployeeManage() {
                             <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow">
                                 <h3 className="mb-4 text-base font-semibold text-slate-800">Create New Admin</h3>
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <Field label="Email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
-                                    <Field label="Password" type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
+                                    <Field label="Name *" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} placeholder="Enter admin's full name" />
+                                    <Field label="Email *" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+                                    <Field label="Password *" type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
                                     <div>
-                                        <label className="mb-1 block text-xs font-medium text-slate-600">Role</label>
+                                        <label className="mb-1 block text-xs font-medium text-slate-600">Role *</label>
                                         <select value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none">
                                             <option value="bus">Bus Admin</option>
                                             <option value="lease">Lease Admin</option>
@@ -165,6 +185,7 @@ export default function EmployeeManage() {
                                         </select>
                                     </div>
                                 </div>
+                                <p className="mt-2 text-xs text-slate-500">* Required fields</p>
                                 <div className="mt-4 flex justify-end gap-2">
                                     <button onClick={() => setShowCreate(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 cursor-pointer">Cancel</button>
                                     <button onClick={addAdmin} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700 cursor-pointer">Create</button>
@@ -231,9 +252,9 @@ export default function EmployeeManage() {
     );
 }
 
-const Field = ({ label, value, onChange, type = "text", disabled = false }) => (
+const Field = ({ label, value, onChange, type = "text", disabled = false, placeholder = "" }) => (
     <div>
         <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-        <input disabled={disabled} value={value} onChange={onChange} type={type} className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none ${disabled ? "opacity-70" : ""}`} />
+        <input disabled={disabled} value={value} onChange={onChange} type={type} placeholder={placeholder} className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none ${disabled ? "opacity-70" : ""}`} />
     </div>
 );
