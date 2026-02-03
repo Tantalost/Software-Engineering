@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Settings } from "lucide-react"; 
+import { Settings } from "lucide-react";
 import Layout from "../components/layout/Layout";
 import StatCards from "../components/dashboard/StatCards";
 import OperationsAnalytics from "../components/dashboard/OperationsAnalytics";
 import SummaryDonut from "../components/dashboard/SummaryDonut";
 import RecentActivity from "../components/dashboard/RecentActivity";
 import DashboardToolbar from "../components/dashboard/DashboardToolbar";
-import TargetModal from "../components/dashboard/TargetModal"; 
+import TargetModal from "../components/dashboard/TargetModal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ const Dashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [analyticsData, setAnalyticsData] = useState([]);
   const [donutData, setDonutData] = useState([]);
-  const [totalQuota, setTotalQuota] = useState(0); 
+  const [totalQuota, setTotalQuota] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const getItemDate = (item) => {
@@ -74,24 +74,20 @@ const Dashboard = () => {
     return `₱${value.toLocaleString()}`;
   };
 
-  const calculateQuota = (moduleName) => {
-    return targets[moduleName] || 0;
-  };
-
   const isDateInView = (dateString, view, anchorDate) => {
     if (!dateString) return false;
     const target = new Date(dateString);
     const anchor = new Date(anchorDate);
-    if (isNaN(target.getTime())) return false; 
+    if (isNaN(target.getTime())) return false;
 
     if (view === "day") return target.toDateString() === anchor.toDateString();
     if (view === "week") {
       const start = new Date(anchor);
       start.setDate(anchor.getDate() - anchor.getDay());
-      start.setHours(0,0,0,0);
+      start.setHours(0, 0, 0, 0);
       const end = new Date(start);
       end.setDate(start.getDate() + 6);
-      end.setHours(23,59,59,999);
+      end.setHours(23, 59, 59, 999);
       return target >= start && target <= end;
     }
     if (view === "month") return target.getMonth() === anchor.getMonth() && target.getFullYear() === anchor.getFullYear();
@@ -141,23 +137,26 @@ const Dashboard = () => {
   useEffect(() => {
     if (loading) return;
 
+    // --- REVENUE STATS CALCULATION ---
     const generateStat = (label, items, color, moduleKey) => {
       const currentItems = items.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
       const currentRev = calculateRevenue(currentItems);
-      const targetRev = calculateQuota(moduleKey); 
 
-      let percent = 0;
-      if (targetRev > 0) {
-        percent = ((currentRev - targetRev) / targetRev) * 100;
-      }
+      const baseMonthlyTarget = targets[moduleKey] || 0;
+      let targetRev = 0;
 
-      const sign = percent >= 0 ? "+" : "";
-      const changeLabel = `${sign}${percent.toFixed(1)}%`;
+      // Fix: Formula Logic
+      if (filterView === "day") targetRev = baseMonthlyTarget / 30;
+      else if (filterView === "week") targetRev = baseMonthlyTarget / 4;
+      else if (filterView === "month") targetRev = baseMonthlyTarget;
+      else if (filterView === "year") targetRev = baseMonthlyTarget * 12;
+
+      const percent = targetRev > 0 ? (currentRev / targetRev) * 100 : 0;
 
       return {
         label,
         value: formatCurrency(currentRev),
-        change: changeLabel,
+        change: `${percent.toFixed(0)}% of Target`,
         subtitle: `Target: ${formatCurrency(targetRev)}`,
         color
       };
@@ -170,18 +169,20 @@ const Dashboard = () => {
       generateStat("Parking Revenue", rawData.parking, "blue", "parking"),
     ]);
 
+    // --- SUMMARY DONUT CALCULATION ---
+    const monthlyTotalTarget = Object.values(targets).reduce((a, b) => a + b, 0);
+    let scaledQuota = 0;
+    if (filterView === "day") scaledQuota = monthlyTotalTarget / 30;
+    else if (filterView === "week") scaledQuota = monthlyTotalTarget / 4;
+    else if (filterView === "month") scaledQuota = monthlyTotalTarget;
+    else if (filterView === "year") scaledQuota = monthlyTotalTarget * 12;
+
+    setTotalQuota(scaledQuota);
+
     const filteredTickets = rawData.tickets.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
     const filteredBus = rawData.bus.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
     const filteredParking = rawData.parking.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
     const filteredTenants = rawData.tenants.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
-
-    const calculatedTotalQuota = 
-        calculateQuota("tickets") +
-        calculateQuota("bus") +
-        calculateQuota("tenants") +
-        calculateQuota("parking");
-    
-    setTotalQuota(calculatedTotalQuota);
 
     setDonutData([
       { name: "Tickets", value: calculateRevenue(filteredTickets), color: "#EF4444" },
@@ -190,12 +191,13 @@ const Dashboard = () => {
       { name: "Parking", value: calculateRevenue(filteredParking), color: "#3B82F6" },
     ]);
 
+    // --- RECENT ACTIVITY ---
     const filteredReports = rawData.reports.filter(r => isDateInView(r.createdAt || r.date, filterView, filterDate));
     const processedActivity = filteredReports
       .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
       .slice(0, 5)
       .map(r => ({
-        id: r._id || r.id, 
+        id: r._id || r.id,
         type: r.status === 'Resolved' ? 'success' : 'warning',
         message: `${r.type} Report Submitted`,
         date: r.createdAt || r.date,
@@ -203,46 +205,65 @@ const Dashboard = () => {
       }));
     setRecentActivity(processedActivity);
 
+    // --- CHART DATA (REVENUE + VOLUME) ---
+    // Fix: Added Volume Logic
     let chartPoints = [];
     if (filterView === 'week') {
-       const startOfWeek = new Date(filterDate);
-       startOfWeek.setDate(filterDate.getDate() - filterDate.getDay());
-       for(let i=0; i<7; i++) {
-         const d = new Date(startOfWeek);
-         d.setDate(startOfWeek.getDate() + i);
-         const dateStr = d.toISOString().split('T')[0];
-         const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dateStr); };
-         chartPoints.push({
-           name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-           ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
-           busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
-           parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
-           tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
-         });
-       }
+      const startOfWeek = new Date(filterDate);
+      startOfWeek.setDate(filterDate.getDate() - filterDate.getDay());
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0];
+        const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dateStr); };
+        chartPoints.push({
+          name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
+          ticketsVolume: rawData.tickets.filter(isMatch).length,
+          busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
+          busVolume: rawData.bus.filter(isMatch).length,
+          parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
+          parkingVolume: rawData.parking.filter(isMatch).length,
+          tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
+          tenantsVolume: rawData.tenants.filter(isMatch).length,
+        });
+      }
     } else if (filterView === 'month') {
-        const daysInMonth = new Date(filterDate.getFullYear(), filterDate.getMonth() + 1, 0).getDate();
-        for(let i=1; i<=daysInMonth; i++) {
-            const dStr = `${filterDate.getFullYear()}-${String(filterDate.getMonth()+1).padStart(2, '0')}-${String(i).padStart(2,'0')}`;
-            const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dStr); };
-            chartPoints.push({
-                name: i.toString(),
-                ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
-                busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
-                parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
-                tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
-            });
-        }
+      const daysInMonth = new Date(filterDate.getFullYear(), filterDate.getMonth() + 1, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dStr = `${filterDate.getFullYear()}-${String(filterDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dStr); };
+        chartPoints.push({
+          name: i.toString(),
+          ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
+          ticketsVolume: rawData.tickets.filter(isMatch).length,
+          busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
+          busVolume: rawData.bus.filter(isMatch).length,
+          parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
+          parkingVolume: rawData.parking.filter(isMatch).length,
+          tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
+          tenantsVolume: rawData.tenants.filter(isMatch).length,
+        });
+      }
     } else if (filterView === 'year') {
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       chartPoints = months.map((m, idx) => {
-        const monthFilter = (item) => { const dVal = getItemDate(item); if(!dVal) return false; const d = new Date(dVal); return d.getMonth() === idx && d.getFullYear() === filterDate.getFullYear(); };
+        const monthFilter = (item) => { 
+          const dVal = getItemDate(item); 
+          if (!dVal) return false; 
+          const d = new Date(dVal); 
+          return d.getMonth() === idx && d.getFullYear() === filterDate.getFullYear(); 
+        };
         return {
           name: m,
           ticketsRevenue: calculateRevenue(rawData.tickets.filter(monthFilter)),
+          ticketsVolume: rawData.tickets.filter(monthFilter).length,
           busRevenue: calculateRevenue(rawData.bus.filter(monthFilter)),
+          busVolume: rawData.bus.filter(monthFilter).length,
           parkingRevenue: calculateRevenue(rawData.parking.filter(monthFilter)),
+          parkingVolume: rawData.parking.filter(monthFilter).length,
           tenantsRevenue: calculateRevenue(rawData.tenants.filter(monthFilter)),
+          tenantsVolume: rawData.tenants.filter(monthFilter).length,
         };
       });
     }
@@ -251,24 +272,25 @@ const Dashboard = () => {
   }, [rawData, filterDate, filterView, loading, targets]);
 
   const handleFilterChange = ({ date, view }) => {
-     setFilterDate(date);
-     setFilterView(view);
+    setFilterDate(date);
+    setFilterView(view);
   };
 
   const handleDownload = (format) => {
+    // PDF generation logic would go here
   };
 
   return (
     <Layout title="Dashboard">
       <div className="px-4 pt-0 lg:px-2 lg:pt-0 space-y-6">
-        <DashboardToolbar 
-          onRefresh={fetchDashboardData} 
-          onDownload={handleDownload}    
+        <DashboardToolbar
+          onRefresh={fetchDashboardData}
+          onDownload={handleDownload}
           onFilterChange={handleFilterChange}
-          loading={loading}              
+          loading={loading}
         />
         <div className="flex justify-end">
-          <button 
+          <button
             onClick={() => setIsTargetModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-full shadow-sm hover:bg-gray-50 hover:text-teal-600 transition-colors cursor-pointer"
             title="Set Revenue Targets"
@@ -277,27 +299,26 @@ const Dashboard = () => {
             Set Targets
           </button>
         </div>
-        
+
         <StatCards statsData={stats} />
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <OperationsAnalytics data={analyticsData} loading={loading} />
           <SummaryDonut data={donutData} quota={totalQuota} loading={loading} />
         </div>
-        
-        <RecentActivity 
-            data={recentActivity} 
-            loading={loading} 
-            onItemClick={handleReportClick} 
+
+        <RecentActivity
+          data={recentActivity}
+          loading={loading}
+          onItemClick={handleReportClick}
         />
 
-        <TargetModal 
+        <TargetModal
           isOpen={isTargetModalOpen}
           onClose={() => setIsTargetModalOpen(false)}
           currentTargets={targets}
           onSave={handleSaveTargets}
         />
-
       </div>
     </Layout>
   );

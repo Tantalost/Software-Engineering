@@ -12,9 +12,11 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    const processedValue = value === "" ? "" : Number(value);
+
     setLocalTargets((prev) => ({
       ...prev,
-      [name]: Number(value),
+      [name]: processedValue,
     }));
   };
 
@@ -30,7 +32,7 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="bg-gradient-to-r from-teal-500 to-emerald-600 p-6 flex justify-between items-center text-white">
-          <h2 className="text-xl font-bold tracking-wide">Set Daily Targets</h2>
+          <h2 className="text-xl font-bold tracking-wide">Set Monthly Targets</h2>
           <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition">
             <X size={20} />
           </button>
@@ -38,7 +40,7 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <p className="text-sm text-gray-500 mb-4">
-            Adjust the daily revenue goals. Weekly, Monthly, and Yearly targets will be calculated automatically based on these values.
+            Adjust the monthly revenue goals. Weekly, Monthly, and Yearly targets will be calculated automatically based on these values.
           </p>
           {[
             { label: "Tickets Target", name: "tickets", color: "text-red-500" },
@@ -55,10 +57,13 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
                 <input
                   type="number"
                   name={field.name}
-                  value={localTargets[field.name]}
+                  value={localTargets[field.name] === 0 ? '' : localTargets[field.name]}
                   onChange={handleChange}
-                  className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:outline-none font-bold text-gray-700 transition"
+                  onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
+                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:outline-none font-bold text-gray-700 transition"
                   min="0"
+                  step="0.01"
+                  placeholder="0.00"
                 />
               </div>
             </div>
