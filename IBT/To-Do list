@@ -13,7 +13,7 @@ Dashboard
 - Fix Revenue value. Value does not reflect the submitted revenue (Lloyd) - Done
 - fix stat card. make it flexible to the length of the set value (Alviar)
 - remove value in the operation analytics (Venn)
-- reflect the value submitted by the admins of different modules (Lloyd)
+- reflect the value submitted by the admins of different modules (Lloyd) - Done
 - notification status number is static.(venn)
 
 Bus Admin
