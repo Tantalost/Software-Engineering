@@ -45,15 +45,21 @@ const Dashboard = () => {
   const [totalQuota, setTotalQuota] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Helper: Get Date
   const getItemDate = (item) => {
     if (!item) return null;
-    return item.date || item.timeIn || item.createdAt || item.startDate || item.leaseStart || item.joinedAt;
+    return item.date || item.timeIn || item.entryTime || item.createdAt || item.startDate || item.leaseStart || item.joinedAt;
   };
 
+  // UPDATED: Helper to get Value (Added finalPrice)
   const getSmartValue = (item) => {
     if (!item) return 0;
-    const exactMatch = item.amount || item.Amount || item.fee || item.Fee || item.price || item.Price || item.total || item.Total || item.rent || item.Rent || item.monthlyRent || item.leaseAmount || item.cost || item.Cost || item.amountPaid;
+    // Added 'item.finalPrice' to the start of this list for Parking
+    const exactMatch = item.finalPrice || item.amount || item.Amount || item.fee || item.Fee || item.price || item.Price || item.total || item.Total || item.rent || item.Rent || item.monthlyRent || item.leaseAmount || item.cost || item.Cost || item.amountPaid;
+    
     if (exactMatch !== undefined && exactMatch !== null) return exactMatch;
+    
+    // Try to find any key that looks like money
     const keys = Object.keys(item);
     const moneyKey = keys.find(k => /amount|price|fee|cost|rent|total|pay/i.test(k) && !k.toLowerCase().includes("id"));
     return moneyKey ? item[moneyKey] : 0;
@@ -117,6 +123,8 @@ const Dashboard = () => {
       const tenants = await parseResponse(tenantsRes);
       const parking = await parseResponse(parkingRes);
       const reports = await parseResponse(reportsRes);
+      
+      console.log("DASHBOARD DATA:", { tickets, bus, tenants, parking, reports });
 
       setRawData({ tickets, bus, tenants, parking, reports });
     } catch (error) {
@@ -134,18 +142,42 @@ const Dashboard = () => {
     navigate('/reports', { state: { openReportId: reportId } });
   };
 
+  // UPDATED: Helper to Filter for Paid/Active items
+  const getPaidItems = (items, category) => {
+    if (!items || !items.length) return [];
+    
+    if (category === 'tickets') return items;
+
+    // UPDATED: Added 'departed' to the list of allowed statuses for Parking
+    if (category === 'parking') {
+        return items.filter(i => {
+            const s = (i.status || "").toLowerCase();
+            return ['paid', 'completed', 'active', 'occupied', 'parked', 'pending', 'departed'].includes(s);
+        });
+    }
+
+    return items.filter(i => {
+        const s = (i.status || "").toLowerCase();
+        return ['paid', 'completed', 'active'].includes(s);
+    });
+  };
+
   useEffect(() => {
     if (loading) return;
 
     // --- REVENUE STATS CALCULATION ---
     const generateStat = (label, items, color, moduleKey) => {
-      const currentItems = items.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
-      const currentRev = calculateRevenue(currentItems);
+      // 1. Filter by Date
+      const dateFiltered = items.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
+      
+      // 2. Filter by Status
+      const paidItems = getPaidItems(dateFiltered, moduleKey);
+
+      const currentRev = calculateRevenue(paidItems);
 
       const baseMonthlyTarget = targets[moduleKey] || 0;
       let targetRev = 0;
 
-      // Fix: Formula Logic
       if (filterView === "day") targetRev = baseMonthlyTarget / 30;
       else if (filterView === "week") targetRev = baseMonthlyTarget / 4;
       else if (filterView === "month") targetRev = baseMonthlyTarget;
@@ -179,10 +211,10 @@ const Dashboard = () => {
 
     setTotalQuota(scaledQuota);
 
-    const filteredTickets = rawData.tickets.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
-    const filteredBus = rawData.bus.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
-    const filteredParking = rawData.parking.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
-    const filteredTenants = rawData.tenants.filter(i => isDateInView(getItemDate(i), filterView, filterDate));
+    const filteredTickets = getPaidItems(rawData.tickets.filter(i => isDateInView(getItemDate(i), filterView, filterDate)), 'tickets');
+    const filteredBus = getPaidItems(rawData.bus.filter(i => isDateInView(getItemDate(i), filterView, filterDate)), 'bus');
+    const filteredParking = getPaidItems(rawData.parking.filter(i => isDateInView(getItemDate(i), filterView, filterDate)), 'parking');
+    const filteredTenants = getPaidItems(rawData.tenants.filter(i => isDateInView(getItemDate(i), filterView, filterDate)), 'tenants');
 
     setDonutData([
       { name: "Tickets", value: calculateRevenue(filteredTickets), color: "#EF4444" },
@@ -206,7 +238,15 @@ const Dashboard = () => {
     setRecentActivity(processedActivity);
 
     // --- CHART DATA (REVENUE + VOLUME) ---
-    // Fix: Added Volume Logic
+    const getChartMetrics = (items, moduleKey, dateMatchFn) => {
+        const dateMatched = items.filter(dateMatchFn);
+        const paidOnly = getPaidItems(dateMatched, moduleKey);
+        return {
+            revenue: calculateRevenue(paidOnly),
+            volume: paidOnly.length
+        };
+    };
+
     let chartPoints = [];
     if (filterView === 'week') {
       const startOfWeek = new Date(filterDate);
@@ -215,17 +255,20 @@ const Dashboard = () => {
         const d = new Date(startOfWeek);
         d.setDate(startOfWeek.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
+        
         const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dateStr); };
+        
+        const tickets = getChartMetrics(rawData.tickets, 'tickets', isMatch);
+        const bus = getChartMetrics(rawData.bus, 'bus', isMatch);
+        const parking = getChartMetrics(rawData.parking, 'parking', isMatch);
+        const tenants = getChartMetrics(rawData.tenants, 'tenants', isMatch);
+
         chartPoints.push({
           name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-          ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
-          ticketsVolume: rawData.tickets.filter(isMatch).length,
-          busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
-          busVolume: rawData.bus.filter(isMatch).length,
-          parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
-          parkingVolume: rawData.parking.filter(isMatch).length,
-          tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
-          tenantsVolume: rawData.tenants.filter(isMatch).length,
+          ticketsRevenue: tickets.revenue, ticketsVolume: tickets.volume,
+          busRevenue: bus.revenue, busVolume: bus.volume,
+          parkingRevenue: parking.revenue, parkingVolume: parking.volume,
+          tenantsRevenue: tenants.revenue, tenantsVolume: tenants.volume,
         });
       }
     } else if (filterView === 'month') {
@@ -233,16 +276,18 @@ const Dashboard = () => {
       for (let i = 1; i <= daysInMonth; i++) {
         const dStr = `${filterDate.getFullYear()}-${String(filterDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const isMatch = (item) => { const dVal = getItemDate(item); return dVal && dVal.startsWith(dStr); };
+        
+        const tickets = getChartMetrics(rawData.tickets, 'tickets', isMatch);
+        const bus = getChartMetrics(rawData.bus, 'bus', isMatch);
+        const parking = getChartMetrics(rawData.parking, 'parking', isMatch);
+        const tenants = getChartMetrics(rawData.tenants, 'tenants', isMatch);
+
         chartPoints.push({
           name: i.toString(),
-          ticketsRevenue: calculateRevenue(rawData.tickets.filter(isMatch)),
-          ticketsVolume: rawData.tickets.filter(isMatch).length,
-          busRevenue: calculateRevenue(rawData.bus.filter(isMatch)),
-          busVolume: rawData.bus.filter(isMatch).length,
-          parkingRevenue: calculateRevenue(rawData.parking.filter(isMatch)),
-          parkingVolume: rawData.parking.filter(isMatch).length,
-          tenantsRevenue: calculateRevenue(rawData.tenants.filter(isMatch)),
-          tenantsVolume: rawData.tenants.filter(isMatch).length,
+          ticketsRevenue: tickets.revenue, ticketsVolume: tickets.volume,
+          busRevenue: bus.revenue, busVolume: bus.volume,
+          parkingRevenue: parking.revenue, parkingVolume: parking.volume,
+          tenantsRevenue: tenants.revenue, tenantsVolume: tenants.volume,
         });
       }
     } else if (filterView === 'year') {
@@ -254,16 +299,18 @@ const Dashboard = () => {
           const d = new Date(dVal); 
           return d.getMonth() === idx && d.getFullYear() === filterDate.getFullYear(); 
         };
+        
+        const tickets = getChartMetrics(rawData.tickets, 'tickets', monthFilter);
+        const bus = getChartMetrics(rawData.bus, 'bus', monthFilter);
+        const parking = getChartMetrics(rawData.parking, 'parking', monthFilter);
+        const tenants = getChartMetrics(rawData.tenants, 'tenants', monthFilter);
+
         return {
           name: m,
-          ticketsRevenue: calculateRevenue(rawData.tickets.filter(monthFilter)),
-          ticketsVolume: rawData.tickets.filter(monthFilter).length,
-          busRevenue: calculateRevenue(rawData.bus.filter(monthFilter)),
-          busVolume: rawData.bus.filter(monthFilter).length,
-          parkingRevenue: calculateRevenue(rawData.parking.filter(monthFilter)),
-          parkingVolume: rawData.parking.filter(monthFilter).length,
-          tenantsRevenue: calculateRevenue(rawData.tenants.filter(monthFilter)),
-          tenantsVolume: rawData.tenants.filter(monthFilter).length,
+          ticketsRevenue: tickets.revenue, ticketsVolume: tickets.volume,
+          busRevenue: bus.revenue, busVolume: bus.volume,
+          parkingRevenue: parking.revenue, parkingVolume: parking.volume,
+          tenantsRevenue: tenants.revenue, tenantsVolume: tenants.volume,
         };
       });
     }
