@@ -6,3 +6,12 @@ REVISIONS FOR WEBSITE
 - application rejection should have a note
 - NAME + role for admin
 - remove clear history
+
+NEW REVISIONS
+Dashboard
+- Align set targets with download and week, month year,
+- Fix Revenue value. Value does not reflect the submitted revenue 
+- fix stat card. make it flexible to the length of the set value
+- remove value in the operation analytics
+- reflect the value submitted by the admins of different modules
+- notification status number is static.
