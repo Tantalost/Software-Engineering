@@ -1,11 +1,11 @@
 REVISIONS FOR WEBSITE
-- Fix ang Position ng Set Target sa Dashboard
-- Buses Page dapat maka add New Company Buses
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees.
+- Fix ang Position ng Set Target sa Dashboard - Done
+- Buses Page dapat maka add New Company Buses - Done
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 
 - Add Tooltip - Done
-- application rejection should have a note
-- NAME + role for admin
-- remove clear history
+- application rejection should have a note 
+- NAME + role for admin - Done
+- remove clear history - Done
 
 NEW REVISIONS
 Dashboard
@@ -18,6 +18,6 @@ Dashboard
 
 Bus Admin
 - plate no. not reflecting (lloyd)
-- ticket ref should be unique (lloyd)
+- ticket ref should be unique (lloyd) - Done
 - logs does not reflect archived trips (lloyd)
 - remove date search filter in bus admin (jayna)

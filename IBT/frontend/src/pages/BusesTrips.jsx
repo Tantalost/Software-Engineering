@@ -553,8 +553,22 @@ const BusTrips = () => {
 
     const handleLogoutClick = (row) => { setLogoutRow(row); setTicketRefInput(""); };
     
+    // --- UPDATED CONFIRM LOGOUT (DEPART) FUNCTION ---
     const confirmLogout = async () => {
         if (!logoutRow || !ticketRefInput) return;
+
+        // CHECK FOR UNIQUE TICKET REF
+        const isDuplicate = records.some(
+            (record) => 
+                record.ticketReferenceNo && 
+                record.ticketReferenceNo.toString().trim() === ticketRefInput.toString().trim()
+        );
+
+        if (isDuplicate) {
+            alert(`Error: Ticket Reference Number "${ticketRefInput}" already exists. Please use a unique number.`);
+            return;
+        }
+
         try {
             const response = await fetch(`${API_URL}/${logoutRow.id}`, {
                 method: "PUT",
