@@ -3,6 +3,8 @@ import "dotenv/config";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import connectCloudinary from "./config/cloudinary.js";
+
+// Route Imports
 import busTripRoutes from "./routes/busTripRoutes.js";
 import terminalFeeRoutes from "./routes/terminalFeeRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
@@ -14,7 +16,7 @@ import parkingRoutes from "./routes/parkingRoutes.js";
 import lostfoundRoutes from "./routes/lostfoundRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import notifications from "../backend/routes/notifications.js";
-
+import companyRoutes from "./routes/companyRoutes.js"; // <--- NEW IMPORT
 
 connectDB();
 connectCloudinary();
@@ -27,7 +29,9 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.get('/', (req, res) => res.send("API is working"));
 
+// API Endpoints
 app.use("/api/bustrips", busTripRoutes);
+app.use("/api/companies", companyRoutes); // <--- NEW ROUTE
 app.use("/api/terminal-fees", terminalFeeRoutes);
 app.use("/api/logs", logRoutes);
 app.use("/api/parking", parkingRoutes);
