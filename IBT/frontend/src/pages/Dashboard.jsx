@@ -145,7 +145,6 @@ const Dashboard = () => {
       const baseMonthlyTarget = targets[moduleKey] || 0;
       let targetRev = 0;
 
-      // Fix: Formula Logic
       if (filterView === "day") targetRev = baseMonthlyTarget / 30;
       else if (filterView === "week") targetRev = baseMonthlyTarget / 4;
       else if (filterView === "month") targetRev = baseMonthlyTarget;
@@ -206,7 +205,6 @@ const Dashboard = () => {
     setRecentActivity(processedActivity);
 
     // --- CHART DATA (REVENUE + VOLUME) ---
-    // Fix: Added Volume Logic
     let chartPoints = [];
     if (filterView === 'week') {
       const startOfWeek = new Date(filterDate);
@@ -248,11 +246,11 @@ const Dashboard = () => {
     } else if (filterView === 'year') {
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       chartPoints = months.map((m, idx) => {
-        const monthFilter = (item) => { 
-          const dVal = getItemDate(item); 
-          if (!dVal) return false; 
-          const d = new Date(dVal); 
-          return d.getMonth() === idx && d.getFullYear() === filterDate.getFullYear(); 
+        const monthFilter = (item) => {
+          const dVal = getItemDate(item);
+          if (!dVal) return false;
+          const d = new Date(dVal);
+          return d.getMonth() === idx && d.getFullYear() === filterDate.getFullYear();
         };
         return {
           name: m,
@@ -283,21 +281,29 @@ const Dashboard = () => {
   return (
     <Layout title="Dashboard">
       <div className="px-4 pt-0 lg:px-2 lg:pt-0 space-y-6">
-        <DashboardToolbar
-          onRefresh={fetchDashboardData}
-          onDownload={handleDownload}
-          onFilterChange={handleFilterChange}
-          loading={loading}
-        />
-        <div className="flex justify-end">
-          <button
-            onClick={() => setIsTargetModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-full shadow-sm hover:bg-gray-50 hover:text-teal-600 transition-colors cursor-pointer"
-            title="Set Revenue Targets"
-          >
-            <Settings size={14} />
-            Set Targets
-          </button>
+
+        {/* --- FILTERS + TARGETS ALIGNMENT --- */}
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+          {/* Left: Filters + Download */}
+          <DashboardToolbar
+            onRefresh={fetchDashboardData}
+            onDownload={handleDownload}
+            onFilterChange={handleFilterChange}
+            loading={loading}
+            onSetTargets={() => setIsTargetModalOpen(true)}
+          />
+
+          {/* Right: Set Targets Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => setIsTargetModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-full shadow-sm hover:bg-gray-50 hover:text-teal-600 transition-colors cursor-pointer"
+              title="Set Revenue Targets"
+            >
+              <Settings size={14} />
+              Set Targets
+            </button>
+          </div>
         </div>
 
         <StatCards statsData={stats} />
