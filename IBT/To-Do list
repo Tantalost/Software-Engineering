@@ -9,9 +9,17 @@ REVISIONS FOR WEBSITE
 
 NEW REVISIONS
 Dashboard
-- Align set targets with download and week, month year,
-- Fix Revenue value. Value does not reflect the submitted revenue 
-- fix stat card. make it flexible to the length of the set value
-- remove value in the operation analytics
-- reflect the value submitted by the admins of different modules
-- notification status number is static.
+- Align set targets with download and week, month year, (Alviar)
+- Fix Revenue value. Value does not reflect the submitted revenue (Lloyd) 
+- fix stat card. make it flexible to the length of the set value (Alviar)
+- remove value in the operation analytics (Venn)
+- reflect the value submitted by the admins of different modules (Lloyd)
+- notification status number is static.(venn)
+
+
+
+Bus Admin
+- plate no. not reflecting (lloyd)
+- ticket ref should be unique (lloyd)
+- logs does not reflect archived trips (lloyd)
+- remove date search filter in bus admin (jayna)
