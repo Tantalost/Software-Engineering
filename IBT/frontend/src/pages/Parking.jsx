@@ -499,7 +499,7 @@ const Parking = () => {
       const deleteRes = await fetch(`${API_URL}/${idToDelete}`, { method: "DELETE" });
       if (!deleteRes.ok) throw new Error("Failed to remove from active list");
 
-      await logActivity(role, "ARCHIVE_TICKET", `Archived Parking Ticket #${rowToArchive.ticketNo}`, "Parking");
+      await logActivity(role, "ARCHIVE_PARKING", `Archived Parking Ticket #${rowToArchive.ticketNo}`, "Parking");
       setRecords(prev => prev.filter(r => r.id !== idToDelete));
       
       setNotificationState({ 

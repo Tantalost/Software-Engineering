@@ -553,8 +553,22 @@ const BusTrips = () => {
 
     const handleLogoutClick = (row) => { setLogoutRow(row); setTicketRefInput(""); };
     
+    // --- UPDATED CONFIRM LOGOUT (DEPART) FUNCTION ---
     const confirmLogout = async () => {
         if (!logoutRow || !ticketRefInput) return;
+
+        // CHECK FOR UNIQUE TICKET REF
+        const isDuplicate = records.some(
+            (record) => 
+                record.ticketReferenceNo && 
+                record.ticketReferenceNo.toString().trim() === ticketRefInput.toString().trim()
+        );
+
+        if (isDuplicate) {
+            alert(`Error: Ticket Reference Number "${ticketRefInput}" already exists. Please use a unique number.`);
+            return;
+        }
+
         try {
             const response = await fetch(`${API_URL}/${logoutRow.id}`, {
                 method: "PUT",
@@ -583,7 +597,8 @@ const BusTrips = () => {
     const confirmArchive = async () => {
         if (!archiveRow) return;
         try {
-            await fetch("http://localhost:3000/api/archives", {
+            // 1. Send to Archives
+            const archiveRes = await fetch("http://localhost:3000/api/archives", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -593,8 +608,22 @@ const BusTrips = () => {
                     archivedBy: role
                 })
             });
-            await fetch(`${API_URL}/${archiveRow.id}`, { method: "DELETE" });
-            fetchBusTrips();
+
+            // 2. If Archive successful, Delete and Log
+            if (archiveRes.ok) {
+                await fetch(`${API_URL}/${archiveRow.id}`, { method: "DELETE" });
+
+                // --- NEW: CREATE LOG ENTRY ---
+                await logActivity(
+                    role, 
+                    "ARCHIVE_TRIP", 
+                    `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`, 
+                    "BusTrips"
+                );
+                // -----------------------------
+
+                fetchBusTrips();
+            }
         } catch(e) { console.error(e); }
         finally { setArchiveRow(null); }
     };
