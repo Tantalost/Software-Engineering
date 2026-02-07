@@ -9,14 +9,13 @@ import {
   Legend,
   Area,
 } from "recharts";
-import { PhilippinePeso, BarChart3, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
 
 const OperationsAnalytics = ({ data }) => {
-  const [viewMode, setViewMode] = useState("revenue");
-  // New state to manage the separate view for each operation
+  
   const [focusModule, setFocusModule] = useState("all");
 
-  // Centralized configuration for each operation module
+  
   const modules = [
     { id: "all", label: "All Operations", color: "#6366f1", icon: <Layers size={14} /> },
     { id: "tickets", label: "Tickets", color: "#EF4444", key: "tickets" },
@@ -26,10 +25,7 @@ const OperationsAnalytics = ({ data }) => {
   ];
 
   const formatValue = (value) => {
-    if (viewMode === "revenue") {
-      return `₱${value.toLocaleString()}`;
-    }
-    return value.toLocaleString();
+    return `₱${value.toLocaleString()}`;
   };
 
   const renderCustomTooltip = ({ active, payload, label }) => {
@@ -60,36 +56,16 @@ const OperationsAnalytics = ({ data }) => {
   return (
     <div className="lg:col-span-2 bg-white rounded-3xl p-8 shadow-xl border-2 border-emerald-400 hover:shadow-2xl transition-all duration-500">
       <div className="flex flex-col gap-6 mb-8">
-        {/* Header and Revenue/Volume Toggle */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold text-gray-900">Operations Analytics</h3>
             <p className="text-sm text-gray-500">
-              {focusModule === 'all' ? 'Combined view' : `${focusModule.charAt(0).toUpperCase() + focusModule.slice(1)} view`} — {viewMode}
+              {focusModule === 'all' ? 'Combined view' : `${focusModule.charAt(0).toUpperCase() + focusModule.slice(1)} view`}
             </p>
-          </div>
-
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setViewMode("revenue")}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all ${
-                viewMode === "revenue" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-900"
-              }`}
-            >
-              <PhilippinePeso size={16} /> Revenue
-            </button>
-            <button
-              onClick={() => setViewMode("volume")}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all ${
-                viewMode === "volume" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900"
-              }`}
-            >
-              <BarChart3 size={16} /> Volume
-            </button>
           </div>
         </div>
 
-        {/* Module Selection Pills: This is the new part for separate views */}
+        
         <div className="flex flex-wrap gap-2">
           {modules.map((m) => (
             <button
@@ -117,17 +93,17 @@ const OperationsAnalytics = ({ data }) => {
             axisLine={false} tickLine={false} dy={10}
           />
           <YAxis 
-            tickFormatter={(val) => viewMode === 'revenue' ? `₱${val/1000}k` : val}
+            tickFormatter={(val) => `₱${val/1000}k`}
             tick={{ fontSize: 12, fill: "#6b7280", fontWeight: 500 }} 
             axisLine={false} tickLine={false} dx={-10}
           />
           <Tooltip content={renderCustomTooltip} cursor={{ fill: 'transparent' }} />
           <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }}/>
 
-          {/* Dynamic rendering of Areas based on focusModule */}
+          
           {modules.filter(m => m.id !== 'all').map((m) => {
             const isVisible = focusModule === 'all' || focusModule === m.id;
-            const dataKey = `${m.key}${viewMode === 'revenue' ? 'Revenue' : 'Volume'}`;
+            const dataKey = `${m.key}Revenue`;
             
             return (
               <Area 
@@ -137,8 +113,8 @@ const OperationsAnalytics = ({ data }) => {
                 dataKey={dataKey} 
                 stroke={m.color} 
                 fill={m.color}
-                fillOpacity={isVisible ? 0.1 : 0} // Hide fill if not focused
-                strokeWidth={isVisible ? 3 : 0}    // Hide stroke if not focused
+                fillOpacity={isVisible ? 0.1 : 0}
+                strokeWidth={isVisible ? 3 : 0}  
                 dot={isVisible ? { r: 4, fill: m.color } : false}
                 activeDot={isVisible}
               />
