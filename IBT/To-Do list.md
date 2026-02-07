@@ -4,7 +4,7 @@ REVISIONS FOR WEBSITE
 - Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🔴 **To be Fixed**
 - Add Tooltip - 🟢 **Done**
 - application rejection should have a note 🔴 **To be Fixed**
-- NAME + role for admin - 🟢 **Done**
+- NAME + role for admin - 🔴 **To be Fixed** (Should reflect to the whole system)
 - remove clear history - 🟢 **Done**
 
 NEW REVISIONS
@@ -21,6 +21,32 @@ Bus Admin
 - ticket ref should be unique (lloyd) - 🟢 **Done**
 - logs does not reflect archived trips (lloyd) - 🟡 **In Progress**
 - remove date search filter in bus admin (jayna) 🔴 **To be Fixed**
+- export file layout 
+- submit report nawala
+
+Parking Admin
+- set price should only be visible in the superadmin (Alviar)
+- plate should be unique (jayna)
+- ticket no. should be unique (jayna)
+- chane icon for jeep and motor (venn)
+- export file layout (venn)
+
+
+Lost and Found admin
+- should not have a description (Jayna)
+
+
+Terminal Fee Admin
+- remove date search filter (Alviar)
+- Change "Tickets" to "Terminal Fee" (Jayna)
+- as one ang student and senior filter (Venn)
+- export layout (Venn)
+
+
+Manage Employee
+- should be able to edit name and email (Lloyd)
+
+
 
 Color Coding
 🔴 **To be Fixed**
