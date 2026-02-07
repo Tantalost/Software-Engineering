@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import { Settings } from "lucide-react";
 import Layout from "../components/layout/Layout";
 import StatCards from "../components/dashboard/StatCards";
@@ -79,6 +80,21 @@ const Dashboard = () => {
     if (value >= 1000) return `₱${(value / 1000).toFixed(1).replace(/\.0$/, '')}K`;
     return `₱${value.toLocaleString()}`;
   };
+
+  // --- EXPORT DATA BUILDER ---
+const getExportPayload = () => {
+  return {
+    meta: {
+      view: filterView,
+      date: filterDate.toDateString(),
+      generatedAt: new Date().toLocaleString(),
+    },
+    stats,
+    donut: donutData,
+    analytics: analyticsData,
+    activity: recentActivity,
+  };
+};
 
   const isDateInView = (dateString, view, anchorDate) => {
     if (!dateString) return false;
@@ -323,9 +339,61 @@ const Dashboard = () => {
     setFilterView(view);
   };
 
+  // --- EXPORT TO EXCEL ---
+const exportToExcel = () => {
+  try {
+    const payload = getExportPayload();
+    const wb = XLSX.utils.book_new();
+
+    // --- Stats Sheet ---
+    const statsSheet = XLSX.utils.json_to_sheet(
+      payload.stats.map(s => ({
+        Module: s.label,
+        Revenue: Number(String(s.value).replace(/[^0-9.-]+/g, "")),
+        Target: Number(String(s.subtitle).replace(/[^0-9.-]+/g, "")),
+        Progress: s.change,
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, statsSheet, "Revenue Summary");
+
+    // --- Donut Sheet ---
+    const donutSheet = XLSX.utils.json_to_sheet(
+      payload.donut.map(d => ({
+        Module: d.name,
+        Revenue: d.value,
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, donutSheet, "Revenue Breakdown");
+
+    // --- Analytics Sheet ---
+    const analyticsSheet = XLSX.utils.json_to_sheet(payload.analytics);
+    XLSX.utils.book_append_sheet(wb, analyticsSheet, "Trends");
+
+    // --- Recent Activity Sheet ---
+    const activitySheet = XLSX.utils.json_to_sheet(
+      payload.activity.map(a => ({
+        Message: a.message,
+        Status: a.status,
+        Date: a.date ? new Date(a.date).toLocaleString() : "",
+      }))
+    );
+    XLSX.utils.book_append_sheet(wb, activitySheet, "Recent Activity");
+
+    // --- Save Excel file ---
+    XLSX.writeFile(wb, `Dashboard_Report_${filterView}_${Date.now()}.xlsx`);
+
+    console.log("Excel exported successfully!");
+  } catch (err) {
+    console.error("Excel export failed:", err);
+  }
+};
+
+
   const handleDownload = (format) => {
-    // PDF generation logic would go here
-  };
+  if (format === "pdf") exportToPDF();
+  if (format === "excel") exportToExcel();
+};
+
 
   return (
     <Layout title="Dashboard">
