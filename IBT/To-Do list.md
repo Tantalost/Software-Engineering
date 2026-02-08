@@ -7,7 +7,6 @@ Color Coding
 Revisions for web
 - Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🔴 **To be Fixed**
 - application rejection should have a note 🔴 **To be Fixed**
-- NAME + role for admin - 🔴 **To be Fixed** (Should reflect to the whole system)
 
 Dashboard
 
@@ -28,13 +27,11 @@ Terminal Fee Admin
 - export layout (Venn)  🔴 **To be Fixed**
 
 
-Manage Employee
-- should be able to edit name and email (Lloyd)  🔴 **To be Fixed**
-
-
 
 🟡 **In Progress**
-
+Manage Employee
+- should be able to edit name and email (Lloyd)
+- NAME + role for admin (Should reflect to the whole system)
 
 
 🟢 **Done**
