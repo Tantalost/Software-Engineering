@@ -720,7 +720,7 @@ const BusTrips = () => {
                         data={paginatedData.map((bus) => {
                             const rowData = {
                                 id: bus.id,
-                                templateno: bus.templateNo, 
+                                plateno: bus.templateNo || bus.templateno || "-",
                                 route: bus.route,
                                 price: `₱${(bus.price || 75).toFixed(2)}`,
                                 time: formatTime(bus.time),
