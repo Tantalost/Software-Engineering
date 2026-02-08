@@ -3,7 +3,6 @@ import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks, Fi
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Layout from "../components/layout/Layout";
-import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
@@ -39,8 +38,6 @@ const TerminalFees = () => {
   const role = localStorage.getItem("authRole") || "superadmin"; 
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);  
@@ -156,8 +153,6 @@ const TerminalFees = () => {
     return records.filter((fee) => {
       const pType = (fee.passengerType || "").toLowerCase();
       const aType = activeType.toLowerCase();
-      const matchesSearch = pType.includes(searchQuery.toLowerCase());
-      const matchesDate = selectedDate ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString() : true;
       
       let matchesType = false;
       if (aType === "all") {
@@ -168,9 +163,10 @@ const TerminalFees = () => {
         matchesType = pType.includes(aType);
       }
 
-      return matchesSearch && matchesDate && matchesType;
+      return matchesType;
     });
-  }, [records, searchQuery, selectedDate, activeType]);
+}, [records, activeType]);
+
 
   const stats = useMemo(() => ({
     regular: filtered.filter(f => (f.passengerType || "").toLowerCase().includes("regular")).length,
@@ -249,8 +245,6 @@ const TerminalFees = () => {
         screen: "Terminal Fees Management",
         generatedDate: new Date().toLocaleString(),
         filters: {
-          searchQuery,
-          selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
           activeType
         },
         statistics: {
@@ -647,12 +641,6 @@ const TerminalFees = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        />
         
         <div className="flex items-center justify-end gap-3">
           {(role === "superadmin") && (

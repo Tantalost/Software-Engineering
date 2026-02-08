@@ -799,7 +799,8 @@ const Parking = () => {
             </button>
           )}
           
-          <button 
+          { (role === "superadmin") &&(
+            <button 
           onClick={() => setShowPriceModal(true)}
           className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
           title="Price Setting"
@@ -807,7 +808,7 @@ const Parking = () => {
           <Settings size={18} className="text-slate-600" />
           <span>Set Price</span>
         </button>
-
+          )}
 
           <button onClick={handleAddClick} className="bg-gradient-to-r cursor-pointer from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
           title ='Add New Ticket' >

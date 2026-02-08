@@ -12,16 +12,16 @@ Dashboard
 
 Bus Admin
 - export file layout (jayna) 🔴 **To be Fixed**
-- submit report nawala (Alviar)  🔴 **To be Fixed**
+- submit report nawala (Alviar)  🟢 **Done**
 
 Parking Admin
-- set price should only be visible in the superadmin (Alviar)  🔴 **To be Fixed**
+- set price should only be visible in the superadmin (Alviar)  🟢 **Done**
 - chane icon for jeep and motor (venn)  🔴 **To be Fixed**
 - export file layout (venn)  🔴 **To be Fixed**
 
 
 Terminal Fee Admin
-- remove date search filter (Alviar)  🔴 **To be Fixed**
+- remove date search filter (Alviar)  🟢 **Done**
 - Change "Tickets" to "Terminal Fee" (Jayna)  🔴 **To be Fixed**
 - as one ang student and senior filter (Venn)  🔴 **To be Fixed**
 - export layout (Venn)  🔴 **To be Fixed**
