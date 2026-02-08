@@ -34,9 +34,7 @@ Manage Employee
 
 
 🟡 **In Progress**
-Bus Admin
-- plate no. not reflecting (lloyd) - 🟡 **In Progress**
-- logs does not reflect archived trips (lloyd) - 🟡 **In Progress**
+
 
 
 🟢 **Done**
@@ -59,3 +57,7 @@ Bus Admin
 
 Lost and Found admin
 - should not have a description (Jayna)  🟢 **Done**
+
+Bus Admin
+- plate no. not reflecting (lloyd) - 🟢 **Done**
+- logs does not reflect archived trips (lloyd) - 🟢 **Done**
