@@ -340,8 +340,7 @@ const TenantLease = () => {
             "Report Submitted: Tenant Lease", 
             `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}.`,
             "Tenants",
-            "all",
-            "/tenant-lease"
+            "superadmin" 
         );
 
         await logActivity(role, "SUBMIT_REPORT", "Submitted Tenant Lease Report", "Tenants");
@@ -421,8 +420,7 @@ const TenantLease = () => {
                 "Deletion Request: Tenants", 
                 `Tenant Admin has requested to delete ${selectedIds.length} tenant records.`,
                 "Tenants",
-                "superadmin",
-                `/tenant-lease?tab=permanent`
+                "superadmin" 
             );
 
             await Promise.all(requestPromises);

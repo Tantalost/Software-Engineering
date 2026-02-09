@@ -16,7 +16,6 @@ import StatCardGroupTerminal from "../components/terminal/StatCardGroupTerminal"
 import TerminalFilter from "../components/terminal/TerminalFilter";
 import { logActivity } from "../utils/logger";
 import { submitPageReport } from "../utils/reportService"; 
-import { sendNotification } from "../utils/notificationService.js"; 
 
 const API_URL = "http://localhost:3000/api";
 
@@ -158,8 +157,8 @@ const TerminalFees = () => {
       let matchesType = false;
       if (aType === "all") {
         matchesType = true;
-      } else if (aType.includes("student") || aType.includes("senior") || aType.includes("pwd")) {
-        matchesType = pType.includes("student") || pType.includes("senior") || pType.includes("pwd");
+      } else if (aType.includes("senior") || aType.includes("pwd")) {
+        matchesType = pType.includes("senior") || pType.includes("pwd");
       } else {
         matchesType = pType.includes(aType);
       }
@@ -260,13 +259,15 @@ const TerminalFees = () => {
 
       const adminName = localStorage.getItem("authName") || "Ticket Admin";
       await submitPageReport("Terminal Fees", reportPayload, adminName);
-      await sendNotification(
-        "Report Submitted: Terminal Fees Reports",
-        "A new Terminal Fees report has been generated and the active log has been cleared.",
-        "Terminal Fees",
-        "all",
-        "/tickets"
-      );
+      await fetch("http://localhost:3000/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Report Submitted: Terminal Fees Reports",
+          message: "A new Terminal Fees report has been generated and the active log has been cleared.",
+          source: "Terminal Fees"
+        }),
+      });
 
       const deletePromises = filtered.map(item => 
           fetch(`${API_URL}/terminal-fees/${item._id || item.id}`, { method: 'DELETE' })
@@ -947,15 +948,15 @@ const TerminalFees = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Passenger Type</label>
-                <div className="grid grid-cols-2 gap-2 ">
-                  {["Regular", "Student / Senior / PWD"].map((type) => (
+                <div className="grid grid-cols-3 gap-2 ">
+                  {["Regular", "Student", "Senior Citizen / PWD"].map((type) => (
                     <button key={type} onClick={() => {
-                        const price = type === 'Student / Senior / PWD' ? basePrices.discounted : basePrices.regular;
+                        const price = (type === 'Student' || type === 'Senior Citizen / PWD') ? basePrices.discounted : basePrices.regular;
                         setNewTicket(prev => ({ ...prev, passengerType: type, price }));
                       }}
                       className={`py-2 px-1 rounded-lg text-xs font-semibold border ${newTicket.passengerType === type ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
                     >
-                      {type}
+                      {type === "Senior Citizen / PWD" ? "Senior/PWD" : type}
                     </button>
                   ))}
                 </div>
@@ -987,9 +988,9 @@ const TerminalFees = () => {
             <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {["Regular", "Student / Senior / PWD"].map((type) => {
-              const newPrice = type === "Student / Senior / PWD" ? basePrices.discounted : basePrices.regular;
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
+              const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? basePrices.discounted : basePrices.regular;
               const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
               return (
                 <button
@@ -998,7 +999,7 @@ const TerminalFees = () => {
                   onClick={() => setEditRow(prev => ({ ...prev, passengerType: type, price: newPrice }))}
                   className={`py-2 px-1 rounded-lg text-xs font-semibold border ${active ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
                 >
-                  {type}
+                  {type === "Senior Citizen / PWD" ? "Senior/PWD" : type}
                 </button>
               );
             })}
