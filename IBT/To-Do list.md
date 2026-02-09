@@ -4,24 +4,22 @@ Color Coding
 🟢 **Done**
 
 🔴 **To be Fixed**
-Revisions for web
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🔴 **To be Fixed**
+Revisions for web general 
+- create backend for the admins with role and connect it to MongoDB (lloyd) 🔴 **To be Fixed**
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress** 
 - application rejection should have a note 🔴 **To be Fixed**
 
 Dashboard
 
 Bus Admin
 - export file layout (jayna) 🔴 **To be Fixed**
-- submit report nawala (Alviar)  🔴 **To be Fixed**
 
 Parking Admin
-- set price should only be visible in the superadmin (Alviar)  🔴 **To be Fixed**
 - chane icon for jeep and motor (venn)  🔴 **To be Fixed**
 - export file layout (venn)  🔴 **To be Fixed**
 
 
 Terminal Fee Admin
-- remove date search filter (Alviar)  🔴 **To be Fixed**
 - Change "Tickets" to "Terminal Fee" (Jayna)  🔴 **To be Fixed**
 - as one ang student and senior filter (Venn)  🔴 **To be Fixed**
 - export layout (Venn)  🔴 **To be Fixed**
@@ -50,7 +48,10 @@ Dashboard
 
 Bus Admin
 - ticket ref should be unique (lloyd) - 🟢 **Done**
+- submit report nawala (Alviar)  🟢 **Done**
 
+Parkin Admin
+- set price should only be visible in the superadmin (Alviar)  🟢 **Done**
 
 Lost and Found admin
 - should not have a description (Jayna)  🟢 **Done**
@@ -58,3 +59,6 @@ Lost and Found admin
 Bus Admin
 - plate no. not reflecting (lloyd) - 🟢 **Done**
 - logs does not reflect archived trips (lloyd) - 🟢 **Done**
+
+Terminal Fee
+- remove date search filter (Alviar)  🟢 **Done**
