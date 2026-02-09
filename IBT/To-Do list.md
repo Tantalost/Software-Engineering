@@ -6,7 +6,7 @@ Color Coding
 🔴 **To be Fixed**
 Revisions for web general 
 - create backend for the admins with role and connect it to MongoDB (lloyd) 🔴 **To be Fixed**
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🔴 **To be Fixed**
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress** 
 - application rejection should have a note 🔴 **To be Fixed**
 
 Dashboard
