@@ -31,7 +31,7 @@ Terminal Fee Admin
 🟡 **In Progress**
 Manage Employee
 - should be able to edit name and email (Lloyd)
-- NAME + role for admin (Should reflect to the whole system)
+- NAME + role for admin, dynamic and encrypted accounts (Should reflect to the whole system)
 
 
 🟢 **Done**
