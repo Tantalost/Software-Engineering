@@ -1,5 +1,7 @@
 // src/utils/notificationService.js
-export const sendNotification = async (title, message, source, targetRole = "all") => {
+import { navigateToPage } from './navigationHelper';
+
+export const sendNotification = async (title, message, source, targetRole = "all", route = null) => {
     try {
         const response = await fetch("http://localhost:3000/api/notifications", {
             method: "POST",
@@ -8,11 +10,12 @@ export const sendNotification = async (title, message, source, targetRole = "all
                 title,
                 message,
                 source,
-                targetRole
+                targetRole,
+                route
             }),
         });
         
-        console.log("Notification Sent:", { title, targetRole }); 
+        console.log("Notification Sent:", { title, targetRole, route }); 
 
         if (!response.ok) {
             console.error("Failed to send notification");

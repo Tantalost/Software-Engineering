@@ -274,7 +274,8 @@ const LostFound = () => {
                     "Deletion Request: Lost & Found", 
                     `Lost & Found Admin has requested to delete ${selectedIds.length} records.`,
                     "Lost & Found",
-                    "superadmin"
+                    "all",
+                    "/lost-found"
                 );
 
                 alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`);
@@ -340,7 +341,8 @@ const LostFound = () => {
                 "Report Submitted: Lost & Found Report",
                 "A new Lost & Found report has been generated and the active log has been cleared.",
                 "Lost & Found",
-                "superadmin"
+                "superadmin",
+                "/lost-found"
             );
 
             const deletePromises = filtered.map(item =>

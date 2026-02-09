@@ -303,8 +303,9 @@ const Parking = () => {
         "Deletion Request: Parking", 
         `Parking Admin has requested to delete ${selectedIds.length} parking records.`,
         "Parking",
-        "superadmin" 
-    );
+        "all",
+        "/parking"
+      );
 
             await Promise.all(requestPromises);
             await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} parking tickets`, "Parking");

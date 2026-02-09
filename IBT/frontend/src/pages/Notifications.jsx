@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Logs, X, MailOpen, Trash2, Loader2 } from "lucide-react";
+import { Logs, X, MailOpen, Trash2, Loader2, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/layout/Layout";
 import { fetchNotifications, markNotificationAsRead, deleteNotification } from "../utils/notificationService.js";
+import { PAGE_ROUTES } from "../utils/navigationHelper.js";
 
 export default function Notifications() {
     const [notes, setNotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
+    const navigate = useNavigate();
 
-const loadData = async () => {
+    const loadData = async () => {
         setIsLoading(true);
         const data = await fetchNotifications();
         const userRole = localStorage.getItem("authRole") || "superadmin";
@@ -73,6 +76,20 @@ const loadData = async () => {
                 setNotes(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
                 await markNotificationAsRead(id);
             }
+            
+            // Navigate to the designated page
+            const route = note.route || PAGE_ROUTES[note.source];
+            if (route) {
+                navigate(route);
+            }
+        }
+    };
+
+    const handleNavigateClick = (note, e) => {
+        e.stopPropagation();
+        const route = note.route || PAGE_ROUTES[note.source];
+        if (route) {
+            navigate(route);
         }
     };
 
@@ -164,7 +181,18 @@ const loadData = async () => {
                                             {n.message}
                                         </div>
                                     </div>
-                                    <div className="whitespace-nowrap text-xs text-slate-400">{n.date}</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="whitespace-nowrap text-xs text-slate-400">{n.date}</div>
+                                        {!isSelectionMode && (
+                                            <button
+                                                onClick={(e) => handleNavigateClick(n, e)}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full text-slate-400 hover:bg-white hover:text-emerald-600 hover:shadow-sm"
+                                                title="Go to page"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
