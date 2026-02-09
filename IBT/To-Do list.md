@@ -6,6 +6,8 @@ Color Coding
 🔴 **To be Fixed**
 Revisions for web general 
 - create backend for the admins with role and connect it to MongoDB (lloyd) 🔴 **To be Fixed**
+- Login Authentication for Web (lloyd) 🔴 **To be Fixed**
+- New Module  for Posting announcements for Ibt mobile dashboard / newsfeed (lloyd) 🔴 **To be Fixed**
 - Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🔴 **To be Fixed**
 - application rejection should have a note 🔴 **To be Fixed**
 
@@ -20,7 +22,6 @@ Parking Admin
 
 
 Terminal Fee Admin
-- Change "Tickets" to "Terminal Fee" (Jayna)  🔴 **To be Fixed**
 - as one ang student and senior filter (Venn)  🔴 **To be Fixed**
 - export layout (Venn)  🔴 **To be Fixed**
 
@@ -62,3 +63,4 @@ Bus Admin
 
 Terminal Fee
 - remove date search filter (Alviar)  🟢 **Done**
+- Change "Tickets" to "Terminal Fee" (Jayna)  🟢 **Done**
