@@ -27,8 +27,6 @@ Terminal Fee Admin
 🟡 **In Progress**
 Manage Employee
 - should be able to edit name and email (Lloyd)
-- NAME + role for admin, dynamic and encrypted accounts (Should reflect to the whole system)
-- create backend for the admins with role and connect it to MongoDB (lloyd)
 
 
 🟢 **Done**
@@ -62,3 +60,7 @@ Bus Admin
 Terminal Fee
 - remove date search filter (Alviar)  🟢 **Done**
 - Change "Tickets" to "Terminal Fee" (Jayna)  🟢 **Done**
+
+Manage Employee
+- create backend for the admins with role and connect it to MongoDB (lloyd)
+- NAME + role for admin, dynamic and encrypted accounts (Should reflect to the whole system)
