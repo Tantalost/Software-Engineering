@@ -1,7 +1,7 @@
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js"; 
 
-// GET ALL
+
 export const getWaitlist = async (req, res) => {
   try {
     const list = await TenantApplication.find().sort({ createdAt: -1 });
@@ -11,7 +11,7 @@ export const getWaitlist = async (req, res) => {
   }
 };
 
-// GET BY ID
+
 export const getWaitlistById = async (req, res) => {
   try {
     const entry = await TenantApplication.findById(req.params.id);
@@ -22,7 +22,7 @@ export const getWaitlistById = async (req, res) => {
   }
 };
 
-// CREATE
+
 export const createWaitlistEntry = async (req, res) => {
   try {
     const newEntry = new TenantApplication(req.body);
@@ -33,7 +33,7 @@ export const createWaitlistEntry = async (req, res) => {
   }
 };
 
-// UPDATE
+
 export const updateWaitlistEntry = async (req, res) => {
   try {
     const { id } = req.params;
@@ -42,14 +42,14 @@ export const updateWaitlistEntry = async (req, res) => {
     const applicant = await TenantApplication.findByIdAndUpdate(
       id, 
       req.body,
-      { new: true }
+      { new: true } 
     );
 
     if (!applicant) {
       return res.status(404).json({ error: "Applicant not found" });
     }
 
-    // EMAIL LOGIC
+
     let message = "";
     let subject = "";
 
@@ -62,26 +62,28 @@ export const updateWaitlistEntry = async (req, res) => {
         message = `Dear ${applicant.name},\n\nWe have verified your payment.\nSince you applied for a Permanent slot, please upload your Signed Contract document via the app to proceed.\n\nThank you!`;
     }
 
-    // SEND EMAIL
-    if (subject) {
+    if (subject && applicant.email) {
         try {
             await sendEmail({
                 email: applicant.email,
                 subject: subject,
                 message: message
             });
-            console.log("Email sent successfully to:", applicant.email);
+
         } catch (emailError) {
-            console.error("Email failed:", emailError);
+            console.error("Email failed:", emailError.message);
         }
     }
+    
     res.status(200).json(applicant);
+
   } catch (error) {
+    console.error("Update Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
-// DELETE
+
 export const deleteWaitlistEntry = async (req, res) => {
   try {
     await TenantApplication.findByIdAndDelete(req.params.id);

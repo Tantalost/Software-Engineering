@@ -259,7 +259,7 @@ const TenantLease = () => {
     setAlerts(newAlerts);
   }, [records]);
 
-  // FILTERER & PAGINATION
+
   const filtered = records.filter((t) => {
     const name = t.tenantName || t.name || "";
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || (t.referenceNo || "").toLowerCase().includes(searchQuery.toLowerCase());
@@ -282,7 +282,7 @@ const TenantLease = () => {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
-  // STATS CALCULATION
+
   const mapStats = useMemo(() => {
     let available = 0; let paid = 0; let revenue = 0;
     const SECTION_CAPACITY = 30; 
@@ -392,7 +392,7 @@ const TenantLease = () => {
   
   const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item.id));
 
-  // BULK DELETE HANDLER (Lease Admin Only)
+  
   const handleBulkDelete = async () => {
     const confirmMsg = `Request deletion for ${selectedIds.length} tenants?`;
     if (!window.confirm(confirmMsg)) return;
@@ -479,15 +479,43 @@ const TenantLease = () => {
     }
   };
 
-  const handleStartApproval = (applicant) => {
-    setReviewData(applicant);
-    setShowWaitlistModal(false);
-    setShowReviewModal(true); 
+  const handleStartApproval = async (applicant) => {
+    try {
+        
+        document.body.style.cursor = 'wait';
+        
+        const res = await fetch(`${API_URL}/waitlist/${applicant.id}`);
+        
+        if (!res.ok) throw new Error("Failed to fetch applicant details");
+        
+        const fullData = await res.json();
+
+        setReviewData(fullData);
+        setShowWaitlistModal(false);
+        setShowReviewModal(true); 
+    } catch (error) {
+        console.error("Error fetching full details:", error);
+        setNotificationState({ 
+            isOpen: true, 
+            type: 'error', 
+            message: "Could not load documents. Please try again.", 
+            autoClose: true, 
+            duration: 3000 
+        });
+    } finally {
+        document.body.style.cursor = 'default';
+    }
   };
 
   const handleUnlockPayment = async () => {
-    if (!reviewData?.id) return; 
-    const idToUpdate = reviewData.id; 
+    
+    const idToUpdate = reviewData?.id || reviewData?._id; 
+    
+    if (!idToUpdate) {
+        console.error("Error: No ID found for payment unlock");
+        return; 
+    }
+
     try {
         const response = await fetch(`${API_URL}/waitlist/${idToUpdate}`, {
             method: 'PUT',
@@ -495,7 +523,13 @@ const TenantLease = () => {
             body: JSON.stringify({ status: "PAYMENT_UNLOCKED" })
         });
         if (response.ok) {
-            setNotificationState({ isOpen: true, type: 'success', message: "Payment Unlocked! The applicant has been notified via email.", autoClose: true, duration: 3000 });
+            setNotificationState({ 
+                isOpen: true, 
+                type: 'success', 
+                message: "Payment Unlocked! The applicant has been notified via email.", 
+                autoClose: true, 
+                duration: 3000 
+            });
             await logActivity(role, "UNLOCK_PAYMENT", `Unlocked payment for waitlist applicant ID #${idToUpdate}`, "Tenants");
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
@@ -510,8 +544,11 @@ const TenantLease = () => {
   };
 
   const handleRequestContract = async () => {
-    if (!reviewData?.id) return; 
-    const idToUpdate = reviewData.id; 
+    
+    const idToUpdate = reviewData?.id || reviewData?._id; 
+    
+    if (!idToUpdate) return; 
+
     try {
         const response = await fetch(`${API_URL}/waitlist/${idToUpdate}`, {
             method: 'PUT',
@@ -519,7 +556,13 @@ const TenantLease = () => {
             body: JSON.stringify({ status: "CONTRACT_PENDING" })
         });
         if (response.ok) {
-            setNotificationState({ isOpen: true, type: 'success', message: "Status updated to Contract Pending. Applicant notified via email.", autoClose: true, duration: 3000 });
+            setNotificationState({ 
+                isOpen: true, 
+                type: 'success', 
+                message: "Status updated to Contract Pending. Applicant notified via email.", 
+                autoClose: true, 
+                duration: 3000 
+            });
             await logActivity(role, "REQUEST_CONTRACT", `Requested contract for waitlist applicant ID #${idToUpdate}`, "Tenants");
             setShowReviewModal(false);
             setShowWaitlistModal(true); 
@@ -541,14 +584,27 @@ const TenantLease = () => {
 
   const handleAddTenant = async (newTenant) => {
     try {
+      
+      const waitlistId = transferApplicant?.id || transferApplicant?._id;
+
       const response = await fetch(`${API_URL}/tenants`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...newTenant, transferWaitlistId: transferApplicant?.id })
+          body: JSON.stringify({ 
+              ...newTenant, 
+              transferWaitlistId: waitlistId 
+          })
       });
+      
       if (response.ok) {
           setShowAddModal(false);
-          setNotificationState({ isOpen: true, type: 'success', message: "Tenant Added Successfully! Welcome email sent.", autoClose: true, duration: 3000 });
+          setNotificationState({ 
+              isOpen: true, 
+              type: 'success', 
+              message: "Tenant Added Successfully! Welcome email sent.", 
+              autoClose: true, 
+              duration: 3000 
+          });
           await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
           fetchTenants(); 
           fetchWaitlist(); 

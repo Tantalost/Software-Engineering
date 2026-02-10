@@ -11,6 +11,7 @@ export default defineConfig({
 
   server: {
     allowedHosts: true, 
+    maxHeaderSize: 1024 * 1024,
   },
 })
 

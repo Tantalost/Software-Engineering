@@ -1,26 +1,101 @@
-import React, { useState } from "react";
-import { ArrowLeft, CheckCircle, Lock, Unlock, FileText, User, CreditCard, X, ZoomIn, PenTool } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { 
+  ArrowLeft, CheckCircle, Lock, Unlock, FileText, User, 
+  CreditCard, X, ZoomIn, PenTool, Download 
+} from "lucide-react";
+import CryptoJS from 'crypto-js';
+
+const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
 const ApplicationReviewModal = ({ 
   isOpen, 
-  reviewData, 
-  onClose, 
+  reviewData,
+
   onBack, 
   onUnlockPayment, 
   onProceedToLease,
   onRequestContract 
+  
 }) => {
   const [previewImage, setPreviewImage] = useState(null);
 
+  const decryptData = (encryptedString) => {
+    if (!reviewData) return null;
+    if (!encryptedString) return null;
+
+    if (encryptedString.startsWith("data:")) {
+        return encryptedString;
+    }
+
+    try {
+      const bytes = CryptoJS.AES.decrypt(encryptedString, ENCRYPTION_KEY);
+      const originalText = bytes.toString(CryptoJS.enc.Utf8);
+
+      if (!originalText) return null;
+      
+     
+      const isValidFormat = originalText.startsWith("data:image") || originalText.startsWith("data:application/pdf");
+
+      if (!isValidFormat) {
+          console.error("Debug: Decrypted string is unknown format.");
+          return null;
+      }
+
+      return originalText;
+    } catch (error) {
+      console.error("Debug: Decryption Crashed", error);
+      return null;
+    }
+  };
+
+ 
+  const openPdf = (base64Pdf) => {
+    try {
+      
+      const byteCharacters = atob(base64Pdf.split(',')[1]);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (e) {
+      console.error("Failed to open PDF", e);
+      alert("Could not open PDF. Try downloading it instead.");
+    }
+  };
+
+  const safeData = reviewData || {};
+  const isPermanent = (safeData.floor === "Permanent" || safeData.tenantType === "Permanent");
+
+  const documents = useMemo(() => {
+    if (!reviewData) return []; 
+
+    const showContractSlot = isPermanent || reviewData.contractUrl;
+    
+    const rawDocs = [
+      { label: "Valid ID", url: reviewData.validIdUrl },
+      { label: "Business Permit", url: reviewData.permitUrl },
+      { label: "Brgy Clearance", url: reviewData.clearanceUrl },
+      { label: "Payment Receipt", url: reviewData.receiptUrl },
+      ...(showContractSlot ? [{ label: "Signed Contract", url: reviewData.contractUrl }] : [])
+    ];
+
+    return rawDocs.map(doc => ({
+        ...doc,
+        url: decryptData(doc.url)
+    }));
+  }, [reviewData, isPermanent]);
+
   if (!isOpen || !reviewData) return null;
 
-  const displayId = reviewData?._id 
-    ? String(reviewData._id).slice(-6).toUpperCase() 
-    : "---";
-  
+  const displayId = reviewData._id ? String(reviewData._id).slice(-6).toUpperCase() : "---";
   const status = reviewData.status || "Pending";
-  const isPermanent = (reviewData.floor === "Permanent" || reviewData.tenantType === "Permanent");
 
+  
   const isPaymentReview = status === "PAYMENT_REVIEW"; 
   const isContractReview = status === "CONTRACT_REVIEW";
   
@@ -28,18 +103,19 @@ const ApplicationReviewModal = ({
   const showRequestContractBtn = isPaymentReview && isPermanent;
   const showAddTenantBtn = (isPaymentReview && !isPermanent) || isContractReview;
 
-  // DOCUMENT LOGIC
-  const showContractSlot = isPermanent || reviewData.contractUrl;
-  const documents = [
-    { label: "Valid ID", url: reviewData.validIdUrl },
-    { label: "Business Permit", url: reviewData.permitUrl },
-    { label: "Brgy Clearance", url: reviewData.clearanceUrl },
-    { label: "Payment Receipt", url: reviewData.receiptUrl },
-    ...(showContractSlot ? [{ label: "Signed Contract", url: reviewData.contractUrl }] : [])
-  ];
+  const handleDownload = (e, url, label) => {
+    e.stopPropagation();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${label.replace(/\s+/g, '_')}_${reviewData.name.replace(/\s+/g, '_')}.png`; // Browser will auto-detect extension if it's PDF
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <>
+  
       {previewImage && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -53,7 +129,7 @@ const ApplicationReviewModal = ({
           </button>
           <img 
             src={previewImage} 
-            alt="Document Preview" 
+            alt="Preview" 
             className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl border border-slate-700"
             onClick={(e) => e.stopPropagation()} 
           />
@@ -86,6 +162,7 @@ const ApplicationReviewModal = ({
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <User size={18} className="text-emerald-600" /> Applicant Information
@@ -116,19 +193,25 @@ const ApplicationReviewModal = ({
                   >
                     {doc.url ? (
                       <>
+                        <button 
+                            onClick={(e) => handleDownload(e, doc.url, doc.label)}
+                            className="absolute top-2 right-2 z-20 p-1.5 bg-black/50 hover:bg-emerald-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                            title="Download File"
+                        >
+                            <Download size={14} />
+                        </button>
+
                         {(doc.url.startsWith("data:application/pdf") || doc.url.toLowerCase().endsWith(".pdf")) ? (
                             <div 
                                 className="w-full h-full flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 transition-colors"
-                                onClick={() => {
-                                    const pdfWindow = window.open("");
-                                    if (pdfWindow) pdfWindow.document.write(`<iframe width='100%' height='100%' src='${doc.url}'></iframe>`);
-                                }} 
+                                onClick={() => openPdf(doc.url)} // Use safe open function
                             >
                                 <FileText size={40} className="text-red-500 mb-2" />
                                 <span className="text-xs font-bold text-red-700">PDF Document</span>
-                                <span className="text-[10px] text-red-400">(Click to Open)</span>
+                                <span className="text-[10px] text-red-500">Click to View</span>
                             </div>
                         ) : (
+                            
                             <div className="w-full h-full" onClick={() => setPreviewImage(doc.url)}>
                                 <img src={doc.url} alt={doc.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
@@ -138,9 +221,14 @@ const ApplicationReviewModal = ({
                         )}
                       </>
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-2 text-center"><FileText size={24} className="mb-2 opacity-50" /><span className="text-xs italic">Not Uploaded</span></div>
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                        <FileText size={24} className="mb-2 opacity-50" />
+                        <span className="text-xs italic">Not Uploaded</span>
+                      </div>
                     )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm text-slate-700 text-[10px] py-1.5 text-center font-bold border-t border-slate-100">{doc.label}</div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm text-slate-700 text-[10px] py-1.5 text-center font-bold border-t border-slate-100">
+                        {doc.label}
+                    </div>
                   </div>
                 ))}
               </div>
