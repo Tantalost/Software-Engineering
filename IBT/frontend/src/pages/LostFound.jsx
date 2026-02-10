@@ -54,7 +54,6 @@ const LostFound = () => {
     
     const [newItem, setNewItem] = useState({
         trackingNo: "",
-        description: "",
         itemType: "", 
         location: "",
         dateTime: "",
@@ -106,7 +105,6 @@ const LostFound = () => {
 
         setNewItem({
             trackingNo: autoTracking,
-            description: "",
             itemType: "", 
             location: "",
             dateTime: formattedNow,
@@ -164,7 +162,6 @@ const LostFound = () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     type: "LostFound",
-                    description: `Item #${row.trackingNo} - ${row.description}`,
                     originalData: row,
                     archivedBy: role
                 })
@@ -263,7 +260,6 @@ const LostFound = () => {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             itemType: "Lost & Found Item",
-                            itemDescription: `Item #${item.trackingNo} - ${item.description}`,
                             requestedBy: "LostFound Admin",
                             originalData: item, 
                             reason: "Bulk deletion request"
@@ -368,7 +364,6 @@ const LostFound = () => {
         return data.map(item => ({
             "Tracking No": item.trackingNo,
             "Item Type": item.itemType || "-",
-            "Description": item.description,
             "Location": item.location,
             "DateTime": formatDateTimeForExport(item.dateTime), 
             "Status": item.status,
@@ -450,9 +445,9 @@ const LostFound = () => {
                     className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
             </div>,
-            "Tracking No", "Item Type", "Description", "Location", "DateTime", "Status"
+            "Tracking No", "Item Type", "Location", "DateTime", "Status"
           ]
-        : ["Tracking No", "Item Type", "Description", "Location", "DateTime", "Status"];
+        : ["Tracking No", "Item Type", "Location", "DateTime", "Status"];
 
     return (
         <Layout title="Lost and Found Records">
@@ -559,7 +554,6 @@ const LostFound = () => {
                                 id: item.id,
                                 trackingno: item.trackingNo,
                                 itemtype: item.itemType, 
-                                description: item.description,
                                 location: item.location,
                                 datetime: formatDateTime(item.dateTime),
                                 status: item.status,
@@ -687,19 +681,6 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                                    <div className="relative">
-                                        <FileText size={16} className="absolute left-3 top-3 text-slate-400" />
-                                        <textarea
-                                            value={newItem.description}
-                                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none min-h-[100px]"
-                                            placeholder="Detailed description of the item..."
-                                            required
-                                        />
-                                    </div>
-                                </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
@@ -737,7 +718,6 @@ const LostFound = () => {
                             <Field label="Type" value={viewRow.itemType} /> 
                             <Field label="Status" value={viewRow.status} />
                             <Field label="DateTime" value={formatDateTime(viewRow.dateTime)} />
-                            <div className="md:col-span-2"><Field label="Description" value={viewRow.description} /></div>
                             <div className="md:col-span-2"><Field label="Location" value={viewRow.location} /></div>
                         </div>
                         <div className="mt-4 flex justify-end">
@@ -831,19 +811,6 @@ const LostFound = () => {
                                             value={formatDateTime(editFormData.dateTime)}
                                             disabled
                                             className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed" 
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                                    <div className="relative">
-                                        <FileText size={16} className="absolute left-3 top-3 text-slate-400" />
-                                        <textarea
-                                            value={editFormData.description || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none min-h-[100px]"
-                                            required
                                         />
                                     </div>
                                 </div>

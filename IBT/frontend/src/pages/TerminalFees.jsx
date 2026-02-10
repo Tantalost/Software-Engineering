@@ -3,7 +3,6 @@ import { Archive, Trash2, Plus, X, CheckCircle, Loader2, History, ListChecks, Fi
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Layout from "../components/layout/Layout";
-import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
@@ -39,8 +38,6 @@ const TerminalFees = () => {
   const role = localStorage.getItem("authRole") || "superadmin"; 
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);  
@@ -156,21 +153,20 @@ const TerminalFees = () => {
     return records.filter((fee) => {
       const pType = (fee.passengerType || "").toLowerCase();
       const aType = activeType.toLowerCase();
-      const matchesSearch = pType.includes(searchQuery.toLowerCase());
-      const matchesDate = selectedDate ? new Date(fee.date).toDateString() === new Date(selectedDate).toDateString() : true;
       
       let matchesType = false;
       if (aType === "all") {
         matchesType = true;
-      } else if (aType.includes("senior") || aType.includes("pwd")) {
-        matchesType = pType.includes("senior") || pType.includes("pwd");
+      } else if (aType.includes("student") || aType.includes("senior") || aType.includes("pwd")) {
+        matchesType = pType.includes("student") || pType.includes("senior") || pType.includes("pwd");
       } else {
         matchesType = pType.includes(aType);
       }
 
-      return matchesSearch && matchesDate && matchesType;
+      return matchesType;
     });
-  }, [records, searchQuery, selectedDate, activeType]);
+}, [records, activeType]);
+
 
   const stats = useMemo(() => ({
     regular: filtered.filter(f => (f.passengerType || "").toLowerCase().includes("regular")).length,
@@ -249,8 +245,6 @@ const TerminalFees = () => {
         screen: "Terminal Fees Management",
         generatedDate: new Date().toLocaleString(),
         filters: {
-          searchQuery,
-          selectedDate: selectedDate ? new Date(selectedDate).toLocaleDateString() : "None",
           activeType
         },
         statistics: {
@@ -647,12 +641,6 @@ const TerminalFees = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        />
         
         <div className="flex items-center justify-end gap-3">
           {(role === "superadmin") && (
@@ -960,15 +948,15 @@ const TerminalFees = () => {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Passenger Type</label>
-                <div className="grid grid-cols-3 gap-2 ">
-                  {["Regular", "Student", "Senior Citizen / PWD"].map((type) => (
+                <div className="grid grid-cols-2 gap-2 ">
+                  {["Regular", "Student/Senior/PWD"].map((type) => (
                     <button key={type} onClick={() => {
-                        const price = (type === 'Student' || type === 'Senior Citizen / PWD') ? basePrices.discounted : basePrices.regular;
+                        const price = (type === 'Student/Senior/PWD') ? basePrices.discounted : basePrices.regular;
                         setNewTicket(prev => ({ ...prev, passengerType: type, price }));
                       }}
                       className={`py-2 px-1 rounded-lg text-xs font-semibold border ${newTicket.passengerType === type ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
                     >
-                      {type === "Senior Citizen / PWD" ? "Senior/PWD" : type}
+                      {type}
                     </button>
                   ))}
                 </div>
@@ -1000,9 +988,9 @@ const TerminalFees = () => {
             <button onClick={() => setEditRow(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {["Regular", "Student", "Senior Citizen / PWD"].map((type) => {
-              const newPrice = (type === "Student" || type === "Senior Citizen / PWD") ? basePrices.discounted : basePrices.regular;
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {["Regular", "Student/Senior/PWD"].map((type) => {
+              const newPrice = (type === "Student/Senior/PWD") ? basePrices.discounted : basePrices.regular;
               const active = (editRow.passengerType || "").toLowerCase() === type.toLowerCase();
               return (
                 <button
@@ -1011,7 +999,7 @@ const TerminalFees = () => {
                   onClick={() => setEditRow(prev => ({ ...prev, passengerType: type, price: newPrice }))}
                   className={`py-2 px-1 rounded-lg text-xs font-semibold border ${active ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "bg-white border-slate-200"}`}
                 >
-                  {type === "Senior Citizen / PWD" ? "Senior/PWD" : type}
+                  {type}
                 </button>
               );
             })}
