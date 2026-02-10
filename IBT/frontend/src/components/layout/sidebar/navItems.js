@@ -13,7 +13,7 @@ import {
 export const menuItems = [
   { path: "/dashboard", icon: Home, label: "Dashboard", roles: ["superadmin"] },
   { path: "/buses-trips", icon: Bus, label: "Buses", roles: ["bus","superadmin"] },
-  { path: "/tickets", icon: Ticket, label: "Tickets", roles: ["ticket","superadmin"] },
+  { path: "/tickets", icon: Ticket, label: "Terminal Fee", roles: ["ticket","superadmin"] },
   { path: "/tenant-lease", icon: Store, label: "Tenants/Lease", roles: ["lease","superadmin"] },
   { path: "/parking", icon: CircleParking, label: "Parking", roles: ["superadmin", "parking"] },
   { path: "/lost-found", icon: SearchCheck, label: "Lost and Found", roles: ["lostfound","superadmin"] },
