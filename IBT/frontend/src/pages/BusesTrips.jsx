@@ -27,6 +27,7 @@ import {
   X,
   Bus,
   Plus,
+  Settings,
 } from "lucide-react";
 
 // --- NEW COMPONENT: Manage Companies & Buses Modal ---
@@ -390,14 +391,59 @@ const BusTrips = () => {
   const API_URL = "http://localhost:3000/api/bustrips";
   const COMPANY_API_URL = "http://localhost:3000/api/companies";
 
+  const [defaultPrice, setDefaultPrice] = useState(75);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("defaultBusPrice");
+    if (saved) setDefaultPrice(Number(saved));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("defaultBusPrice", defaultPrice);
+  }, [defaultPrice]);
+
+  //Set Modal States
+  const [showSetPriceModal, setShowSetPriceModal] = useState(false);
+  const [newPrice, setNewPrice] = useState("");
+  const [isSettingPrice, setIsSettingPrice] = useState(false);
+
+  const handleSetPrice = async () => {
+    if (!newPrice || isNaN(newPrice)) {
+      alert("Please enter a valid price.");
+      return;
+    }
+
+    setIsSettingPrice(true);
+
+    try {
+      setDefaultPrice(Number(newPrice));
+
+      await logActivity(
+        role,
+        "SET_DEFAULT_PRICE",
+        `Set default bus fee to ₱${newPrice}`,
+        "BusTrips",
+      );
+
+      setShowSetPriceModal(false);
+      setNewPrice("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to set price");
+    } finally {
+      setIsSettingPrice(false);
+    }
+  };
+
   // --- NEW: ADD BUS FORM STATE ---
   const [newBusData, setNewBusData] = useState({
-    templateNo: "", // Maps to Plate Number now
+    templateNo: "",
     route: "",
     company: "",
     time: "",
     date: new Date().toISOString().split("T")[0],
     status: "Pending",
+    price: 75,
   });
 
   // 2. DATA FETCHING
@@ -481,7 +527,9 @@ const BusTrips = () => {
       }),
       date: new Date().toISOString().split("T")[0],
       status: "Pending",
+      price: defaultPrice, // ✅ snapshot price
     });
+
     setShowAddModal(true);
   };
 
@@ -859,6 +907,16 @@ const BusTrips = () => {
                   <span>Submit Report</span>
                 </button>
               )}
+              {/* SUPER ADMIN: SET PRICE BUTTON */}
+              {role === "superadmin" && (
+                <button
+                  onClick={() => setShowSetPriceModal(true)}
+                  className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
+                >
+                  <Settings size={18} /> <span>Set Price</span>
+                </button>
+              )}
+
               {/* SUPER ADMIN: MANAGE COMPANIES BUTTON */}
               {role === "superadmin" && (
                 <button
@@ -994,6 +1052,56 @@ const BusTrips = () => {
         fetchCompanies={fetchCompanies}
         role={role}
       />
+
+      {/* --- MODAL: Set Price Modal --- */}
+      {showSetPriceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-slate-800 mb-3">
+              Set Bus Fee
+            </h3>
+
+            <p className="text-sm text-slate-500 mb-4">
+              Current Price:{" "}
+              <span className="font-semibold text-slate-800">
+                ₱{defaultPrice}
+              </span>
+            </p>
+
+            <p className="text-sm text-slate-500 mb-4">
+              Enter the new bus fee below. Only numbers are allowed.
+            </p>
+
+            <input
+              type="text"
+              placeholder="Enter new price (e.g. 75)"
+              value={newPrice} // <-- ONLY use newPrice
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                setNewPrice(value);
+              }}
+              className="w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-700 placeholder-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+            />
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowSetPriceModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleSetPrice}
+                disabled={isSettingPrice}
+                className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700 disabled:opacity-70 transition"
+              >
+                {isSettingPrice ? "Updating..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- UPDATED MODAL: Add Bus Trip --- */}
       {showAddModal && (
