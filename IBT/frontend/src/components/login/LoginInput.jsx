@@ -1,5 +1,5 @@
 import React from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react"; 
+import { Mail, Lock, Eye, EyeOff, KeyRound } from "lucide-react"; 
 
 export default function LoginInput({
   type,
@@ -10,12 +10,14 @@ export default function LoginInput({
   placeholder,
   showPassword,
   setShowPassword,
+  disabled = false,
 }) {
   const isPassword = type === "password";
   const inputType = isPassword ? (showPassword ? "text" : "password") : type;
   const renderIcon = () => {
     if (icon === "Mail") return <Mail size={20} />;
     if (icon === "Lock") return <Lock size={20} />;
+    if (icon === "Key") return <KeyRound size={20} />;
     return null;
   };
 
@@ -32,7 +34,7 @@ export default function LoginInput({
         <input
           type={inputType}
           value={value}
-        
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)} 
           placeholder={placeholder}
           className="

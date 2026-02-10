@@ -1,47 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/layout/Layout";
 import DeleteModal from "../components/common/DeleteModal"; 
-import { Trash2, CheckCircle, XCircle, X, UserX } from "lucide-react"; 
+import { CheckCircle, XCircle, X, UserX } from "lucide-react"; 
 
-const STORAGE_KEY = "ibt_admins";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-const ensureDefaultAdmins = () => {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-            const defaults = [
-                { id: 1, email: "admin@example.com", password: "admin123", role: "superadmin", name: "Super Admin" },
-                { id: 2, email: "parkingadmin@example.com", password: "parking123", role: "parking", name: "Parking Admin" },
-                { id: 3, email: "lostfoundadmin@example.com", password: "lostfound123", role: "lostfound", name: "Lost & Found Admin" },
-                { id: 4, email: "ticketadmin@example.com", password: "ticket123", role: "ticket", name: "Ticket Admin" },
-                { id: 5, email: "busadmin@example.com", password: "bus123", role: "bus", name: "Bus Admin" },
-                { id: 6, email: "leaseadmin@example.com", password: "lease123", role: "lease", name: "Lease Admin" },
-            ];
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
-            return defaults;
-        }
-        const admins = JSON.parse(raw);
-        return admins.map(admin => {
-            if (!admin.name) {
-                const roleNames = {
-                    superadmin: "Super Admin",
-                    parking: "Parking Admin",
-                    lostfound: "Lost & Found Admin",
-                    ticket: "Ticket Admin",
-                    bus: "Bus Admin",
-                    lease: "Lease Admin"
-                };
-                admin.name = roleNames[admin.role] || "Admin";
-            }
-            return admin;
-        });
-    } catch {
-        return [];
-    }
+const roleLabels = {
+  superadmin: "Super Admin",
+  parking: "Parking Admin",
+  lostfound: "Lost & Found Admin",
+  ticket: "Ticket Admin",
+  bus: "Bus Admin",
+  lease: "Lease Admin",
 };
 
 export default function EmployeeManage() {
-    const [admins, setAdmins] = useState(() => ensureDefaultAdmins());
+    const [admins, setAdmins] = useState([]);
     const [showCreate, setShowCreate] = useState(false);
     const [createForm, setCreateForm] = useState({ email: "", password: "", role: "parking", name: "" }); 
     const [editTarget, setEditTarget] = useState(null);
@@ -55,9 +29,38 @@ export default function EmployeeManage() {
       duration: 3000
     }); 
 
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Load admins from backend
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(admins));
-    }, [admins]);
+        const fetchAdmins = async () => {
+            setIsLoading(true);
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admins`);
+                if (!res.ok) throw new Error("Failed to load admins");
+                const data = await res.json();
+                setAdmins(
+                    data.map((a) => ({
+                        ...a,
+                        name: a.name || roleLabels[a.role] || "Admin",
+                    }))
+                );
+            } catch (error) {
+                console.error("Error fetching admins:", error);
+                setNotificationState({
+                    isOpen: true,
+                    type: "error",
+                    message: "Failed to load admins from server.",
+                    autoClose: true,
+                    duration: 4000,
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAdmins();
+    }, []);
 
     useEffect(() => {
         if (notificationState.isOpen && notificationState.autoClose) {
@@ -69,51 +72,140 @@ export default function EmployeeManage() {
         }
     }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]); 
 
-    const isSuperAdmin = useMemo(() => (localStorage.getItem("authRole") || "superadmin") === "superadmin", []);
+    const isSuperAdmin = useMemo(
+        () => (localStorage.getItem("authRole") || "superadmin") === "superadmin",
+        []
+    );
 
-    const addAdmin = () => {
+    const addAdmin = async () => {
         if (!createForm.email || !createForm.password || !createForm.name.trim()) {
             setNotificationState({ isOpen: true, type: 'error', message: "Please fill in all required fields (Email, Password, and Name).", autoClose: true, duration: 3000 });
             return;
         }
-        const exists = admins.some((a) => a.email.toLowerCase() === createForm.email.toLowerCase());
-        if (exists) {
-            setNotificationState({ isOpen: true, type: 'error', message: "Email already exists.", autoClose: true, duration: 3000 });
-            return;
-        } 
-        const next = [
-            ...admins,
-            { id: Date.now(), email: createForm.email, password: createForm.password, role: createForm.role, name: createForm.name.trim() },
-        ];
-        setAdmins(next);
-        setShowCreate(false);
-        setCreateForm({ email: "", password: "", role: "parking", name: "" });
-        setNotificationState({ isOpen: true, type: 'success', message: `${createForm.email} created successfully.`, autoClose: true, duration: 3000 });
+
+        try {
+            setIsLoading(true);
+            const res = await fetch(`${API_BASE_URL}/api/admins`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: createForm.name.trim(),
+                    email: createForm.email.trim(),
+                    role: createForm.role,
+                    password: createForm.password,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setNotificationState({
+                    isOpen: true,
+                    type: "error",
+                    message: data.message || "Failed to create admin.",
+                    autoClose: true,
+                    duration: 4000,
+                });
+                return;
+            }
+
+            setAdmins((prev) => [
+                ...prev,
+                {
+                    ...data.admin,
+                    name: data.admin.name || roleLabels[data.admin.role] || "Admin",
+                },
+            ]);
+            setShowCreate(false);
+            setCreateForm({ email: "", password: "", role: "parking", name: "" });
+            setNotificationState({
+                isOpen: true,
+                type: "success",
+                message: `${createForm.email} created successfully.`,
+                autoClose: true,
+                duration: 3000,
+            });
+        } catch (error) {
+            console.error("Error creating admin:", error);
+            setNotificationState({
+                isOpen: true,
+                type: "error",
+                message: "Failed to create admin.",
+                autoClose: true,
+                duration: 4000,
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (!deleteTarget) return;
 
         try {
             const adminEmail = deleteTarget.email; 
+            const res = await fetch(`${API_BASE_URL}/api/admins/${deleteTarget.id}`, {
+                method: "DELETE",
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.message || "Failed to remove admin.");
+            }
+
             const next = admins.filter((a) => a.id !== deleteTarget.id);
             setAdmins(next);
             setNotificationState({ isOpen: true, type: 'success', message: `${adminEmail} has been successfully removed.`, autoClose: true, duration: 3000 });
         } catch (error) {
             console.error("Error removing admin:", error);
-            setNotificationState({ isOpen: true, type: 'error', message: `Failed to remove admin: ${deleteTarget.email}.`, autoClose: true, duration: 3000 });
+            setNotificationState({ isOpen: true, type: 'error', message: error.message || `Failed to remove admin: ${deleteTarget.email}.`, autoClose: true, duration: 3000 });
         } finally {
             setDeleteTarget(null);
         }
     };
 
-    const applyPasswordChange = () => {
+    const applyPasswordChange = async () => {
         if (!editTarget || !editPassword) return;
-        const next = admins.map((a) => (a.id === editTarget.id ? { ...a, password: editPassword } : a));
-        setAdmins(next);
-        setEditTarget(null);
-        setEditPassword("");
-        setNotificationState({ isOpen: true, type: 'success', message: `Password for ${editTarget.email} updated.`, autoClose: true, duration: 3000 });
+
+        try {
+            setIsLoading(true);
+            const res = await fetch(`${API_BASE_URL}/api/admins/${editTarget.id}/password`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newPassword: editPassword }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to update password.");
+            }
+
+            const next = admins.map((a) =>
+                a.id === editTarget.id ? { ...a } : a
+            );
+            setAdmins(next);
+            setEditTarget(null);
+            setEditPassword("");
+            setNotificationState({
+                isOpen: true,
+                type: "success",
+                message: `Password for ${editTarget.email} updated.`,
+                autoClose: true,
+                duration: 3000,
+            });
+        } catch (error) {
+            console.error("Error updating admin password:", error);
+            setNotificationState({
+                isOpen: true,
+                type: "error",
+                message: error.message || "Failed to update password.",
+                autoClose: true,
+                duration: 4000,
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -140,20 +232,48 @@ export default function EmployeeManage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {admins.length === 0 ? (
+                                        {isLoading && admins.length === 0 ? (
                                             <tr>
-                                                <td className="px-6 py-4" colSpan={4}>No admins found.</td>
+                                                <td className="px-6 py-4" colSpan={4}>
+                                                    Loading admins...
+                                                </td>
+                                            </tr>
+                                        ) : admins.length === 0 ? (
+                                            <tr>
+                                                <td className="px-6 py-4" colSpan={4}>
+                                                    No admins found.
+                                                </td>
                                             </tr>
                                         ) : (
                                             admins.map((a) => (
-                                                <tr key={a.id} className="border-b border-gray-100 hover:bg-gray-50 transition-all">
-                                                    <td className="px-6 py-3 font-medium">{a.name || "N/A"}</td>
+                                                <tr
+                                                    key={a.id}
+                                                    className="border-b border-gray-100 hover:bg-gray-50 transition-all"
+                                                >
+                                                    <td className="px-6 py-3 font-medium">
+                                                        {a.name || "N/A"}
+                                                    </td>
                                                     <td className="px-6 py-3">{a.email}</td>
-                                                    <td className="px-6 py-3 capitalize">{a.role}</td>
+                                                    <td className="px-6 py-3 capitalize">
+                                                        {roleLabels[a.role] || a.role}
+                                                    </td>
                                                     <td className="px-6 py-3">
                                                         <div className="flex justify-end gap-2">
-                                                            <button onClick={() => { setEditTarget(a); setEditPassword(""); }} className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-green-50 transition-all cursor-pointer">Change Password</button>
-                                                            <button onClick={() => setDeleteTarget(a)} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition-all cursor-pointer">Remove</button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditTarget(a);
+                                                                    setEditPassword("");
+                                                                }}
+                                                                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-green-50 transition-all cursor-pointer"
+                                                            >
+                                                                Change Password
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setDeleteTarget(a)}
+                                                                className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition-all cursor-pointer"
+                                                            >
+                                                                Remove
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>

@@ -15,6 +15,18 @@ export default function LoginCard({
   handleSubmit,
   isLoading,
   error,
+  // Optional customization
+  emailLabel = "Email Address",
+  emailPlaceholder = "admin@example.com",
+  emailIcon = "Mail",
+  emailDisabled = false,
+  passwordLabel = "Password",
+  passwordPlaceholder = "Enter your password",
+  passwordIcon = "Lock",
+  passwordType = "password",
+  showPasswordToggle = true,
+  buttonText = "Sign In",
+  footer = null,
 }) {
   return (
     <div className="flex justify-center items-center w-full p-4 sm:p-6">
@@ -66,28 +78,31 @@ export default function LoginCard({
             <div className="space-y-4 sm:space-y-5 lg:space-y-6">
               <LoginInput
                 type="email"
-                label="Email Address"
+                label={emailLabel}
                 value={email}
                 onChange={setEmail}
-                icon="Mail"
-                placeholder="admin@example.com"
+                icon={emailIcon}
+                placeholder={emailPlaceholder}
+                disabled={emailDisabled}
               />
               <LoginInput
-                type="password"
-                label="Password"
+                type={passwordType}
+                label={passwordLabel}
                 value={password}
                 onChange={setPassword}
-                showPassword={showPassword}
-                setShowPassword={setShowPassword}
-                icon="Lock"
-                placeholder="Enter your password"
+                showPassword={showPasswordToggle ? showPassword : false}
+                setShowPassword={showPasswordToggle ? setShowPassword : () => {}}
+                icon={passwordIcon}
+                placeholder={passwordPlaceholder}
               />
               <div className="pt-2 lg:pt-4">
                 <LoginButton
                   handleSubmit={handleSubmit}
                   isLoading={isLoading}
+                  text={buttonText}
                 />
               </div>
+              {footer}
             </div>
           </div>
         </div>

@@ -436,11 +436,9 @@ const TerminalFees = () => {
   };
 
   const handleFinalizeAction = () => {
-    const requiredPassword = role === "ticket" 
-        ? (localStorage.getItem("ticketPassword") || "ticket123") 
-        : (localStorage.getItem("authPassword") || "admin123");
+    const requiredPassword = localStorage.getItem("authPassword") || "";
 
-    if (passwordInput === requiredPassword) {
+    if (passwordInput && passwordInput === requiredPassword) {
       const recordId = pendingEdit?._id || pendingEdit?.id;
       if (!pendingEdit || !recordId) {
           setPasswordError("System Error: Lost record ID. Please refresh and try again.");

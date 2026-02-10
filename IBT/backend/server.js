@@ -16,6 +16,7 @@ import lostfoundRoutes from "./routes/lostfoundRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import notifications from "../backend/routes/notifications.js";
 import companyRoutes from "./routes/companyRoutes.js"; 
+import adminRoutes from "./routes/adminRoutes.js";
 
 connectDB();
 connectCloudinary();
@@ -40,6 +41,7 @@ app.use("/api/tenants", tenantRoutes);
 app.use("/api/lostfound", lostfoundRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notifications);
+app.use("/api/admins", adminRoutes);
 
 const PORT = process.env.PORT || 3000;
 
