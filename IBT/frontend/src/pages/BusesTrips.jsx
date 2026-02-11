@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import headerImg from "../assets/Header.png";
+import footerImg from "../assets/FOOTER.png";
 import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
@@ -198,11 +200,10 @@ const ManageCompaniesModal = ({
               <div
                 key={company._id}
                 onClick={() => setSelectedCompanyId(company._id)}
-                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
-                  selectedCompanyId === company._id
+                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${selectedCompanyId === company._id
                     ? "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500"
                     : "bg-white border-slate-200 hover:border-emerald-300"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -495,7 +496,7 @@ const BusTrips = () => {
     const matchesDate =
       !selectedDate ||
       new Date(bus.date).toDateString() ===
-        new Date(selectedDate).toDateString();
+      new Date(selectedDate).toDateString();
     return matchesSearch && matchesCompany && matchesDate;
   });
 
@@ -593,67 +594,95 @@ const BusTrips = () => {
   // --- EXPORT TO EXCEL ---
   const handleExportExcel = () => {
     if (filtered.length === 0) return alert("No records to export.");
-    const dataToExport = filtered.map((item) => ({
-      "Plate No": item.templateNo || item.templateno || "-",
-      "Ticket Ref": item.ticketReferenceNo || "-",
-      Route: item.route || "-",
-      Price: `₱${(item.price || 75).toFixed(2)}`,
-      Time: item.time,
-      Departure: item.departureTime || "",
-      Date: item.date ? new Date(item.date).toLocaleDateString() : "-",
-      Company: item.company || "-",
-      Status: item.status || "-",
-    }));
-    const headers = Object.keys(dataToExport[0]).join(",");
-    const rows = dataToExport
-      .map((row) =>
-        Object.values(row)
-          .map((val) => `"${val}"`)
-          .join(","),
-      )
-      .join("\n");
-    const blob = new Blob([headers + "\n" + rows], {
-      type: "text/csv;charset=utf-8;",
+
+    const operator = localStorage.getItem("authName") || "Admin";
+    const dateStr = new Date().toLocaleDateString();
+
+    // Define rows to match the reference format 
+    const rows = [
+      ["", "", "", "BUS PARKING REPORTS", "", "", "", ""],
+      [`Date: ${dateStr}`, "", "", "", `No. of Bus: ${filtered.length}`, "", "", ""],
+      [`Operator: ${operator}`, "", "", "", `Revenue: ₱${totalRevenue.toFixed(2)}`, "", "", ""],
+      [], // Spacer row
+      ["Plate No.", "Ticket Ref.", "Route", "Price", "Arrival", "Departure", "Company", "Status"]
+    ];
+
+    // Append data rows from your records 
+    filtered.forEach((item) => {
+      rows.push([
+        item.templateNo || item.templateno || "-",
+        item.ticketReferenceNo || "-",
+        item.route || "-",
+        `₱${(item.price || 75).toFixed(2)}`,
+        item.time || "-",
+        item.departureTime || "-",
+        item.company || "-",
+        item.status || "-",
+      ]);
     });
+
+    const csvContent = rows
+      .map((row) => row.map((val) => `"${val}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `Bus_Trips_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `IBT_Bus_Report_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
 
   // --- EXPORT TO PDF ---
   const handleExportPDF = () => {
     if (filtered.length === 0) return alert("No records to export.");
-    const doc = new jsPDF("landscape", "mm", "a4");
-    doc.text("Bus Trips Report", 14, 15);
+
+    const doc = new jsPDF("l", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // 1. Add Header Branding
+    doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+
+    // 2. Add Title and Summary Metadata 
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("BUS PARKING REPORTS", pageWidth / 2, 45, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+    doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, 15, 61);
+
+    doc.text(`No. of Bus: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
+    doc.text(`Revenue: ₱${totalRevenue.toFixed(2)}`, pageWidth - 15, 61, { align: "right" });
+
+    // 3. Generate Table 
     autoTable(doc, {
-      startY: 20,
-      head: [
-        [
-          "Plate No",
-          "Ticket Ref",
-          "Route",
-          "Price",
-          "Time",
-          "Departure",
-          "Date",
-          "Company",
-          "Status",
-        ],
-      ],
+      startY: 70,
+      margin: { bottom: 35 },
+      head: [[
+        "Plate No.", "Ticket Ref.", "Route", "Price",
+        "Arrival", "Departure", "Company", "Status"
+      ]],
       body: filtered.map((item) => [
         item.templateNo || "-",
         item.ticketReferenceNo || "-",
         item.route || "-",
         `₱${(item.price || 75).toFixed(2)}`,
-        item.time,
-        item.departureTime || "",
-        item.date ? new Date(item.date).toLocaleDateString() : "-",
+        item.time || "-",
+        item.departureTime || "-",
         item.company || "-",
         item.status || "-",
       ]),
+      headStyles: { fillColor: [220, 38, 38] }, // Matches the Red in your branding
+      styles: { fontSize: 9 },
+      didDrawPage: (data) => {
+        // 4. Add Footer Branding on every page
+        doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+      },
     });
-    doc.save(`Bus_Trips_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+    doc.save(`IBT_Bus_Parking_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
   // --- BULK DELETE ---
@@ -739,7 +768,7 @@ const BusTrips = () => {
       (record) =>
         record.ticketReferenceNo &&
         record.ticketReferenceNo.toString().trim() ===
-          ticketRefInput.toString().trim(),
+        ticketRefInput.toString().trim(),
     );
 
     if (isDuplicate) {
@@ -819,38 +848,38 @@ const BusTrips = () => {
   // --- TABLE COLUMNS ---
   const tableColumns = isSelectionMode
     ? [
-        <div key="header-check" className="flex items-center">
-          <input
-            type="checkbox"
-            checked={
-              selectedIds.length === paginatedData.length &&
-              paginatedData.length > 0
-            }
-            onChange={handleSelectAll}
-            className="h-4 w-4 rounded border-slate-300"
-          />
-        </div>,
-        "Plate No",
-        "Ticket Ref",
-        "Route",
-        "Price",
-        "Time",
-        "Departure",
-        "Date",
-        "Company",
-        "Status",
-      ]
+      <div key="header-check" className="flex items-center">
+        <input
+          type="checkbox"
+          checked={
+            selectedIds.length === paginatedData.length &&
+            paginatedData.length > 0
+          }
+          onChange={handleSelectAll}
+          className="h-4 w-4 rounded border-slate-300"
+        />
+      </div>,
+      "Plate No",
+      "Ticket Ref",
+      "Route",
+      "Price",
+      "Time",
+      "Departure",
+      "Date",
+      "Company",
+      "Status",
+    ]
     : [
-        "Plate No",
-        "Ticket Ref",
-        "Route",
-        "Price",
-        "Time",
-        "Departure",
-        "Date",
-        "Company",
-        "Status",
-      ];
+      "Plate No",
+      "Ticket Ref",
+      "Route",
+      "Price",
+      "Time",
+      "Departure",
+      "Date",
+      "Company",
+      "Status",
+    ];
 
   return (
     <Layout title="Bus Trips Management">
