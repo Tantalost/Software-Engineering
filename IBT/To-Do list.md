@@ -5,14 +5,7 @@ Color Coding
 
 🔴 **To be Fixed**
 Revisions for web general 
-- create backend for the admins with role and connect it to MongoDB (lloyd) 🔴 **To be Fixed**
-<<<<<<< HEAD
-- Login Authentication for Web (lloyd) 🔴 **To be Fixed**
-- New Module  for Posting announcements for Ibt mobile dashboard / newsfeed (lloyd) 🔴 **To be Fixed**
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🔴 **To be Fixed**
-=======
 - Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress** 
->>>>>>> 74416a33a74428f0659aab0e81d557a60d2091a3
 - application rejection should have a note 🔴 **To be Fixed**
 
 Dashboard
@@ -32,9 +25,6 @@ Terminal Fee Admin
 
 
 🟡 **In Progress**
-Manage Employee
-- should be able to edit name and email (Lloyd)
-- NAME + role for admin, dynamic and encrypted accounts (Should reflect to the whole system)
 
 
 🟢 **Done**
@@ -68,3 +58,8 @@ Bus Admin
 Terminal Fee
 - remove date search filter (Alviar)  🟢 **Done**
 - Change "Tickets" to "Terminal Fee" (Jayna)  🟢 **Done**
+
+Manage Employee
+- create backend for the admins with role and connect it to MongoDB (lloyd) 🟢 **Done**
+- NAME + role for admin, dynamic and encrypted accounts (Should reflect to the whole system) 🟢 **Done**
+- should be able to edit name and email (Lloyd) 🟢 **Done**
