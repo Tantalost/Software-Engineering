@@ -8,7 +8,6 @@ const WaitlistModal = ({
 
   if (!isOpen) return null;
 
-  // FILTER
   const filteredData = waitlistData.filter((app) => {
     if (statusFilter === "All") return true;
     
@@ -29,7 +28,7 @@ const WaitlistModal = ({
         <div className="flex justify-between items-center mb-4 border-b pb-4">
           <div>
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <ClipboardList className="text-emerald-600" /> Waitlist Applications
+                <ClipboardList className="text-emerald-600" /> Applicants
             </h3>
             <p className="text-xs text-slate-500 mt-1">Manage incoming applications and payments.</p>
           </div>

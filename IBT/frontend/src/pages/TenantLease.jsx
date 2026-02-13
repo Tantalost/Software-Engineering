@@ -238,10 +238,10 @@ const TenantLease = () => {
         fetchTenants();
         fetchWaitlist();
 
-        const interval = setInterval(() => {
-            fetchTenants();
-            fetchWaitlist();
-        }, 5000);
+    const interval = setInterval(() => {
+        fetchTenants();
+        fetchWaitlist();
+    }, 30000); 
 
         return () => clearInterval(interval);
     }, []);
@@ -622,42 +622,61 @@ const TenantLease = () => {
         setShowAddModal(true);
     };
 
-    const handleAddTenant = async (newTenant) => {
-        try {
+  const handleAddTenant = async (newTenant) => {
+    try {
+      const waitlistId = transferApplicant?.id || transferApplicant?._id;
+      
+      const formData = new FormData();
+      
+      Object.keys(newTenant).forEach(key => {
+        if (key === 'documents') return;
+        formData.append(key, newTenant[key]);
+      });
+      
+      if (waitlistId) {
+          formData.append('transferWaitlistId', waitlistId);
+      }
 
-            const waitlistId = transferApplicant?.id || transferApplicant?._id;
-
-            const response = await fetch(`${API_URL}/tenants`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...newTenant,
-                    transferWaitlistId: waitlistId
-                })
-            });
-
-            if (response.ok) {
-                setShowAddModal(false);
-                setNotificationState({
-                    isOpen: true,
-                    type: 'success',
-                    message: "Tenant Added Successfully! Welcome email sent.",
-                    autoClose: true,
-                    duration: 3000
-                });
-                await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
-                fetchTenants();
-                fetchWaitlist();
-                setTransferApplicant(null);
-            } else {
-                const err = await response.json();
-                setNotificationState({ isOpen: true, type: 'error', message: `Error saving to database: ${err.error || 'Unknown error'}`, autoClose: true, duration: 3000 });
-            }
-        } catch (e) {
-            console.error(e);
-            setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not save tenant.", autoClose: true, duration: 3000 });
+      if (newTenant.documents) {
+        if (newTenant.documents.businessPermit instanceof File) {
+            formData.append('businessPermit', newTenant.documents.businessPermit);
         }
-    };
+        if (newTenant.documents.validID instanceof File) {
+            formData.append('validID', newTenant.documents.validID);
+        }
+        if (newTenant.documents.contract instanceof File) {
+            formData.append('contract', newTenant.documents.contract);
+        }
+      }
+
+      const response = await fetch(`${API_URL}/tenants`, {
+          method: 'POST',
+          body: formData, 
+          
+      });
+      
+      if (response.ok) {
+          setShowAddModal(false);
+          setNotificationState({ 
+              isOpen: true, 
+              type: 'success', 
+              message: "Tenant Added Successfully! Welcome email sent.", 
+              autoClose: true, 
+              duration: 3000 
+          });
+          await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
+          fetchTenants(); 
+          fetchWaitlist(); 
+          setTransferApplicant(null);
+      } else {
+          const err = await response.json();
+          setNotificationState({ isOpen: true, type: 'error', message: `Error saving to database: ${err.error || 'Unknown error'}`, autoClose: true, duration: 3000 });
+      }
+    } catch (e) { 
+        console.error(e); 
+        setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not save tenant.", autoClose: true, duration: 3000 });
+    }
+  };
 
     const handleRejectApplicant = async (id) => {
         if (window.confirm("Are you sure you want to REJECT and DELETE this application?")) {
@@ -972,37 +991,37 @@ const TenantLease = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                    <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
-                        <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-                            <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
-                        </button>
-                        <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-                            <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
-                        </button>
-                    </div>
-                    <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
-                        <Map size={18} /> <span className="hidden sm:inline">View Map</span>
-                    </button>
-                    <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
-                        <ClipboardList size={18} /> <span className="hidden sm:inline">Waitlist</span>
-                        {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
-                    </button>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
-                    <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
-                    {(role === "superadmin" || role === "lease") && (
-                        <button
-                            onClick={() => setShowLogModal(true)}
-                            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
-                            title="View Logs"
-                        >
-                            <History size={18} />
-                            <span className="hidden sm:inline cursor-pointer">Logs</span>
-                        </button>
-                    )}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
+            <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+              <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
+            </button>
+            <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+              <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
+            </button>
+          </div>
+          <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
+            <Map size={18} /> <span className="hidden sm:inline">View Map</span>
+          </button>
+          <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
+            <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
+            {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
+          </button>
+        </div>
+        
+        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+            <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+            {(role === "superadmin" || role === "lease") && (
+                <button
+                    onClick={() => setShowLogModal(true)}
+                    className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                    title="View Logs"
+                >
+                    <History size={18} />
+                    <span className="hidden sm:inline cursor-pointer">Logs</span>
+                </button>
+            )}
 
                     {isSelectionMode && selectedIds.length > 0 && (
                         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
@@ -1157,47 +1176,68 @@ const TenantLease = () => {
                 } : null}
             />
 
-            {editRow && (
-                <EditTenantLease
-                    row={editRow}
-                    tenants={records}
-                    onClose={() => setEditRow(null)}
-                    onSave={async (updatedData) => {
-                        try {
-                            const idToUpdate = updatedData._id || updatedData.id;
-                            if (!idToUpdate) {
-                                setNotificationState({ isOpen: true, type: 'error', message: "Error: No Tenant ID found to update.", autoClose: true, duration: 3000 });
-                                return;
-                            }
-                            const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(updatedData)
-                            });
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(errorData.error || "Update failed");
-                            }
-                            setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
-                            await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
-                            fetchTenants();
-                            setEditRow(null);
-                        } catch (error) {
-                            console.error("Update Error:", error);
-                            setNotificationState({ isOpen: true, type: 'error', message: `Failed to update record: ${error.message}`, autoClose: true, duration: 3000 });
-                        }
-                    }}
-                />
-            )}
+      {editRow && (
+        <EditTenantLease 
+          row={editRow} 
+          tenants={records} 
+          onClose={() => setEditRow(null)} 
+          onSave={async (updatedData) => { 
+            try {
+              const idToUpdate = updatedData._id || updatedData.id;
+              if (!idToUpdate) {
+                setNotificationState({ isOpen: true, type: 'error', message: "Error: No Tenant ID found to update.", autoClose: true, duration: 3000 });
+                return;
+              }
 
-            <DeleteModal
-                isOpen={!!deleteRow}
-                onClose={() => setDeleteRow(null)}
-                onConfirm={handleDeleteConfirm}
-                title="Delete Record"
-                message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion."
-                itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""}
-            />
+              
+              const formData = new FormData();
+              Object.keys(updatedData).forEach(key => {
+                 if (key === 'documents') return; 
+                 formData.append(key, updatedData[key]);
+              });
+
+            
+              if (updatedData.documents) {
+                  if (updatedData.documents.businessPermit instanceof File) {
+                      formData.append('businessPermit', updatedData.documents.businessPermit);
+                  }
+                  if (updatedData.documents.validID instanceof File) {
+                      formData.append('validID', updatedData.documents.validID);
+                  }
+                  if (updatedData.documents.contract instanceof File) {
+                      formData.append('contract', updatedData.documents.contract);
+                  }
+              }
+
+              const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
+                method: 'PUT',
+                body: formData 
+              }); 
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Update failed");
+              }
+              setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
+              await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
+              fetchTenants(); 
+              setEditRow(null); 
+            } catch (error) { 
+              console.error("Update Error:", error); 
+              setNotificationState({ isOpen: true, type: 'error', message: `Failed to update record: ${error.message}`, autoClose: true, duration: 3000 });
+            }
+          }}
+        />
+      )}
+      
+      <DeleteModal 
+        isOpen={!!deleteRow} 
+        onClose={() => setDeleteRow(null)} 
+        onConfirm={handleDeleteConfirm} 
+        title="Delete Record" 
+        message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion." 
+        itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} 
+      />
 
             <BroadcastModal
                 isOpen={showNotify}

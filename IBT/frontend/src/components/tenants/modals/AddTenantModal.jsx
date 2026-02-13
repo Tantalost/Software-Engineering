@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Eye, Loader2, ZoomIn } from "lucide-react";
+import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Loader2, ZoomIn } from "lucide-react";
 
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dqgt2uxfe/auto/upload";
-const UPLOAD_PRESET = "ibt_upload";
+import CryptoJS from "crypto-js";
+
+
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
 
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,7 +85,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             setTempSelectedSlots(initialData.slotNo.split(', '));
         }
 
-        // DOCUMENT LOADER
         if (initialData.documents) {
             setDocuments({
                 businessPermit: initialData.documents.businessPermit || null,
@@ -133,7 +134,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [isOpen, initialData]); 
 
-  // MAPPER
   useEffect(() => {
     if (showMapModal) {
       const currentSlots = formData.slotNo ? formData.slotNo.split(', ') : [];
@@ -141,7 +141,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [showMapModal, formData.slotNo]);
 
-  // CALCULATIONS
   useEffect(() => {
     let baseRent = 0;
     let calculatedDueDate = "";
@@ -179,25 +178,28 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   };
 
-  const uploadToCloudinary = async (file) => {
-    const data = new FormData();
-    data.append("file", file);
-    data.append("upload_preset", UPLOAD_PRESET);
-  
-    try {
-      const res = await fetch(CLOUDINARY_URL, { 
-      method: "POST",
-      body: data,
-      });
-      const result = await res.json();
-      return result.secure_url;
-    } catch (error) {
-      console.error("Upload failed", error);
-      return null;
-    }
+  const encryptFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const base64Data = e.target.result; 
+          
+          const pureBase64 = base64Data.split(',')[1]; 
+
+          const encrypted = CryptoJS.AES.encrypt(pureBase64, SECRET_KEY).toString();
+          
+          const blob = new Blob([encrypted], { type: 'application/octet-stream' });
+          resolve(blob);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
-  // SUBMIT
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -212,30 +214,20 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             }).replace(',', ''); 
         };
 
-        const processedDocuments = { ...documents };
-        if (formData.tenantType !== "Permanent") {
-            delete processedDocuments.contract;
-        }
+        const { _id, firstName, middleName, lastName, ...restOfFormData } = formData;
+        const combinedName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
 
-        for (const key of Object.keys(processedDocuments)) {
-            const file = processedDocuments[key];
-            if (!file) continue;
-
-            if (typeof file === 'object' && file instanceof File) {
-                const url = await uploadToCloudinary(file);
-                if (url) processedDocuments[key] = url;
-                else delete processedDocuments[key]; 
-            } 
-            else if (typeof file === 'string' && file.startsWith('data:')) {
-                const url = await uploadToCloudinary(file);
-                if (url) processedDocuments[key] = url;
-                else delete processedDocuments[key];
+        const processedDocs = { ...documents };
+        
+        for (const key of Object.keys(processedDocs)) {
+            const file = processedDocs[key];
+            if (file && typeof file !== 'string') {
+               
+                processedDocs[key] = await encryptFile(file);
+               
+                processedDocs[key].name = file.name; 
             }
         }
-
-        const { _id, firstName, middleName, lastName, ...restOfFormData } = formData;
-        
-        const combinedName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
 
         const newTenant = {
             ...restOfFormData,
@@ -248,7 +240,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             StartDateTime: formatForTable(startDate), 
             DueDateTime: formatForTable(dueDate),    
             status: "Paid", 
-            documents: processedDocuments
+            documents: processedDocs 
         };
 
         await onSave(newTenant);
@@ -284,7 +276,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   const getFileStatus = (file) => {
       if (!file) return "Click to upload";
       if (typeof file === 'string') {
-          if (file.startsWith('data:')) return "Ready to upload";
           return "Attached";
       }
       return file.name; 

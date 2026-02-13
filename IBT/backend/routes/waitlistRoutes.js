@@ -4,10 +4,13 @@ import {
   getWaitlistById, 
   createWaitlistEntry, 
   updateWaitlistEntry,
-  deleteWaitlistEntry 
+  deleteWaitlistEntry,
+  getSecureDocument 
 } from "../controllers/waitlistController.js";
 
 const router = express.Router();
+
+router.get('/doc/:filename', getSecureDocument);
 
 router.get('/', getWaitlist);
 router.get('/:id', getWaitlistById);
