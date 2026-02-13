@@ -15,10 +15,10 @@ const StatCardGroupPark = ({ cars, motorcycles, totalVehicles, totalRevenue }) =
         icon={Bike}
         title="Motorcycles"
         value={motorcycles}
-        color="red"
+        color="orange"
       />
 
-       <StatCard icon={CarFront} title="Total Vehicles" value={totalVehicles}  color="emerald" />
+       <StatCard icon={CarFront} title="Total Vehicles" value={totalVehicles}  color="black" />
 
       <StatCard
         icon={PhilippinePesoIcon}

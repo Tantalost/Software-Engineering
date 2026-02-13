@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useLocation } from "react-router-dom"; 
+import { useLocation } from "react-router-dom";
 import Layout from "../components/layout/Layout";
+import headerImg from "../assets/Header.png";
+import footerImg from "../assets/FOOTER.png";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
@@ -95,7 +97,7 @@ const DataRenderer = ({ reportPayload }) => {
 };
 
 const Reports = () => {
-  const location = useLocation(); 
+  const location = useLocation();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -104,7 +106,7 @@ const Reports = () => {
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [timeRange, setTimeRange] = useState("All");
-  
+
   const [showLogModal, setShowLogModal] = useState(false);
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -138,20 +140,20 @@ const Reports = () => {
     fetchReports();
   }, []);
 
-  
+
   useEffect(() => {
     if (records.length > 0 && location.state?.openReportId) {
       const targetId = location.state.openReportId;
-      
+
       const reportToOpen = records.find(r => r.id === targetId || r._id === targetId);
-      
+
       if (reportToOpen) {
-        setViewRow(reportToOpen); 
-        
+        setViewRow(reportToOpen);
+
         window.history.replaceState({}, document.title);
       }
     }
-  }, [records, location.state]); 
+  }, [records, location.state]);
 
   const filtered = useMemo(() => {
     return records.filter((report) => {
@@ -187,45 +189,103 @@ const Reports = () => {
 
   // MAIN EXPORT FUNCTIONS (List)
   const handleExportExcel = () => {
-    const dataToExport = filtered.map((item) => ({
-      "Report ID": item.id,
-      "Type": item.type,
-      "Author": item.author,
-      "Date": new Date(item.createdAt || item.date).toLocaleDateString(),
-    }));
+    if (filtered.length === 0) return alert("No records to export.");
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Reports");
+    const dateStr = new Date().toLocaleDateString();
+    const operator = localStorage.getItem("authName") || "Admin";
 
-    XLSX.writeFile(workbook, `Reports_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Helper to extract revenue safely from different report structures
+    const getRevenue = (item) => item.data?.statistics?.totalRevenue || item.data?.statistics?.revenue || 0;
+
+    const overallTotalRevenue = filtered.reduce((sum, item) => sum + getRevenue(item), 0);
+
+    // Define rows to match the "OVERALL REPORTS" reference (Source 6 & 7)
+    const rows = [
+      ["", "", "OVERALL REPORTS", ""],
+      [], // Spacer
+      [`Date: ${dateStr}`, "", "Overall Total Revenue", `₱${overallTotalRevenue.toFixed(2)}`],
+      [`Operator: ${operator}`, "", "", ""],
+      [], // Spacer
+      ["Report ID", "Department", "Operator", "Revenue"] // Table Headers (Source 6)
+    ];
+
+    // Map filtered records to the required columns
+    filtered.forEach((item) => {
+      rows.push([
+        item.id ? item.id.substring(0, 8).toUpperCase() : "-",
+        item.type || "-",
+        item.author || "-",
+        `₱${getRevenue(item).toFixed(2)}`
+      ]);
+    });
+
+    const csvContent = rows
+      .map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Overall_Terminal_Report_${new Date().toISOString().split("T")[0]}.csv`);
+    link.click();
+
+    logActivity(role, "EXPORT_OVERALL_EXCEL", `Exported Overall Report summary`, "Reports");
   };
 
   const handleExportPDF = () => {
-    const doc = new jsPDF();
+    if (filtered.length === 0) return alert("No records to export.");
 
-    doc.text("Reports List", 14, 15);
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const getRevenue = (item) => item.data?.statistics?.totalRevenue || item.data?.statistics?.revenue || 0;
+    const overallTotalRevenue = filtered.reduce((sum, item) => sum + getRevenue(item), 0);
+
+    // 1. Header Branding
+    doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+
+    // 2. Report Title & Metadata (Source 6 & 7)
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("OVERALL REPORTS", pageWidth / 2, 45, { align: "center" });
+
     doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+    doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, 15, 61);
 
-    const tableColumn = ["Report ID", "Type", "Author", "Date"];
-    
-    const tableRows = filtered.map((item) => [
-      item.id,
-      item.type,
-      item.author,
-      new Date(item.createdAt || item.date).toLocaleDateString(),
-    ]);
+    doc.setFont("helvetica", "bold");
+    doc.text("Overall Total Revenue:", pageWidth - 70, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(`₱${overallTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, pageWidth - 15, 55, { align: "right" });
 
+    // 3. Data Table (Source 6)
     autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 25,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [16, 185, 129] },
+      startY: 70,
+      margin: { bottom: 35 },
+      head: [["Report ID", "Department", "Operator", "Revenue"]],
+      body: filtered.map((item) => [
+        item.id ? item.id.substring(0, 8).toUpperCase() : "-",
+        item.type || "-",
+        item.author || "-",
+        `₱${getRevenue(item).toFixed(2)}`,
+      ]),
+      headStyles: { fillColor: [220, 38, 38] }, // Zamboanga IBT Red
+      styles: { fontSize: 9, halign: 'center' },
+      columnStyles: {
+        0: { halign: 'left' }, // Report ID
+        1: { halign: 'left' }, // Department
+        2: { halign: 'left' }, // Operator
+      },
+      didDrawPage: (data) => {
+        // 4. Footer Branding
+        doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+      },
     });
 
-    doc.save(`Reports_Export_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Overall_Terminal_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    logActivity(role, "EXPORT_OVERALL_PDF", `Exported Overall Report summary to PDF`, "Reports");
   };
 
   // SINGLE REPORT EXPORT
@@ -258,7 +318,7 @@ const Reports = () => {
   };
 
   const handleSingleExportPDF = (report) => {
-    const doc = new jsPDF();    
+    const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text("Report Details", 14, 15);
     doc.setFontSize(10);
@@ -271,36 +331,36 @@ const Reports = () => {
 
     let currentY = 60;
     if (report.data?.statistics) {
-        doc.setFontSize(12);
-        doc.text("Statistics", 14, currentY);
-        currentY += 10;
-        
-        const statsData = Object.entries(report.data.statistics).map(([k, v]) => [k, v]);
-        autoTable(doc, {
-            startY: currentY,
-            head: [['Metric', 'Value']],
-            body: statsData,
-            theme: 'grid',
-            headStyles: { fillColor: [240, 240, 240], textColor: 50 },
-            styles: { fontSize: 10 }
-        });
-        currentY = doc.lastAutoTable.finalY + 15;
+      doc.setFontSize(12);
+      doc.text("Statistics", 14, currentY);
+      currentY += 10;
+
+      const statsData = Object.entries(report.data.statistics).map(([k, v]) => [k, v]);
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Metric', 'Value']],
+        body: statsData,
+        theme: 'grid',
+        headStyles: { fillColor: [240, 240, 240], textColor: 50 },
+        styles: { fontSize: 10 }
+      });
+      currentY = doc.lastAutoTable.finalY + 15;
     }
 
     if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
-        doc.setFontSize(12);
-        doc.text("Data Records", 14, currentY);
-        
-        const headers = Object.keys(report.data.data[0]);
-        const rows = report.data.data.map(row => Object.values(row));
+      doc.setFontSize(12);
+      doc.text("Data Records", 14, currentY);
 
-        autoTable(doc, {
-            startY: currentY + 5,
-            head: [headers],
-            body: rows,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [16, 185, 129] }
-        });
+      const headers = Object.keys(report.data.data[0]);
+      const rows = report.data.data.map(row => Object.values(row));
+
+      autoTable(doc, {
+        startY: currentY + 5,
+        head: [headers],
+        body: rows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [16, 185, 129] }
+      });
     }
 
     doc.save(`${report.type}_Report_${report.id}.pdf`);
@@ -335,37 +395,37 @@ const Reports = () => {
 
     setLoading(true);
     try {
-        const processPromises = selectedIds.map(async (id) => {
-            const report = records.find(r => r.id === id);
-            if (!report) return;
+      const processPromises = selectedIds.map(async (id) => {
+        const report = records.find(r => r.id === id);
+        if (!report) return;
 
-            await fetch(ARCHIVE_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    type: "Report",
-                    description: `${report.type} Report by ${report.author}`,
-                    originalData: report,
-                    archivedBy: role
-                })
-            });
-            
-            await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+        await fetch(ARCHIVE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "Report",
+            description: `${report.type} Report by ${report.author}`,
+            originalData: report,
+            archivedBy: role
+          })
         });
 
-        await Promise.all(processPromises);
-        await logActivity(role, "BULK_DELETE_REPORTS", `Archived & Deleted ${selectedIds.length} reports`, "Reports");
-        
-        await fetchReports();
-        setSelectedIds([]);
-        setIsSelectionMode(false);
-        alert(`Successfully archived and deleted ${selectedIds.length} reports.`);
+        await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      });
+
+      await Promise.all(processPromises);
+      await logActivity(role, "BULK_DELETE_REPORTS", `Archived & Deleted ${selectedIds.length} reports`, "Reports");
+
+      await fetchReports();
+      setSelectedIds([]);
+      setIsSelectionMode(false);
+      alert(`Successfully archived and deleted ${selectedIds.length} reports.`);
 
     } catch (error) {
-        console.error("Bulk action failed", error);
-        alert("Failed to process some records.");
+      console.error("Bulk action failed", error);
+      alert("Failed to process some records.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -389,40 +449,40 @@ const Reports = () => {
     setArchiveRow(null);
 
     try {
-        await fetch(ARCHIVE_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                type: "Report",
-                description: `${row.type} Report by ${row.author}`,
-                originalData: row,
-                archivedBy: role
-            })
-        });
+      await fetch(ARCHIVE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Report",
+          description: `${row.type} Report by ${row.author}`,
+          originalData: row,
+          archivedBy: role
+        })
+      });
 
-        await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
-        await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${row.id}`, "Reports");
-        
-        setRecords(records.filter((r) => r.id !== row.id));
-        alert("Report moved to archives.");
+      await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
+      await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${row.id}`, "Reports");
+
+      setRecords(records.filter((r) => r.id !== row.id));
+      alert("Report moved to archives.");
     } catch (e) {
-        console.error(e);
-        alert("Failed to archive report.");
+      console.error(e);
+      alert("Failed to archive report.");
     }
   };
 
-  const tableColumns = isSelectionMode 
+  const tableColumns = isSelectionMode
     ? [
-        <div key="header-check" className="flex items-center">
-            <input 
-                type="checkbox" 
-                checked={isAllSelected}
-                onChange={handleSelectAll}
-                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-            />
-        </div>,
-        "Report ID", "Type", "Author", "Date"
-      ]
+      <div key="header-check" className="flex items-center">
+        <input
+          type="checkbox"
+          checked={isAllSelected}
+          onChange={handleSelectAll}
+          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+        />
+      </div>,
+      "Report ID", "Type", "Author", "Date"
+    ]
     : ["Report ID", "Type", "Author", "Date"];
 
   return (
@@ -436,10 +496,10 @@ const Reports = () => {
         />
         <div className="flex items-center justify-end gap-3">
           <div className="h-[44px] flex items-center"
-          title='Download Reports'>
-            <ExportMenu 
-              onExportExcel={handleExportExcel} 
-              onExportPDF={handleExportPDF} 
+            title='Download Reports'>
+            <ExportMenu
+              onExportExcel={handleExportExcel}
+              onExportPDF={handleExportPDF}
             />
           </div>
         </div>
@@ -490,91 +550,90 @@ const Reports = () => {
         </div>
 
         <div className="flex items-center justify-end gap-2">
-            <button 
-                onClick={() => setShowLogModal(true)} 
-                className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
-                title="View Logs"
-            >
-                <History size={18} /> 
-                <span className="hidden xl:inline">Logs</span>
-            </button>
+          <button
+            onClick={() => setShowLogModal(true)}
+            className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
+            title="View Logs"
+          >
+            <History size={18} />
+            <span className="hidden xl:inline">Logs</span>
+          </button>
 
-            {isSelectionMode && selectedIds.length > 0 && (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                  <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-                    {selectedIds.length} Selected
-                  </span>
-                  <button
-                    onClick={handleBulkDelete}
-                    title="Delete Selected"
-                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-button"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-            )}
-           
-            {(role === "lol") && (<button
-              onClick={toggleSelectionMode}
-              title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${
-              isSelectionMode
-              ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
-              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
-              }`}
+          {isSelectionMode && selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+              <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                {selectedIds.length} Selected
+              </span>
+              <button
+                onClick={handleBulkDelete}
+                title="Delete Selected"
+                className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-button"
               >
-              {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-            </button>)}
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+
+          {(role === "lol") && (<button
+            onClick={toggleSelectionMode}
+            title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+            className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${isSelectionMode
+                ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
+                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
+              }`}
+          >
+            {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+          </button>)}
         </div>
 
       </div>
 
       {loading ? (
         <div className="p-8 text-center text-slate-500 flex flex-col items-center">
-            <Loader2 className="animate-spin mb-2" />
-            Loading reports...
+          <Loader2 className="animate-spin mb-2" />
+          Loading reports...
         </div>
       ) : (
         <Table
           columns={tableColumns}
           data={paginatedData.map((report) => {
             const baseData = {
-                id: report.id,
-                reportid: report.id ? report.id.substring(0, 8).toUpperCase() : "ERR",
-                type: report.type,
-                author: report.author,
-                date: new Date(report.createdAt || report.date).toLocaleDateString()
+              id: report.id,
+              reportid: report.id ? report.id.substring(0, 8).toUpperCase() : "ERR",
+              type: report.type,
+              author: report.author,
+              date: new Date(report.createdAt || report.date).toLocaleDateString()
             };
 
             if (isSelectionMode) {
-                return {
-                    select: (
-                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                            <input 
-                                type="checkbox"
-                                checked={selectedIds.includes(report.id)}
-                                onChange={() => toggleSelect(report.id)}
-                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                            />
-                        </div>
-                    ),
-                    ...baseData
-                };
+              return {
+                select: (
+                  <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(report.id)}
+                      onChange={() => toggleSelect(report.id)}
+                      className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                  </div>
+                ),
+                ...baseData
+              };
             }
             return baseData;
           })}
 
           actions={(row) => {
             const fullRecord = records.find(r => r.id === row.id);
-            
+
             return (
               <div className="flex justify-end items-center space-x-2">
-                <TableActions 
-                  onView={() => setViewRow(fullRecord)} 
-                  onDelete={() => setDeleteRow(fullRecord)} 
+                <TableActions
+                  onView={() => setViewRow(fullRecord)}
+                  onDelete={() => setDeleteRow(fullRecord)}
                 />
                 <button onClick={() => setArchiveRow(fullRecord)} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100" title="Archive">
-                    <Archive size={16} />
+                  <Archive size={16} />
                 </button>
 
                 <button
@@ -602,9 +661,9 @@ const Reports = () => {
         }}
       />
 
-      <LogModal 
-        isOpen={showLogModal} 
-        onClose={() => setShowLogModal(false)} 
+      <LogModal
+        isOpen={showLogModal}
+        onClose={() => setShowLogModal(false)}
       />
 
       {viewRow && (
@@ -619,30 +678,30 @@ const Reports = () => {
               </div>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                   <Field label="Source Module" value={viewRow.type} />
-                   <Field label="Submitted By" value={viewRow.author} />
-                   <Field label="Submission Date" value={new Date(viewRow.createdAt || viewRow.date).toLocaleDateString()} />
-                </div>
-                <hr className="border-slate-100 mb-6" />
-                <DataRenderer reportPayload={viewRow.data} />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <Field label="Source Module" value={viewRow.type} />
+                <Field label="Submitted By" value={viewRow.author} />
+                <Field label="Submission Date" value={new Date(viewRow.createdAt || viewRow.date).toLocaleDateString()} />
+              </div>
+              <hr className="border-slate-100 mb-6" />
+              <DataRenderer reportPayload={viewRow.data} />
             </div>
-            
+
             <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-between items-center">
               <div className="flex gap-2">
                 <button
-                    onClick={() => handleSingleExportExcel(viewRow)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors"
+                  onClick={() => handleSingleExportExcel(viewRow)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors"
                 >
-                    <FileSpreadsheet size={16} />
-                    Export Excel
+                  <FileSpreadsheet size={16} />
+                  Export Excel
                 </button>
                 <button
-                    onClick={() => handleSingleExportPDF(viewRow)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors"
+                  onClick={() => handleSingleExportPDF(viewRow)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors"
                 >
-                    <FileText size={16} />
-                    Export PDF
+                  <FileText size={16} />
+                  Export PDF
                 </button>
               </div>
 
@@ -659,23 +718,23 @@ const Reports = () => {
 
       {archiveRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
-                <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Archive size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-800">Confirm Archiving</h3>
-                <p className="text-slate-600 mt-2 text-sm">
-                    Archive Report <strong>{archiveRow.id}</strong>?
-                </p>
-                <div className="mt-6 flex gap-3">
-                    <button onClick={() => setArchiveRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50">
-                        Cancel
-                    </button>
-                    <button onClick={confirmArchive} className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg">
-                        Yes, Archive
-                    </button>
-                </div>
+          <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center">
+            <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Archive size={24} />
             </div>
+            <h3 className="text-xl font-bold text-slate-800">Confirm Archiving</h3>
+            <p className="text-slate-600 mt-2 text-sm">
+              Archive Report <strong>{archiveRow.id}</strong>?
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setArchiveRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50">
+                Cancel
+              </button>
+              <button onClick={confirmArchive} className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg">
+                Yes, Archive
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

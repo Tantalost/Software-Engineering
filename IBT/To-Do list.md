@@ -5,26 +5,21 @@ Color Coding
 
 🔴 **To be Fixed**
 Revisions for web general 
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress** 
 - application rejection should have a note 🔴 **To be Fixed**
-
-Dashboard
-
-Bus Admin
-- export file layout (jayna) 🔴 **To be Fixed**
-
-Parking Admin       
-- chane icon for jeep and motor (venn)  🔴 **To be Fixed**
-- export file layout (venn)  🔴 **To be Fixed**
+- add posting module in notify all for tenants 🔴 **To be Fixed**
+- fix mobile home module 🔴 **To be Fixed**
+- fix superadmin dashboard monthly target card layout 🔴 **To be Fixed**
+- dashboard export format 🔴 **To be Fixed**
 
 
-Terminal Fee Admin
-- as one ang student and senior filter (Venn)  🔴 **To be Fixed**
-- export layout (Venn)  🔴 **To be Fixed**
+
+
 
 
 
 🟡 **In Progress**
+Revisions for web general 
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress** 
 
 
 🟢 **Done**
@@ -44,9 +39,12 @@ Dashboard
 Bus Admin
 - ticket ref should be unique (lloyd) - 🟢 **Done**
 - submit report nawala (Alviar)  🟢 **Done**
+- export file layout (jayna)   🟢 **Done**
 
 Parkin Admin
 - set price should only be visible in the superadmin (Alviar)  🟢 **Done**
+- chane icon for jeep and motor (venn)    🟢 **Done**
+- export file layout (venn)   🟢 **Done**
 
 Lost and Found admin
 - should not have a description (Jayna)  🟢 **Done**
@@ -58,6 +56,8 @@ Bus Admin
 Terminal Fee
 - remove date search filter (Alviar)  🟢 **Done**
 - Change "Tickets" to "Terminal Fee" (Jayna)  🟢 **Done**
+- as one ang student and senior filter (Venn) 🟢 **Done**
+- export layout (Venn)   🟢 **Done**
 
 Manage Employee
 - create backend for the admins with role and connect it to MongoDB (lloyd) 🟢 **Done**
