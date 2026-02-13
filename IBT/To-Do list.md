@@ -12,8 +12,7 @@ Revisions for web general
 
 🟡 **In Progress**
 Revisions for web general 
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress** 
-
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress**
 
 🟢 **Done**
 REVISIONS FOR WEB
