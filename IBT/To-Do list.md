@@ -57,3 +57,18 @@ Manage Employee
 - create backend for the admins with role and connect it to MongoDB (lloyd) 🟢 **Done**
 - NAME + role for admin, dynamic and encrypted accounts (Should reflect to the whole system) 🟢 **Done**
 - should be able to edit name and email (Lloyd) 🟢 **Done**
+
+Bugs 
+dashboard - PDF download not working
+
+Buses - set price working but not reflecting
+
+Terminal fee - Student/senior/PWD save ticket not working / Set price mag save pero di nag rereflect sa table
+
+Tenant/Lease - If mag add ng new tenant di lumalabas sa map
+
+Notification di nag reredirect
+
+Lost&Found - Di nag Sasave if mag add new
+
+*Make the design consistent for (set price/ add new/ export) options
