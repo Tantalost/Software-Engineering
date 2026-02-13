@@ -10,12 +10,6 @@ Revisions for web general
 - dashboard export format 🔴 **To be Fixed**
 - connect set price change to actual prices for bus, terminal (lloyd) 🔴 **To be Fixed**
 
-
-
-
-
-
-
 🟡 **In Progress**
 Revisions for web general 
 - Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress** 
