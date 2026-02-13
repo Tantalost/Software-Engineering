@@ -438,13 +438,7 @@ const TerminalFees = () => {
   };
 
   const handleFinalizeAction = () => {
-<<<<<<< HEAD
-    const requiredPassword = role === "ticket"
-      ? (localStorage.getItem("ticketPassword") || "ticket123")
-      : (localStorage.getItem("authPassword") || "admin123");
-=======
     const requiredPassword = localStorage.getItem("authPassword") || "";
->>>>>>> 8cddfa9520f7715982bc223bb51e6e8826e9b080
 
     if (passwordInput && passwordInput === requiredPassword) {
       const recordId = pendingEdit?._id || pendingEdit?.id;
