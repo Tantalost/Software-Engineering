@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { X, Upload, FileText, PhilippinePeso, Map, Check, ChevronDown, Eye } from "lucide-react";
 
+const API_URL = "http://localhost:3000/api"; 
+
 const FormInput = ({ label, type = "text", readOnly = false, ...props }) => (
   <div className="flex flex-col gap-1">
     <label className="text-sm font-medium text-slate-700">{label}</label>
@@ -148,6 +150,15 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
     onSave(processedData);
   };
 
+  // HELPER: Get Secure URL
+  const getFileUrl = (pathOrString) => {
+    if (!pathOrString) return null;
+    if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) {
+        return pathOrString;
+    }
+    return `${API_URL}/stalls/doc/${pathOrString}`; 
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-3xl rounded-xl bg-white shadow-2xl ring-1 ring-slate-900/5 flex flex-col max-h-[90vh]">
@@ -291,7 +302,9 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            window.open(currentFile, '_blank', 'noopener,noreferrer');
+                            
+                            const secureUrl = getFileUrl(currentFile);
+                            window.open(secureUrl, '_blank', 'noopener,noreferrer');
                           }}
                           className="absolute top-2 right-2 p-1.5 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all z-10"
                           title="View Current File"

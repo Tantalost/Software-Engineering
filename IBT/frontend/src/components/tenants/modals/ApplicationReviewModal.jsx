@@ -3,69 +3,31 @@ import {
   ArrowLeft, CheckCircle, Lock, Unlock, FileText, User, 
   CreditCard, X, ZoomIn, PenTool, Download 
 } from "lucide-react";
-import CryptoJS from 'crypto-js';
 
-const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
+const API_URL = "http://localhost:3000/api"; 
 
 const ApplicationReviewModal = ({ 
   isOpen, 
   reviewData,
-
   onBack, 
   onUnlockPayment, 
   onProceedToLease,
   onRequestContract 
-  
 }) => {
   const [previewImage, setPreviewImage] = useState(null);
 
-  const decryptData = (encryptedString) => {
-    if (!reviewData) return null;
-    if (!encryptedString) return null;
-
-    if (encryptedString.startsWith("data:")) {
-        return encryptedString;
+  const getFileUrl = (pathOrString) => {
+    if (!pathOrString) return null;
+    
+    if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) {
+        return pathOrString;
     }
-
-    try {
-      const bytes = CryptoJS.AES.decrypt(encryptedString, ENCRYPTION_KEY);
-      const originalText = bytes.toString(CryptoJS.enc.Utf8);
-
-      if (!originalText) return null;
-      
-     
-      const isValidFormat = originalText.startsWith("data:image") || originalText.startsWith("data:application/pdf");
-
-      if (!isValidFormat) {
-          console.error("Debug: Decrypted string is unknown format.");
-          return null;
-      }
-
-      return originalText;
-    } catch (error) {
-      console.error("Debug: Decryption Crashed", error);
-      return null;
-    }
+    
+    return `${API_URL}/waitlist/doc/${pathOrString}`; 
   };
 
- 
-  const openPdf = (base64Pdf) => {
-    try {
-      
-      const byteCharacters = atob(base64Pdf.split(',')[1]);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-      
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-    } catch (e) {
-      console.error("Failed to open PDF", e);
-      alert("Could not open PDF. Try downloading it instead.");
-    }
+  const openPdf = (url) => {
+    window.open(url, '_blank');
   };
 
   const safeData = reviewData || {};
@@ -77,24 +39,20 @@ const ApplicationReviewModal = ({
     const showContractSlot = isPermanent || reviewData.contractUrl;
     
     const rawDocs = [
-      { label: "Valid ID", url: reviewData.validIdUrl },
-      { label: "Business Permit", url: reviewData.permitUrl },
-      { label: "Brgy Clearance", url: reviewData.clearanceUrl },
-      { label: "Payment Receipt", url: reviewData.receiptUrl },
-      ...(showContractSlot ? [{ label: "Signed Contract", url: reviewData.contractUrl }] : [])
+      { label: "Valid ID", url: getFileUrl(reviewData.validIdUrl) },
+      { label: "Business Permit", url: getFileUrl(reviewData.permitUrl) },
+      { label: "Brgy Clearance", url: getFileUrl(reviewData.clearanceUrl) },
+      { label: "Payment Receipt", url: getFileUrl(reviewData.receiptUrl) },
+      ...(showContractSlot ? [{ label: "Signed Contract", url: getFileUrl(reviewData.contractUrl) }] : [])
     ];
 
-    return rawDocs.map(doc => ({
-        ...doc,
-        url: decryptData(doc.url)
-    }));
+    return rawDocs;
   }, [reviewData, isPermanent]);
 
   if (!isOpen || !reviewData) return null;
 
   const displayId = reviewData._id ? String(reviewData._id).slice(-6).toUpperCase() : "---";
   const status = reviewData.status || "Pending";
-
   
   const isPaymentReview = status === "PAYMENT_REVIEW"; 
   const isContractReview = status === "CONTRACT_REVIEW";
@@ -107,7 +65,8 @@ const ApplicationReviewModal = ({
     e.stopPropagation();
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${label.replace(/\s+/g, '_')}_${reviewData.name.replace(/\s+/g, '_')}.png`; // Browser will auto-detect extension if it's PDF
+    link.target = "_blank";
+    link.download = `${label.replace(/\s+/g, '_')}_${reviewData.name.replace(/\s+/g, '_')}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -115,7 +74,6 @@ const ApplicationReviewModal = ({
 
   return (
     <>
-  
       {previewImage && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -162,7 +120,6 @@ const ApplicationReviewModal = ({
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100">
                 <User size={18} className="text-emerald-600" /> Applicant Information
@@ -201,17 +158,16 @@ const ApplicationReviewModal = ({
                             <Download size={14} />
                         </button>
 
-                        {(doc.url.startsWith("data:application/pdf") || doc.url.toLowerCase().endsWith(".pdf")) ? (
+                        {(doc.url.toLowerCase().endsWith(".pdf") || doc.url.startsWith("data:application/pdf")) ? (
                             <div 
                                 className="w-full h-full flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 transition-colors"
-                                onClick={() => openPdf(doc.url)} // Use safe open function
+                                onClick={() => openPdf(doc.url)}
                             >
                                 <FileText size={40} className="text-red-500 mb-2" />
                                 <span className="text-xs font-bold text-red-700">PDF Document</span>
                                 <span className="text-[10px] text-red-500">Click to View</span>
                             </div>
                         ) : (
-                            
                             <div className="w-full h-full" onClick={() => setPreviewImage(doc.url)}>
                                 <img src={doc.url} alt={doc.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
@@ -264,20 +220,17 @@ const ApplicationReviewModal = ({
                 <Unlock size={18} /> Verify & Unlock Payment
               </button>
             )}
-
             {showRequestContractBtn && (
                 <button onClick={onRequestContract} className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-orange-600 transition-all flex items-center gap-2 active:scale-95">
                   <PenTool size={18} /> Request Contract
                 </button>
             )}
-
             {showAddTenantBtn && (
               <button onClick={onProceedToLease} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95">
                 <CheckCircle size={18} /> Approve & Create Lease
               </button>
             )}
           </div>
-
         </div>
       </div>
     </>

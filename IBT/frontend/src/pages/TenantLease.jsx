@@ -201,7 +201,7 @@ const TenantLease = () => {
     const interval = setInterval(() => {
         fetchTenants();
         fetchWaitlist();
-    }, 5000); 
+    }, 30000); 
 
     return () => clearInterval(interval);
   }, []);
@@ -584,16 +584,35 @@ const TenantLease = () => {
 
   const handleAddTenant = async (newTenant) => {
     try {
-      
       const waitlistId = transferApplicant?.id || transferApplicant?._id;
+      
+      const formData = new FormData();
+      
+      Object.keys(newTenant).forEach(key => {
+        if (key === 'documents') return;
+        formData.append(key, newTenant[key]);
+      });
+      
+      if (waitlistId) {
+          formData.append('transferWaitlistId', waitlistId);
+      }
+
+      if (newTenant.documents) {
+        if (newTenant.documents.businessPermit instanceof File) {
+            formData.append('businessPermit', newTenant.documents.businessPermit);
+        }
+        if (newTenant.documents.validID instanceof File) {
+            formData.append('validID', newTenant.documents.validID);
+        }
+        if (newTenant.documents.contract instanceof File) {
+            formData.append('contract', newTenant.documents.contract);
+        }
+      }
 
       const response = await fetch(`${API_URL}/tenants`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-              ...newTenant, 
-              transferWaitlistId: waitlistId 
-          })
+          body: formData, 
+          
       });
       
       if (response.ok) {
@@ -852,7 +871,7 @@ const TenantLease = () => {
             <Map size={18} /> <span className="hidden sm:inline">View Map</span>
           </button>
           <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
-            <ClipboardList size={18} /> <span className="hidden sm:inline">Waitlist</span>
+            <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
             {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
           </button>
         </div>
@@ -1036,11 +1055,32 @@ const TenantLease = () => {
                 setNotificationState({ isOpen: true, type: 'error', message: "Error: No Tenant ID found to update.", autoClose: true, duration: 3000 });
                 return;
               }
+
+              
+              const formData = new FormData();
+              Object.keys(updatedData).forEach(key => {
+                 if (key === 'documents') return; 
+                 formData.append(key, updatedData[key]);
+              });
+
+            
+              if (updatedData.documents) {
+                  if (updatedData.documents.businessPermit instanceof File) {
+                      formData.append('businessPermit', updatedData.documents.businessPermit);
+                  }
+                  if (updatedData.documents.validID instanceof File) {
+                      formData.append('validID', updatedData.documents.validID);
+                  }
+                  if (updatedData.documents.contract instanceof File) {
+                      formData.append('contract', updatedData.documents.contract);
+                  }
+              }
+
               const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedData)
+                body: formData 
               }); 
+
               if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || "Update failed");
