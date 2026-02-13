@@ -6,10 +6,9 @@ Color Coding
 🔴 **To be Fixed**
 Revisions for web general 
 - application rejection should have a note 🔴 **To be Fixed**
-- add posting module in notify all for tenants 🔴 **To be Fixed**
 - fix mobile home module 🔴 **To be Fixed**
-- fix superadmin dashboard monthly target card layout 🔴 **To be Fixed**
 - dashboard export format 🔴 **To be Fixed**
+- connect set price change to actual prices for bus, terminal (lloyd) 🔴 **To be Fixed**
 
 
 
@@ -28,6 +27,7 @@ REVISIONS FOR WEB
 - Buses Page dapat maka add New Company Buses - 🟢 **Done**
 - Add Tooltip - 🟢 **Done**
 - remove clear history - 🟢 **Done**
+- add posting module in notify all for tenants 🟢 **Done**
 
 Dashboard
 - Fix Revenue value. Value does not reflect the submitted revenue (Lloyd) - 🟢 **Done**
@@ -35,6 +35,7 @@ Dashboard
 - Align set targets with download and week, month year, (Alviar) 🟢 **Done**
 - remove value in the operation analytics (Venn) 🟢 **Done**
 - notification status number is static.(venn) 🟢 **Done**
+- fix superadmin dashboard monthly target card layout 🟢 **Done**
 
 Bus Admin
 - ticket ref should be unique (lloyd) - 🟢 **Done**
