@@ -31,113 +31,150 @@ import { submitPageReport } from "../utils/reportService.js";
 const API_URL = "http://localhost:3000/api";
 const ARCHIVE_URL = "http://localhost:3000/api/archives";
 
-const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft, tenantCount }) => {
+const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft }) => {
     if (!isOpen) return null;
 
-    const handleTemplateClick = () => {
-        setDraft(prev => ({
-            ...prev,
-            title: "Payment Reminder: Due Date Approaching",
-            message: "Dear Tenant,\n\nThis is a friendly reminder that your rent payment is due within the next 5 days. Please ensure your payment is settled to avoid penalties.\n\nThank you!",
-            templateApplied: true
-        }));
+    const getCurrentDateTime = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) setDraft(prev => ({ ...prev, attachment: file }));
+    };
+
+    const removeFile = () => setDraft(prev => ({ ...prev, attachment: null }));
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
-                <div className="flex items-center justify-between mb-5 border-b pb-3">
-                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <Bell className="text-emerald-600" size={24} />
-                        Broadcast Notification
-                    </h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors">
-                        <X size={24} />
+            {/* Modal Container: Fixed width and max-height to ensure it fits the screen */}
+            <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
+                
+                {/* Fixed Header */}
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800">Broadcast Message</h3>
+                        <p className="text-xs text-slate-500">Manage announcements and scheduling</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-red-500 p-2 rounded-full hover:bg-slate-50 transition-all">
+                        <X size={20} />
                     </button>
                 </div>
 
-                <div className="space-y-4">
+                {/* --- Scrollable Body Pane --- */}
+                <div className="p-6 overflow-y-auto custom-scrollbar space-y-5">
+                    {/* Subject Input */}
                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
-                            <Filter size={14} /> Target Audience
-                        </label>
-                        <select
-                            value={draft.targetGroup}
-                            onChange={(e) => setDraft({ ...draft, targetGroup: e.target.value })}
-                            className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
-                        >
-                            <option value="All">All Tenants</option>
-                            <option value="Permanent">Permanent Tenants Only</option>
-                            <option value="Night Market">Night Market Only</option>
-                        </select>
-                    </div>
-
-                    <div className="flex justify-end">
-                        <button
-                            type="button"
-                            onClick={handleTemplateClick}
-                            className="text-xs flex items-center gap-1 text-emerald-600 font-semibold hover:text-emerald-700 transition-colors bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100"
-                        >
-                            <Wand2 size={12} /> Auto-fill "Due Near" Template
-                        </button>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Title / Subject</label>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Subject</label>
                         <input
                             type="text"
                             value={draft.title}
                             onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                            placeholder="e.g. Important Announcement"
-                            className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
+                            placeholder="Announcement Title"
+                            className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
                         />
                     </div>
+
+                    {/* Message Body */}
                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">Message Body</label>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Message</label>
                         <textarea
                             value={draft.message}
                             onChange={(e) => setDraft({ ...draft, message: e.target.value })}
-                            placeholder="Type your message here..."
-                            rows={4}
-                            className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                            placeholder="Write your message here..."
+                            rows={3}
+                            className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none resize-none transition-all text-sm"
                         />
                     </div>
 
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                        <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
-                            <Clock size={14} /> Schedule Send (Optional)
-                        </label>
-                        <div className="relative">
-                            <Calendar className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                            <input
-                                type="datetime-local"
-                                value={draft.scheduleTime}
-                                onChange={(e) => setDraft({ ...draft, scheduleTime: e.target.value })}
-                                className="w-full pl-10 p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
-                            />
+                    {/* Upload Area */}
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Attachment</label>
+                        {!draft.attachment ? (
+                            <div className="relative group">
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={handleFileChange}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                />
+                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 bg-slate-50/30 flex flex-col items-center justify-center group-hover:border-emerald-400 group-hover:bg-emerald-50/30 transition-all">
+                                    <Download className="text-slate-300 group-hover:text-emerald-500 mb-2" size={20} />
+                                    <p className="text-xs font-medium text-slate-600">Click or drag to upload</p>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">PDF or Image (Max 10MB)</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-3 p-3 rounded-xl border border-emerald-100 bg-emerald-50/30 animate-in fade-in slide-in-from-top-1">
+                                <div className="w-8 h-10 bg-white rounded border border-emerald-100 flex items-center justify-center shadow-sm">
+                                    <FileText className="text-emerald-500" size={16} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-slate-700 truncate">{draft.attachment.name}</p>
+                                    <p className="text-[10px] text-slate-400">{(draft.attachment.size / (1024 * 1024)).toFixed(2)} MB</p>
+                                </div>
+                                <button onClick={removeFile} className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Timing */}
+                    <div className="space-y-3">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Post Timing</label>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setDraft({...draft, isScheduled: false, scheduleTime: ""})}
+                                className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${!draft.isScheduled ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                Post Now
+                            </button>
+                            <button 
+                                onClick={() => setDraft({...draft, isScheduled: true})}
+                                className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${draft.isScheduled ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                Schedule
+                            </button>
                         </div>
-                        <p className="text-[10px] text-slate-500 mt-1 pl-1">
-                            Leave blank to send immediately.
-                        </p>
+
+                        {draft.isScheduled && (
+                            <div className="pt-1 animate-in fade-in slide-in-from-top-2">
+                                <input
+                                    type="datetime-local"
+                                    min={getCurrentDateTime()} 
+                                    value={draft.scheduleTime}
+                                    onChange={(e) => setDraft({ ...draft, scheduleTime: e.target.value })}
+                                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-                    <button onClick={onClose} className="px-4 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 font-medium transition-colors">
+                {/* Fixed Footer */}
+                <div className="p-6 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50/30 rounded-b-2xl">
+                    <button onClick={onClose} className="flex-1 py-3 px-4 rounded-xl text-slate-600 text-sm font-bold border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
                     <button
                         onClick={onBroadcast}
-                        className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-md transition-all flex items-center gap-2"
+                        disabled={!draft.title || !draft.message || (draft.isScheduled && !draft.scheduleTime)}
+                        className="flex-1 py-3 px-4 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-black shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {draft.scheduleTime ? "Schedule Broadcast" : "Send Now"}
+                        {draft.isScheduled ? "Schedule" : "Send Broadcast"}
                     </button>
                 </div>
             </div>
         </div>
     );
 };
-
 const TenantLease = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
@@ -184,6 +221,8 @@ const TenantLease = () => {
         message: "",
         targetGroup: "All",
         scheduleTime: "",
+        isScheduled: false,
+        attachment: null,
         templateApplied: false
     });
 
@@ -700,39 +739,76 @@ const TenantLease = () => {
     };
 
     const handleBroadcast = async () => {
+        // 1. Prepare Target Recipients
         let targetTenants = records;
         if (notifyDraft.targetGroup !== "All") {
             targetTenants = records.filter(t => t.tenantType === notifyDraft.targetGroup);
         }
-        if (notifyDraft.templateApplied) {
-            const today = new Date();
-            const next5Days = new Date();
-            next5Days.setDate(today.getDate() + 5);
-            targetTenants = targetTenants.filter(t => {
-                if (!t.DueDateTime) return false;
-                const due = new Date(t.DueDateTime);
-                return due >= today && due <= next5Days;
-            });
-            if (targetTenants.length === 0) {
-                setNotificationState({ isOpen: true, type: 'error', message: "No tenants found with due dates in the next 5 days.", autoClose: true, duration: 3000 });
-                return;
-            }
+
+        // 2. Build FormData for File Upload
+        const formData = new FormData();
+        formData.append("title", notifyDraft.title);
+        formData.append("message", notifyDraft.message);
+        formData.append("targetGroup", notifyDraft.targetGroup);
+        formData.append("source", "Tenant Lease");
+
+        // Add scheduling data
+        if (notifyDraft.isScheduled && notifyDraft.scheduleTime) {
+            formData.append("scheduleTime", notifyDraft.scheduleTime);
         }
-        const payload = {
-            title: notifyDraft.title,
-            message: notifyDraft.message,
-            recipients: targetTenants.map(t => t.email).filter(Boolean),
-            recipientIds: targetTenants.map(t => t.id),
-            scheduleTime: notifyDraft.scheduleTime || null,
-            source: "Tenant Lease",
-        };
-        await logActivity(role, "BROADCAST_MSG", `Sent broadcast to ${targetTenants.length} tenants`, "Tenants");
-        setShowNotify(false);
-        setNotifyDraft({ title: "", message: "", targetGroup: "All", scheduleTime: "", templateApplied: false });
-        if (payload.scheduleTime) {
-            setNotificationState({ isOpen: true, type: 'success', message: `Broadcast scheduled for ${new Date(payload.scheduleTime).toLocaleString()}`, autoClose: true, duration: 4000 });
-        } else {
-            setNotificationState({ isOpen: true, type: 'success', message: `Broadcast sent to ${targetTenants.length} tenants!`, autoClose: true, duration: 3000 });
+
+        // Add file attachment if it exists
+        if (notifyDraft.attachment) {
+            formData.append("file", notifyDraft.attachment);
+        }
+
+        // Add recipient IDs
+        const recipientIds = targetTenants.map(t => t.id || t._id);
+        formData.append("recipientIds", JSON.stringify(recipientIds));
+
+        try {
+            // 3. Send to Backend
+            // Note: Change this URL to your specific notification/broadcast endpoint
+            const response = await fetch(`${API_URL}/notifications/broadcast`, {
+                method: 'POST',
+                // Do NOT set Content-Type header when using FormData; 
+                // the browser will set it automatically with the correct boundary
+                body: formData
+            });
+
+            if (!response.ok) throw new Error("Failed to send broadcast");
+
+            // 4. Log and Notify User
+            await logActivity(role, "BROADCAST_MSG", `Sent/Scheduled broadcast: ${notifyDraft.title}`, "Tenants");
+
+            setShowNotify(false);
+            setNotifyDraft({
+                title: "",
+                message: "",
+                targetGroup: "All",
+                scheduleTime: "",
+                isScheduled: false,
+                attachment: null,
+                templateApplied: false
+            });
+
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: notifyDraft.isScheduled ? "Broadcast scheduled successfully!" : "Broadcast sent to all tenants!",
+                autoClose: true,
+                duration: 3000
+            });
+
+        } catch (error) {
+            console.error("Broadcast Error:", error);
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to process broadcast.",
+                autoClose: true,
+                duration: 3000
+            });
         }
     };
 
@@ -886,7 +962,7 @@ const TenantLease = () => {
                     <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center cursor-pointer"
                         title='Add New Tenant'> + Add New </button>
                     {role === "superadmin" && (<button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer"
-                        title='Notify All Tenants'> Notify All </button>)}
+                        title='Notify All Tenants'> Broadcast </button>)}
 
                     <ExportMenu
                         onPrint={() => window.print()}

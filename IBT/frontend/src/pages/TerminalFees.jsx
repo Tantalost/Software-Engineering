@@ -657,40 +657,46 @@ const TerminalFees = () => {
         />
       </div>
 
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
+      {/* --- Main container justified to the right --- */}
+<div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
 
-        <div className="flex items-center justify-end gap-3">
-          {(role === "superadmin") && (
-            <button
-              title='Price Setting'
-              onClick={handleOpenPriceModal}
-              className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
-            >
-              <Settings size={18} /> <span>Set Price</span>
-            </button>)}
+  {/* --- Inner button group justified to the right --- */}
+  <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
+    {(role === "superadmin") && (
+      <button
+        title='Price Setting'
+        onClick={handleOpenPriceModal}
+        className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+      >
+        <Settings size={18} /> <span>Set Price</span>
+      </button>
+    )}
 
-          <button onClick={handleOpenAdd} className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
-            title='Add Ticket'>
-            <Plus size={18} /> <span>Add Fee</span>
-          </button>
+    <button 
+      onClick={handleOpenAdd} 
+      className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+      title='Add Ticket'
+    >
+      <Plus size={18} /> <span>Add Fee</span>
+    </button>
 
-          {(role === "ticket") && (
-            <button
-              onClick={() => setShowSubmitModal(true)}
-              disabled={isReporting}
-              className="flex items-center cursor-pointer justify-center gap-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
-            >
-              <FileText size={18} />
-              <span>Submit Report</span>
-            </button>
-          )}
-          <ExportMenu
-            onExportExcel={exportToCSV}
-            onExportPDF={exportToPDF}
-          />
-        </div>
-      </div>
+    {(role === "ticket") && (
+      <button
+        onClick={() => setShowSubmitModal(true)}
+        disabled={isReporting}
+        className="flex items-center cursor-pointer justify-center gap-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+      >
+        <FileText size={18} />
+        <span>Submit Report</span>
+      </button>
+    )}
 
+    <ExportMenu
+      onExportExcel={exportToCSV}
+      onExportPDF={exportToPDF}
+    />
+  </div>
+</div>
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
 
         <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
