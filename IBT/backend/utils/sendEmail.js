@@ -3,37 +3,44 @@ import nodemailer from 'nodemailer';
 const sendEmail = async (options) => {
   const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
-    port: 2525,               // <--- CHANGE THIS TO 2525
-    secure: false,            // <--- KEEP AS FALSE
+    port: 2525,
+    secure: false, // TLS is handled via STARTTLS on port 2525
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS 
+      user: process.env.EMAIL_USER, // Your Brevo SMTP ID (a25ead001...)
+      pass: process.env.EMAIL_PASS  // Your Brevo SMTP Key
     },
-    // Keep these to help bypass handshakes and debug if it fails
-    connectionTimeout: 5000, 
-    greetingTimeout: 5000,
-    socketTimeout: 10000,
-    debug: true,
-    logger: true,
     tls: {
       rejectUnauthorized: false
     }
   });
 
   const mailOptions = {
-    from: `"IBT Admin" <${process.env.EMAIL_USER}>`,
+    // This combines the name and the verified email correctly
+    from: `"${process.env.FROM_NAME || 'IBT Admin'}" <${process.env.SENDER_EMAIL}>`, 
     to: options.email,
     subject: options.subject,
-    text: options.message, 
+    text: options.message,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #10b981;">IBT Security Code</h2>
+        <p>Hello,</p>
+        <p style="font-size: 16px;">${options.message}</p>
+        <p style="color: #64748b; font-size: 12px; margin-top: 20px;">
+          If you did not request this, please ignore this email.
+        </p>
+      </div>
+    `
   };
 
   try {
-    console.log("Attempting to connect to Brevo on port 2525...");
-    await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully!");
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully! MessageID:", info.messageId);
+    return info;
   } catch (error) {
-    console.error("DETAILED SMTP ERROR:", error);
-    throw error;
+    // Detailed logging to catch any future sender rejections
+    console.error("Critical Mail Error:", error.message);
+    if (error.response) console.error("SMTP Response:", error.response);
+    throw new Error("Could not send verification email.");
   }
 };
 
