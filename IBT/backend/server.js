@@ -23,11 +23,9 @@ connectDB();
 
 const app = express();
 
-const allowedOrigins = [
-  "https://software-engineering-git-segregated-code-tantalosts-projects.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:3000"  
-];
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ["http://localhost:5173"];
 
 const corsOptions = {
   origin: (origin, callback) => {
