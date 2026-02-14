@@ -20,16 +20,30 @@ import companyRoutes from "./routes/companyRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
 connectDB();
-// FIX 2: DELETE this line. The config happened automatically when we imported the file above.
-// connectCloudinary(); 
 
 const app = express();
 
-app.use(cors({
-    origin: "*", 
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"]
-}));
+const allowedOrigins = [
+  "https://software-engineering-git-segregated-code-tantalosts-projects.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000"  
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`CORS Blocked: Origin ${origin} is not in whitelist.`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  optionsSuccessStatus: 200 
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
