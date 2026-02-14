@@ -4,6 +4,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { Settings } from "lucide-react";
+import headerImg from "../assets/Header.png";
+import footerImg from "../assets/FOOTER.png";
 import Layout from "../components/layout/Layout";
 import StatCards from "../components/dashboard/StatCards";
 import OperationsAnalytics from "../components/dashboard/OperationsAnalytics";
@@ -339,60 +341,125 @@ const getExportPayload = () => {
     setFilterView(view);
   };
 
+  // --- EXPORT TO PDF ---
+  const exportToPDF = () => {
+    try {
+      const payload = getExportPayload();
+      const doc = new jsPDF("p", "mm", "a4");
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // 1. Add Header Branding
+      doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+
+      // 2. Add Title and Summary Metadata
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("DASHBOARD REPORT", pageWidth / 2, 45, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`View: ${payload.meta.view}`, 15, 55);
+      doc.text(`Date: ${payload.meta.date}`, 15, 61);
+      doc.text(`Generated: ${payload.meta.generatedAt}`, 15, 67);
+
+      // 3. Revenue Summary Table
+      autoTable(doc, {
+        startY: 75,
+        head: [["Module", "Revenue", "Target", "Progress"]],
+        body: payload.stats.map(s => [
+          s.label,
+          s.value,
+          s.subtitle.replace("Target: ", ""),
+          s.change,
+        ]),
+        headStyles: { fillColor: [220, 38, 38] },
+        styles: { fontSize: 9 },
+        margin: { bottom: 20 },
+      });
+
+      // 4. Revenue Breakdown Table
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Revenue Breakdown", 15, finalY);
+      
+      autoTable(doc, {
+        startY: finalY + 5,
+        head: [["Module", "Revenue"]],
+        body: payload.donut.map(d => [
+          d.name,
+          `₱${d.value.toLocaleString()}`,
+        ]),
+        headStyles: { fillColor: [220, 38, 38] },
+        styles: { fontSize: 9 },
+        margin: { bottom: 35 },
+      });
+
+      // 5. Add Footer Branding on every page
+      doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+
+      doc.save(`Dashboard_Report_${filterView}_${Date.now()}.pdf`);
+      console.log("PDF exported successfully!");
+    } catch (err) {
+      console.error("PDF export failed:", err);
+      alert("Failed to export PDF. Please try again.");
+    }
+  };
+
   // --- EXPORT TO EXCEL ---
-const exportToExcel = () => {
-  try {
-    const payload = getExportPayload();
-    const wb = XLSX.utils.book_new();
+  const exportToExcel = () => {
+    try {
+      const payload = getExportPayload();
+      const wb = XLSX.utils.book_new();
 
-    // --- Stats Sheet ---
-    const statsSheet = XLSX.utils.json_to_sheet(
-      payload.stats.map(s => ({
-        Module: s.label,
-        Revenue: Number(String(s.value).replace(/[^0-9.-]+/g, "")),
-        Target: Number(String(s.subtitle).replace(/[^0-9.-]+/g, "")),
-        Progress: s.change,
-      }))
-    );
-    XLSX.utils.book_append_sheet(wb, statsSheet, "Revenue Summary");
+      // --- Stats Sheet ---
+      const statsSheet = XLSX.utils.json_to_sheet(
+        payload.stats.map(s => ({
+          Module: s.label,
+          Revenue: Number(String(s.value).replace(/[^0-9.-]+/g, "")),
+          Target: Number(String(s.subtitle).replace(/[^0-9.-]+/g, "")),
+          Progress: s.change,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, statsSheet, "Revenue Summary");
 
-    // --- Donut Sheet ---
-    const donutSheet = XLSX.utils.json_to_sheet(
-      payload.donut.map(d => ({
-        Module: d.name,
-        Revenue: d.value,
-      }))
-    );
-    XLSX.utils.book_append_sheet(wb, donutSheet, "Revenue Breakdown");
+      // --- Donut Sheet ---
+      const donutSheet = XLSX.utils.json_to_sheet(
+        payload.donut.map(d => ({
+          Module: d.name,
+          Revenue: d.value,
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, donutSheet, "Revenue Breakdown");
 
-    // --- Analytics Sheet ---
-    const analyticsSheet = XLSX.utils.json_to_sheet(payload.analytics);
-    XLSX.utils.book_append_sheet(wb, analyticsSheet, "Trends");
+      // --- Analytics Sheet ---
+      const analyticsSheet = XLSX.utils.json_to_sheet(payload.analytics);
+      XLSX.utils.book_append_sheet(wb, analyticsSheet, "Trends");
 
-    // --- Recent Activity Sheet ---
-    const activitySheet = XLSX.utils.json_to_sheet(
-      payload.activity.map(a => ({
-        Message: a.message,
-        Status: a.status,
-        Date: a.date ? new Date(a.date).toLocaleString() : "",
-      }))
-    );
-    XLSX.utils.book_append_sheet(wb, activitySheet, "Recent Activity");
+      // --- Recent Activity Sheet ---
+      const activitySheet = XLSX.utils.json_to_sheet(
+        payload.activity.map(a => ({
+          Message: a.message,
+          Status: a.status,
+          Date: a.date ? new Date(a.date).toLocaleString() : "",
+        }))
+      );
+      XLSX.utils.book_append_sheet(wb, activitySheet, "Recent Activity");
 
-    // --- Save Excel file ---
-    XLSX.writeFile(wb, `Dashboard_Report_${filterView}_${Date.now()}.xlsx`);
+      // --- Save Excel file ---
+      XLSX.writeFile(wb, `Dashboard_Report_${filterView}_${Date.now()}.xlsx`);
 
-    console.log("Excel exported successfully!");
-  } catch (err) {
-    console.error("Excel export failed:", err);
-  }
-};
-
+      console.log("Excel exported successfully!");
+    } catch (err) {
+      console.error("Excel export failed:", err);
+    }
+  };
 
   const handleDownload = (format) => {
-  if (format === "pdf") exportToPDF();
-  if (format === "excel") exportToExcel();
-};
+    if (format === "pdf") exportToPDF();
+    if (format === "excel") exportToExcel();
+  };
 
 
   return (

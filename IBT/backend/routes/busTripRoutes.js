@@ -3,7 +3,8 @@ import {
   getBusTrips, 
   createBusTrip, 
   updateBusTrip, 
-  deleteBusTrip 
+  deleteBusTrip,
+  updateAllBusTripPrices
 } from "../controllers/busTripController.js"; 
 
 const router = express.Router();
@@ -11,6 +12,7 @@ const router = express.Router();
 router.get("/", getBusTrips);
 router.post("/", createBusTrip);
 router.put("/:id", updateBusTrip);
+router.put("/update-prices/all", updateAllBusTripPrices);
 router.delete("/:id", deleteBusTrip);
 
 export default router;

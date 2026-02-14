@@ -11,7 +11,7 @@ export const getBusTrips = async (req, res) => {
 
 export const createBusTrip = async (req, res) => {
   try {
-    const { templateNo, route, time, date, company, status } = req.body;
+    const { templateNo, route, time, date, company, status, price } = req.body;
 
     if (!templateNo || !route || !company) {
       return res.status(400).json({ message: "Template, Route, and Company are required." });
@@ -23,7 +23,7 @@ export const createBusTrip = async (req, res) => {
       time,
       date,
       company,
-      price: 75,
+      price: price || 75,
       status: status || "Pending",
       isArchived: false
     });
@@ -65,6 +65,28 @@ export const deleteBusTrip = async (req, res) => {
     }
 
     res.status(200).json({ message: "Bus trip deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateAllBusTripPrices = async (req, res) => {
+  try {
+    const { newPrice } = req.body;
+    
+    if (!newPrice || isNaN(newPrice) || newPrice < 0) {
+      return res.status(400).json({ message: "Valid price is required." });
+    }
+
+    const result = await BusTrip.updateMany(
+      { status: "Pending" },
+      { price: parseFloat(newPrice) }
+    );
+
+    res.status(200).json({ 
+      message: `Updated ${result.modifiedCount} pending bus trips with new price.`,
+      modifiedCount: result.modifiedCount
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

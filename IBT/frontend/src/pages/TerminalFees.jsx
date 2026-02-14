@@ -116,7 +116,7 @@ const TerminalFees = () => {
     setModalPrices(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleSaveBasePrices = () => {
+  const handleSaveBasePrices = async () => {
     const newPrices = {};
     let hasError = false;
 
@@ -137,9 +137,35 @@ const TerminalFees = () => {
     }
 
     if (!hasError) {
-      setBasePrices(newPrices);
-      setShowPriceModal(false);
-      showToastMessage("Base prices updated successfully!");
+      try {
+        // Update localStorage
+        setBasePrices(newPrices);
+        
+        // Update database - update all existing tickets with new prices
+        const response = await fetch(`${API_URL}/terminal-fees/update-prices/all`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            regularPrice: newPrices.regular,
+            discountedPrice: newPrices.discounted
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update prices in database");
+        }
+
+        const result = await response.json();
+        
+        // Refresh the data to show updated prices
+        await fetchFees();
+
+        setShowPriceModal(false);
+        showToastMessage(`Base prices updated successfully! ${result.regularUpdated || 0} regular and ${result.discountedUpdated || 0} discounted tickets updated.`);
+      } catch (error) {
+        console.error("Error updating prices:", error);
+        showToastMessage("Failed to update prices in database. Please try again.");
+      }
     }
   };
 

@@ -9,7 +9,7 @@ const terminalFeeSchema = new mongoose.Schema({
   passengerType: {
     type: String,
     required: true,
-    enum: ["Regular", "Student", "Senior Citizen / PWD"]
+    enum: ["Regular", "Student", "Senior Citizen / PWD", "Student/Senior/PWD"]
   },
   price: {
     type: Number,

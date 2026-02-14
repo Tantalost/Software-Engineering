@@ -8,14 +8,14 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import DeleteModal from "../components/common/DeleteModal";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
-import LogModal from "../components/common/LogModal"; 
+import LogModal from "../components/common/LogModal";
 import { submitPageReport } from "../utils/reportService.js";
-import { logActivity } from "../utils/logger"; 
-import { sendNotification } from "../utils/notificationService.js"; 
+import { logActivity } from "../utils/logger";
+import { sendNotification } from "../utils/notificationService.js";
 import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag, Save, Info, CheckCircle, XCircle } from "lucide-react";
 
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable'; 
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 const formatDateTimeForExport = (dateStr) => {
@@ -36,31 +36,32 @@ const LostFound = () => {
     const [activeStatus, setActiveStatus] = useState("All");
     const [showAddModal, setShowAddModal] = useState(false);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
-    const [showLogModal, setShowLogModal] = useState(false); 
+    const [showLogModal, setShowLogModal] = useState(false);
     const [viewRow, setViewRow] = useState(null);
-    const [editRow, setEditRow] = useState(null); 
-    const [editFormData, setEditFormData] = useState({}); 
+    const [editRow, setEditRow] = useState(null);
+    const [editFormData, setEditFormData] = useState({});
     const [deleteRow, setDeleteRow] = useState(null);
     const [archiveRow, setArchiveRow] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [isReporting, setIsReporting] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
-    const [selectedIds, setSelectedIds] = useState([]);    
+    const [selectedIds, setSelectedIds] = useState([]);
 
     const role = localStorage.getItem("authRole") || "superadmin";
     const API_URL = "http://localhost:3000/api/lostfound";
 
-    
+
     const [newItem, setNewItem] = useState({
         trackingNo: "",
-        itemType: "", 
+        itemType: "",
+        description: "",
         location: "",
         dateTime: "",
-        status: "Unclaimed", 
+        status: "Unclaimed",
     });
 
-    
+
     const fetchLostFound = async () => {
         setIsLoading(true);
         try {
@@ -97,7 +98,7 @@ const LostFound = () => {
         }
     }, [editRow]);
 
-    
+
     const handleAddClick = () => {
         const autoTracking = `LF-${Date.now().toString().slice(-6)}`;
         const now = new Date();
@@ -105,10 +106,11 @@ const LostFound = () => {
 
         setNewItem({
             trackingNo: autoTracking,
-            itemType: "", 
+            itemType: "",
+            description: "",
             location: "",
             dateTime: formattedNow,
-            status: "Unclaimed" 
+            status: "Unclaimed"
         });
         setShowAddModal(true);
     };
@@ -132,7 +134,7 @@ const LostFound = () => {
         }
     };
 
-    
+
     const handleSaveEdit = async (e) => {
         e.preventDefault();
         try {
@@ -180,7 +182,7 @@ const LostFound = () => {
             alert("Failed to archive item.");
         }
     };
-    
+
     const handleDeleteConfirm = async () => {
         if (!deleteRow) return;
         try {
@@ -201,7 +203,7 @@ const LostFound = () => {
     const filtered = records.filter((item) => {
         const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (item.itemType && item.itemType.toLowerCase().includes(searchQuery.toLowerCase())); 
+            (item.itemType && item.itemType.toLowerCase().includes(searchQuery.toLowerCase()));
 
         const matchesDate = !selectedDate || new Date(item.dateTime).toDateString() === new Date(selectedDate).toDateString();
 
@@ -242,8 +244,8 @@ const LostFound = () => {
 
 
     const handleBulkDelete = async () => {
-        const confirmMsg = role === "lostfound" 
-            ? `Request deletion for ${selectedIds.length} records?` 
+        const confirmMsg = role === "lostfound"
+            ? `Request deletion for ${selectedIds.length} records?`
             : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
 
         if (!window.confirm(confirmMsg)) return;
@@ -261,7 +263,7 @@ const LostFound = () => {
                         body: JSON.stringify({
                             itemType: "Lost & Found Item",
                             requestedBy: "LostFound Admin",
-                            originalData: item, 
+                            originalData: item,
                             reason: "Bulk deletion request"
                         })
                     });
@@ -269,9 +271,9 @@ const LostFound = () => {
 
                 await Promise.all(requestPromises);
                 logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} items`, "LostFound");
-                
+
                 sendNotification(
-                    "Deletion Request: Lost & Found", 
+                    "Deletion Request: Lost & Found",
                     `Lost & Found Admin has requested to delete ${selectedIds.length} records.`,
                     "Lost & Found",
                     "superadmin"
@@ -282,13 +284,13 @@ const LostFound = () => {
                 setIsSelectionMode(false);
 
             } else {
-                const deletePromises = selectedIds.map(id => 
+                const deletePromises = selectedIds.map(id =>
                     fetch(`${API_URL}/${id}`, { method: "DELETE" })
                 );
-                
+
                 await Promise.all(deletePromises);
                 logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} items via bulk action`, "LostFound");
-                
+
                 alert(`Successfully deleted ${selectedIds.length} records`);
                 fetchLostFound();
                 setSelectedIds([]);
@@ -359,13 +361,13 @@ const LostFound = () => {
             setIsReporting(false);
         }
     };
-        
+
     const getExportData = (data) => {
         return data.map(item => ({
             "Tracking No": item.trackingNo,
             "Item Type": item.itemType || "-",
             "Location": item.location,
-            "DateTime": formatDateTimeForExport(item.dateTime), 
+            "DateTime": formatDateTimeForExport(item.dateTime),
             "Status": item.status,
         }));
     };
@@ -377,7 +379,7 @@ const LostFound = () => {
         }
         const dataToExport = getExportData(filtered);
         const headers = Object.keys(dataToExport[0]).join(',');
-        const rows = dataToExport.map(row => 
+        const rows = dataToExport.map(row =>
             Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
         const csvContent = headers + '\n' + rows;
@@ -403,17 +405,17 @@ const LostFound = () => {
         const body = dataToExport.map(item => Object.values(item));
         const doc = new jsPDF('portrait', 'mm', 'a4');
         doc.setFontSize(16);
-        doc.setTextColor(34, 34, 34); 
+        doc.setTextColor(34, 34, 34);
         doc.text("Lost & Found Records Report", 14, 15);
         doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100); 
+        doc.setTextColor(100, 100, 100);
         doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
         autoTable(doc, {
-            startY: 30, 
+            startY: 30,
             head: [headers],
             body: body,
-            theme: 'grid', 
-            headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontSize: 9, halign: 'center' }, 
+            theme: 'grid',
+            headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
             styles: { fontSize: 8, cellPadding: 3, valign: 'middle', textColor: [51, 51, 51] },
             alternateRowStyles: { fillColor: [240, 255, 240] }
         });
@@ -434,11 +436,11 @@ const LostFound = () => {
         logActivity(role, "EXPORT_EXCEL", `Exported ${dataToExport.length} Lost & Found records to Excel`, "LostFound");
     };
 
-    const tableColumns = isSelectionMode 
+    const tableColumns = isSelectionMode
         ? [
             <div key="header-check" className="flex items-center">
-                <input 
-                    type="checkbox" 
+                <input
+                    type="checkbox"
                     title="Select All Records on Page"
                     checked={isAllSelected}
                     onChange={handleSelectAll}
@@ -446,7 +448,7 @@ const LostFound = () => {
                 />
             </div>,
             "Tracking No", "Item Type", "Location", "DateTime", "Status"
-          ]
+        ]
         : ["Tracking No", "Item Type", "Location", "DateTime", "Status"];
 
     return (
@@ -475,9 +477,9 @@ const LostFound = () => {
                                     <span>Submit Report</span>
                                 </button>
                             )}
-                            
-                            <button 
-                                onClick={handleAddClick} 
+
+                            <button
+                                onClick={handleAddClick}
                                 title="Add New Item"
                                 className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 h-[44px] rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center w-full sm:w-auto cursor-pointer"
                             >
@@ -485,10 +487,10 @@ const LostFound = () => {
                             </button>
 
                             <div className="h-[44px] flex items-center"
-                            title = "Download">
-                                <ExportMenu 
-                                    onExportCSV={handleExportCSV} 
-                                    onExportPDF={handleExportPDF} 
+                                title="Download">
+                                <ExportMenu
+                                    onExportCSV={handleExportCSV}
+                                    onExportPDF={handleExportPDF}
                                     onExportExcel={handleExportExcel}
                                 />
                             </div>
@@ -499,12 +501,12 @@ const LostFound = () => {
                         <LostFoundStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
 
                         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
-                            <button 
-                                onClick={() => setShowLogModal(true)} 
+                            <button
+                                onClick={() => setShowLogModal(true)}
                                 className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
                                 title="View System Activity Logs"
                             >
-                                <History size={18} /> 
+                                <History size={18} />
                                 <span className="hidden sm:inline">Logs</span>
                             </button>
 
@@ -523,14 +525,13 @@ const LostFound = () => {
                                 </div>
                             )}
 
-                            {(role == "lostfound") &&(<button
+                            {(role == "lostfound") && (<button
                                 onClick={toggleSelectionMode}
                                 title={isSelectionMode ? "Exit Multi-Selection Mode" : "Enter Multi-Selection Mode"}
-                                className={`flex items-center justify-center h-10 cursor-pointer w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-                                    isSelectionMode
+                                className={`flex items-center justify-center h-10 cursor-pointer w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
                                         ? "bg-red-500 text-white shadow-md"
                                         : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                                }`}
+                                    }`}
                             >
                                 {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
                             </button>)}
@@ -553,9 +554,10 @@ const LostFound = () => {
                             const baseData = {
                                 id: item.id,
                                 trackingno: item.trackingNo,
-                                itemtype: item.itemType, 
+                                itemtype: item.itemType,
                                 location: item.location,
                                 datetime: formatDateTime(item.dateTime),
+                                description: item.description,
                                 status: item.status,
                             };
 
@@ -563,7 +565,7 @@ const LostFound = () => {
                                 return {
                                     select: (
                                         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                                            <input 
+                                            <input
                                                 type="checkbox"
                                                 title={`Select item #${item.trackingNo}`}
                                                 checked={selectedIds.includes(item.id)}
@@ -581,27 +583,27 @@ const LostFound = () => {
                             const selectedRecord = records.find(r => r.id === row.id);
                             return (
                                 <div className="flex justify-end items-center space-x-2">
-                                <TableActions
-                                    onView={() => setViewRow(selectedRecord)}
-                                    onEdit={() => setEditRow(selectedRecord)}
-                                    onDelete={() => setDeleteRow(selectedRecord)}
-                                />
-                                <button 
-                                    onClick={() => setArchiveRow(selectedRecord)} 
-                                    title="Move Record to Archives" 
-                                    className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer">
-                                    <Archive size={16} />
-                                </button>
-
-                                {(role == "superadmin") &&(
-                                    <button 
-                                        onClick={() => setDeleteRow(selectedRecord)} 
-                                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
-                                        title="Permanently Delete Record"
-                                    >
-                                        <Trash2 size={16} />
+                                    <TableActions
+                                        onView={() => setViewRow(selectedRecord)}
+                                        onEdit={() => setEditRow(selectedRecord)}
+                                        onDelete={() => setDeleteRow(selectedRecord)}
+                                    />
+                                    <button
+                                        onClick={() => setArchiveRow(selectedRecord)}
+                                        title="Move Record to Archives"
+                                        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer">
+                                        <Archive size={16} />
                                     </button>
-                                )}
+
+                                    {(role == "superadmin") && (
+                                        <button
+                                            onClick={() => setDeleteRow(selectedRecord)}
+                                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
+                                            title="Permanently Delete Record"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                 </div>
                             );
                         }}
@@ -622,9 +624,9 @@ const LostFound = () => {
                 }}
             />
 
-            <LogModal 
-                isOpen={showLogModal} 
-                onClose={() => setShowLogModal(false)} 
+            <LogModal
+                isOpen={showLogModal}
+                onClose={() => setShowLogModal(false)}
             />
 
             {showAddModal && (
@@ -651,7 +653,7 @@ const LostFound = () => {
                                         />
                                     </div>
                                 </div>
-                            
+
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
                                     <div className="relative">
@@ -675,7 +677,7 @@ const LostFound = () => {
                                             type="datetime-local"
                                             value={newItem.dateTime}
                                             onChange={(e) => setNewItem({ ...newItem, dateTime: e.target.value })}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white cursor-pointer" 
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-white cursor-pointer"
                                             required
                                         />
                                     </div>
@@ -696,6 +698,20 @@ const LostFound = () => {
                                     </div>
                                 </div>
 
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                                    <div className="relative">
+                                        <FileText size={16} className="absolute left-3 top-3 text-slate-400" />
+                                        <textarea
+                                            value={newItem.description}
+                                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                            placeholder="Detailed description of the item..."
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
                                 <input type="hidden" name="status" value={newItem.status} />
 
                             </div>
@@ -708,21 +724,21 @@ const LostFound = () => {
                 </div>
             )}
 
-            
+
             {viewRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
                         <h3 className="mb-4 text-base font-semibold text-slate-800">View Lost/Found Details</h3>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
                             <Field label="Tracking No" value={viewRow.trackingNo} />
-                            <Field label="Type" value={viewRow.itemType} /> 
+                            <Field label="Type" value={viewRow.itemType} />
                             <Field label="Status" value={viewRow.status} />
                             <Field label="DateTime" value={formatDateTime(viewRow.dateTime)} />
                             <div className="md:col-span-2"><Field label="Location" value={viewRow.location} /></div>
                         </div>
                         <div className="mt-4 flex justify-end">
-                            <button 
-                                onClick={() => setViewRow(null)} 
+                            <button
+                                onClick={() => setViewRow(null)}
                                 title="Close Details View"
                                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 cursor-pointer"
                             >
@@ -742,7 +758,7 @@ const LostFound = () => {
                         </div>
                         <form onSubmit={handleSaveEdit}>
                             <div className="space-y-4">
-                                
+
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Tracking Number</label>
                                     <div className="relative">
@@ -763,11 +779,10 @@ const LostFound = () => {
                                             type="button"
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Unclaimed' })}
                                             title="Mark Item as Unclaimed"
-                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${
-                                                editFormData.status === 'Unclaimed'
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === 'Unclaimed'
                                                     ? 'bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1'
                                                     : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                                            }`}
+                                                }`}
                                         >
                                             <XCircle size={18} />
                                             Unclaimed
@@ -776,11 +791,10 @@ const LostFound = () => {
                                             type="button"
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Claimed' })}
                                             title="Mark Item as Claimed"
-                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${
-                                                editFormData.status === 'Claimed'
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === 'Claimed'
                                                     ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
                                                     : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                                            }`}
+                                                }`}
                                         >
                                             <CheckCircle size={18} />
                                             Claimed
@@ -810,7 +824,7 @@ const LostFound = () => {
                                             type="text"
                                             value={formatDateTime(editFormData.dateTime)}
                                             disabled
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed" 
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
@@ -863,7 +877,7 @@ const LostFound = () => {
                 </div>
             )}
 
-            
+
             <DeleteModal
                 isOpen={!!deleteRow}
                 onClose={() => setDeleteRow(null)}
@@ -890,7 +904,7 @@ const LostFound = () => {
                                 onClick={handleSubmitReport}
                                 disabled={isReporting}
                                 title="Confirm Submission and Reset Table"
-                                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer" 
+                                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                             >
                                 {isReporting ? (
                                     <>
@@ -903,7 +917,7 @@ const LostFound = () => {
                             </button>
                         </div>
                     </div>
-              </div> 
+                </div>
             )}
 
         </Layout>

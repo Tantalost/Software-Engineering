@@ -59,16 +59,12 @@ Manage Employee
 - should be able to edit name and email (Lloyd) 🟢 **Done**
 
 Bugs 
-dashboard - PDF download not working
-
-Buses - set price working but not reflecting
-
-Terminal fee - Student/senior/PWD save ticket not working / Set price mag save pero di nag rereflect sa table
-
-Tenant/Lease - If mag add ng new tenant di lumalabas sa map
-
-Notification di nag reredirect
-
-Lost&Found - Di nag Sasave if mag add new
-
+- Tenant/Lease - If mag add ng new tenant di lumalabas sa map
+- Notification di nag reredirect
 *Make the design consistent for (set price/ add new/ export) options
+
+Fixed
+- Lost&Found - Di nag Sasave if mag add new  🟡 **In Progress** Works but description is missing in table
+- Dashboard - PDF download not working 🟢 **Done**
+- Buses - set price working but not reflecting 🟢 **Done**
+- Terminal fee - Student/senior/PWD save ticket not working / Set price mag save pero di nag rereflect sa table 🟢 **Done**

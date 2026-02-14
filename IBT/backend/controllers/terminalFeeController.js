@@ -45,3 +45,50 @@ export const deleteTerminalFee = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const updateTerminalFeePrices = async (req, res) => {
+  try {
+    const { regularPrice, discountedPrice } = req.body;
+    
+    if (regularPrice !== undefined && (isNaN(regularPrice) || regularPrice < 0)) {
+      return res.status(400).json({ error: "Valid regular price is required." });
+    }
+    
+    if (discountedPrice !== undefined && (isNaN(discountedPrice) || discountedPrice < 0)) {
+      return res.status(400).json({ error: "Valid discounted price is required." });
+    }
+
+    let regularCount = 0;
+    let discountedCount = 0;
+
+    if (regularPrice !== undefined) {
+      const regularResult = await TerminalFee.updateMany(
+        { passengerType: "Regular" },
+        { price: parseFloat(regularPrice) }
+      );
+      regularCount = regularResult.modifiedCount;
+    }
+
+    if (discountedPrice !== undefined) {
+      const discountedResult = await TerminalFee.updateMany(
+        { 
+          $or: [
+            { passengerType: "Student" },
+            { passengerType: "Senior Citizen / PWD" },
+            { passengerType: "Student/Senior/PWD" }
+          ]
+        },
+        { price: parseFloat(discountedPrice) }
+      );
+      discountedCount = discountedResult.modifiedCount;
+    }
+
+    res.json({ 
+      message: "Prices updated successfully.",
+      regularUpdated: regularCount,
+      discountedUpdated: discountedCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

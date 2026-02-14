@@ -414,23 +414,50 @@ const BusTrips = () => {
       return;
     }
 
+    const priceValue = Number(newPrice);
+    if (priceValue <= 0) {
+      alert("Please enter a valid price greater than 0.");
+      return;
+    }
+
     setIsSettingPrice(true);
 
     try {
-      setDefaultPrice(Number(newPrice));
+      // Update localStorage first to ensure persistence
+      localStorage.setItem("defaultBusPrice", priceValue.toString());
+      
+      // Update state
+      setDefaultPrice(priceValue);
+
+      // Update database - update all pending trips with new price
+      const response = await fetch(`${API_URL}/update-prices/all`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPrice: priceValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update prices in database");
+      }
+
+      const result = await response.json();
+      
+      // Refresh the data to show updated prices
+      await fetchBusTrips();
 
       await logActivity(
         role,
         "SET_DEFAULT_PRICE",
-        `Set default bus fee to ₱${newPrice}`,
+        `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
         "BusTrips",
       );
 
       setShowSetPriceModal(false);
       setNewPrice("");
+      alert(`Price updated successfully! ${result.modifiedCount || 0} pending trips updated. All new trips will use ₱${newPrice}.`);
     } catch (err) {
       console.error(err);
-      alert("Failed to set price");
+      alert("Failed to set price: " + err.message);
     } finally {
       setIsSettingPrice(false);
     }
@@ -570,10 +597,16 @@ const BusTrips = () => {
   const handleCreateRecord = async (e) => {
     e.preventDefault();
     try {
+      // Ensure price is always set from defaultPrice if not explicitly set
+      const tripData = {
+        ...newBusData,
+        price: newBusData.price || defaultPrice
+      };
+      
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newBusData),
+        body: JSON.stringify(tripData),
       });
       if (response.ok) {
         const newItem = await response.json();
@@ -939,7 +972,10 @@ const BusTrips = () => {
               {/* SUPER ADMIN: SET PRICE BUTTON */}
               {role === "superadmin" && (
                 <button
-                  onClick={() => setShowSetPriceModal(true)}
+                  onClick={() => {
+                    setNewPrice(defaultPrice.toString());
+                    setShowSetPriceModal(true);
+                  }}
                   className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
                 >
                   <Settings size={18} /> <span>Set Price</span>
