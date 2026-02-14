@@ -23,25 +23,11 @@ connectDB();
 
 const app = express();
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ["http://localhost:5173"];
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error(`CORS Blocked: Origin ${origin} is not in whitelist.`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  optionsSuccessStatus: 200 
-};
-
-app.use(cors(corsOptions));
+app.use(cors({
+    origin: "*", 
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"]
+}));
 
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
