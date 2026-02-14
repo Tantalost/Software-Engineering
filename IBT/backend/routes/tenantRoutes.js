@@ -1,7 +1,8 @@
 import express from "express";
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+// FIX 3: Import the CONFIGURED cloudinary from your config folder
+import cloudinary from '../config/cloudinary.js'; 
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { 
   getTenants, 
   createTenant, 
@@ -11,19 +12,12 @@ import {
 
 const router = express.Router();
 
-const uploadDir = 'uploads/';
-if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir);
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir); 
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'tenant_documents',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
 });
 
 const upload = multer({ storage: storage });

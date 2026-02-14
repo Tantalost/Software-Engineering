@@ -2,7 +2,8 @@ import express from "express";
 import "dotenv/config";
 import cors from "cors";
 import connectDB from "./config/db.js";
-import connectCloudinary from "./config/cloudinary.js";
+// FIX 1: Import the configured object, don't name it "connectCloudinary"
+import cloudinary from "./config/cloudinary.js"; 
 
 import busTripRoutes from "./routes/busTripRoutes.js";
 import terminalFeeRoutes from "./routes/terminalFeeRoutes.js";
@@ -14,19 +15,16 @@ import tenantRoutes from "./routes/tenantRoutes.js";
 import parkingRoutes from "./routes/parkingRoutes.js";
 import lostfoundRoutes from "./routes/lostfoundRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
-// FIX #1: Corrected the relative path below
 import notifications from "./routes/notifications.js"; 
 import companyRoutes from "./routes/companyRoutes.js"; 
 import adminRoutes from "./routes/adminRoutes.js";
 
 connectDB();
-connectCloudinary();
+// FIX 2: DELETE this line. The config happened automatically when we imported the file above.
+// connectCloudinary(); 
 
 const app = express();
 
-// FIX #2: specific CORS configuration
-// For your FIRST deploy, we allow all origins ("*") to ensure it works.
-// Once your Vercel frontend is live, we will come back and restrict this.
 app.use(cors({
     origin: "*", 
     credentials: true,
