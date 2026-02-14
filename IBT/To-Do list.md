@@ -8,7 +8,6 @@ Revisions for web general
 - application rejection should have a note 🔴 **To be Fixed**
 - fix mobile home module 🔴 **To be Fixed**
 - dashboard export format 🔴 **To be Fixed**
-- connect set price change to actual prices for bus, terminal (lloyd) 🔴 **To be Fixed**
 
 🟡 **In Progress**
 Revisions for web general 
@@ -29,6 +28,7 @@ Dashboard
 - remove value in the operation analytics (Venn) 🟢 **Done**
 - notification status number is static.(venn) 🟢 **Done**
 - fix superadmin dashboard monthly target card layout 🟢 **Done**
+- connect set price change to actual prices for bus, terminal (lloyd) 🟢 **Done**
 
 Bus Admin
 - ticket ref should be unique (lloyd) - 🟢 **Done**
@@ -59,12 +59,12 @@ Manage Employee
 - should be able to edit name and email (Lloyd) 🟢 **Done**
 
 Bugs 
-- Tenant/Lease - If mag add ng new tenant di lumalabas sa map
-- Notification di nag reredirect
 *Make the design consistent for (set price/ add new/ export) options
 
 Fixed
-- Lost&Found - Di nag Sasave if mag add new  🟡 **In Progress** Works but description is missing in table
+- Lost&Found - Di nag Sasave if mag add new  🟢 **Done**
 - Dashboard - PDF download not working 🟢 **Done**
 - Buses - set price working but not reflecting 🟢 **Done**
 - Terminal fee - Student/senior/PWD save ticket not working / Set price mag save pero di nag rereflect sa table 🟢 **Done**
+- Notification di nag reredirect 🟢 **Done**
+- Tenant/Lease - If mag add ng new tenant di lumalabas sa map 🟢 **Done**
