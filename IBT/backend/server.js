@@ -2,8 +2,7 @@ import express from "express";
 import "dotenv/config";
 import cors from "cors";
 import connectDB from "./config/db.js";
-// FIX 1: Import the configured object, don't name it "connectCloudinary"
-import cloudinary from "./config/cloudinary.js"; 
+import mongoose from "mongoose";
 
 import busTripRoutes from "./routes/busTripRoutes.js";
 import terminalFeeRoutes from "./routes/terminalFeeRoutes.js";
@@ -23,6 +22,16 @@ connectDB();
 
 const app = express();
 
+let bucket;
+mongoose.connection.once('open', () => {
+  bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+    bucketName: 'uploads' 
+  });
+  console.log("GridFS Bucket initialized");
+});
+
+export { bucket };
+
 app.use(cors({
     origin: "*", 
     credentials: true,
@@ -32,7 +41,7 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-app.get('/', (req, res) => res.send("API is working"));
+app.get('/', (req, res) => res.send("IBT Management System API is working"));
 
 app.use("/api/bustrips", busTripRoutes);
 app.use("/api/companies", companyRoutes);
@@ -48,6 +57,27 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notifications);
 app.use("/api/admins", adminRoutes);
 
-const PORT = process.env.PORT || 3000;
+app.get('/api/files/:filename', async (req, res) => {
+  try {
+    const file = await bucket.find({ filename: req.params.filename }).toArray();
+    
+    if (!file || file.length === 0) {
+      return res.status(404).json({ message: "File not found" });
+    }
 
+    res.set('Content-Type', file[0].contentType);
+    
+    const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+    
+    downloadStream.on('error', () => {
+      res.status(404).json({ message: "Error streaming file" });
+    });
+
+    downloadStream.pipe(res);
+  } catch (error) {
+    res.status(500).json({ message: "Server error retrieving file", error: error.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

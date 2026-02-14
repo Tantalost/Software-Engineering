@@ -1,8 +1,6 @@
 import express from "express";
 import multer from 'multer';
-// FIX 3: Import the CONFIGURED cloudinary from your config folder
-import cloudinary from '../config/cloudinary.js'; 
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import { GridFsStorage } from 'multer-gridfs-storage'; // New import
 import { 
   getTenants, 
   createTenant, 
@@ -12,18 +10,23 @@ import {
 
 const router = express.Router();
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'tenant_documents',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
-  },
+// ✅ NEW: GridFS Storage Engine
+const storage = new GridFsStorage({
+  url: process.env.MONGO_URI,
+  options: { useNewUrlParser: true, useUnifiedTopology: true },
+  file: (req, file) => {
+    return {
+      bucketName: 'uploads', // Must match bucketName in server.js
+      filename: `${Date.now()}-${file.originalname}`
+    };
+  }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 router.get('/', getTenants);
 
+// Routes remain the same, but now 'upload' uses GridFS
 router.post('/', 
   upload.fields([
     { name: 'businessPermit', maxCount: 1 }, 
