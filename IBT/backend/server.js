@@ -14,7 +14,8 @@ import tenantRoutes from "./routes/tenantRoutes.js";
 import parkingRoutes from "./routes/parkingRoutes.js";
 import lostfoundRoutes from "./routes/lostfoundRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
-import notifications from "../backend/routes/notifications.js";
+// FIX #1: Corrected the relative path below
+import notifications from "./routes/notifications.js"; 
 import companyRoutes from "./routes/companyRoutes.js"; 
 import adminRoutes from "./routes/adminRoutes.js";
 
@@ -23,7 +24,15 @@ connectCloudinary();
 
 const app = express();
 
-app.use(cors());
+// FIX #2: specific CORS configuration
+// For your FIRST deploy, we allow all origins ("*") to ensure it works.
+// Once your Vercel frontend is live, we will come back and restrict this.
+app.use(cors({
+    origin: "*", 
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"]
+}));
+
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
