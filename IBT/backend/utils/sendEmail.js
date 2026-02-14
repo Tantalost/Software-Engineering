@@ -3,21 +3,20 @@ import nodemailer from 'nodemailer';
 const sendEmail = async (options) => {
   const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
+    port: 2525,               // <--- CHANGE THIS TO 2525
+    secure: false,            // <--- KEEP AS FALSE
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS 
     },
-    // --- DEBUGGING & SPEED FIXES ---
-    debug: true,              // Log the SMTP traffic to your Render console
-    logger: true,             // Include detailed logs in the output
-    connectionTimeout: 10000, // Stop trying after 10 seconds (don't wait 2 minutes)
-    greetingTimeout: 5000,    // Stop if Gmail doesn't say "Hello" in 5 seconds
-    socketTimeout: 10000,     // Stop if data transfer hangs for 10 seconds
+    // Keep these to help bypass handshakes and debug if it fails
+    connectionTimeout: 5000, 
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
+    debug: true,
+    logger: true,
     tls: {
-      rejectUnauthorized: false,
-      minVersion: 'TLSv1.2'   // Ensure modern encryption is used
+      rejectUnauthorized: false
     }
   });
 
@@ -29,9 +28,10 @@ const sendEmail = async (options) => {
   };
 
   try {
+    console.log("Attempting to connect to Brevo on port 2525...");
     await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully!");
   } catch (error) {
-    // This will now print the EXACT SMTP error code in Render logs
     console.error("DETAILED SMTP ERROR:", error);
     throw error;
   }
