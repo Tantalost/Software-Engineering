@@ -1,7 +1,7 @@
 import express from "express";
 import multer from 'multer';
 import { GridFsStorage } from 'multer-gridfs-storage';
-import "dotenv/config"; // CRITICAL: Loads environment variables before storage initialization
+import "dotenv/config"; 
 import { 
   getTenants, 
   createTenant, 
@@ -12,27 +12,29 @@ import {
 const router = express.Router();
 
 // --- 1. GridFS Storage Configuration ---
-// This engine tells Multer to send files directly to your MongoDB
 const storage = new GridFsStorage({
-  url: process.env.MONGO_URI, // Ensure this matches your Render Dashboard Key
+  // ✅ UPDATED: Changed from MONGO_URI to MONGODB_URL to match your Dashboard
+  url: process.env.MONGODB_URL, 
   options: { useNewUrlParser: true, useUnifiedTopology: true },
   file: (req, file) => {
-    // This function runs for every file uploaded
-    return {
-      bucketName: 'uploads', // Must match the bucket name in server.js
-      filename: `${Date.now()}-${file.originalname}` // Unique filename for retrieval
-    };
+    return new Promise((resolve, reject) => {
+      const filename = `${Date.now()}-${file.originalname}`;
+      const fileInfo = {
+        filename: filename,
+        bucketName: 'uploads' 
+      };
+      resolve(fileInfo);
+    });
   }
 });
 
 // --- 2. Connection Debugging ---
-// These logs will appear in your Render console to confirm connection health
 storage.on('connection', () => {
-  console.log("Multer-GridFS: Successfully connected to MongoDB for uploads");
+  console.log("Multer-GridFS: Successfully connected using MONGODB_URL");
 });
 
 storage.on('connectionError', (err) => {
-  console.error("Multer-GridFS: Failed to connect to MongoDB:", err.message);
+  console.error("Multer-GridFS: Connection failed. Check if MONGODB_URL is correct in Render.");
 });
 
 // --- 3. Multer Initialization ---
@@ -41,7 +43,6 @@ const upload = multer({ storage });
 // --- 4. Routes ---
 router.get('/', getTenants);
 
-// POST: Create a new tenant with up to 3 document uploads
 router.post('/', 
   upload.fields([
     { name: 'businessPermit', maxCount: 1 }, 
@@ -53,7 +54,6 @@ router.post('/',
 
 router.delete('/:id', deleteTenant);
 
-// PUT: Update an existing tenant and their documents
 router.put('/:id', 
   upload.fields([
     { name: 'businessPermit', maxCount: 1 }, 
