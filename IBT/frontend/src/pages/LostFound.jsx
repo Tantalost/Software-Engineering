@@ -49,7 +49,7 @@ const LostFound = () => {
     const [selectedIds, setSelectedIds] = useState([]);
 
     const role = localStorage.getItem("authRole") || "superadmin";
-    const API_URL = "http://localhost:3000/api/lostfound";
+    const API_URL = `${import.meta.env.VITE_API_URL}/api/lostfound`;
 
 
     const [newItem, setNewItem] = useState({
@@ -159,7 +159,7 @@ const LostFound = () => {
         setArchiveRow(null);
 
         try {
-            const archiveRes = await fetch("http://localhost:3000/api/archives", {
+            const archiveRes = await fetch(`${API_URL}/archives`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -257,7 +257,7 @@ const LostFound = () => {
                     const item = records.find(r => r.id === id);
                     if (!item) return;
 
-                    return fetch("http://localhost:3000/api/deletion-requests", {
+                    return fetch(`${API_URL}/deletion-requests`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({

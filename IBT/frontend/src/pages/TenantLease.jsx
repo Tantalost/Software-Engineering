@@ -28,8 +28,8 @@ import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
 import { submitPageReport } from "../utils/reportService.js";
 
-const API_URL = "http://localhost:3000/api";
-const ARCHIVE_URL = "http://localhost:3000/api/archives";
+const API_URL = `${import.meta.env.VITE_API_URL}/api`;
+const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
 
 const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft }) => {
     if (!isOpen) return null;
@@ -443,7 +443,7 @@ const TenantLease = () => {
                     const item = records.find(r => r.id === id);
                     if (!item) return;
 
-                    return fetch("http://localhost:3000/api/deletion-requests", {
+                    return fetch(`${import.meta.env.VITE_API_URL}/api/deletion-requests`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({

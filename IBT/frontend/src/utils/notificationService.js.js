@@ -1,7 +1,7 @@
 // src/utils/notificationService.js
 export const sendNotification = async (title, message, source, targetRole = "all") => {
     try {
-        const response = await fetch("http://localhost:3000/api/notifications", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -24,7 +24,7 @@ export const sendNotification = async (title, message, source, targetRole = "all
 
 export const fetchNotifications = async () => {
     try {
-        const response = await fetch("http://localhost:3000/api/notifications");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`);
         return await response.json();
     } catch (error) {
         console.error("Error fetching notifications", error);
@@ -34,12 +34,12 @@ export const fetchNotifications = async () => {
 
 export const markNotificationAsRead = async (id) => {
     try {
-        await fetch(`http://localhost:3000/api/notifications/${id}/read`, { method: "PUT" });
+        await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/${id}/read`, { method: "PUT" });
     } catch (error) { console.error(error); }
 };
 
 export const deleteNotification = async (id) => {
     try {
-        await fetch(`http://localhost:3000/api/notifications/${id}`, { method: "DELETE" });
+        await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/${id}`, { method: "DELETE" });
     } catch (error) { console.error(error); }
 };

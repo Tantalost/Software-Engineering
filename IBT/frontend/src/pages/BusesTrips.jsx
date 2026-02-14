@@ -49,7 +49,7 @@ const ManageCompaniesModal = ({
   const [newBusRoute, setNewBusRoute] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const API_URL = "http://localhost:3000/api/companies";
+  const API_URL = `${import.meta.env.VITE_API_URL}/api/companies`;
 
   // Reset states when modal opens/closes
   useEffect(() => {
@@ -389,8 +389,8 @@ const BusTrips = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const role = localStorage.getItem("authRole") || "bus";
-  const API_URL = "http://localhost:3000/api/bustrips";
-  const COMPANY_API_URL = "http://localhost:3000/api/companies";
+  const API_URL = `${import.meta.env.VITE_API_URL}/api/bustrips`;
+  const COMPANY_API_URL = `${import.meta.env.VITE_API_URL}/api/companies`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
 
@@ -856,7 +856,7 @@ const BusTrips = () => {
     if (!archiveRow) return;
     try {
       // 1. Send to Archives
-      const archiveRes = await fetch("http://localhost:3000/api/archives", {
+      const archiveRes = await fetch(`${API_URL}/archives`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

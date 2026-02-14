@@ -7,7 +7,7 @@ import Field from "../components/common/Field";
 import { Eye, RotateCcw, Trash2, CalendarDays, Loader2, X, ListChecks } from "lucide-react";
 import { logActivity } from "../utils/logger"; 
 
-const API_URL = "http://localhost:3000/api"; 
+const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
 
 const Archive = () => {
   const role = localStorage.getItem("authRole");

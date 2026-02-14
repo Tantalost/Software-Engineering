@@ -119,8 +119,8 @@ const Reports = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const role = localStorage.getItem("authRole") || "superadmin";
-  const API_URL = "http://localhost:3000/api/reports";
-  const ARCHIVE_URL = "http://localhost:3000/api/archives";
+  const API_URL = `${import.meta.env.VITE_API_URL}/api/reports`;
+  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
 
   const fetchReports = async () => {
     try {

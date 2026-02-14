@@ -19,7 +19,7 @@ import TerminalFilter from "../components/terminal/TerminalFilter";
 import { logActivity } from "../utils/logger";
 import { submitPageReport } from "../utils/reportService";
 
-const API_URL = "http://localhost:3000/api";
+const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 const getInitialBasePrices = () => {
   const storedPrices = localStorage.getItem("terminalBasePrices");
@@ -287,7 +287,7 @@ const TerminalFees = () => {
 
       const adminName = localStorage.getItem("authName") || "Ticket Admin";
       await submitPageReport("Terminal Fees", reportPayload, adminName);
-      await fetch("http://localhost:3000/api/notifications", {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

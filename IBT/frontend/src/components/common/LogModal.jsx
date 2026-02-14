@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { History, X, Loader2 } from "lucide-react";
 
-const API_URL = "http://localhost:3000/api"; 
+const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
 
 const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
   const [logs, setLogs] = useState([]);

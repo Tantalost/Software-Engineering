@@ -26,7 +26,7 @@ const Topbar = ({ title, onMenuClick }) => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/notifications");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`);
       if (res.ok) {
         const data = await res.json();
         const myRole = localStorage.getItem("authRole") || "superadmin";

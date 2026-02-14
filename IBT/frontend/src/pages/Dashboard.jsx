@@ -123,11 +123,11 @@ const getExportPayload = () => {
     try {
       setLoading(true);
       const [ticketsRes, busRes, tenantsRes, parkingRes, reportsRes] = await Promise.all([
-        fetch("http://localhost:3000/api/terminal-fees"),
-        fetch("http://localhost:3000/api/bustrips"),
-        fetch("http://localhost:3000/api/tenants"),
-        fetch("http://localhost:3000/api/parking"),
-        fetch("http://localhost:3000/api/reports")
+        fetch(`${API_URL}/api/terminal-fees`),
+        fetch(`${API_URL}/api/bustrips`),
+        fetch(`${API_URL}/api/tenants`),
+        fetch(`${API_URL}/api/parking`),
+        fetch(`${API_URL}/api/reports`)
       ]);
 
       const parseResponse = async (res) => {

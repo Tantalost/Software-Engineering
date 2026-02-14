@@ -132,8 +132,8 @@ const Parking = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const role = localStorage.getItem("authRole") || "superadmin";
-  const API_URL = "http://localhost:3000/api/parking";
-  const ARCHIVE_URL = "http://localhost:3000/api/archives";
+  const API_URL = `${import.meta.env.VITE_API_URL}/api/parking`;
+  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -288,7 +288,7 @@ const Parking = () => {
           const item = records.find(r => r.id === id);
           if (!item) return;
 
-          return fetch("http://localhost:3000/api/deletion-requests", {
+          return fetch(`${API_URL}/api/deletion-requests`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -601,7 +601,7 @@ const Parking = () => {
       const adminName = localStorage.getItem("authName") || "Parking Admin";
       await submitPageReport("Parking", reportPayload, adminName);
 
-      await fetch("http://localhost:3000/api/notifications", {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

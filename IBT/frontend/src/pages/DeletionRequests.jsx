@@ -7,8 +7,8 @@ import Textarea from "../components/common/Textarea";
 import { Check, X, Eye, AlertCircle, MessageSquare, Loader2, ListChecks, Trash2, Archive } from "lucide-react"; 
 import { logActivity } from "../utils/logger"; 
 
-const API_URL = "http://localhost:3000/api"; 
-const ARCHIVE_URL = "http://localhost:3000/api/archives";
+const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
+const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
 
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
