@@ -394,14 +394,27 @@ const BusTrips = () => {
 
   const [defaultPrice, setDefaultPrice] = useState(75);
 
+  // Fetch default price from backend on mount
   useEffect(() => {
-    const saved = localStorage.getItem("defaultBusPrice");
-    if (saved) setDefaultPrice(Number(saved));
+    const fetchDefaultPrice = async () => {
+      try {
+        const response = await fetch(`${API_URL}/default-price`);
+        if (response.ok) {
+          const data = await response.json();
+          setDefaultPrice(data.defaultPrice);
+          // Also update localStorage for backward compatibility
+          localStorage.setItem("defaultBusPrice", data.defaultPrice.toString());
+        }
+      } catch (error) {
+        console.error("Error fetching default price:", error);
+        // Fallback to localStorage if backend fails
+        const saved = localStorage.getItem("defaultBusPrice");
+        if (saved) setDefaultPrice(Number(saved));
+      }
+    };
+    fetchDefaultPrice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("defaultBusPrice", defaultPrice);
-  }, [defaultPrice]);
 
   //Set Modal States
   const [showSetPriceModal, setShowSetPriceModal] = useState(false);
@@ -423,13 +436,7 @@ const BusTrips = () => {
     setIsSettingPrice(true);
 
     try {
-      // Update localStorage first to ensure persistence
-      localStorage.setItem("defaultBusPrice", priceValue.toString());
-      
-      // Update state
-      setDefaultPrice(priceValue);
-
-      // Update database - update all pending trips with new price
+      // Update database - this will also save the default price to settings
       const response = await fetch(`${API_URL}/update-prices/all`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -441,6 +448,10 @@ const BusTrips = () => {
       }
 
       const result = await response.json();
+      
+      // Update state and localStorage after successful database update
+      setDefaultPrice(priceValue);
+      localStorage.setItem("defaultBusPrice", priceValue.toString());
       
       // Refresh the data to show updated prices
       await fetchBusTrips();
@@ -471,7 +482,7 @@ const BusTrips = () => {
     time: "",
     date: new Date().toISOString().split("T")[0],
     status: "Pending",
-    price: 75,
+    price: 75, // Initial value, will be updated in handleAddClick
   });
 
   // 2. DATA FETCHING

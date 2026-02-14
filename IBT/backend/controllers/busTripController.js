@@ -1,4 +1,5 @@
 import BusTrip from "../models/BusTrips.js";
+import Settings from "../models/Settings.js";
 
 export const getBusTrips = async (req, res) => {
   try {
@@ -17,13 +18,22 @@ export const createBusTrip = async (req, res) => {
       return res.status(400).json({ message: "Template, Route, and Company are required." });
     }
 
+    // Get default price from settings if price is not provided
+    let defaultPrice = 75;
+    if (!price) {
+      const priceSetting = await Settings.findOne({ key: "defaultBusPrice" });
+      if (priceSetting) {
+        defaultPrice = Number(priceSetting.value);
+      }
+    }
+
     const newTrip = new BusTrip({
       templateNo,
       route,
       time,
       date,
       company,
-      price: price || 75,
+      price: price || defaultPrice,
       status: status || "Pending",
       isArchived: false
     });
@@ -78,15 +88,36 @@ export const updateAllBusTripPrices = async (req, res) => {
       return res.status(400).json({ message: "Valid price is required." });
     }
 
+    const priceValue = parseFloat(newPrice);
+
+    // Update or create the default price setting in database
+    await Settings.findOneAndUpdate(
+      { key: "defaultBusPrice" },
+      { key: "defaultBusPrice", value: priceValue },
+      { upsert: true, new: true }
+    );
+
+    // Update all pending trips with new price
     const result = await BusTrip.updateMany(
       { status: "Pending" },
-      { price: parseFloat(newPrice) }
+      { price: priceValue }
     );
 
     res.status(200).json({ 
       message: `Updated ${result.modifiedCount} pending bus trips with new price.`,
       modifiedCount: result.modifiedCount
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get default bus price from settings
+export const getDefaultBusPrice = async (req, res) => {
+  try {
+    const priceSetting = await Settings.findOne({ key: "defaultBusPrice" });
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 75;
+    res.status(200).json({ defaultPrice });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

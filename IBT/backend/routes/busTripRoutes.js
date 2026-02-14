@@ -4,12 +4,14 @@ import {
   createBusTrip, 
   updateBusTrip, 
   deleteBusTrip,
-  updateAllBusTripPrices
+  updateAllBusTripPrices,
+  getDefaultBusPrice
 } from "../controllers/busTripController.js"; 
 
 const router = express.Router();
 
 router.get("/", getBusTrips);
+router.get("/default-price", getDefaultBusPrice);
 router.post("/", createBusTrip);
 router.put("/:id", updateBusTrip);
 router.put("/update-prices/all", updateAllBusTripPrices);
