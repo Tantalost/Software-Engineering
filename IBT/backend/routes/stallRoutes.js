@@ -18,8 +18,10 @@ dotenv.config();
 
 const router = express.Router();
 
+const mongoURL = process.env.MONGODB_URL;
+
 const storage = new GridFsStorage({
-  url: process.env.MONGODB_URL, 
+  url: mongoURL, 
   file: (req, file) => {
     return {
       bucketName: 'uploads', 
@@ -30,8 +32,8 @@ const storage = new GridFsStorage({
 
 const upload = multer({ storage });
 
-router.get('/pending', getPendingStalls); 
 
+router.get('/pending', getPendingStalls); 
 router.get('/occupied', getOccupiedStalls);
 router.get('/doc/:filename', getSecureDocument);
 router.get('/my-application/:userId', getMyApplication);
