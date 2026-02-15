@@ -1,4 +1,4 @@
-import Tenant from '../models/TenantS.js'; 
+import Tenant from '../models/Tenant.js'; 
 import TenantApplication from '../models/TenantApplicationS.js';
 import Notification from '../models/NotificationS.js'; 
 
