@@ -157,11 +157,18 @@ export default function StallsPage() {
       setOccupiedStalls(occupiedList);
 
       try {
-          const pendingRes = await fetch(`${API_URL}/stalls/pending?floor=${selectedFloor}&_t=${timestamp}`);
-          const pendingData = await pendingRes.json();
-          setPendingStalls(Array.isArray(pendingData) ? pendingData : []);
+        const pendingRes = await fetch(`${API_URL}/stalls/pending?floor=${selectedFloor}&_t=${timestamp}`);
+    
+        if (!pendingRes.ok) {
+          const errorText = await pendingRes.text();
+          console.log("SERVER ERROR PAGE:", errorText); 
+          return;
+        }
+
+        const pendingData = await pendingRes.json();
+        setPendingStalls(Array.isArray(pendingData) ? pendingData : []);
       } catch (err) {
-          console.log("Error fetching pending slots:", err);
+        console.log("Error fetching pending slots:", err);
       }
 
       if (userId) {
