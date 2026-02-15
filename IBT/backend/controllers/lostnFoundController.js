@@ -1,4 +1,4 @@
-import LostFound from '../models/LostNFound.js';
+import LostFound from '../models/LostFound.js';
 
 export const getLostItems = async (req, res) => {
   try {
