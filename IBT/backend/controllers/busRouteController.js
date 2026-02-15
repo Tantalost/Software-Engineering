@@ -1,4 +1,4 @@
-import BusTrip from '../models/BusRoute.js'; 
+import BusTrip from '../models/BusTrips.js'; 
 
 export const getBusRoutes = async (req, res) => {
   try {
