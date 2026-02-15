@@ -55,16 +55,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Standard Health Check
 app.get('/', (req, res) => res.send("IBT Unified Management System API is working"));
 
-// Mobile Connection Test Endpoint
-// This helps verify the mobile app can "see" the backend
-app.get('/api/test-connection', (req, res) => {
-  res.json({ 
-    status: "online", 
-    message: "IBT Unified Backend is reachable", 
-    dbConnected: mongoose.connection.readyState === 1 
-  });
-});
-
 // --- ROUTE MOUNTING ---
 
 // Web-focused routes
