@@ -19,7 +19,7 @@ dotenv.config();
 const router = express.Router();
 
 const storage = new GridFsStorage({
-  url: process.env.MONGODB_URI, 
+  url: process.env.MONGODB_URL, 
   file: (req, file) => {
     return {
       bucketName: 'uploads', 
