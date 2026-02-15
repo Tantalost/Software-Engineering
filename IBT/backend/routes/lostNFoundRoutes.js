@@ -1,5 +1,5 @@
 import express from 'express';
-import { getLostItems } from '../controllers/lostFoundController.js';
+import { getLostItems } from '../controllers/lostnFoundController.js';
 
 const router = express.Router();
 
