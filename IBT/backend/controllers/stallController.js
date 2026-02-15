@@ -1,6 +1,6 @@
 import Tenant from '../models/Tenant.js'; 
-import TenantApplication from '../models/TenantApplicationS.js';
-import Notification from '../models/NotificationS.js'; 
+import TenantApplication from '../models/TenantApplication.js';
+import Notification from '../models/Notification.js'; 
 
 // Helper to create notifications internally
 const createAdminNotification = async (title, message) => {
