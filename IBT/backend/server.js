@@ -22,6 +22,9 @@ import adminRoutes from "./routes/adminRoutes.js";
 // --- NEW MOBILE ROUTES ---
 // Ensure stallRoutes.js has been moved to backend/routes/
 import stallRoutes from "./routes/stallRoutes.js"; 
+import lostFoundRoutes from './routes/lostNFoundRoutes.js';
+import busRoutes from './routes/busRoutes.js';
+import authRoutes from "./routes/authRoutes.js";
 
 connectDB();
 
@@ -82,6 +85,9 @@ app.use("/api/admins", adminRoutes);
 // Mobile-focused routes
 // Final URL: ...onrender.com/api/stalls/occupied
 app.use("/api/stalls", stallRoutes); 
+app.use('/api/lost-found', lostFoundRoutes);
+app.use('/api/bus-routes', busRoutes);
+app.use("/api/auth", authRoutes);
 
 // File retrieval endpoint for GridFS
 app.get('/api/files/:filename', async (req, res) => {
