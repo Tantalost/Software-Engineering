@@ -17,14 +17,13 @@ const ApplicationReviewModal = ({
   const [previewImage, setPreviewImage] = useState(null);
 
   const getFileUrl = (pathOrString) => {
-
-    if (!pathOrString || typeof pathOrString !== 'string') return null;
-    
-    if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) {
-        return pathOrString;
-    }
+  if (!pathOrString || typeof pathOrString !== 'string') return null;
   
-    return `${API_URL}/waitlist/doc/${pathOrString}`; 
+  if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) {
+      return pathOrString;
+  }
+
+  return `${API_URL}/stalls/doc/${pathOrString}`; 
   };
 
   const openPdf = (url) => {
