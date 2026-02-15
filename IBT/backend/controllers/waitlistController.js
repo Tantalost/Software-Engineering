@@ -1,62 +1,88 @@
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js"; 
 import CryptoJS from 'crypto-js';
-import fs from 'fs';
+import mongoose from 'mongoose'; // REQUIRED for GridFS
 import path from 'path';
-import os from 'os';
 
+// Uses your Render Environment Variable for the key
 const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
-console.log(`[Server] Loaded Key Length: ${SECRET_KEY.length} characters`); 
 
+// --- SECURE VIEWER (Streams from MongoDB GridFS) ---
 export const getSecureDocument = async (req, res) => {
     try {
         const { filename } = req.params;
-        const safeFilename = path.basename(filename).trim();
         
-        const uploadDir = path.join(os.homedir(), 'stalls_app_uploads'); 
-        const filePath = path.join(uploadDir, safeFilename);
-       
-        if (!fs.existsSync(filePath)) {
-            console.error(`[Viewer] 404: File not found at ${filePath}`);
-            return res.status(404).send("Document not found.");
+        // 1. Connect to the MongoDB GridFS Bucket
+        const db = mongoose.connection.db;
+        const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: 'uploads' });
+
+        // 2. Check if file exists in Database
+        const cursor = bucket.find({ filename: filename });
+        const files = await cursor.toArray();
+        
+        if (!files.length) {
+            return res.status(404).send("File not found in Database.");
         }
 
-        const fileBufferRaw = fs.readFileSync(filePath);
+        // 3. Download the file stream into a Buffer
+        const downloadStream = bucket.openDownloadStreamByName(filename);
+        const chunks = [];
+        
+        downloadStream.on('data', (chunk) => {
+            chunks.push(chunk);
+        });
 
-        const header = fileBufferRaw.toString('utf8', 0, 8);
-        const isEncrypted = header === 'U2FsdGVk'; 
+        downloadStream.on('error', (err) => {
+            console.error("Stream Error:", err);
+            res.status(500).send("Error reading file.");
+        });
 
-        let finalBuffer;
+        downloadStream.on('end', () => {
+            // 4. Combine chunks into one buffer (This is your encrypted file)
+            const fileBufferRaw = Buffer.concat(chunks);
 
-        if (isEncrypted) {
-            try {
-                const fileContentStr = fileBufferRaw.toString('utf8');
-                const bytes = CryptoJS.AES.decrypt(fileContentStr, SECRET_KEY);
-                const originalBase64 = bytes.toString(CryptoJS.enc.Utf8);
-                if (!originalBase64) throw new Error("Empty decryption");
-                finalBuffer = Buffer.from(originalBase64, 'base64');
-            } catch (err) {
-                console.error("[Viewer] Decrypt Fail:", err.message);
-                return res.status(500).send("Decryption Failed.");
+            // 5. DECRYPT LOGIC
+            // Check for "Salted__" signature (Base64: U2FsdGVk)
+            const header = fileBufferRaw.toString('utf8', 0, 8);
+            const isEncrypted = header === 'U2FsdGVk'; 
+            
+            let finalBuffer;
+
+            if (isEncrypted) {
+                try {
+                    const fileContentStr = fileBufferRaw.toString('utf8');
+                    const bytes = CryptoJS.AES.decrypt(fileContentStr, SECRET_KEY);
+                    const originalBase64 = bytes.toString(CryptoJS.enc.Utf8);
+                    
+                    if (!originalBase64) throw new Error("Empty decryption");
+                    finalBuffer = Buffer.from(originalBase64, 'base64');
+                } catch (err) {
+                    console.error("Decryption Failed:", err.message);
+                    return res.status(500).send("Decryption Failed. Key mismatch?");
+                }
+            } else {
+                // If not encrypted, serve as is (legacy support)
+                finalBuffer = fileBufferRaw;
             }
-        } else {
-            finalBuffer = fileBufferRaw;
-        }
 
-        const ext = path.extname(safeFilename).toLowerCase();
-        let contentType = 'application/octet-stream';
-        if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
-        if (['.png'].includes(ext)) contentType = 'image/png';
-        if (['.pdf'].includes(ext)) contentType = 'application/pdf';
+            // 6. Send the Image/PDF
+            const ext = path.extname(filename).toLowerCase();
+            let contentType = 'application/octet-stream';
+            if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
+            if (['.png'].includes(ext)) contentType = 'image/png';
+            if (['.pdf'].includes(ext)) contentType = 'application/pdf';
 
-        res.setHeader('Content-Type', contentType);
-        res.send(finalBuffer);
+            res.setHeader('Content-Type', contentType);
+            res.send(finalBuffer);
+        });
 
     } catch (error) {
-        console.error("[Viewer] Error:", error);
+        console.error("Viewer Error:", error);
         res.status(500).send("Server Error");
     }
 };
+
+// --- EXISTING CONTROLLERS (Unchanged) ---
 
 export const getWaitlist = async (req, res) => {
   try {

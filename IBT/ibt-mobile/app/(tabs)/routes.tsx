@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, View, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Text, Card, Searchbar, Chip, Avatar, Button, Divider } from 'react-native-paper';
+import { Text, Card, Searchbar, Avatar, Button, Divider } from 'react-native-paper';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import API_URL from '../../src/config'; 
 
-// --- Interface ---
+
 interface BusTrip {
   _id: string;
   templateNo: string;
@@ -60,23 +60,23 @@ export default function RoutesPage() {
     fetchRoutes();
   };
 
-  // --- NEW HELPER: Convert 24h to 12h AM/PM ---
+
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '--:--';
-    // Splits "14:30" into ["14", "30"]
+ 
     const [hourStr, minuteStr] = timeStr.split(':');
     let hour = parseInt(hourStr, 10);
     
     const ampm = hour >= 12 ? 'PM' : 'AM';
     
-    // Convert 24h to 12h
+
     hour = hour % 12;
-    hour = hour ? hour : 12; // the hour '0' should be '12'
+    hour = hour ? hour : 12; 
     
     return `${hour}:${minuteStr} ${ampm}`;
   };
 
-  // --- Filtering Logic ---
+ 
   const filteredRoutes = useMemo(() => {
     let data = routes;
 
@@ -103,7 +103,7 @@ export default function RoutesPage() {
     router.setParams({ tripId: '', search: '' }); 
   };
 
-  // --- Render Individual Route Card ---
+
   const renderItem = ({ item }: { item: BusTrip }) => (
     <Card style={styles.card} mode="elevated">
       <Card.Content>
@@ -133,7 +133,7 @@ export default function RoutesPage() {
            <View style={{alignItems: 'flex-end'}}>
               <Text style={styles.label}>Departure</Text>
               
-              {/* ✅ UPDATED: Now uses formatTime() */}
+
               <Text variant="titleMedium" style={styles.timeValue}>{formatTime(item.time)}</Text>
               
               <Text variant="bodySmall" style={styles.dateValue}>
@@ -159,7 +159,7 @@ export default function RoutesPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header Section */}
+    
       <View style={styles.headerContainer}>
         <Text variant="headlineMedium" style={styles.headerTitle}>Bus Schedules</Text>
         
@@ -186,7 +186,7 @@ export default function RoutesPage() {
         )}
       </View>
 
-      {/* Main List */}
+    
       <FlatList
         data={filteredRoutes}
         keyExtractor={(item) => item._id}

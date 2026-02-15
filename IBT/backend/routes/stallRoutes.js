@@ -1,23 +1,51 @@
 import express from 'express';
+import multer from 'multer';
+import { GridFsStorage } from 'multer-gridfs-storage'; 
+import path from 'path';
+import dotenv from 'dotenv';
+
 import { 
   getOccupiedStalls, 
+  getPendingStalls,
   getMyApplication, 
   submitApplication, 
   submitPayment,
-  uploadContract 
+  uploadContract,
+  getSecureDocument 
 } from '../controllers/stallController.js';
+
+dotenv.config();
 
 const router = express.Router();
 
-// Public route to see which slots are red
-router.get('/occupied', getOccupiedStalls);
+const storage = new GridFsStorage({
+  url: process.env.MONGODB_URI, 
+  file: (req, file) => {
+    return {
+      bucketName: 'uploads', 
+      filename: file.fieldname + '-' + Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname)
+    };
+  }
+});
 
-// UPDATED: Now uses :userId instead of :deviceId
+const upload = multer({ storage });
+
+router.get('/pending', getPendingStalls); 
+
+router.get('/occupied', getOccupiedStalls);
+router.get('/doc/:filename', getSecureDocument);
 router.get('/my-application/:userId', getMyApplication);
 
-// Transaction routes (Apply, Pay, Contract)
-router.post('/apply', submitApplication);
-router.post('/pay', submitPayment);
-router.post('/upload-contract', uploadContract);
+router.post('/apply', 
+  upload.fields([
+    { name: 'permit', maxCount: 1 }, 
+    { name: 'validId', maxCount: 1 },
+    { name: 'clearance', maxCount: 1 }
+  ]), 
+  submitApplication
+);
+
+router.post('/pay', upload.single('receipt'), submitPayment);
+router.post('/upload-contract', upload.single('contract'), uploadContract);
 
 export default router;

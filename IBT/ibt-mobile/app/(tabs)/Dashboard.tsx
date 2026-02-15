@@ -5,14 +5,14 @@ import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View, ActivityIndi
 import { Avatar, Card, Chip, Text, Button } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import API_URL from '../../src/config'; 
+import API_URL from '@/src/config'; 
 
-// --- Interfaces ---
+
 interface BusTrip {
   _id: string;
   templateNo: string;
   route: string;
-  time: string; // Military time string "14:30"
+  time: string; 
   date: string;
   company: string;
   status: string;
@@ -38,7 +38,7 @@ interface StallApplication {
   due?: string;
 }
 
-export const Dashboard: React.FC = () => {
+export default function Dashboard() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -54,7 +54,7 @@ export const Dashboard: React.FC = () => {
 
       const fetchAllData = async () => {
         try {
-          // 1. Check Login & Get User
+          
           const storedUser = await AsyncStorage.getItem('ibt_user');
           let currentUserId = null;
 
@@ -66,7 +66,6 @@ export const Dashboard: React.FC = () => {
              if (isActive) { setUser(null); setMyApp(null); }
           }
 
-          // 2. Fetch Dashboard Data
           const [routesRes, lostRes] = await Promise.all([
             fetch(`${API_URL}/bus-routes`),
             fetch(`${API_URL}/lost-found`)
@@ -75,7 +74,6 @@ export const Dashboard: React.FC = () => {
           const routesData = await routesRes.json();
           const lostData = await lostRes.json();
 
-          // 3. Fetch Stall Application if Logged In
           let applicationData = null;
           if (currentUserId) {
             const appRes = await fetch(`${API_URL}/stalls/my-application/${currentUserId}`);
@@ -102,9 +100,6 @@ export const Dashboard: React.FC = () => {
     }, [])
   );
 
-  // --- HELPERS ---
-
-  // 1. Convert 24h Time to 12h AM/PM
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '--:--';
     const [hourStr, minuteStr] = timeStr.split(':');
@@ -112,7 +107,7 @@ export const Dashboard: React.FC = () => {
     const ampm = hour >= 12 ? 'PM' : 'AM';
     
     hour = hour % 12;
-    hour = hour ? hour : 12; // Convert 0 to 12
+    hour = hour ? hour : 12; 
     
     return `${hour}:${minuteStr} ${ampm}`;
   };
@@ -122,7 +117,8 @@ export const Dashboard: React.FC = () => {
       return new Date(dateString).toLocaleDateString();
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status?: string) => {
+      if (!status) return 'PENDING'; 
       if (status === 'TENANT') return 'PAID'; 
       return status.replace('_', ' ');
   };
@@ -134,7 +130,6 @@ export const Dashboard: React.FC = () => {
     return name[0].toUpperCase();
   };
 
-  // Filter Logic
   const filteredRoutes = useMemo(() => {
     if (!searchQuery.trim()) return busTrips.slice(0, 3);
     const query = searchQuery.toLowerCase();
@@ -152,7 +147,7 @@ export const Dashboard: React.FC = () => {
     return busTrips[0]; 
   }, [busTrips]);
 
-  // Navigation Handlers
+  
   const handleRoutePress = (route: BusTrip) => {
     router.push({ pathname: '/(tabs)/routes', params: { tripId: route._id } });
   };
@@ -171,7 +166,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+     
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
@@ -195,7 +190,6 @@ export const Dashboard: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         
-        {/* --- 1. STALL APPLICATION STATUS CARD --- */}
         {user && myApp && (
             <Card style={[styles.sectionCard, styles.stallCard]} mode="elevated" elevation={2}>
                 <Card.Content>
@@ -209,7 +203,7 @@ export const Dashboard: React.FC = () => {
                             </Text>
                             <Text variant="bodyMedium" style={{color: '#333', fontWeight:'bold'}}>
                                 {myApp.targetSlot} 
-                                {/* Color Adjustment: Brown/Grey for floor type */}
+                               
                                 <Text style={{fontWeight:'normal', color: '#6a8d63ff'}}> ({myApp.floor})</Text>
                             </Text>
                         </View>
@@ -225,8 +219,7 @@ export const Dashboard: React.FC = () => {
             fontSize: 14, 
             fontWeight: 'bold',
             textAlign: 'center',
-            // lineHeight: 18, // REMOVE this if it still clips, let it center automatically
-            marginTop: 4 // Optional: Fine-tune vertical center if needed on Android
+            marginTop: 4 
         }}
     >
         {getStatusLabel(myApp.status)}
@@ -234,7 +227,7 @@ export const Dashboard: React.FC = () => {
 </View>
                     </View>
                     
-                    {/* Dates Section */}
+                  
                     {myApp.start && (
                         <View style={{marginTop: 15, padding: 12, backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 8, borderWidth: 1, borderColor: '#d2f3d6ff'}}>
                             <View style={{flexDirection:'row', justifyContent:'space-between', marginBottom: 6}}>
@@ -253,7 +246,7 @@ export const Dashboard: React.FC = () => {
             </Card>
         )}
 
-        {/* --- 2. SEARCH / WHERE TO SECTION --- */}
+       
         <Card style={[styles.sectionCard, styles.whereCard]} mode="elevated" elevation={3}>
           <Card.Content style={styles.whereContent}>
             <Text variant="titleLarge" style={styles.whereTitle}>Where to?</Text>
@@ -274,7 +267,7 @@ export const Dashboard: React.FC = () => {
               )}
             </View>
 
-            {/* Suggestions List */}
+           
             {filteredRoutes.length > 0 ? (
               <View style={styles.suggestionList}>
                 {filteredRoutes.map((route) => (
@@ -307,7 +300,7 @@ export const Dashboard: React.FC = () => {
           </Card.Content>
         </Card>
 
-        {/* --- 3. NEXT DEPARTURE CARD --- */}
+      
         {currentTrip && (
           <Card style={[styles.sectionCard, styles.tripCard]} mode="elevated" elevation={2}>
             <Card.Content>
@@ -342,7 +335,7 @@ export const Dashboard: React.FC = () => {
                     <Text variant="titleSmall" style={styles.stopName}>
                       Zamboanga City (IBT)
                     </Text>
-                    {/* ✅ UPDATED: Using formatTime() */}
+                  
                     <Text variant="bodySmall" style={styles.stopMeta}>
                       {formatTime(currentTrip.time)}
                     </Text>
@@ -361,7 +354,6 @@ export const Dashboard: React.FC = () => {
           </Card>
         )}
 
-        {/* --- 4. LOST & FOUND --- */}
         <Card style={[styles.sectionCard, styles.lostCard]} mode="elevated" elevation={2}>
           <Card.Content>
             <View style={styles.cardHeader}>
@@ -416,6 +408,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+    paddingBottom: 50,
   },
   centerContent: {
     justifyContent: 'center',
@@ -455,6 +448,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
     marginBottom: 20,
+   
   },
   whereCard: {
     shadowColor: '#D0E2FF',
@@ -677,20 +671,18 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#E2E8F0',
   },
-
-  // --- STALL CARD STYLES ---
  stallCard: {
     backgroundColor: '#d9f8dbff', 
     borderLeftWidth: 4,
     borderLeftColor: '#1B5E20',
     marginBottom: 20,
-    borderRadius: 20, // Matches other cards
+    borderRadius: 20, 
   },
   stallHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // Pushes items apart
-    paddingRight: 4, // Adds space on the far right so chip isn't cut off
+    justifyContent: 'space-between', 
+    paddingRight: 4, 
   },
   stallIconBg: {
     width: 40,
@@ -699,14 +691,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1b5e1f28',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12, // Space between icon and text
+    marginRight: 12,
   },
   statusChip: {
-    height: 30, // INCREASED from 24 to 30 to prevent cutting text
+    height: 30, 
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4, // Adds internal breathing room
-    minWidth: 60, // Ensures it's wide enough for "PAID"
+    paddingHorizontal: 4, 
+    minWidth: 60,
   }
 });
