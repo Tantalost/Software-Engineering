@@ -1,17 +1,13 @@
 import mongoose from "mongoose";
 
 const TenantSchema = new mongoose.Schema({
-  // --- Personal Information ---
   firstName: String,     // Optional: If you want to store them separately
   middleName: String,    // Optional
-  lastName: String,      // Optional
-  tenantName: { type: String, required: true }, // The combined full name used in tables
-
-  // --- Contact Information ---
+  lastName: String,   
+     // Optional
+  tenantName: { type: String, required: true },
   email: { type: String, required: true },
   contactNo: { type: String, required: true },
-  
-  // --- Lease Details ---
   referenceNo: { type: String, required: true, unique: true },
   slotNo: { type: String, required: true }, // e.g., "A-101" or "A-101, A-102"
   tenantType: { type: String, required: true }, // "Permanent" or "Night Market"
