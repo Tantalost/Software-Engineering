@@ -32,15 +32,13 @@ const app = express();
 
 let bucket;
 mongoose.connection.once('open', () => {
+  
   bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
     bucketName: 'uploads' 
   });
-  console.log("GridFS Bucket initialized");
+  
+  console.log("GridFS Bucket initialized (pointed to 'test' database)");
 });
-
-
-export { bucket };
-
 
 app.use(cors({
     origin: "*", 
