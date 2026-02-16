@@ -33,9 +33,7 @@ const app = express();
 let bucket;
 mongoose.connection.once('open', () => {
   
-  const fileDb = mongoose.connection.client.db('test');
-
-  bucket = new mongoose.mongo.GridFSBucket(fileDb, {
+  bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
     bucketName: 'uploads' 
   });
   
