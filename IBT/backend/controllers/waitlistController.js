@@ -1,22 +1,18 @@
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js"; 
 import CryptoJS from 'crypto-js';
-import mongoose from 'mongoose'; // REQUIRED for GridFS
+import mongoose from 'mongoose'; 
 import path from 'path';
 
-// Uses your Render Environment Variable for the key
 const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
 
-// --- SECURE VIEWER (Streams from MongoDB GridFS) ---
 export const getSecureDocument = async (req, res) => {
     try {
         const { filename } = req.params;
         
-        // 1. Connect to the MongoDB GridFS Bucket
         const db = mongoose.connection.db;
         const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: 'uploads' });
 
-        // 2. Check if file exists in Database
         const cursor = bucket.find({ filename: filename });
         const files = await cursor.toArray();
         
@@ -24,7 +20,6 @@ export const getSecureDocument = async (req, res) => {
             return res.status(404).send("File not found in Database.");
         }
 
-        // 3. Download the file stream into a Buffer
         const downloadStream = bucket.openDownloadStreamByName(filename);
         const chunks = [];
         
@@ -38,11 +33,8 @@ export const getSecureDocument = async (req, res) => {
         });
 
         downloadStream.on('end', () => {
-            // 4. Combine chunks into one buffer (This is your encrypted file)
             const fileBufferRaw = Buffer.concat(chunks);
 
-            // 5. DECRYPT LOGIC
-            // Check for "Salted__" signature (Base64: U2FsdGVk)
             const header = fileBufferRaw.toString('utf8', 0, 8);
             const isEncrypted = header === 'U2FsdGVk'; 
             
@@ -61,11 +53,9 @@ export const getSecureDocument = async (req, res) => {
                     return res.status(500).send("Decryption Failed. Key mismatch?");
                 }
             } else {
-                // If not encrypted, serve as is (legacy support)
                 finalBuffer = fileBufferRaw;
             }
 
-            // 6. Send the Image/PDF
             const ext = path.extname(filename).toLowerCase();
             let contentType = 'application/octet-stream';
             if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
@@ -81,8 +71,6 @@ export const getSecureDocument = async (req, res) => {
         res.status(500).send("Server Error");
     }
 };
-
-// --- EXISTING CONTROLLERS (Unchanged) ---
 
 export const getWaitlist = async (req, res) => {
   try {

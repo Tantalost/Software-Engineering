@@ -265,18 +265,15 @@ export default function StallsPage() {
     setModalStep('review');
   };
 
-  // --- CLIENT-SIDE ENCRYPTION HELPER ---
   const encryptFileBeforeUpload = async (fileUri: string, fileName: string) => {
     try {
-      // 1. Read file as Base64 using LEGACY API
+     
       const fileData = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      // 2. Encrypt using CryptoJS (Now using the fixed global.crypto)
       const encryptedData = CryptoJS.AES.encrypt(fileData, SECRET_KEY).toString();
 
-      // 3. Write encrypted string to a temporary file
       const tempDir = FileSystem.cacheDirectory; 
       const tempUri = tempDir + 'enc_' + fileName.replace(/[^a-zA-Z0-9.]/g, '_'); 
       
@@ -287,12 +284,10 @@ export default function StallsPage() {
       return tempUri;
     } catch (error) {
       console.error("Encryption failed:", error);
-      // More detailed error message
       throw new Error(`Failed to encrypt. ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
-  // Helper to append files safely
   const appendFile = (form: FormData, key: string, fileObj: any, encryptedUri: string | null = null) => {
     if (fileObj) {
         const uri = encryptedUri 
