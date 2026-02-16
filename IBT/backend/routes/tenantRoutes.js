@@ -11,36 +11,29 @@ import {
 
 const router = express.Router();
 
-// --- 1. GridFS Storage Configuration ---
+
 const storage = new GridFsStorage({
-  // ✅ UPDATED: Changed from MONGO_URI to MONGODB_URL to match your Dashboard
+
   url: process.env.MONGODB_URL, 
-  options: { useNewUrlParser: true, useUnifiedTopology: true },
   file: (req, file) => {
-    return new Promise((resolve, reject) => {
-      const filename = `${Date.now()}-${file.originalname}`;
-      const fileInfo = {
-        filename: filename,
-        bucketName: 'uploads' 
-      };
-      resolve(fileInfo);
-    });
+    return {
+      bucketName: 'uploads', 
+      
+      filename: `${Date.now()}-${file.originalname}` 
+    };
   }
 });
 
-// --- 2. Connection Debugging ---
 storage.on('connection', () => {
-  console.log("Multer-GridFS: Successfully connected using MONGODB_URL");
+  console.log("Multer-GridFS (Tenants): Connected successfully.");
 });
 
 storage.on('connectionError', (err) => {
-  console.error("Multer-GridFS: Connection failed. Check if MONGODB_URL is correct in Render.");
+  console.error("Multer-GridFS (Tenants): Connection Failed!", err);
 });
 
-// --- 3. Multer Initialization ---
 const upload = multer({ storage });
 
-// --- 4. Routes ---
 router.get('/', getTenants);
 
 router.post('/', 

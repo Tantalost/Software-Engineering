@@ -4,8 +4,6 @@ import {
   CreditCard, X, ZoomIn, PenTool, Download 
 } from "lucide-react";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
-
 const ApplicationReviewModal = ({ 
   isOpen, 
   reviewData,
@@ -17,13 +15,13 @@ const ApplicationReviewModal = ({
   const [previewImage, setPreviewImage] = useState(null);
 
   const getFileUrl = (pathOrString) => {
-    if (!pathOrString) return null;
-    
-    if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) {
-        return pathOrString;
-    }
-    
-    return `${API_URL}/waitlist/doc/${pathOrString}`; 
+  if (!pathOrString || typeof pathOrString !== 'string') return null;
+  
+  if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) {
+      return pathOrString;
+  }
+
+  return `${import.meta.env.VITE_API_URL}/api/stalls/doc/${pathOrString}`; 
   };
 
   const openPdf = (url) => {

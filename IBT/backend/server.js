@@ -4,6 +4,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import mongoose from "mongoose";
 
+
 import busTripRoutes from "./routes/busTripRoutes.js";
 import terminalFeeRoutes from "./routes/terminalFeeRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
@@ -18,19 +19,26 @@ import notifications from "./routes/notifications.js";
 import companyRoutes from "./routes/companyRoutes.js"; 
 import adminRoutes from "./routes/adminRoutes.js";
 
+
+import stallRoutes from "./routes/stallRoutes.js"; 
+import lostFoundRoutes from './routes/lostNFoundRoutes.js';
+import busRoutes from './routes/busRoutes.js';
+import authRoutes from "./routes/authRoutes.js";
+
 connectDB();
 
 const app = express();
 
+
 let bucket;
 mongoose.connection.once('open', () => {
+  
   bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
     bucketName: 'uploads' 
   });
-  console.log("GridFS Bucket initialized");
+  
+  console.log("GridFS Bucket initialized (pointed to 'test' database)");
 });
-
-export { bucket };
 
 app.use(cors({
     origin: "*", 
@@ -41,9 +49,17 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-app.get('/', (req, res) => res.send("IBT Management System API is working"));
+
+app.get('/', (req, res) => res.send("IBT Unified Management System API is working"));
+
+
+
+
+
+
 
 app.use("/api/bustrips", busTripRoutes);
+
 app.use("/api/companies", companyRoutes);
 app.use("/api/terminal-fees", terminalFeeRoutes);
 app.use("/api/logs", logRoutes);
@@ -56,6 +72,13 @@ app.use("/api/lostfound", lostfoundRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notifications);
 app.use("/api/admins", adminRoutes);
+
+
+app.use("/api/stalls", stallRoutes); 
+app.use('/api/lost-found', lostFoundRoutes);
+app.use('/api/bus-routes', busRoutes);
+app.use("/api/auth", authRoutes);
+
 
 app.get('/api/files/:filename', async (req, res) => {
   try {
@@ -79,5 +102,6 @@ app.get('/api/files/:filename', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+const PORT = process.env.PORT || 10000; 
+app.listen(PORT, '0.0.0.0', () => console.log(`Unified Server running on port ${PORT}`));

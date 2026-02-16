@@ -1,41 +1,7 @@
 import Tenant from "../models/Tenant.js";
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
 
-
-const ENCRYPTION_KEY = process.env.FILE_ENCRYPTION_KEY 
-  ? Buffer.from(process.env.FILE_ENCRYPTION_KEY, 'hex') 
-  : crypto.randomBytes(32); 
-
-const IV_LENGTH = 16; 
-
-const encryptFile = async (filePath) => {
-    try {
-        const fileContent = fs.readFileSync(filePath);
-        const iv = crypto.randomBytes(IV_LENGTH);
-        const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
-        
-        let encrypted = cipher.update(fileContent);
-        encrypted = Buffer.concat([encrypted, cipher.final()]);
-        
-        const output = Buffer.concat([iv, encrypted]);
-        
-        const encryptedPath = filePath + '.enc';
-        fs.writeFileSync(encryptedPath, output);
-        
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-        
-        return encryptedPath;
-    } catch (error) {
-        console.error("Encryption failed:", error);
-        throw new Error("File encryption failed");
-    }
-};
 
 export const getTenants = async (req, res) => {
   try {
@@ -58,27 +24,29 @@ export const getTenantById = async (req, res) => {
 
 export const createTenant = async (req, res) => {
   try {
-   
-    const processUpload = async (fieldName) => {
-        if (req.files && req.files[fieldName]) {
-            const originalPath = req.files[fieldName][0].path;
-            const securePath = await encryptFile(originalPath);
-            return path.basename(securePath);
+    
+    const getFile = (fieldName) => {
+        
+        if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
+            return req.files[fieldName][0].filename;
+        }
+       
+        if (req.body[fieldName] && typeof req.body[fieldName] === 'string') {
+            return req.body[fieldName];
         }
         return null;
     };
 
-    const businessPermitPath = await processUpload('businessPermit');
-    const validIDPath = await processUpload('validID');
-    const contractPath = await processUpload('contract');
+    const businessPermit = getFile('businessPermit');
+    const validID = getFile('validID');
+    const contract = getFile('contract');
 
     const tenantData = {
         ...req.body,
-        
         documents: {
-            businessPermit: businessPermitPath,
-            validID: validIDPath,
-            contract: contractPath
+            businessPermit: businessPermit,
+            validID: validID,
+            contract: contract
         }
     };
 
@@ -138,21 +106,18 @@ IBT Management
 
 export const updateTenant = async (req, res) => {
   try {
-   
     const updateData = { ...req.body };
 
-    const processUpload = async (fieldName) => {
-        if (req.files && req.files[fieldName]) {
-            const originalPath = req.files[fieldName][0].path;
-            const securePath = await encryptFile(originalPath);
-            return path.basename(securePath);
+    const getFile = (fieldName) => {
+        if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
+            return req.files[fieldName][0].filename;
         }
-        return null;
+        return null; 
     };
 
-    const newPermit = await processUpload('businessPermit');
-    const newID = await processUpload('validID');
-    const newContract = await processUpload('contract');
+    const newPermit = getFile('businessPermit');
+    const newID = getFile('validID');
+    const newContract = getFile('contract');
 
     if (newPermit) updateData['documents.businessPermit'] = newPermit;
     if (newID) updateData['documents.validID'] = newID;
@@ -171,7 +136,6 @@ export const updateTenant = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const deleteTenant = async (req, res) => {
   try {
