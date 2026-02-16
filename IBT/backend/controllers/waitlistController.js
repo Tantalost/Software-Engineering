@@ -10,7 +10,7 @@ export const getSecureDocument = async (req, res) => {
     try {
         const { filename } = req.params;
         
-        const db = mongoose.connection.db;
+        const db = mongoose.connection.db('IBT');
         const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: 'uploads' });
 
         const cursor = bucket.find({ filename: filename });

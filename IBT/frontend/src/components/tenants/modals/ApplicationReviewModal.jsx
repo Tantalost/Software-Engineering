@@ -23,7 +23,7 @@ const ApplicationReviewModal = ({
       return pathOrString;
   }
 
-  return `${API_URL}/stalls/doc/${pathOrString}`; 
+  return `${import.meta.env.VITE_API_URL}/api/stalls/doc/${pathOrString}`; 
   };
 
   const openPdf = (url) => {
