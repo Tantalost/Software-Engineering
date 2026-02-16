@@ -4,7 +4,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import mongoose from "mongoose";
 
-// --- EXISTING WEB ROUTES ---
+
 import busTripRoutes from "./routes/busTripRoutes.js";
 import terminalFeeRoutes from "./routes/terminalFeeRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
@@ -19,8 +19,7 @@ import notifications from "./routes/notifications.js";
 import companyRoutes from "./routes/companyRoutes.js"; 
 import adminRoutes from "./routes/adminRoutes.js";
 
-// --- NEW MOBILE ROUTES ---
-// Ensure stallRoutes.js has been moved to backend/routes/
+
 import stallRoutes from "./routes/stallRoutes.js"; 
 import lostFoundRoutes from './routes/lostNFoundRoutes.js';
 import busRoutes from './routes/busRoutes.js';
@@ -30,7 +29,7 @@ connectDB();
 
 const app = express();
 
-// Initialize GridFS Bucket
+
 let bucket;
 mongoose.connection.once('open', () => {
   bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
@@ -39,10 +38,10 @@ mongoose.connection.once('open', () => {
   console.log("GridFS Bucket initialized");
 });
 
-// Export bucket so controllers (like stallController) can use it
+
 export { bucket };
 
-// Middlewares
+
 app.use(cors({
     origin: "*", 
     credentials: true,
@@ -52,13 +51,17 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Standard Health Check
+
 app.get('/', (req, res) => res.send("IBT Unified Management System API is working"));
 
-// --- ROUTE MOUNTING ---
 
-// Web-focused routes
+
+
+
+
+
 app.use("/api/bustrips", busTripRoutes);
+
 app.use("/api/companies", companyRoutes);
 app.use("/api/terminal-fees", terminalFeeRoutes);
 app.use("/api/logs", logRoutes);
@@ -72,14 +75,13 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notifications);
 app.use("/api/admins", adminRoutes);
 
-// Mobile-focused routes
-// Final URL: ...onrender.com/api/stalls/occupied
+
 app.use("/api/stalls", stallRoutes); 
 app.use('/api/lost-found', lostFoundRoutes);
 app.use('/api/bus-routes', busRoutes);
 app.use("/api/auth", authRoutes);
 
-// File retrieval endpoint for GridFS
+
 app.get('/api/files/:filename', async (req, res) => {
   try {
     const file = await bucket.find({ filename: req.params.filename }).toArray();
@@ -102,7 +104,6 @@ app.get('/api/files/:filename', async (req, res) => {
   }
 });
 
-// Port Configuration for Render
-// Render automatically provides a PORT environment variable
+
 const PORT = process.env.PORT || 10000; 
 app.listen(PORT, '0.0.0.0', () => console.log(`Unified Server running on port ${PORT}`));

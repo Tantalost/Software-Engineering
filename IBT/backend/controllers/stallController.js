@@ -8,7 +8,6 @@ import path from 'path';
 const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
 
 const createAdminNotification = async (title, message) => {
-  
   try {
     const newNote = new Notification({
       title,
@@ -26,7 +25,9 @@ const createAdminNotification = async (title, message) => {
 export const getSecureDocument = async (req, res) => {
     try {
         const { filename } = req.params;
-        const db = mongoose.connection.db('IBT');
+        
+        
+        const db = mongoose.connection.client.db('IBT');
         const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: 'uploads' });
 
         const cursor = bucket.find({ filename: filename });
@@ -66,17 +67,17 @@ export const getSecureDocument = async (req, res) => {
             res.send(finalBuffer);
         });
     } catch (error) {
+        console.error(error);
         res.status(500).send("Server Error");
     }
 };
+
 
 export const getOccupiedStalls = async (req, res) => {
    
     try {
         const { floor } = req.query; 
-    
         const tenants = await Tenant.find({ tenantType: floor });
-    
         let occupiedLabels = [];
         tenants.forEach(t => {
           if (t.slotNo) {
@@ -84,71 +85,40 @@ export const getOccupiedStalls = async (req, res) => {
             occupiedLabels.push(...slots);
           }
         });
-    
         res.json(occupiedLabels);
       } catch (error) {
-        console.error("Error fetching occupied stalls:", error);
         res.status(500).json({ message: error.message });
       }
 };
 
 export const getPendingStalls = async (req, res) => {
+  
   try {
     const { floor } = req.query; 
-    
-    const activeStatuses = [
-        'VERIFICATION_PENDING', 
-        'PAYMENT_UNLOCKED', 
-        'PAYMENT_REVIEW', 
-        'CONTRACT_PENDING', 
-        'CONTRACT_REVIEW'
-    ];
-
-    const pendingApps = await TenantApplication.find({ 
-        floor: floor, 
-        status: { $in: activeStatuses } 
-    }).select('targetSlot'); 
-
+    const activeStatuses = ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED', 'PAYMENT_REVIEW', 'CONTRACT_PENDING', 'CONTRACT_REVIEW'];
+    const pendingApps = await TenantApplication.find({ floor: floor, status: { $in: activeStatuses } }).select('targetSlot'); 
     const pendingLabels = pendingApps.map(app => app.targetSlot);
-
     res.json(pendingLabels);
   } catch (error) {
-    console.error("Error fetching pending stalls:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-
 export const getMyApplication = async (req, res) => {
-   
+    
     try {
         const { userId } = req.params;
-        
         let application = await TenantApplication.findOne({ userId }).lean();
-        
-        const tenant = await Tenant.findOne({ 
-            $or: [{ uid: userId }, { email: application?.email }] 
-        }).lean();
-    
+        const tenant = await Tenant.findOne({ $or: [{ uid: userId }, { email: application?.email }] }).lean();
         if (tenant) {
-           
             if (!application) {
-              
-                application = {
-                    status: 'TENANT',
-                    targetSlot: tenant.slotNo,
-                    floor: tenant.tenantType,
-                    start: tenant.StartDateTime,
-                    due: tenant.DueDateTime
-                };
+                application = { status: 'TENANT', targetSlot: tenant.slotNo, floor: tenant.tenantType, start: tenant.StartDateTime, due: tenant.DueDateTime };
             } else {
-                
                 application.status = 'TENANT'; 
                 application.start = tenant.StartDateTime;
                 application.due = tenant.DueDateTime;
             }
         }
-        
         res.json(application || null); 
       } catch (error) {
         res.status(500).json({ message: error.message });
@@ -156,84 +126,36 @@ export const getMyApplication = async (req, res) => {
 };
 
 export const submitApplication = async (req, res) => {
+   
     try {
         const data = req.body; 
         const files = req.files;
-
         if (files) {
             if (files.permit?.[0]) data.permitUrl = files.permit[0].filename;
             if (files.validId?.[0]) data.validIdUrl = files.validId[0].filename;
             if (files.clearance?.[0]) data.clearanceUrl = files.clearance[0].filename;
         }
-
-        const existingTenant = await Tenant.findOne({ 
-            slotNo: data.targetSlot 
-        });
-    
-        if (existingTenant) {
-            return res.status(400).json({ message: "Sorry, this slot was just taken by another user." });
-        }
-    
-        const pendingApp = await TenantApplication.findOne({
-            targetSlot: data.targetSlot,
-            status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED', 'PAYMENT_REVIEW', 'CONTRACT_PENDING', 'CONTRACT_REVIEW'] }
-        });
-    
-        if (pendingApp) {
-            return res.status(400).json({ message: "Someone else is currently applying for this slot. Please choose another." });
-        }
-    
-        const newApp = await TenantApplication.findOneAndUpdate(
-          { userId: data.userId },
-          { ...data, status: 'VERIFICATION_PENDING' },
-          { new: true, upsert: true }
-        );
-    
-        await createAdminNotification(
-          "New Application Received",
-          `Applicant ${data.name} has applied for slot ${data.targetSlot}.`
-        );
-    
+        const existingTenant = await Tenant.findOne({ slotNo: data.targetSlot });
+        if (existingTenant) return res.status(400).json({ message: "Sorry, this slot was just taken by another user." });
+        const pendingApp = await TenantApplication.findOne({ targetSlot: data.targetSlot, status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED', 'PAYMENT_REVIEW', 'CONTRACT_PENDING', 'CONTRACT_REVIEW'] } });
+        if (pendingApp) return res.status(400).json({ message: "Someone else is currently applying for this slot." });
+        const newApp = await TenantApplication.findOneAndUpdate({ userId: data.userId }, { ...data, status: 'VERIFICATION_PENDING' }, { new: true, upsert: true });
+        await createAdminNotification("New Application Received", `Applicant ${data.name} has applied for slot ${data.targetSlot}.`);
         res.json(newApp);
-    
       } catch (error) {
         res.status(500).json({ message: error.message });
       }
 };
 
 export const submitPayment = async (req, res) => {
+   
     try {
         const { userId, paymentReference, paymentAmount } = req.body;
-        
         let receiptUrl = "";
-        if (req.file) {
-            receiptUrl = req.file.filename;
-        } else if (req.body.receiptUrl) {
-            
-            receiptUrl = req.body.receiptUrl;
-        }
-
-        if (!receiptUrl) {
-             return res.status(400).json({ message: "Receipt file is missing." });
-        }
-        
-        const updatedApp = await TenantApplication.findOneAndUpdate(
-          { userId: userId },
-          { 
-            receiptUrl, 
-            paymentReference, 
-            paymentAmount, 
-            status: 'PAYMENT_REVIEW',
-            paymentSubmittedAt: new Date()
-          },
-          { new: true }
-        );
-    
-        await createAdminNotification(
-          "Payment Receipt Uploaded",
-          `Ref: ${paymentReference}. Verify payment for Applicant ID: ${userId.slice(-6)}.`
-        );
-    
+        if (req.file) { receiptUrl = req.file.filename; } else if (req.body.receiptUrl) { receiptUrl = req.body.receiptUrl; }
+        if (!receiptUrl) return res.status(400).json({ message: "Receipt file is missing." });
+        const updatedApp = await TenantApplication.findOneAndUpdate({ userId: userId }, { receiptUrl, paymentReference, paymentAmount, status: 'PAYMENT_REVIEW', paymentSubmittedAt: new Date() }, { new: true });
+        await createAdminNotification("Payment Receipt Uploaded", `Ref: ${paymentReference}. Verify payment for Applicant ID: ${userId.slice(-6)}.`);
         res.json(updatedApp);
       } catch (error) {
         res.status(500).json({ message: error.message });
@@ -241,40 +163,17 @@ export const submitPayment = async (req, res) => {
 };
 
 export const uploadContract = async (req, res) => {
+   
     try {
         const { userId } = req.body;
-
         let contractUrl = "";
-        if (req.file) {
-            contractUrl = req.file.filename;
-        }
-
-        if (!userId || !contractUrl) {
-          return res.status(400).json({ message: "Missing userId or contract file" });
-        }
-    
-        const updatedApp = await TenantApplication.findOneAndUpdate(
-          { userId: userId },
-          { 
-            contractUrl, 
-            status: 'CONTRACT_REVIEW', 
-            contractSubmittedAt: new Date()
-          },
-          { new: true }
-        );
-        
-        await createAdminNotification(
-          "Contract Signed",
-          "A new signed contract has been uploaded. Please review for final approval."
-        );
-    
-        if (!updatedApp) {
-          return res.status(404).json({ message: "Application not found" });
-        }
-    
+        if (req.file) contractUrl = req.file.filename;
+        if (!userId || !contractUrl) return res.status(400).json({ message: "Missing userId or contract file" });
+        const updatedApp = await TenantApplication.findOneAndUpdate({ userId: userId }, { contractUrl, status: 'CONTRACT_REVIEW', contractSubmittedAt: new Date() }, { new: true });
+        await createAdminNotification("Contract Signed", "A new signed contract has been uploaded.");
+        if (!updatedApp) return res.status(404).json({ message: "Application not found" });
         res.json(updatedApp);
       } catch (error) {
-        console.error("Contract Upload Error:", error);
         res.status(500).json({ message: error.message });
       }
 };

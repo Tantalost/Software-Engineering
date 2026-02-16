@@ -10,7 +10,7 @@ export const getSecureDocument = async (req, res) => {
     try {
         const { filename } = req.params;
         
-        const db = mongoose.connection.db('IBT');
+        const db = mongoose.connection.client.db('IBT');
         const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: 'uploads' });
 
         const cursor = bucket.find({ filename: filename });
@@ -34,23 +34,19 @@ export const getSecureDocument = async (req, res) => {
 
         downloadStream.on('end', () => {
             const fileBufferRaw = Buffer.concat(chunks);
-
             const header = fileBufferRaw.toString('utf8', 0, 8);
             const isEncrypted = header === 'U2FsdGVk'; 
             
             let finalBuffer;
-
             if (isEncrypted) {
                 try {
                     const fileContentStr = fileBufferRaw.toString('utf8');
                     const bytes = CryptoJS.AES.decrypt(fileContentStr, SECRET_KEY);
                     const originalBase64 = bytes.toString(CryptoJS.enc.Utf8);
-                    
                     if (!originalBase64) throw new Error("Empty decryption");
                     finalBuffer = Buffer.from(originalBase64, 'base64');
                 } catch (err) {
-                    console.error("Decryption Failed:", err.message);
-                    return res.status(500).send("Decryption Failed. Key mismatch?");
+                    return res.status(500).send("Decryption Failed.");
                 }
             } else {
                 finalBuffer = fileBufferRaw;
@@ -74,9 +70,7 @@ export const getSecureDocument = async (req, res) => {
 
 export const getWaitlist = async (req, res) => {
   try {
-    const list = await TenantApplication.find()
-      .select('-permitUrl -validIdUrl -clearanceUrl -receiptUrl -contractUrl') 
-      .sort({ createdAt: -1 });
+    const list = await TenantApplication.find().select('-permitUrl -validIdUrl -clearanceUrl -receiptUrl -contractUrl').sort({ createdAt: -1 });
     res.status(200).json(list);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -108,27 +102,23 @@ export const updateWaitlistEntry = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const applicant = await TenantApplication.findByIdAndUpdate(id, req.body, { new: true });
-
     if (!applicant) return res.status(404).json({ error: "Applicant not found" });
 
     let message = "";
     let subject = "";
-
     if (status === "PAYMENT_UNLOCKED") {
         subject = "Application Approved - Payment Unlocked";
-        message = `Dear ${applicant.name},\n\nYour application has been approved!\n\nPlease open the app to view the "Stall Order of Payment".\nYou are required to upload your payment receipt photo for final verification.\n\nThank you!`;
+        message = `Dear ${applicant.name},\n\nYour application has been approved!\n\nPlease open the app to view the "Stall Order of Payment".`;
     } 
     else if (status === "CONTRACT_PENDING") {
         subject = "Action Required: Upload Contract";
-        message = `Dear ${applicant.name},\n\nWe have verified your payment.\nSince you applied for a Permanent slot, please upload your Signed Contract document via the app to proceed.\n\nThank you!`;
+        message = `Dear ${applicant.name},\n\nWe have verified your payment. Please upload your Signed Contract.`;
     }
 
     if (subject && applicant.email) {
-        try {
-            await sendEmail({ email: applicant.email, subject: subject, message: message });
-        } catch (emailError) { console.error("Email failed:", emailError.message); }
+        try { await sendEmail({ email: applicant.email, subject: subject, message: message }); } 
+        catch (emailError) { console.error("Email failed:", emailError.message); }
     }
-    
     res.status(200).json(applicant);
   } catch (error) {
     res.status(500).json({ error: error.message });
