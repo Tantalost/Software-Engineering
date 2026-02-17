@@ -17,13 +17,13 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
   };
 
   const handleSave = () => {
-    const formattedTargets = {};
-    Object.keys(modalTargets).forEach((key) => {
-      formattedTargets[key] = parseFloat(modalTargets[key]) || 0;
-    });
-    onSave(formattedTargets);
-    onClose();
-  };
+  const formattedTargets = {};
+  Object.keys(modalTargets).forEach((key) => {
+    formattedTargets[key] = parseFloat(modalTargets[key]) || 0;
+  });
+  onSave(formattedTargets); 
+};
+
 
   if (!isOpen) return null;
 
