@@ -49,22 +49,21 @@ const Dashboard = () => {
   });
 
   const handleSaveTargets = (newTargets) => {
-  setTargets(newTargets);
-  localStorage.setItem("dashboardTargets", JSON.stringify(newTargets));
+    setTargets(newTargets);
+    localStorage.setItem("dashboardTargets", JSON.stringify(newTargets));
 
-  setToast({
-    show: true,
-    message: "Revenue targets saved successfully",
-    type: "success",
-  });
+    setToast({
+      show: true,
+      message: "Revenue targets saved successfully",
+      type: "success",
+    });
 
-  setIsTargetModalOpen(false); 
+    setIsTargetModalOpen(false);
 
-  setTimeout(() => {
-    setToast((prev) => ({ ...prev, show: false }));
-  }, 3000);
-};
-
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, show: false }));
+    }, 3000);
+  };
 
   const [stats, setStats] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -633,7 +632,7 @@ const Dashboard = () => {
 
   return (
     <Layout title="Dashboard">
-      <div className="px-4 py-6 lg:px-6 space-y-8 bg-gray-50 min-h-screen">
+      <div className="px-4 py-6 lg:px-8 space-y-10 bg-gray-50 min-h-screen">
         {/* --- FILTERS + TARGETS ALIGNMENT --- */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           {/* Left: Filters + Download */}
@@ -649,11 +648,14 @@ const Dashboard = () => {
           <div className="flex justify-end">
             <button
               onClick={() => setIsTargetModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-full shadow-sm hover:bg-gray-50 hover:text-teal-600 transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 
+             text-gray-700 text-sm font-medium rounded-lg 
+             shadow-sm hover:bg-gray-50 hover:border-teal-300 
+             hover:text-teal-600 transition-all"
               title="Set Revenue Targets"
             >
-              <Settings size={14} />
-              Set Targets
+              <Settings size={16} />
+              Set Revenue Targets
             </button>
           </div>
         </div>
@@ -680,7 +682,7 @@ const Dashboard = () => {
       </div>
 
       {toast.show && (
-        <div className="fixed top-6 right-6 z-50">
+        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-2 duration-300">
           <div
             className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border
         ${
