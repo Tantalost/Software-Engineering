@@ -680,6 +680,7 @@ const TenantLease = () => {
 
     const handleRejectApplicant = async (id, reason) => {
         try {
+            
             const response = await fetch(`${API_URL}/waitlist/${id}`, { 
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -906,7 +907,7 @@ const TenantLease = () => {
     const handleExportPDF = () => {
         if (filtered.length === 0) return alert("No records to export.");
 
-        const doc = new jsPDF("l", "mm", "a4"); // Landscape for better column spacing
+        const doc = new jsPDF("l", "mm", "a4"); 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
