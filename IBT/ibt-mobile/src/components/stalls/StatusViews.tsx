@@ -1,11 +1,12 @@
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, Image } from 'react-native';
 import { Card, Text, Button, Divider, TextInput } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import styles from '@/src/styles/stallsStyle'; 
 import { colors } from '@/src/themes/stallsColors'; 
 import { ApplicationData} from '@/src/types/StallTypes';
 import FileUploadButton from '@/src/components/FileUploadButton';
+import API_URL from '@/src/config';
 
 export const VerificationPendingView = ({ currentApp }: { currentApp: ApplicationData }) => (
     <View style={styles.centerContent}>
@@ -99,18 +100,132 @@ export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, s
     );
 };
 
-export const TenantView = ({ currentApp }: { currentApp: ApplicationData }) => (
-    <ScrollView contentContainerStyle={{padding: 20}}>
-        <Card style={[styles.card, {borderColor: colors.success, borderWidth: 1}]}>
-            <Card.Content style={{alignItems: 'center', paddingVertical: 30}}>
-                <Icon name="check-decagram" size={80} color={colors.success} />
-                <Text variant="headlineSmall" style={{marginTop: 15, fontWeight: 'bold', color: colors.success}}>Active Tenant</Text>
-                <Text variant="titleMedium" style={{marginTop: 5, color: colors.textDark, fontWeight: 'bold'}}>Slot: {currentApp.targetSlot}</Text>
-                <Text style={{color: colors.textDark, marginTop: 5}}>Floor: {currentApp.floor}</Text>
-                <View style={{marginTop: 30, width: '100%'}}>
-                    <Button mode="outlined" textColor={colors.primary} style={{borderColor: colors.primary}}>View Contract</Button>
-                </View>
-            </Card.Content>
-        </Card>
+
+export const RejectedView = ({ currentApp }: { currentApp: any }) => {
+  return (
+    <View style={{ flex: 1, padding: 20, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name="close-circle-outline" size={80} color="#ef4444" />
+      <Text variant="headlineSmall" style={{ marginTop: 20, fontWeight: 'bold', color: '#ef4444' }}>
+        Application Rejected
+      </Text>
+      
+      <Card style={{ width: '100%', marginTop: 20, backgroundColor: '#fef2f2', borderColor: '#fca5a5', borderWidth: 1 }}>
+        <Card.Content>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <Icon name="alert-circle" size={20} color="#dc2626" style={{ marginRight: 8 }} />
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#991b1b' }}>
+              Admin Remarks:
+            </Text>
+          </View>
+          <Text variant="bodyLarge" style={{ color: '#7f1d1d', lineHeight: 24 }}>
+            {currentApp.rejectionReason || "Your application did not meet the requirements or had incomplete documentation. Please contact administration."}
+          </Text>
+        </Card.Content>
+      </Card>
+
+      <Text style={{ marginTop: 30, textAlign: 'center', color: 'gray' }}>
+        You may select a different slot or switch tabs to submit a new application with corrected documents.
+      </Text>
+    </View>
+  );
+};
+
+
+export const TenantView = ({ currentApp }: { currentApp: any }) => {
+  
+  const receiptImageUri = currentApp.receiptUrl 
+    ? `${API_URL}/stalls/doc/${currentApp.receiptUrl}` 
+    : null;
+
+ 
+  const dueDate = currentApp.due 
+    ? new Date(currentApp.due).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }) 
+    : "Not Set";
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+      <Card style={[styles.card, { borderColor: colors.success, borderWidth: 1, marginBottom: 20 }]}>
+        <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
+          <Icon name="check-decagram" size={80} color={colors.success} />
+          <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: colors.success }}>
+            Active Tenant
+          </Text>
+          <Text variant="titleMedium" style={{ marginTop: 5, color: colors.textDark, fontWeight: 'bold' }}>
+            Slot: {currentApp.targetSlot}
+          </Text>
+          <Text style={{ color: colors.textDark, marginTop: 5 }}>
+            Floor: {currentApp.floor}
+          </Text>
+          {currentApp.contractUrl && (
+              <View style={{ marginTop: 20, width: '100%' }}>
+                  <Button mode="outlined" textColor={colors.primary} style={{ borderColor: colors.primary }}>
+                      View Contract
+                  </Button>
+              </View>
+          )}
+        </Card.Content>
+      </Card>
+
+     
+      <Card style={{ marginBottom: 20, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 }}>
+        <Card.Content>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+            <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>
+              Next Payment Due
+            </Text>
+          </View>
+          <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>
+            {dueDate}
+          </Text>
+        </Card.Content>
+      </Card>
+
+   
+      <Card style={{ marginBottom: 20, borderColor: '#e2e8f0', borderWidth: 1 }}>
+        <Card.Content>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+            <Icon name="receipt" size={24} color="#64748b" style={{ marginRight: 10 }} />
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#334155' }}>
+              Initial Payment Record
+            </Text>
+          </View>
+          
+          <View style={{ backgroundColor: '#f8fafc', padding: 15, borderRadius: 10, marginBottom: 15 }}>
+            <Text variant="bodyMedium" style={{ marginBottom: 5 }}>
+              <Text style={{ fontWeight: 'bold', color: '#475569' }}>Reference No:</Text> {currentApp.paymentReference || "N/A"}
+            </Text>
+            <Text variant="bodyMedium">
+              <Text style={{ fontWeight: 'bold', color: '#475569' }}>Amount Paid:</Text> ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString() : "0.00"}
+            </Text>
+          </View>
+
+         
+          {receiptImageUri ? (
+            <View style={{ marginTop: 5 }}>
+              <Text variant="labelLarge" style={{ color: '#64748b', marginBottom: 10 }}>
+                <Icon name="image-outline" size={16} /> Attached Document:
+              </Text>
+              <Image 
+                source={{ uri: receiptImageUri }} 
+                style={{ width: '100%', height: 350, borderRadius: 12, backgroundColor: '#e2e8f0' }} 
+                resizeMode="contain" 
+              />
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', padding: 20, backgroundColor: '#f1f5f9', borderRadius: 10 }}>
+              <Icon name="file-hidden" size={30} color="#94a3b8" />
+              <Text style={{ color: '#64748b', fontStyle: 'italic', marginTop: 10 }}>
+                No receipt document available.
+              </Text>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
     </ScrollView>
-);
+  );
+};

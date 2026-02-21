@@ -25,6 +25,8 @@ import lostFoundRoutes from './routes/lostNFoundRoutes.js';
 import busRoutes from './routes/busRoutes.js';
 import authRoutes from "./routes/authRoutes.js";
 
+import { startCleanUP } from './utils/cleanUP.js';
+
 connectDB();
 
 const app = express();
@@ -51,11 +53,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 
 app.get('/', (req, res) => res.send("IBT Unified Management System API is working"));
-
-
-
-
-
 
 
 app.use("/api/bustrips", busTripRoutes);
@@ -102,6 +99,7 @@ app.get('/api/files/:filename', async (req, res) => {
   }
 });
 
+startCleanUP();
 
 const PORT = process.env.PORT || 10000; 
 app.listen(PORT, '0.0.0.0', () => console.log(`Unified Server running on port ${PORT}`));
