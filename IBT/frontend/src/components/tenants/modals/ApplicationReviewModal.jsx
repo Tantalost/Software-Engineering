@@ -220,9 +220,13 @@ const ApplicationReviewModal = ({
 
           <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between gap-3 rounded-b-2xl">
            
-            <button onClick={() => handleActionClick('reject')} className="bg-white border border-red-200 text-red-600 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-300 transition-all flex items-center gap-2 active:scale-95">
-              <AlertTriangle size={18} /> Reject
-            </button>
+            {status !== 'REJECTED' ? (
+              <button onClick={() => handleActionClick('reject')} className="bg-white border border-red-200 text-red-600 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-300 transition-all flex items-center gap-2 active:scale-95">
+                <AlertTriangle size={18} /> Reject
+              </button>
+            ) : (
+              <div></div> 
+            )}
 
             <div className="flex gap-3">
               {showUnlockBtn && (

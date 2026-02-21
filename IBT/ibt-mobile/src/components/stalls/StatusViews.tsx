@@ -103,7 +103,8 @@ export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, s
 
 export const RejectedView = ({ currentApp }: { currentApp: any }) => {
   return (
-    <View style={{ flex: 1, padding: 20, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ flex: 1, padding: 20, alignItems: 'center', paddingTop: 80 }}> 
+       
       <Icon name="close-circle-outline" size={80} color="#ef4444" />
       <Text variant="headlineSmall" style={{ marginTop: 20, fontWeight: 'bold', color: '#ef4444' }}>
         Application Rejected
@@ -160,13 +161,7 @@ export const TenantView = ({ currentApp }: { currentApp: any }) => {
           <Text style={{ color: colors.textDark, marginTop: 5 }}>
             Floor: {currentApp.floor}
           </Text>
-          {currentApp.contractUrl && (
-              <View style={{ marginTop: 20, width: '100%' }}>
-                  <Button mode="outlined" textColor={colors.primary} style={{ borderColor: colors.primary }}>
-                      View Contract
-                  </Button>
-              </View>
-          )}
+          
         </Card.Content>
       </Card>
 
@@ -175,7 +170,7 @@ export const TenantView = ({ currentApp }: { currentApp: any }) => {
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
-            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>
+            <Text variant="titleMedium" style={{ fontWeight: 'medium', color: '#166534' }}>
               Next Payment Due
             </Text>
           </View>
@@ -186,28 +181,39 @@ export const TenantView = ({ currentApp }: { currentApp: any }) => {
       </Card>
 
    
-      <Card style={{ marginBottom: 20, borderColor: '#e2e8f0', borderWidth: 1 }}>
+      <Card style={{ marginBottom: 20, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 }}>
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
-            <Icon name="receipt" size={24} color="#64748b" style={{ marginRight: 10 }} />
-            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#334155' }}>
-              Initial Payment Record
+            <Icon name="receipt" size={24} color="#166534" style={{ marginRight: 10 }} />
+            <Text variant="titleMedium" style={{ fontWeight: 'medium', color: '#166534' }}>
+             Payment Record History
             </Text>
           </View>
           
-          <View style={{ backgroundColor: '#f8fafc', padding: 15, borderRadius: 10, marginBottom: 15 }}>
-            <Text variant="bodyMedium" style={{ marginBottom: 5 }}>
-              <Text style={{ fontWeight: 'bold', color: '#475569' }}>Reference No:</Text> {currentApp.paymentReference || "N/A"}
+          <View style={{ 
+            backgroundColor: '#ffffff', 
+            padding: 15, 
+            borderRadius: 10, 
+            marginBottom: 15,
+            borderWidth: 1, 
+            borderColor: colors.success 
+          }}>
+            
+            <Text variant="bodyMedium" style={{ marginBottom: 5, color: '#121213', fontWeight: 'bold'  }}>
+              <Text style={{ fontWeight: 'medium', color: '#121213' }}>Reference No: </Text> 
+              {currentApp.paymentReference || "N/A"}  
             </Text>
-            <Text variant="bodyMedium">
-              <Text style={{ fontWeight: 'bold', color: '#475569' }}>Amount Paid:</Text> ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString() : "0.00"}
+            
+            <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold' }}>
+              <Text style={{ fontWeight: 'medium', color: '#121213' }}>Amount Paid: </Text> 
+              ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString() : "0.00"}
             </Text>
-          </View>
 
+          </View>
          
           {receiptImageUri ? (
             <View style={{ marginTop: 5 }}>
-              <Text variant="labelLarge" style={{ color: '#64748b', marginBottom: 10 }}>
+              <Text variant="labelLarge" style={{ color: '#166534', marginBottom: 10 }}>
                 <Icon name="image-outline" size={16} /> Attached Document:
               </Text>
               <Image 
@@ -218,8 +224,8 @@ export const TenantView = ({ currentApp }: { currentApp: any }) => {
             </View>
           ) : (
             <View style={{ alignItems: 'center', padding: 20, backgroundColor: '#f1f5f9', borderRadius: 10 }}>
-              <Icon name="file-hidden" size={30} color="#94a3b8" />
-              <Text style={{ color: '#64748b', fontStyle: 'italic', marginTop: 10 }}>
+              <Icon name="file-hidden" size={30} color="#000000" />
+              <Text style={{ color: '#000000', fontStyle: 'italic', marginTop: 10 }}>
                 No receipt document available.
               </Text>
             </View>
