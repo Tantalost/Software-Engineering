@@ -37,7 +37,7 @@ mongoose.connection.once('open', () => {
     bucketName: 'uploads' 
   });
   
-  console.log("GridFS Bucket initialized (pointed to 'test' database)");
+  console.log("GridFS Bucket initialized ");
 });
 
 app.use(cors({

@@ -678,22 +678,35 @@ const TenantLease = () => {
     }
   };
 
-    const handleRejectApplicant = async (id) => {
-        if (window.confirm("Are you sure you want to REJECT and DELETE this application?")) {
-            try {
-                const response = await fetch(`${API_URL}/waitlist/${id}`, { method: 'DELETE' });
-                if (response.ok) {
-                    setNotificationState({ isOpen: true, type: 'success', message: "Application removed.", autoClose: true, duration: 3000 });
-                    await logActivity(role, "REJECT_APPLICANT", `Rejected/Deleted waitlist applicant ID #${id}`, "Tenants");
-                    fetchWaitlist();
-                    if (showReviewModal) setShowReviewModal(false);
-                } else {
-                    setNotificationState({ isOpen: true, type: 'error', message: "Failed to delete application.", autoClose: true, duration: 3000 });
-                }
-            } catch (error) {
-                console.error(error);
-                setNotificationState({ isOpen: true, type: 'error', message: "Error removing application.", autoClose: true, duration: 3000 });
+    const handleRejectApplicant = async (id, reason) => {
+        try {
+            const response = await fetch(`${API_URL}/waitlist/${id}`, { 
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    status: "REJECTED", 
+                    rejectionReason: reason 
+                })
+            });
+
+            if (response.ok) {
+                setNotificationState({ 
+                    isOpen: true, 
+                    type: 'success', 
+                    message: "Application rejected. The applicant has been notified via email.", 
+                    autoClose: true, 
+                    duration: 3000 
+                });
+                await logActivity(role, "REJECT_APPLICANT", `Rejected waitlist applicant ID #${id}. Reason: ${reason}`, "Tenants");
+                
+                fetchWaitlist();
+                if (showReviewModal) setShowReviewModal(false);
+            } else {
+                setNotificationState({ isOpen: true, type: 'error', message: "Failed to reject application.", autoClose: true, duration: 3000 });
             }
+        } catch (error) {
+            console.error(error);
+            setNotificationState({ isOpen: true, type: 'error', message: "Error rejecting application.", autoClose: true, duration: 3000 });
         }
     };
 
@@ -1150,6 +1163,7 @@ const TenantLease = () => {
                 onUnlockPayment={handleUnlockPayment}
                 onRequestContract={handleRequestContract}
                 onProceedToLease={handleProceedToLease}
+                onReject={handleRejectApplicant}
             />
 
             <AddTenantModal
