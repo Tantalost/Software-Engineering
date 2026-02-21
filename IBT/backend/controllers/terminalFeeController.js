@@ -1,8 +1,9 @@
 import TerminalFee from "../models/TerminalFee.js";
+import BasePrice from "../models/BasePrice.js";
 
+// Get all terminal fees
 export const getTerminalFees = async (req, res) => {
   try {
-    
     const fees = await TerminalFee.find().sort({ createdAt: -1 });
     res.json(fees);
   } catch (error) {
@@ -10,9 +11,23 @@ export const getTerminalFees = async (req, res) => {
   }
 };
 
+// Create a new terminal fee
 export const createTerminalFee = async (req, res) => {
   try {
-    const newFee = new TerminalFee(req.body);
+    // Use the current base prices if price not provided
+    const basePrices = await BasePrice.findOne({});
+    const price =
+      req.body.price !== undefined
+        ? req.body.price
+        : req.body.passengerType === "Regular"
+        ? basePrices?.regular || 0
+        : basePrices?.discounted || 0;
+
+    const newFee = new TerminalFee({
+      ...req.body,
+      price
+    });
+
     await newFee.save();
     res.status(201).json(newFee);
   } catch (error) {
@@ -20,14 +35,11 @@ export const createTerminalFee = async (req, res) => {
   }
 };
 
+// Update an existing terminal fee by ID
 export const updateTerminalFee = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedFee = await TerminalFee.findByIdAndUpdate(
-      id, 
-      req.body, 
-      { new: true } 
-    );
+    const updatedFee = await TerminalFee.findByIdAndUpdate(id, req.body, { new: true });
     if (!updatedFee) return res.status(404).json({ error: "Record not found" });
     res.json(updatedFee);
   } catch (error) {
@@ -35,6 +47,7 @@ export const updateTerminalFee = async (req, res) => {
   }
 };
 
+// Delete a terminal fee by ID
 export const deleteTerminalFee = async (req, res) => {
   try {
     const { id } = req.params;
@@ -46,47 +59,31 @@ export const deleteTerminalFee = async (req, res) => {
   }
 };
 
+// Update **base prices** for new tickets
 export const updateTerminalFeePrices = async (req, res) => {
   try {
     const { regularPrice, discountedPrice } = req.body;
-    
+
     if (regularPrice !== undefined && (isNaN(regularPrice) || regularPrice < 0)) {
       return res.status(400).json({ error: "Valid regular price is required." });
     }
-    
+
     if (discountedPrice !== undefined && (isNaN(discountedPrice) || discountedPrice < 0)) {
       return res.status(400).json({ error: "Valid discounted price is required." });
     }
 
-    let regularCount = 0;
-    let discountedCount = 0;
+    const updatedBase = await BasePrice.findOneAndUpdate(
+      {},
+      {
+        regular: regularPrice !== undefined ? parseFloat(regularPrice) : undefined,
+        discounted: discountedPrice !== undefined ? parseFloat(discountedPrice) : undefined
+      },
+      { upsert: true, new: true }
+    );
 
-    if (regularPrice !== undefined) {
-      const regularResult = await TerminalFee.updateMany(
-        { passengerType: "Regular" },
-        { price: parseFloat(regularPrice) }
-      );
-      regularCount = regularResult.modifiedCount;
-    }
-
-    if (discountedPrice !== undefined) {
-      const discountedResult = await TerminalFee.updateMany(
-        { 
-          $or: [
-            { passengerType: "Student" },
-            { passengerType: "Senior Citizen / PWD" },
-            { passengerType: "Student/Senior/PWD" }
-          ]
-        },
-        { price: parseFloat(discountedPrice) }
-      );
-      discountedCount = discountedResult.modifiedCount;
-    }
-
-    res.json({ 
-      message: "Prices updated successfully.",
-      regularUpdated: regularCount,
-      discountedUpdated: discountedCount
+    res.json({
+      message: "Base prices updated successfully. Only new tickets will use these prices.",
+      basePrices: updatedBase
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
