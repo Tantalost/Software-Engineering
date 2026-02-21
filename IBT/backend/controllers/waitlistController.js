@@ -118,19 +118,27 @@ export const updateWaitlistEntry = async (req, res) => {
         message = `Dear ${applicant.name},\n\nWe have verified your payment. Please upload your Signed Contract.`;
     }
    
-    else if (status === "REJECTED") {
+    if (status === "REJECTED") {
         subject = "Stall Application Update: Rejected";
         message = `Dear ${applicant.name},\n\nWe regret to inform you that your application for slot ${applicant.targetSlot} has been rejected.\n\nReason: ${rejectionReason || "Did not meet required criteria or incomplete documentation."}\n\nIf you have any questions, please contact administration.`;
+        console.log("Rejection block triggered! Subject set."); // <-- ADD THIS
     }
+
+    console.log("Applicant Email exists?:", applicant.email); // <-- ADD THIS
 
     if (subject && applicant.email) {
         try { 
+            console.log("Attempting to send email to:", applicant.email); // <-- ADD THIS
             await sendEmail({ email: applicant.email, subject: subject, message: message }); 
+            console.log("Email function completed without crashing."); // <-- ADD THIS
         } 
         catch (emailError) { 
             console.error("Email failed:", emailError.message); 
         }
+    } else {
+        console.log("Skipped sending email. Missing subject or applicant email."); // <-- ADD THIS
     }
+    
     res.status(200).json(applicant);
   } catch (error) {
     res.status(500).json({ error: error.message });
