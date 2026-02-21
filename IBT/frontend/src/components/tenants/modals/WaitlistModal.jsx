@@ -1,5 +1,5 @@
 import React, { useState } from "react"; 
-import { X, ClipboardList, CreditCard, Eye, Filter, AlertTriangle } from "lucide-react";
+import { X, ClipboardList, CreditCard, Eye, Filter, AlertTriangle, FileSignature, XCircle } from "lucide-react";
 
 const WaitlistModal = ({ 
   isOpen, onClose, waitlistData, onApprove, onReject 
@@ -16,6 +16,8 @@ const WaitlistModal = ({
     if (statusFilter === "All") return true;
     if (statusFilter === "Verification Pending") return !app.status || app.status === "VERIFICATION_PENDING";
     if (statusFilter === "Payment Review") return app.status === "PAYMENT_REVIEW" || app.status === "PAYMENT_UNLOCKED";
+    if (statusFilter === "Contract Review") return app.status === "CONTRACT_REVIEW" || app.status === "CONTRACT_PENDING"; // <-- ADDED
+    if (statusFilter === "Rejected") return app.status === "REJECTED"; // <-- ADDED
     return true;
   });
 
@@ -77,10 +79,13 @@ const WaitlistModal = ({
             </div>
             <button onClick={onClose} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200"><X size={20}/></button>
           </div>
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-4 flex-wrap">
               <button onClick={() => setStatusFilter("All")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border ${statusFilter === "All" ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white " : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>All ({waitlistData.length})</button>
               <button onClick={() => setStatusFilter("Verification Pending")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Verification Pending" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><Eye size={12}/> Verification Pending</button>
               <button onClick={() => setStatusFilter("Payment Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Payment Review" ? "bg-orange-500 text-white border-orange-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><CreditCard size={12}/> Payment Review</button>
+            
+              <button onClick={() => setStatusFilter("Contract Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Contract Review" ? "bg-purple-600 text-white border-purple-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><FileSignature size={12}/> Contract Review</button>
+              <button onClick={() => setStatusFilter("Rejected")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Rejected" ? "bg-red-500 text-white border-red-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><XCircle size={12}/> Rejected</button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -125,7 +130,10 @@ const WaitlistModal = ({
                       <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
                              
-                              <button onClick={() => handleOpenReject(app._id)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent hover:border-red-100 transition-all">Reject</button>
+                              {app.status !== 'REJECTED' && (
+                                <button onClick={() => handleOpenReject(app._id)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent hover:border-red-100 transition-all">Reject</button>
+                              )}
+                              
                               <button onClick={() => onApprove(app)} className={`px-3 py-1.5 rounded-lg text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all active:scale-95 ${app.status === 'PAYMENT_REVIEW' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
                                   {app.status === 'PAYMENT_REVIEW' ? <><CreditCard size={14}/> Check Payment</> : <><Eye size={14}/> Review Docs</>}
                               </button>
