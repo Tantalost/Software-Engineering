@@ -32,7 +32,7 @@ import { generateRentStatementPDF } from "../utils/tenantUtils";
 import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
 import { submitPageReport } from "../utils/reportService.js";
-import { sendBroadcast, archiveTenantRecord, requestBulkDeletion } from "../services/tenantServices";
+import { sendBroadcast, archiveTenantRecord, requestBulkDeletion } from "../services/tenantServices.js";
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
