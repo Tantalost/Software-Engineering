@@ -161,22 +161,21 @@ const LostFound = () => {
         setArchiveRow(null);
 
         try {
-            const archiveRes = await fetch(`${API_URL}/archives`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    type: "LostFound",
-                    originalData: row,
-                    archivedBy: role
-                })
+            const idToArchive = row._id || row.id;
+            if (!idToArchive) throw new Error("Record ID is missing.");
+
+            // Send a PATCH request to our new soft-delete endpoint
+            const archiveRes = await fetch(`${API_URL}/${idToArchive}/archive`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" }
             });
+
             if (!archiveRes.ok) throw new Error("Failed to archive");
 
-            const deleteRes = await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
-            if (!deleteRes.ok) throw new Error("Failed to remove from active list");
-
+            // Log the activity and re-fetch the data to update the table
             logActivity(role, "ARCHIVE_LOSTFOUND", `Archived Item #${row.trackingNo}`, "LostFound");
-            setRecords(prev => prev.filter(r => r.id !== row.id));
+            fetchLostFound(); 
+            
             alert("Item archived successfully!");
 
         } catch (error) {
