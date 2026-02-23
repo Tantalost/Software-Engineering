@@ -2,7 +2,7 @@ import TerminalFee from "../models/TerminalFee.js";
 
 export const getTerminalFees = async (req, res) => {
   try {
-    const fees = await TerminalFee.find({ isArchived: false }).sort({ createdAt: -1 });
+    const fees = await TerminalFee.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
     res.json(fees);
   } catch (error) {
     res.status(500).json({ error: error.message });
