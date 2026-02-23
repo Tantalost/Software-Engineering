@@ -48,11 +48,11 @@ export const createBusTrip = async (req, res) => {
 export const updateBusTrip = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const updatedTrip = await BusTrip.findByIdAndUpdate(
       id,
-      req.body, 
-      { new: true } 
+      req.body,
+      { new: true }
     );
 
     if (!updatedTrip) {
@@ -62,6 +62,53 @@ export const updateBusTrip = async (req, res) => {
     res.status(200).json(updatedTrip);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+export const archiveBusTrip = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const archivedTrip = await BusTrip.findByIdAndUpdate(
+      id,
+      { isArchived: true },
+      { new: true }
+    );
+
+    if (!archivedTrip) {
+      return res.status(404).json({ message: "Bus trip not found" });
+    }
+
+    res.status(200).json({ message: "Bus trip archived successfully", trip: archivedTrip });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const restoreBusTrip = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restoredTrip = await BusTrip.findByIdAndUpdate(
+      id,
+      { isArchived: false },
+      { new: true }
+    );
+
+    if (!restoredTrip) {
+      return res.status(404).json({ message: "Bus trip not found" });
+    }
+
+    res.status(200).json({ message: "Bus trip restored successfully", trip: restoredTrip });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getArchivedBusTrips = async (req, res) => {
+  try {
+    const trips = await BusTrip.find({ isArchived: true }).sort({ updatedAt: -1 });
+    res.status(200).json(trips);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -83,7 +130,7 @@ export const deleteBusTrip = async (req, res) => {
 export const updateAllBusTripPrices = async (req, res) => {
   try {
     const { newPrice } = req.body;
-    
+
     if (!newPrice || isNaN(newPrice) || newPrice < 0) {
       return res.status(400).json({ message: "Valid price is required." });
     }
@@ -103,7 +150,7 @@ export const updateAllBusTripPrices = async (req, res) => {
       { price: priceValue }
     );
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: `Updated ${result.modifiedCount} pending bus trips with new price.`,
       modifiedCount: result.modifiedCount
     });
