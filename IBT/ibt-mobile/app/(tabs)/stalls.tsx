@@ -44,7 +44,8 @@ import {
   ContractPendingView, 
   PaymentReviewView, 
   PaymentUnlockedView, 
-  TenantView 
+  TenantView,
+  RejectedView
 } from '@/src/components/stalls/StatusViews';
 
 const SECRET_KEY = process.env.EXPO_PUBLIC_ENCRYPTION_KEY || " "; 
@@ -541,6 +542,10 @@ export default function StallsPage() {
     }
 
     if (currentApp.status === "TENANT") return <TenantView currentApp={currentApp} />;
+
+    if (currentApp.status === "REJECTED") {
+        return <RejectedView currentApp={currentApp} />;
+    }
     
     return null;
   };
