@@ -75,9 +75,6 @@ NEW TO DO LIST (TenantLease Module)
 View modal - kailangan maview ang uploaded documents (Steph) 🔴 **To be Fixed**
 Edit modal - kailangan maview ang uploaded documents (Steph) 🔴 **To be Fixed**
 Download button - dapat same format sa mga ibang pdf exports (Jayna) 🔴 **To be Fixed**
-Archive button - iadjust ang backend nito kay if mawala yung data sa tenant page, nagiging multo sya sa mobile kase ang data is nandun lang sa mongo database. Addition, if irestore ng admin, dapat magbalik sya sa tenant table. (LLoyd) 🔴 **To be Fixed**
-
-Delete button - iadjust din yung backend nito since nagiging ghost data sa mobile dinilete. Kahit nakadelete nasya, nandun parin ang data sa mongodb. (LLoyd) 🔴 **To be Fixed**
 
 NEW TO DO LIST (Report Module)
 View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container.
@@ -88,11 +85,6 @@ Add "X" icon button sa view modal (Ven) 🔴 **To be Fixed**
 Archive Button - add toast message (Alviar) 🔴 **To be Fixed**
 Delete Button - add toast message (Alviar) 🔴 **To be Fixed**
 
-NEW TO DO LIST (Lost and Found Module)
-Archive Button - Adjust the backend for this. dapat hindi sya magiging multo sa mobile kase ang data hindi pa nadelete sa mongo database if irestore mag error. Adjust the query nito. Addition, mag add ng toast message. (LLoyd) 🔴 **To be Fixed**
-
-Delete Button - add a toast message, also check if nandun pa ang data sa mongodb, if meron pa kahit nadelete na, adjust ang backend (LLoyd) 🔴 **To be Fixed**
-
 NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. (Ven) 🔴 **To be Fixed**
 
@@ -101,3 +93,9 @@ Add Logs button para malaman mga ginawa ng admin here sa module (Alviar) 🔴 **
 
 NEW TO DO LISTS (Terminal Fee Module)
 Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. (Alviar) 🔴 **To be Fixed**
+
+NEW TO DO LIST (Lost and Found Module)
+Archive Button - Adjust the backend for this. dapat hindi sya magiging multo sa mobile kase ang data hindi pa nadelete sa mongo database if irestore mag error. Adjust the query nito. Addition, mag add ng toast message. (LLoyd) 🔴 **To be Fixed**
+Delete Button - add a toast message, also check if nandun pa ang data sa mongodb, if meron pa kahit nadelete na, adjust ang backend (LLoyd) 🔴 **To be Fixed**
+Archive button - iadjust ang backend nito kay if mawala yung data sa tenant page, nagiging multo sya sa mobile kase ang data is nandun lang sa mongo database. Addition, if irestore ng admin, dapat magbalik sya sa tenant table. (LLoyd) 🔴 **To be Fixed**
+Delete button - iadjust din yung backend nito since nagiging ghost data sa mobile dinilete. Kahit nakadelete nasya, nandun parin ang data sa mongodb. (LLoyd) 🔴 **To be Fixed**
