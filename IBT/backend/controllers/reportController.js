@@ -22,10 +22,50 @@ export const createReport = async (req, res) => {
 // GET ALL
 export const getAllReports = async (req, res) => {
   try {
-    const reports = await Report.find().sort({ createdAt: -1 });
+    // Filter out archived reports using the $ne: true trick
+    const reports = await Report.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
     res.status(200).json(reports);
   } catch (error) {
     res.status(500).json({ message: "Error fetching reports", error: error.message });
+  }
+};
+
+// --- SOFT DELETE FUNCTIONS (Archive & Restore) ---
+
+export const archiveReport = async (req, res) => {
+  try {
+    const archived = await Report.findByIdAndUpdate(
+      req.params.id,
+      { isArchived: true },
+      { new: true }
+    );
+    if (!archived) return res.status(404).json({ message: "Report not found" });
+    res.status(200).json({ message: "Report archived successfully", report: archived });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const restoreReport = async (req, res) => {
+  try {
+    const restored = await Report.findByIdAndUpdate(
+      req.params.id,
+      { isArchived: false },
+      { new: true }
+    );
+    if (!restored) return res.status(404).json({ message: "Report not found" });
+    res.status(200).json({ message: "Report restored successfully", report: restored });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getArchivedReports = async (req, res) => {
+  try {
+    const reports = await Report.find({ isArchived: true }).sort({ updatedAt: -1 });
+    res.status(200).json(reports);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -40,11 +80,11 @@ export const getReportById = async (req, res) => {
   }
 };
 
-// DELETE
+// HARD DELETE (Superadmin Nuke)
 export const deleteReport = async (req, res) => {
     try {
         await Report.findByIdAndDelete(req.params.id);
-        res.status(200).json({ message: "Report deleted" });
+        res.status(200).json({ message: "Report permanently deleted" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
