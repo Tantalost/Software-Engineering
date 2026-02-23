@@ -201,8 +201,8 @@ const ManageCompaniesModal = ({
                 key={company._id}
                 onClick={() => setSelectedCompanyId(company._id)}
                 className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${selectedCompanyId === company._id
-                    ? "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500"
-                    : "bg-white border-slate-200 hover:border-emerald-300"
+                  ? "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500"
+                  : "bg-white border-slate-200 hover:border-emerald-300"
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -448,11 +448,11 @@ const BusTrips = () => {
       }
 
       const result = await response.json();
-      
+
       // Update state and localStorage after successful database update
       setDefaultPrice(priceValue);
       localStorage.setItem("defaultBusPrice", priceValue.toString());
-      
+
       // Refresh the data to show updated prices
       await fetchBusTrips();
 
@@ -613,7 +613,7 @@ const BusTrips = () => {
         ...newBusData,
         price: newBusData.price || defaultPrice
       };
-      
+
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -855,35 +855,27 @@ const BusTrips = () => {
   const confirmArchive = async () => {
     if (!archiveRow) return;
     try {
-      // 1. Send to Archives
-      const archiveRes = await fetch(`${API_URL}/archives`, {
-        method: "POST",
+      // Send a PATCH request to our new soft-delete endpoint
+      const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Bus Trip",
-          description: `Trip: ${archiveRow.templateNo}`,
-          originalData: archiveRow,
-          archivedBy: role,
-        }),
       });
 
-      // 2. If Archive successful, Delete and Log
+      // If the soft delete was successful, log it and refresh the table
       if (archiveRes.ok) {
-        await fetch(`${API_URL}/${archiveRow.id}`, { method: "DELETE" });
-
-        // --- NEW: CREATE LOG ENTRY ---
         await logActivity(
           role,
           "ARCHIVE_TRIP",
           `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`,
           "BusTrips",
         );
-        // -----------------------------
 
         fetchBusTrips();
+      } else {
+        console.error("Failed to archive bus trip");
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error archiving:", e);
     } finally {
       setArchiveRow(null);
     }
@@ -1129,77 +1121,77 @@ const BusTrips = () => {
         role={role}
       />
 
-    {/* --- UPDATED MODAL: Set Price Modal (Strict Terminal Fees Format) --- */}
-{showSetPriceModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
-      
-      {/* Header Structure matching TerminalFees.jsx */}
-      <div className="flex items-center justify-between mb-5 border-b pb-3">
-        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <Settings size={20} className="text-emerald-600" /> Bus Fee Settings
-        </h3>
-        <button
-          onClick={() => setShowSetPriceModal(false)}
-          className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"
-          title="Close"
-        >
-          <X size={20} />
-        </button>
-      </div>
+      {/* --- UPDATED MODAL: Set Price Modal (Strict Terminal Fees Format) --- */}
+      {showSetPriceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
 
-      <p className="text-sm text-slate-600 mb-5">
-        Set the new standard bus parking rate. Changes take effect upon saving.
-      </p>
+            {/* Header Structure matching TerminalFees.jsx */}
+            <div className="flex items-center justify-between mb-5 border-b pb-3">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <Settings size={20} className="text-emerald-600" /> Bus Fee Settings
+              </h3>
+              <button
+                onClick={() => setShowSetPriceModal(false)}
+                className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-      {/* Input Field matching TerminalFees.jsx logic */}
-      <div className="space-y-5">
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">
-            Global Parking Fee
-          </label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
-              ₱
-            </span>
-            <input
-              type="text"
-              value={newPrice}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9.]/g, "");
-                setNewPrice(value);
-              }}
-              className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-              placeholder="0.00"
-            />
+            <p className="text-sm text-slate-600 mb-5">
+              Set the new standard bus parking rate. Changes take effect upon saving.
+            </p>
+
+            {/* Input Field matching TerminalFees.jsx logic */}
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Global Parking Fee
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
+                    ₱
+                  </span>
+                  <input
+                    type="text"
+                    value={newPrice}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9.]/g, "");
+                      setNewPrice(value);
+                    }}
+                    className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons matching TerminalFees.jsx style */}
+            <div className="mt-8 flex justify-end gap-3 border-t pt-4">
+              <button
+                onClick={() => setShowSetPriceModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSetPrice}
+                disabled={isSettingPrice || !newPrice}
+                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSettingPrice ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <CheckCircle size={16} />
+                )}
+                Save Changes
+              </button>
+            </div>
           </div>
-          </div>
-      </div>
-
-      {/* Footer Buttons matching TerminalFees.jsx style */}
-      <div className="mt-8 flex justify-end gap-3 border-t pt-4">
-        <button
-          onClick={() => setShowSetPriceModal(false)}
-          className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSetPrice}
-          disabled={isSettingPrice || !newPrice}
-          className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2 disabled:opacity-50"
-        >
-          {isSettingPrice ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <CheckCircle size={16} />
-          )}
-          Save Changes
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        </div>
+      )}
       {/* --- UPDATED MODAL: Add Bus Trip --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
