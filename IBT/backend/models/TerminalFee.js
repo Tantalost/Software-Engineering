@@ -26,6 +26,10 @@ const terminalFeeSchema = new mongoose.Schema({
   status: {
     type: String,
     default: "Active"
+  },
+  isArchived: { 
+    type: Boolean, 
+    default: false 
   }
 }, { timestamps: true });
 

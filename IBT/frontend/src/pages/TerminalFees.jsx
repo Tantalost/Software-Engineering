@@ -140,7 +140,7 @@ const TerminalFees = () => {
       try {
         // Update localStorage
         setBasePrices(newPrices);
-        
+
         // Update database - update all existing tickets with new prices
         const response = await fetch(`${API_URL}/terminal-fees/update-prices/all`, {
           method: "PUT",
@@ -156,7 +156,7 @@ const TerminalFees = () => {
         }
 
         const result = await response.json();
-        
+
         // Refresh the data to show updated prices
         await fetchFees();
 
@@ -523,24 +523,18 @@ const TerminalFees = () => {
     setArchiveRow(null);
 
     try {
-      const archiveRes = await fetch(`${API_URL}/archives`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Terminal Fee",
-          description: `Ticket #${rowToArchive.ticketNo} - ${rowToArchive.passengerType}`,
-          originalData: rowToArchive,
-          archivedBy: role
-        })
+      const idToArchive = rowToArchive._id || rowToArchive.id;
+      if (!idToArchive) throw new Error("System Error: Record ID is missing.");
+
+      // Send a PATCH request to our new soft-delete endpoint
+      const archiveRes = await fetch(`${API_URL}/terminal-fees/${idToArchive}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" }
       });
+
       if (!archiveRes.ok) throw new Error("Failed to archive");
 
-      const idToDelete = rowToArchive._id || rowToArchive.id;
-      if (!idToDelete) throw new Error("System Error: Record ID is missing.");
-
-      const deleteRes = await fetch(`${API_URL}/terminal-fees/${idToDelete}`, { method: "DELETE" });
-      if (!deleteRes.ok) throw new Error("Failed to remove from active list");
-
+      // Refresh the table and log the action
       await fetchFees();
       await logActivity(role, "ARCHIVE_TICKET", `Archived Ticket #${rowToArchive.ticketNo}`, "TerminalFees");
       showToastMessage("Ticket archived successfully!");
@@ -684,45 +678,45 @@ const TerminalFees = () => {
       </div>
 
       {/* --- Main container justified to the right --- */}
-<div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
 
-  {/* --- Inner button group justified to the right --- */}
-  <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
-    {(role === "superadmin") && (
-      <button
-        title='Price Setting'
-        onClick={handleOpenPriceModal}
-        className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
-      >
-        <Settings size={18} /> <span>Set Price</span>
-      </button>
-    )}
+        {/* --- Inner button group justified to the right --- */}
+        <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
+          {(role === "superadmin") && (
+            <button
+              title='Price Setting'
+              onClick={handleOpenPriceModal}
+              className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
+              <Settings size={18} /> <span>Set Price</span>
+            </button>
+          )}
 
-    <button 
-      onClick={handleOpenAdd} 
-      className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
-      title='Add Ticket'
-    >
-      <Plus size={18} /> <span>Add Fee</span>
-    </button>
+          <button
+            onClick={handleOpenAdd}
+            className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+            title='Add Ticket'
+          >
+            <Plus size={18} /> <span>Add Fee</span>
+          </button>
 
-    {(role === "ticket") && (
-      <button
-        onClick={() => setShowSubmitModal(true)}
-        disabled={isReporting}
-        className="flex items-center cursor-pointer justify-center gap-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
-      >
-        <FileText size={18} />
-        <span>Submit Report</span>
-      </button>
-    )}
+          {(role === "ticket") && (
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              disabled={isReporting}
+              className="flex items-center cursor-pointer justify-center gap-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
+              <FileText size={18} />
+              <span>Submit Report</span>
+            </button>
+          )}
 
-    <ExportMenu
-      onExportExcel={exportToCSV}
-      onExportPDF={exportToPDF}
-    />
-  </div>
-</div>
+          <ExportMenu
+            onExportExcel={exportToCSV}
+            onExportPDF={exportToPDF}
+          />
+        </div>
+      </div>
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
 
         <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
@@ -773,8 +767,8 @@ const TerminalFees = () => {
             onClick={toggleSelectionMode}
             title={isSelectionMode ? "Cancel Selection" : "Select Records"}
             className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
-                ? "bg-red-500  text-white shadow-md"
-                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+              ? "bg-red-500  text-white shadow-md"
+              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
               }`}
           >
             {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}

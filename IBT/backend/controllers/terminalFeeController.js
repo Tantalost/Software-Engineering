@@ -2,8 +2,7 @@ import TerminalFee from "../models/TerminalFee.js";
 
 export const getTerminalFees = async (req, res) => {
   try {
-    
-    const fees = await TerminalFee.find().sort({ createdAt: -1 });
+    const fees = await TerminalFee.find({ isArchived: false }).sort({ createdAt: -1 });
     res.json(fees);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -12,7 +11,10 @@ export const getTerminalFees = async (req, res) => {
 
 export const createTerminalFee = async (req, res) => {
   try {
-    const newFee = new TerminalFee(req.body);
+    const newFee = new TerminalFee({
+      ...req.body,
+      isArchived: false // Ensure it's active on creation
+    });
     await newFee.save();
     res.status(201).json(newFee);
   } catch (error) {
@@ -24,14 +26,53 @@ export const updateTerminalFee = async (req, res) => {
   try {
     const { id } = req.params;
     const updatedFee = await TerminalFee.findByIdAndUpdate(
-      id, 
-      req.body, 
-      { new: true } 
+      id,
+      req.body,
+      { new: true }
     );
     if (!updatedFee) return res.status(404).json({ error: "Record not found" });
     res.json(updatedFee);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+export const archiveTerminalFee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const archivedFee = await TerminalFee.findByIdAndUpdate(
+      id,
+      { isArchived: true },
+      { new: true }
+    );
+    if (!archivedFee) return res.status(404).json({ error: "Record not found" });
+    res.status(200).json({ message: "Terminal fee archived successfully", fee: archivedFee });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const restoreTerminalFee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restoredFee = await TerminalFee.findByIdAndUpdate(
+      id,
+      { isArchived: false },
+      { new: true }
+    );
+    if (!restoredFee) return res.status(404).json({ error: "Record not found" });
+    res.status(200).json({ message: "Terminal fee restored successfully", fee: restoredFee });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getArchivedTerminalFees = async (req, res) => {
+  try {
+    const fees = await TerminalFee.find({ isArchived: true }).sort({ updatedAt: -1 });
+    res.status(200).json(fees);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -49,11 +90,11 @@ export const deleteTerminalFee = async (req, res) => {
 export const updateTerminalFeePrices = async (req, res) => {
   try {
     const { regularPrice, discountedPrice } = req.body;
-    
+
     if (regularPrice !== undefined && (isNaN(regularPrice) || regularPrice < 0)) {
       return res.status(400).json({ error: "Valid regular price is required." });
     }
-    
+
     if (discountedPrice !== undefined && (isNaN(discountedPrice) || discountedPrice < 0)) {
       return res.status(400).json({ error: "Valid discounted price is required." });
     }
@@ -71,7 +112,7 @@ export const updateTerminalFeePrices = async (req, res) => {
 
     if (discountedPrice !== undefined) {
       const discountedResult = await TerminalFee.updateMany(
-        { 
+        {
           $or: [
             { passengerType: "Student" },
             { passengerType: "Senior Citizen / PWD" },
@@ -83,7 +124,7 @@ export const updateTerminalFeePrices = async (req, res) => {
       discountedCount = discountedResult.modifiedCount;
     }
 
-    res.json({ 
+    res.json({
       message: "Prices updated successfully.",
       regularUpdated: regularCount,
       discountedUpdated: discountedCount
