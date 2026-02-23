@@ -17,6 +17,8 @@ import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History,
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import headerImg from "../assets/Header.png";
+import footerImg from "../assets/FOOTER.png";
 
 const formatDateTimeForExport = (dateStr) => {
     if (!dateStr) return "-";
@@ -377,12 +379,38 @@ const LostFound = () => {
             alert("No records to export.");
             return;
         }
-        const dataToExport = getExportData(filtered);
-        const headers = Object.keys(dataToExport[0]).join(',');
-        const rows = dataToExport.map(row =>
-            Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
-        ).join('\n');
-        const csvContent = headers + '\n' + rows;
+
+        const operator = localStorage.getItem("authName") || "Admin";
+        const dateStr = new Date().toLocaleDateString();
+
+
+        const totalItems = filtered.length;
+        const unclaimed = filtered.filter(i => i.status === "Unclaimed").length;
+        const claimed = filtered.filter(i => i.status === "Claimed").length;
+
+        const rows = [
+            ["", "", "LOST & FOUND REPORTS", "", ""],
+            [`Date: ${dateStr}`, "", "", `Total Items: ${totalItems}`, ""],
+            [`Operator: ${operator}`, "", "", `Unclaimed: ${unclaimed}`, `Claimed: ${claimed}`],
+            [], // Spacer
+            ["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]
+        ];
+
+        filtered.forEach(item => {
+            rows.push([
+                item.trackingNo,
+                item.itemType || "-",
+                item.location,
+                formatDateTimeForExport(item.dateTime),
+                item.status,
+                item.description
+            ]);
+        });
+
+        const csvContent = rows
+            .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -391,8 +419,8 @@ const LostFound = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Lost & Found records to CSV`, "LostFound");
+
+        logActivity(role, "EXPORT_CSV", `Exported ${filtered.length} Lost & Found records to CSV`, "LostFound");
     };
 
     const handleExportPDF = () => {
@@ -400,40 +428,46 @@ const LostFound = () => {
             alert("No records to export.");
             return;
         }
-        const dataToExport = getExportData(filtered);
-        const headers = Object.keys(dataToExport[0]);
-        const body = dataToExport.map(item => Object.values(item));
-        const doc = new jsPDF('portrait', 'mm', 'a4');
-        doc.setFontSize(16);
-        doc.setTextColor(34, 34, 34);
-        doc.text("Lost & Found Records Report", 14, 15);
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
-        autoTable(doc, {
-            startY: 30,
-            head: [headers],
-            body: body,
-            theme: 'grid',
-            headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
-            styles: { fontSize: 8, cellPadding: 3, valign: 'middle', textColor: [51, 51, 51] },
-            alternateRowStyles: { fillColor: [240, 255, 240] }
-        });
-        doc.save(`LostFound_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-        logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Lost & Found records to PDF`, "LostFound");
-    };
 
-    const handleExportExcel = () => {
-        if (filtered.length === 0) {
-            alert("No records to export.");
-            return;
-        }
-        const dataToExport = getExportData(filtered);
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "LostFound_Records");
-        XLSX.writeFile(workbook, `LostFound_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-        logActivity(role, "EXPORT_EXCEL", `Exported ${dataToExport.length} Lost & Found records to Excel`, "LostFound");
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        if (headerImg) doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("LOST & FOUND REPORTS", pageWidth / 2, 45, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+        doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, 15, 61);
+
+        doc.text(`Total Items: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
+        doc.text(`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`, pageWidth - 15, 61, { align: "right" });
+
+        autoTable(doc, {
+            startY: 70,
+            margin: { bottom: 35 },
+            head: [["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]],
+            body: filtered.map(item => [
+                item.trackingNo,
+                item.itemType || "-",
+                item.location,
+                formatDateTimeForExport(item.dateTime),
+                item.status,
+                item.description
+            ]),
+            headStyles: { fillColor: [220, 38, 38] },
+            styles: { fontSize: 9 },
+            didDrawPage: (data) => {
+
+                if (footerImg) doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+            },
+        });
+
+        doc.save(`LostFound_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        logActivity(role, "EXPORT_PDF", `Exported ${filtered.length} Lost & Found records to PDF`, "LostFound");
     };
 
     const tableColumns = isSelectionMode
@@ -447,9 +481,14 @@ const LostFound = () => {
                     className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
             </div>,
-            "Tracking No", "Item Type", "Location", "DateTime", "Status"
+            "Tracking No", "Item Type", "Location", "Date & Time", "Status"
         ]
-        : ["Tracking No", "Item Type", "Location", "DateTime", "Status"];
+        : ["Tracking No", "Item Type", "Location", "Date & Time", "Status"];
+
+
+    const handleExportExcel = () => {
+        handleExportCSV();
+    };
 
     return (
         <Layout title="Lost and Found Records">
@@ -529,8 +568,8 @@ const LostFound = () => {
                                 onClick={toggleSelectionMode}
                                 title={isSelectionMode ? "Exit Multi-Selection Mode" : "Enter Multi-Selection Mode"}
                                 className={`flex items-center justify-center h-10 cursor-pointer w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
-                                        ? "bg-red-500 text-white shadow-md"
-                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                    ? "bg-red-500 text-white shadow-md"
+                                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                                     }`}
                             >
                                 {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -780,8 +819,8 @@ const LostFound = () => {
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Unclaimed' })}
                                             title="Mark Item as Unclaimed"
                                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === 'Unclaimed'
-                                                    ? 'bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1'
-                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                                ? 'bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
                                                 }`}
                                         >
                                             <XCircle size={18} />
@@ -792,8 +831,8 @@ const LostFound = () => {
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Claimed' })}
                                             title="Mark Item as Claimed"
                                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === 'Claimed'
-                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
-                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
                                                 }`}
                                         >
                                             <CheckCircle size={18} />
