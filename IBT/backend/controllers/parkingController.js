@@ -3,7 +3,7 @@ import Parking from "../models/Parking.js";
 // GET ALL
 export const getParkingTickets = async (req, res) => {
   try {
-    const tickets = await Parking.find({ isArchived: false }).sort({ createdAt: -1 });
+    const tickets = await Parking.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
     res.status(200).json(tickets);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -22,7 +22,8 @@ export const createParking = async (req, res) => {
       baseRate, 
       timeIn: timeIn || new Date(), 
       status: "Parked",
-      finalPrice: 0 
+      finalPrice: 0,
+      isArchived: false // Explicitly set just to be safe
     });
 
     const savedTicket = await newTicket.save();
@@ -73,7 +74,48 @@ export const updateParking = async (req, res) => {
   }
 };
 
-// DELETE
+// --- SOFT DELETE FUNCTIONS (Archive & Restore) ---
+
+export const archiveParking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const archivedTicket = await Parking.findByIdAndUpdate(
+      id,
+      { isArchived: true },
+      { new: true }
+    );
+    if (!archivedTicket) return res.status(404).json({ message: "Ticket not found" });
+    res.status(200).json({ message: "Parking ticket archived successfully", ticket: archivedTicket });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const restoreParking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const restoredTicket = await Parking.findByIdAndUpdate(
+      id,
+      { isArchived: false },
+      { new: true }
+    );
+    if (!restoredTicket) return res.status(404).json({ message: "Ticket not found" });
+    res.status(200).json({ message: "Parking ticket restored successfully", ticket: restoredTicket });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getArchivedParkingTickets = async (req, res) => {
+  try {
+    const tickets = await Parking.find({ isArchived: true }).sort({ updatedAt: -1 });
+    res.status(200).json(tickets);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// --- HARD DELETE ---
 export const deleteParking = async (req, res) => {
   try {
     await Parking.findByIdAndDelete(req.params.id);
