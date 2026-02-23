@@ -18,10 +18,14 @@ const TenantApplicationSchema = new mongoose.Schema({
       'PAYMENT_REVIEW', 
       'CONTRACT_PENDING', 
       'CONTRACT_REVIEW', 
-      'TENANT'
+      'TENANT',
+      'REJECTED' 
     ],
     default: 'VERIFICATION_PENDING'
   },
+  
+  rejectionReason: String, 
+
   permitUrl: String,
   validIdUrl: String,
   clearanceUrl: String,

@@ -105,41 +105,74 @@ export const getPendingStalls = async (req, res) => {
 };
 
 export const getMyApplication = async (req, res) => {
-    
     try {
         const { userId } = req.params;
-        let application = await TenantApplication.findOne({ userId }).lean();
-        const tenant = await Tenant.findOne({ $or: [{ uid: userId }, { email: application?.email }] }).lean();
-        if (tenant) {
-            if (!application) {
-                application = { status: 'TENANT', targetSlot: tenant.slotNo, floor: tenant.tenantType, start: tenant.StartDateTime, due: tenant.DueDateTime };
+        
+        
+        let applications = await TenantApplication.find({ userId }).lean();
+        
+       
+        const tenants = await Tenant.find({ uid: userId }).lean();
+        
+        let combinedApps = [...applications];
+        
+        
+        tenants.forEach(tenant => {
+           
+            const existingAppIndex = combinedApps.findIndex(app => app.targetSlot === tenant.slotNo);
+            
+            if (existingAppIndex >= 0) {
+            
+                combinedApps[existingAppIndex].status = 'TENANT';
+                combinedApps[existingAppIndex].start = tenant.StartDateTime;
+                combinedApps[existingAppIndex].due = tenant.DueDateTime;
             } else {
-                application.status = 'TENANT'; 
-                application.start = tenant.StartDateTime;
-                application.due = tenant.DueDateTime;
+                
+                combinedApps.push({
+                    status: 'TENANT',
+                    targetSlot: tenant.slotNo,
+                    floor: tenant.tenantType,
+                    start: tenant.StartDateTime,
+                    due: tenant.DueDateTime
+                });
             }
-        }
-        res.json(application || null); 
+        });
+        
+       
+        res.json(combinedApps); 
       } catch (error) {
         res.status(500).json({ message: error.message });
       }
 };
 
 export const submitApplication = async (req, res) => {
-   
+  
     try {
         const data = req.body; 
         const files = req.files;
+
         if (files) {
             if (files.permit?.[0]) data.permitUrl = files.permit[0].filename;
             if (files.validId?.[0]) data.validIdUrl = files.validId[0].filename;
             if (files.clearance?.[0]) data.clearanceUrl = files.clearance[0].filename;
         }
+
         const existingTenant = await Tenant.findOne({ slotNo: data.targetSlot });
         if (existingTenant) return res.status(400).json({ message: "Sorry, this slot was just taken by another user." });
-        const pendingApp = await TenantApplication.findOne({ targetSlot: data.targetSlot, status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED', 'PAYMENT_REVIEW', 'CONTRACT_PENDING', 'CONTRACT_REVIEW'] } });
+        
+        const pendingApp = await TenantApplication.findOne({ 
+            targetSlot: data.targetSlot, 
+            status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED', 'PAYMENT_REVIEW', 'CONTRACT_PENDING', 'CONTRACT_REVIEW'] } 
+        });
         if (pendingApp) return res.status(400).json({ message: "Someone else is currently applying for this slot." });
-        const newApp = await TenantApplication.findOneAndUpdate({ userId: data.userId }, { ...data, status: 'VERIFICATION_PENDING' }, { new: true, upsert: true });
+        
+        
+        const newApp = await TenantApplication.findOneAndUpdate(
+            { userId: data.userId, targetSlot: data.targetSlot }, 
+            { ...data, status: 'VERIFICATION_PENDING' }, 
+            { new: true, upsert: true }
+        );
+
         await createAdminNotification("New Application Received", `Applicant ${data.name} has applied for slot ${data.targetSlot}.`);
         res.json(newApp);
       } catch (error) {
