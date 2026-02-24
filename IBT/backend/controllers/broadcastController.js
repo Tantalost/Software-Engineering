@@ -2,21 +2,31 @@ import Broadcast from '../models/Broadcast.js';
 
 export const createBroadcast = async (req, res) => {
   try {
-    const { title, message } = req.body;
-    let attachment = null;
+  
+    const { title, message, scheduledFor } = req.body;
+    let attachments = [];
 
-    if (req.file) {
-      const contentType = req.file.contentType || req.file.mimetype;
-      const isImage = contentType.startsWith('image/');
-      
-      attachment = {
-        type: isImage ? 'image' : 'pdf',
-        uri: `/api/files/${req.file.filename}`, 
-        name: req.file.originalname
-      };
+    if (req.files && req.files.length > 0) {
+      attachments = req.files.map(file => {
+        const contentType = file.contentType || file.mimetype;
+        const isImage = contentType.startsWith('image/');
+        
+        return {
+          type: isImage ? 'image' : 'video',
+          uri: `/api/files/${file.filename}`, 
+          name: file.originalname
+        };
+      });
     }
 
-    const newBroadcast = new Broadcast({ title, message, attachment });
+    const newBroadcast = new Broadcast({ 
+      title, 
+      message, 
+      attachments,
+   
+      scheduledFor: scheduledFor ? new Date(scheduledFor) : Date.now()
+    });
+
     const savedBroadcast = await newBroadcast.save();
     
     res.status(201).json({ success: true, data: savedBroadcast });
@@ -28,10 +38,15 @@ export const createBroadcast = async (req, res) => {
 
 export const getBroadcasts = async (req, res) => {
   try {
-    const broadcasts = await Broadcast.find().sort({ createdAt: -1 });
+    const now = new Date();
+    
+    
+    const broadcasts = await Broadcast.find({ scheduledFor: { $lte: now } })
+                                      .sort({ scheduledFor: -1 }); 
     
     const formattedBroadcasts = broadcasts.map(b => {
-      const formattedDate = new Date(b.createdAt).toLocaleString('en-US', { 
+    
+      const formattedDate = new Date(b.scheduledFor || b.createdAt).toLocaleString('en-US', { 
         month: 'short', day: '2-digit', year: 'numeric', 
         hour: '2-digit', minute: '2-digit', hour12: true 
       }).replace(',', ' •');
@@ -42,7 +57,7 @@ export const getBroadcasts = async (req, res) => {
         message: b.message,
         source: b.source,
         date: formattedDate,
-        attachment: b.attachment || null
+        attachments: b.attachments || [] 
       };
     });
 
@@ -50,5 +65,48 @@ export const getBroadcasts = async (req, res) => {
   } catch (error) {
     console.error("Error fetching broadcasts:", error);
     res.status(500).json({ success: false, message: 'Failed to fetch broadcasts' });
+  }
+};
+
+export const getAdminBroadcasts = async (req, res) => {
+  try {
+  
+    const broadcasts = await Broadcast.find().sort({ scheduledFor: -1 });
+    
+    const formattedBroadcasts = broadcasts.map(b => {
+      const formattedDate = new Date(b.scheduledFor || b.createdAt).toLocaleString('en-US', { 
+        month: 'short', day: '2-digit', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit', hour12: true 
+      }).replace(',', ' •');
+
+   
+      const isScheduled = new Date(b.scheduledFor) > new Date();
+
+      return {
+        id: b._id.toString(),
+        title: b.title,
+        message: b.message,
+        status: isScheduled ? 'Scheduled' : 'Posted',
+        date: formattedDate,
+      };
+    });
+
+    res.status(200).json(formattedBroadcasts);
+  } catch (error) {
+    console.error("Error fetching admin broadcasts:", error);
+    res.status(500).json({ success: false, message: 'Failed to fetch broadcasts' });
+  }
+};
+
+export const deleteBroadcast = async (req, res) => {
+  try {
+    const broadcast = await Broadcast.findByIdAndDelete(req.params.id);
+    if (!broadcast) {
+      return res.status(404).json({ success: false, message: 'Broadcast not found' });
+    }
+    res.status(200).json({ success: true, message: 'Broadcast deleted successfully' });
+  } catch (error) {
+    console.error("Error deleting broadcast:", error);
+    res.status(500).json({ success: false, message: 'Failed to delete broadcast' });
   }
 };
