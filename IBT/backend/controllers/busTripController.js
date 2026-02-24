@@ -3,7 +3,7 @@ import Settings from "../models/Settings.js";
 
 export const getBusTrips = async (req, res) => {
   try {
-    const trips = await BusTrip.find({ isArchived: false }).sort({ createdAt: -1 });
+    const trips = await BusTrip.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
     res.status(200).json(trips);
   } catch (error) {
     res.status(500).json({ message: error.message });

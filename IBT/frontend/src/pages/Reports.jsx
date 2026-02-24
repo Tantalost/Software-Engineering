@@ -449,24 +449,26 @@ const Reports = () => {
     setArchiveRow(null);
 
     try {
-      await fetch(ARCHIVE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Report",
-          description: `${row.type} Report by ${row.author}`,
-          originalData: row,
-          archivedBy: role
-        })
+      const idToArchive = row._id || row.id;
+      if (!idToArchive) throw new Error("Record ID is missing.");
+
+      // Send a PATCH request to our new soft-delete endpoint
+      const response = await fetch(`${API_URL}/${idToArchive}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" }
       });
 
-      await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
-      await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${row.id}`, "Reports");
+      if (!response.ok) throw new Error("Failed to archive report");
 
-      setRecords(records.filter((r) => r.id !== row.id));
+      // Log the activity and update the UI
+      await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${idToArchive}`, "Reports");
+      
+      // Remove from the local records list to update the table immediately
+      setRecords(records.filter((r) => r.id !== idToArchive));
+      
       alert("Report moved to archives.");
     } catch (e) {
-      console.error(e);
+      console.error("Archive Error:", e);
       alert("Failed to archive report.");
     }
   };

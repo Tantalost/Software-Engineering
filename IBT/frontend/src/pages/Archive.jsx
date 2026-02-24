@@ -31,15 +31,50 @@ const Archive = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // FETCH
+  // FETCH: Bridging Legacy and New Soft-Delete Data
   const fetchArchives = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/archives`);
-      if (res.ok) {
-        const data = await res.json();
-        setAllArchivedItems(data);
-      }
+      // 1. Fetch Legacy Archives (Old Data from Archive Collection)
+      const resLegacy = await fetch(`${API_URL}/archives`);
+      const legacyData = resLegacy.ok ? await resLegacy.json() : [];
+
+      // 2. Fetch New Soft-Deleted Data for each module
+      const moduleEndpoints = [
+        { type: "Bus Trip", url: "/bustrips/archived" },
+        { type: "Terminal Fee", url: "/terminal-fees/archived" },
+        { type: "Parking Ticket", url: "/parking/archived" },
+        { type: "Lost & Found", url: "/lostfound/archived" },
+        { type: "Report", url: "/reports/archived" }
+      ];
+
+      const newArchivedResults = await Promise.all(
+        moduleEndpoints.map(async (mod) => {
+          try {
+            const res = await fetch(`${API_URL}${mod.url}`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            
+            // Map new data to fit the Archive table structure
+            return data.map(item => ({
+              _id: item._id,
+              id: item._id,
+              type: mod.type,
+              description: mod.type === "Bus Trip" ? `Trip: ${item.templateNo}` : 
+                           mod.type === "Terminal Fee" ? `Ticket #${item.ticketNo}` :
+                           mod.type === "Parking Ticket" ? `Plate #${item.plateNo}` :
+                           mod.type === "Lost & Found" ? `Item: ${item.description}` : 
+                           `${mod.type} Report`,
+              dateArchived: item.updatedAt,
+              isSoftDeleted: true, // Flag for routing Restore/Delete
+              originalData: item
+            }));
+          } catch { return []; }
+        })
+      );
+
+      // Combine legacy and new soft-deleted items
+      setAllArchivedItems([...legacyData, ...newArchivedResults.flat()]);
     } catch (e) {
       console.error("Failed to load archives", e);
     } finally {
@@ -51,11 +86,11 @@ const Archive = () => {
     fetchArchives();
   }, []);
 
+  // FILTERS (Maintained from your original code)
   const checkTimeRange = (itemDate) => {
     if (!itemDate) return false;
     const date = new Date(itemDate);
     const now = new Date();
-    
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const itemDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -79,59 +114,48 @@ const Archive = () => {
   const filteredItems = useMemo(() => {
     return allArchivedItems.filter((item) => {
       if (role === "ticket" && item.type !== "Terminal Fee") return false;
-
       const matchesTab = activeTab === "All" || item.type === activeTab;
-      const matchesSearch =
-        (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.type || '').toLowerCase().includes(searchQuery.toLowerCase());
-
-      let matchesDate = true;
-      if (selectedDate) {
-        matchesDate = new Date(item.dateArchived).toDateString() === new Date(selectedDate).toDateString();
-      } else {
-        matchesDate = checkTimeRange(item.dateArchived);
-      }
-
+      const matchesSearch = (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+      let matchesDate = selectedDate 
+        ? new Date(item.dateArchived).toDateString() === new Date(selectedDate).toDateString() 
+        : checkTimeRange(item.dateArchived);
       return matchesTab && matchesSearch && matchesDate;
     });
   }, [allArchivedItems, activeTab, searchQuery, selectedDate, timeRange, role]);
 
   const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredItems.slice(startIndex, endIndex);
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredItems.slice(start, start + itemsPerPage);
   }, [filteredItems, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-  const toggleSelectionMode = () => {
-    if (isSelectionMode) setSelectedIds([]);
-    setIsSelectionMode(!isSelectionMode);
-  };
-
-  const handleToggleSelect = (id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      const pageIds = paginatedData.map((item) => item._id || item.id);
-      setSelectedIds((prev) => [...new Set([...prev, ...pageIds])]);
-    } else {
-      const pageIds = paginatedData.map((item) => item._id || item.id);
-      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
-    }
-  };
-
-  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item._id || item.id));
-
-  // ACTIONS
+  // DYNAMIC RESTORE LOGIC
   const handleRestore = async () => {
     if (!restoreRow) return;
     try {
-      const res = await fetch(`${API_URL}/archives/restore/${restoreRow._id || restoreRow.id}`, { method: "POST" });
+      let res;
+      const id = restoreRow._id || restoreRow.id;
+
+      if (restoreRow.isSoftDeleted) {
+        // New Soft-Delete Pattern: Hits module endpoint with PATCH
+        const moduleMap = {
+          "Bus Trip": "bustrips",
+          "Terminal Fee": "terminal-fees",
+          "Parking Ticket": "parking",
+          "Lost & Found": "lostfound",
+          "Report": "reports"
+        };
+        const endpoint = moduleMap[restoreRow.type];
+        res = await fetch(`${API_URL}/${endpoint}/${id}/restore`, { 
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" }
+        });
+      } else {
+        // Legacy Pattern: Hits original restore logic
+        res = await fetch(`${API_URL}/archives/restore/${id}`, { method: "POST" });
+      }
+
       if (!res.ok) throw new Error("Restore failed");
       await logActivity(role, "RESTORE_ITEM", `Restored ${restoreRow.description}`, "Archive");
       setRestoreRow(null);
@@ -143,43 +167,33 @@ const Archive = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.length} items? \n\nThis action cannot be undone.`)) return;
+    if (!window.confirm(`Permanently delete ${selectedIds.length} items? This cannot be undone.`)) return;
     setIsLoading(true);
     try {
-      await Promise.all(selectedIds.map((id) => fetch(`${API_URL}/archives/${id}`, { method: "DELETE" })));
+      await Promise.all(selectedIds.map(async (id) => {
+        const item = allArchivedItems.find(i => (i._id === id || i.id === id));
+        if (item?.isSoftDeleted) {
+          // New: Hits actual module Hard Delete endpoint
+          const moduleMap = { "Bus Trip": "bustrips", "Terminal Fee": "terminal-fees", "Parking Ticket": "parking", "Lost & Found": "lostfound", "Report": "reports" };
+          return fetch(`${API_URL}/${moduleMap[item.type]}/${id}`, { method: "DELETE" });
+        }
+        return fetch(`${API_URL}/archives/${id}`, { method: "DELETE" });
+      }));
       await logActivity(role, "BULK_DELETE", `Permanently deleted ${selectedIds.length} items`, "Archive");
       setSelectedIds([]);
       fetchArchives();
       setIsSelectionMode(false);
-      alert(`Successfully deleted ${selectedIds.length} items.`);
     } catch (e) {
-      console.error("Bulk Delete Error", e);
-      alert("Failed to delete some items.");
+      console.error("Delete Error", e);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleTimeRangeChange = (e) => {
-    setTimeRange(e.target.value);
-    setSelectedDate(""); 
-  };
-
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
-    if (date) setTimeRange("All Time"); 
-  };
-
   const tableColumns = isSelectionMode 
   ? [
       <div key="header-check" className="flex items-center">
-          <input 
-              type="checkbox" 
-              title="Select All on this page"
-              checked={isAllSelected}
-              onChange={handleSelectAll}
-              className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-          />
+          <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
       </div>,
       "Type", "Description", "Date Archived"
     ]
@@ -188,29 +202,11 @@ const Archive = () => {
   return (
     <Layout title="Archive Management">
       <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-4 gap-3">
-        <div className="flex-1">
-          <FilterBar
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            selectedDate={selectedDate}
-            setSelectedDate={handleDateChange} 
-            placeholder="Search descriptions..."
-          />
-        </div>
-        
-        <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm" title="Filter by time range">
+        <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={(d) => { setSelectedDate(d); setTimeRange("All Time"); }} />
+        <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm">
           <CalendarDays size={18} className="text-slate-500" />
-          <select
-            value={timeRange}
-            onChange={handleTimeRangeChange}
-            className="bg-transparent text-sm text-slate-700 font-medium focus:outline-none cursor-pointer"
-          >
-            <option value="All Time">All Time</option>
-            <option value="Today">Today</option>
-            <option value="Last 7 Days">Last 7 Days</option>
-            <option value="Last 30 Days">Last 30 Days</option>
-            <option value="This Year">This Year</option>
-            <option value="Last Year">Last Year</option>
+          <select value={timeRange} onChange={(e) => { setTimeRange(e.target.value); setSelectedDate(""); }} className="bg-transparent text-sm text-slate-700 font-medium focus:outline-none cursor-pointer">
+            {["All Time", "Today", "Last 7 Days", "Last 30 Days", "This Year", "Last Year"].map(tr => <option key={tr} value={tr}>{tr}</option>)}
           </select>
         </div>
       </div>
@@ -218,50 +214,19 @@ const Archive = () => {
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-4 gap-3">
         <div className="flex flex-wrap gap-2 bg-slate-100 rounded-xl p-1">
           {availableTabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setCurrentPage(1); 
-                setSelectedIds([]);
-              }}
-              title={`Switch to ${tab} view`}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 cursor-pointer ${
-                activeTab === tab
-                  ? "bg-white text-emerald-700 shadow-md"
-                  : "text-slate-600 hover:bg-slate-200 hover:text-slate-800"
-              }`}
-            >
+            <button key={tab} onClick={() => { setActiveTab(tab); setCurrentPage(1); setSelectedIds([]); }} className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform active:scale-95 cursor-pointer ${activeTab === tab ? "bg-white text-emerald-700 shadow-md" : "text-slate-600 hover:bg-slate-200 hover:text-slate-800"}`}>
               {tab}
             </button>
           ))}
         </div>
-
         <div className="flex items-center gap-2">
            {isSelectionMode && selectedIds.length > 0 && (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                  <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-                    {selectedIds.length} Selected
-                  </span>
-                  <button
-                    onClick={handleBulkDelete}
-                    title="Permanently Delete Selected Items"
-                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                  <span className="text-xs font-semibold text-slate-600 px-2">{selectedIds.length} Selected</span>
+                  <button onClick={handleBulkDelete} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer"><Trash2 className="h-5 w-5" /></button>
                 </div>
             )}
-          
-          <button
-            onClick={toggleSelectionMode}
-            title={isSelectionMode ? "Cancel Selection Mode" : "Enable Multi-Selection Mode"}
-            className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-            isSelectionMode
-            ? "bg-red-500 text-white shadow-md hover:bg-red-600 border-red-600"
-            : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-            }`}
-          >
+          <button onClick={() => { if (isSelectionMode) setSelectedIds([]); setIsSelectionMode(!isSelectionMode); }} className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode ? "bg-red-500 text-white shadow-md border-red-600" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`}>
             {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
           </button>
         </div>
@@ -274,133 +239,48 @@ const Archive = () => {
             columns={tableColumns}
             data={paginatedData.map((item) => {
                 const id = item._id || item.id;
-                
-                const rowData = {
-                  ...item,
-                  id: id,
-                  datearchived: item.dateArchived ? new Date(item.dateArchived).toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }) : "N/A",
-                };
-
+                const rowData = { ...item, id: id, datearchived: item.dateArchived ? new Date(item.dateArchived).toLocaleString() : "N/A" };
                 if (isSelectionMode) {
-                  return {
-                    select: (
-                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                            <input 
-                                type="checkbox"
-                                title={`Select item ${id}`}
-                                checked={selectedIds.includes(id)}
-                                onChange={() => handleToggleSelect(id)}
-                                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                            />
-                        </div>
-                    ),
-                    ...rowData
-                  };
+                  return { select: (<div className="flex items-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(id)} onChange={() => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /></div>), ...rowData };
                 }
-
                 return rowData;
             })}
             actions={(row) => {
              const fullItem = allArchivedItems.find(i => (i._id === row.id) || (i.id === row.id));
              return (
                 <div className="flex justify-end items-center space-x-2">
-                    <button
-                    onClick={() => setViewRow(fullItem)}
-                    title="View Detailed Information"
-                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
-                    >
-                    <Eye size={16} />
-                    </button>
-                    <button
-                    onClick={() => setRestoreRow(fullItem)}
-                    title="Restore to Active Status"
-                    className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all cursor-pointer"
-                    >
-                    <RotateCcw size={16} />
-                    </button>
+                    <button onClick={() => setViewRow(fullItem)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"><Eye size={16} /></button>
+                    <button onClick={() => setRestoreRow(fullItem)} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all cursor-pointer"><RotateCcw size={16} /></button>
                 </div>
              );
             }}
         />
       )}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        totalItems={filteredItems.length}
-        onItemsPerPageChange={(newItemsPerPage) => {
-          setItemsPerPage(newItemsPerPage);
-          setCurrentPage(1);
-        }}
-      />
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} totalItems={filteredItems.length} onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }} />
 
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base font-semibold text-slate-800">View Archived Item</h3>
-                <button 
-                  onClick={() => setViewRow(null)} 
-                  title="Close Modal"
-                  className="text-slate-500 hover:text-slate-700 cursor-pointer"
-                >
-                  <X size={20}/>
-                </button>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
-              <Field label="Archive ID" value={viewRow._id || viewRow.id} />
-              <Field label="Item Type" value={viewRow.type} />
-              <Field label="Description" value={viewRow.description} />
-              <Field label="Date Archived" value={new Date(viewRow.dateArchived).toLocaleString()} />
-            </div>
-            
-            <div className="mt-4 flex justify-end">
-              <button 
-                onClick={() => setViewRow(null)} 
-                title="Close Modal"
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
+            <div className="flex justify-between items-center mb-4"><h3 className="text-base font-semibold text-slate-800">View Archived Item</h3><button onClick={() => setViewRow(null)} className="text-slate-500 hover:text-slate-700 cursor-pointer"><X size={20}/></button></div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm"><Field label="Archive ID" value={viewRow._id || viewRow.id} /><Field label="Item Type" value={viewRow.type} /><Field label="Description" value={viewRow.description} /><Field label="Date Archived" value={new Date(viewRow.dateArchived).toLocaleString()} /></div>
+            <div className="mt-4 flex justify-end"><button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 cursor-pointer">Close</button></div>
           </div>
         </div>
       )}
 
       {restoreRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
-            <h3 className="text-base font-semibold text-slate-800">Restore Item</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to restore <strong>{restoreRow.description}</strong>? It will be moved back to active status.
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button 
-                onClick={() => setRestoreRow(null)} 
-                title="Cancel and Go Back"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleRestore} 
-                title="Confirm Restoration"
-                className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700 cursor-pointer"
-              >
-                Restore
-              </button>
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg text-center">
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><RotateCcw size={24} /></div>
+            <h3 className="text-lg font-bold text-slate-800">Restore Item</h3>
+            <p className="mt-2 text-sm text-slate-600">Restore <strong>{restoreRow.description}</strong> back to its original collection?</p>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setRestoreRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium cursor-pointer">Cancel</button>
+              <button onClick={handleRestore} className="flex-1 py-2.5 bg-emerald-600 rounded-lg text-white font-medium hover:bg-emerald-700 shadow-lg cursor-pointer">Restore</button>
             </div>
           </div>
         </div>
       )}
-      
     </Layout>
   );
 };

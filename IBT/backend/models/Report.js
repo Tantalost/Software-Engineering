@@ -17,6 +17,10 @@ const reportSchema = new mongoose.Schema({
   data: {
     type: mongoose.Schema.Types.Mixed, 
     required: true
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 
