@@ -7,6 +7,8 @@ const Topbar = ({ title, onMenuClick }) => {
   const [showBell, setShowBell] = useState(false);
   const [showUser, setShowUser] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
  
   const [broadcastData, setBroadcastData] = useState({ title: "", message: "" });
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -92,7 +94,6 @@ const Topbar = ({ title, onMenuClick }) => {
       fetchAdminBroadcasts();
     }
   }, [broadcastTab, showBroadcastModal]);
-
 
   useEffect(() => {
     const handler = (e) => {
