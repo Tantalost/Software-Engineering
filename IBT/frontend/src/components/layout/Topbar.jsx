@@ -133,6 +133,39 @@ const Topbar = ({ title, onMenuClick }) => {
                 {/* ... existing user dropdown code ... */}
                 {showUser && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
+                    
+                     <button
+                      onClick={() => {
+                        setShowUser(false);
+                        navigate("/notifications");
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                    >
+                      Notifications
+                    </button>
+
+                     <button
+                      onClick={() => {
+                        setShowUser(false);
+                        navigate("/archive");
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                    >
+                      Archive
+                    </button>
+
+                    {role === "superadmin" && (
+                      <button
+                        onClick={() => {
+                          setShowUser(false);
+                          navigate("/employee-management");
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer"
+                      >
+                        Settings
+                      </button>
+                    )}
+
                     <button onClick={() => setShowLogoutModal(true)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50">Logout</button>
                   </div>
                 )}

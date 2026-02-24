@@ -19,7 +19,7 @@ import notifications from "./routes/notifications.js";
 import companyRoutes from "./routes/companyRoutes.js"; 
 import adminRoutes from "./routes/adminRoutes.js";
 
-
+import broadcastRoutes from "./routes/broadcastRoutes.js";
 import stallRoutes from "./routes/stallRoutes.js"; 
 import lostFoundRoutes from './routes/lostNFoundRoutes.js';
 import busRoutes from './routes/busRoutes.js';
@@ -75,6 +75,7 @@ app.use("/api/stalls", stallRoutes);
 app.use('/api/lost-found', lostFoundRoutes);
 app.use('/api/bus-routes', busRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/broadcasts", broadcastRoutes);
 
 
 app.get('/api/files/:filename', async (req, res) => {
