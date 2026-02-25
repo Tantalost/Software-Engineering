@@ -4,7 +4,7 @@ import {
   Eye, Edit, Trash2, ZoomIn, ZoomOut 
 } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
-import NotificationToast from "./NotificationToast"; 
+import NotificationToast from "../common/NotificationToast"; 
 
 const Topbar = ({ title, onMenuClick }) => {
   const navigate = useNavigate();
