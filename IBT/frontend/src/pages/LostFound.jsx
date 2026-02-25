@@ -14,6 +14,7 @@ import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
 import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag, Save, Info, CheckCircle, XCircle } from "lucide-react";
 
+import NotificationToast from "../components/common/NotificationToast";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -101,6 +102,22 @@ const LostFound = () => {
     }, [editRow]);
 
 
+    const [notificationState, setNotificationState] = useState({
+        isOpen: false,
+        type: '',
+        message: '',
+        autoClose: true,
+        duration: 3000
+    });
+
+    useEffect(() => {
+        if (notificationState.isOpen && notificationState.autoClose) {
+            const timer = setTimeout(() => {
+                setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
+            }, notificationState.duration);
+            return () => clearTimeout(timer);
+        }
+    }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
     const handleAddClick = () => {
         const autoTracking = `LF-${Date.now().toString().slice(-6)}`;
         const now = new Date();
@@ -164,7 +181,6 @@ const LostFound = () => {
             const idToArchive = row._id || row.id;
             if (!idToArchive) throw new Error("Record ID is missing.");
 
-            // Send a PATCH request to our new soft-delete endpoint
             const archiveRes = await fetch(`${API_URL}/${idToArchive}/archive`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" }
@@ -172,15 +188,28 @@ const LostFound = () => {
 
             if (!archiveRes.ok) throw new Error("Failed to archive");
 
-            // Log the activity and re-fetch the data to update the table
             logActivity(role, "ARCHIVE_LOSTFOUND", `Archived Item #${row.trackingNo}`, "LostFound");
-            fetchLostFound(); 
-            
-            alert("Item archived successfully!");
+            fetchLostFound();
+
+            // Success Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: "Item archived successfully!",
+                autoClose: true,
+                duration: 3000
+            });
 
         } catch (error) {
             console.error("Error archiving:", error);
-            alert("Failed to archive item.");
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to archive item.",
+                autoClose: true,
+                duration: 3000
+            });
         }
     };
 
@@ -193,9 +222,26 @@ const LostFound = () => {
             if (response.ok) {
                 logActivity(role, "DELETE_LOSTFOUND", `Deleted Item #${deleteRow.trackingNo}`, "LostFound");
                 setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
-            }
+                
+                // Success Toast
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Item permanently deleted!",
+                    autoClose: true,
+                    duration: 3000
+                });
+            } else throw new Error("Delete failed");
         } catch (error) {
             console.error("Error deleting:", error);
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to delete item.",
+                autoClose: true,
+                duration: 3000
+            });
         } finally {
             setDeleteRow(null);
         }
@@ -280,7 +326,15 @@ const LostFound = () => {
                     "superadmin"
                 );
 
-                alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`);
+                // Success Toast (Request)
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: `Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`,
+                    autoClose: true,
+                    duration: 3000
+                });
+                
                 setSelectedIds([]);
                 setIsSelectionMode(false);
 
@@ -292,7 +346,15 @@ const LostFound = () => {
                 await Promise.all(deletePromises);
                 logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} items via bulk action`, "LostFound");
 
-                alert(`Successfully deleted ${selectedIds.length} records`);
+                // Success Toast (Direct Delete)
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: `Successfully deleted ${selectedIds.length} records.`,
+                    autoClose: true,
+                    duration: 3000
+                });
+                
                 fetchLostFound();
                 setSelectedIds([]);
                 setIsSelectionMode(false);
@@ -300,7 +362,14 @@ const LostFound = () => {
 
         } catch (error) {
             console.error("Bulk action failed", error);
-            alert("Failed to process some records.");
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to process some records.",
+                autoClose: true,
+                duration: 3000
+            });
         } finally {
             setIsLoading(false);
         }
@@ -351,13 +420,29 @@ const LostFound = () => {
             );
 
             await Promise.all(deletePromises);
-            alert("Report submitted successfully! The table has been cleared.");
+            
+            // Success Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: "Report submitted successfully! The table has been cleared.",
+                autoClose: true,
+                duration: 3000
+            });
+            
             setShowSubmitModal(false);
             fetchLostFound();
 
         } catch (error) {
             console.error(error);
-            alert("Failed to submit report.");
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to submit report.",
+                autoClose: true,
+                duration: 3000
+            });
         } finally {
             setIsReporting(false);
         }
@@ -957,7 +1042,12 @@ const LostFound = () => {
                     </div>
                 </div>
             )}
-
+            <NotificationToast
+                isOpen={notificationState.isOpen}
+                type={notificationState.type}
+                message={notificationState.message}
+                onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
+            />
         </Layout>
     );
 };

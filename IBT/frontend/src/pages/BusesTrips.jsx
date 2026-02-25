@@ -17,6 +17,7 @@ import StatCardGroupBus from "../components/busTrips/StatCardGroupBus";
 import { submitPageReport } from "../utils/reportService.js";
 import { sendNotification } from "../utils/notificationService.js";
 import { logActivity } from "../utils/logger";
+import NotificationToast from "../components/common/NotificationToast";
 import {
   Archive,
   Trash2,
@@ -32,6 +33,23 @@ import {
   Settings,
 } from "lucide-react";
 
+
+const [notificationState, setNotificationState] = useState({
+  isOpen: false,
+  type: '',
+  message: '',
+  autoClose: true,
+  duration: 3000
+});
+
+useEffect(() => {
+  if (notificationState.isOpen && notificationState.autoClose) {
+    const timer = setTimeout(() => {
+      setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
+    }, notificationState.duration);
+    return () => clearTimeout(timer);
+  }
+}, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
 // --- NEW COMPONENT: Manage Companies & Buses Modal ---
 const ManageCompaniesModal = ({
   isOpen,
@@ -746,10 +764,26 @@ const BusTrips = () => {
         "BusTrips",
       );
       await fetchBusTrips();
+      
+      setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Successfully deleted ${selectedIds.length} records!`,
+          autoClose: true,
+          duration: 3000
+      });
+      
       setSelectedIds([]);
       setIsSelectionMode(false);
     } catch (e) {
       console.error(e);
+      setNotificationState({
+          isOpen: true,
+          type: 'error',
+          message: "Failed to delete some records.",
+          autoClose: true,
+          duration: 3000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -846,9 +880,31 @@ const BusTrips = () => {
 
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
-    await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
-    fetchBusTrips();
-    setDeleteRow(null);
+    try {
+      const response = await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
+      
+      if (!response.ok) throw new Error("Failed to delete");
+      
+      fetchBusTrips();
+      setDeleteRow(null);
+      
+      setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: "Record successfully deleted!",
+          autoClose: true,
+          duration: 3000
+      });
+    } catch (error) {
+      console.error(error);
+      setNotificationState({
+          isOpen: true,
+          type: 'error',
+          message: "Failed to delete record.",
+          autoClose: true,
+          duration: 3000
+      });
+    }
   };
 
   const handleArchive = (row) => setArchiveRow(row);
@@ -1470,6 +1526,12 @@ const BusTrips = () => {
           </div>
         </div>
       )}
+      <NotificationToast
+          isOpen={notificationState.isOpen}
+          type={notificationState.type}
+          message={notificationState.message}
+          onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
+      />
     </Layout>
   );
 };
