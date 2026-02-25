@@ -2,11 +2,57 @@ import Tenant from "../models/Tenant.js";
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
 
-
 export const getTenants = async (req, res) => {
   try {
-    const tenants = await Tenant.find().sort({ createdAt: -1 });
+    const tenants = await Tenant.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
     res.status(200).json(tenants);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const archiveTenant = async (req, res) => {
+  try {
+    const archived = await Tenant.findByIdAndUpdate(
+      req.params.id,
+      { isArchived: true },
+      { new: true }
+    );
+    if (!archived) return res.status(404).json({ error: "Tenant not found" });
+    res.status(200).json({ message: "Tenant archived successfully", tenant: archived });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const restoreTenant = async (req, res) => {
+  try {
+    const restored = await Tenant.findByIdAndUpdate(
+      req.params.id,
+      { isArchived: false },
+      { new: true }
+    );
+    if (!restored) return res.status(404).json({ error: "Tenant not found" });
+    res.status(200).json({ message: "Tenant restored successfully", tenant: restored });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getArchivedTenants = async (req, res) => {
+  try {
+    const archived = await Tenant.find({ isArchived: true }).sort({ updatedAt: -1 });
+    res.status(200).json(archived);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- HARD DELETE ---
+export const deleteTenant = async (req, res) => {
+  try {
+    await Tenant.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Tenant permanently deleted" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -133,15 +179,6 @@ export const updateTenant = async (req, res) => {
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Update Tenant Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export const deleteTenant = async (req, res) => {
-  try {
-    await Tenant.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Tenant deleted successfully" });
-  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };

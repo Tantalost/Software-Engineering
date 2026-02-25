@@ -939,9 +939,6 @@ const Parking = () => {
             <p className="text-slate-600 mt-2 text-sm">
               Are you sure you want to move Ticket <strong>#{archiveRow.ticketNo}</strong> to the Archives?
               <br />
-              <span className="font-semibold text-xs text-red-500">
-                This item will be permanently removed from the active parking list.
-              </span>
             </p>
             <div className="mt-6 flex gap-3">
               <button onClick={() => setArchiveRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors">

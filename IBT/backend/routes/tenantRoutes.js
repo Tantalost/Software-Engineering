@@ -35,6 +35,7 @@ storage.on('connectionError', (err) => {
 const upload = multer({ storage });
 
 router.get('/', getTenants);
+router.get('/archived', getArchivedTenants);
 
 router.post('/', 
   upload.fields([
@@ -44,6 +45,10 @@ router.post('/',
   ]), 
   createTenant
 );
+
+// Soft Delete Routes
+router.patch('/:id/archive', archiveTenant);
+router.patch('/:id/restore', restoreTenant);
 
 router.delete('/:id', deleteTenant);
 

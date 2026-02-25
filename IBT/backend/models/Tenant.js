@@ -36,9 +36,12 @@ const TenantSchema = new mongoose.Schema({
     proofOfReceipt: String,
     contract: String 
   },
-  
   // Meta
   transferWaitlistId: String,
+  isArchived: { 
+    type: Boolean, 
+    default: false 
+  }
 }, { 
   timestamps: true // Automatically adds createdAt and updatedAt
 });

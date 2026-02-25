@@ -544,9 +544,21 @@ const TenantLease = () => {
 
     const confirmArchive = async () => {
         if (!archiveRow) return;
+        const rowToArchive = archiveRow;
+        setArchiveRow(null);
+
         try {
-            await archiveTenantRecord(API_URL, ARCHIVE_URL, archiveRow, role);
-            await logActivity(role, "ARCHIVE_TENANT", `Archived tenant: ${archiveRow.tenantName || archiveRow.name}`, "Tenants");
+            const idToArchive = rowToArchive._id || rowToArchive.id;
+            
+            // Call the new PATCH archive endpoint
+            const res = await fetch(`${API_URL}/tenants/${idToArchive}/archive`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" }
+            });
+
+            if (!res.ok) throw new Error("Failed to archive record");
+
+            await logActivity(role, "ARCHIVE_TENANT", `Archived tenant: ${rowToArchive.tenantName || rowToArchive.name}`, "Tenants");
 
             setNotificationState({
                 isOpen: true,
@@ -555,8 +567,8 @@ const TenantLease = () => {
                 autoClose: true,
                 duration: 2000
             });
-            setArchiveRow(null);
-            fetchTenants();
+            
+            fetchTenants(); // Refresh the table
         } catch (e) {
             console.error("Failed to archive:", e);
             setNotificationState({
