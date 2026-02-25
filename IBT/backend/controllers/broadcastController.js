@@ -110,3 +110,33 @@ export const deleteBroadcast = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete broadcast' });
   }
 };
+
+export const updateBroadcast = async (req, res) => {
+  try {
+    const { title, message } = req.body;
+    let updateData = { title, message };
+
+    if (req.files && req.files.length > 0) {
+      updateData.attachments = req.files.map(file => {
+        const isImage = (file.contentType || file.mimetype).startsWith('image/');
+        return {
+          type: isImage ? 'image' : 'video',
+          uri: `/api/files/${file.filename}`, 
+          name: file.originalname
+        };
+      });
+    }
+
+    const updatedBroadcast = await Broadcast.findByIdAndUpdate(
+      req.params.id, 
+      { $set: updateData }, 
+      { new: true }
+    );
+
+    if (!updatedBroadcast) return res.status(404).json({ success: false, message: 'Broadcast not found' });
+    res.status(200).json({ success: true, data: updatedBroadcast });
+  } catch (error) {
+    console.error("Error updating broadcast:", error);
+    res.status(500).json({ success: false, message: 'Failed to update broadcast' });
+  }
+};

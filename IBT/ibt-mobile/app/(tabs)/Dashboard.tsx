@@ -7,17 +7,17 @@ import {
   View, 
   Image,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  TouchableOpacity 
 } from 'react-native';
 import { Avatar, Card, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
-
+import ImageView from "react-native-image-viewing"; 
 
 import API_URL from '@/src/config'; 
 
 const { width } = Dimensions.get('window');
-
 const BASE_URL = API_URL.replace(/\/api\/?$/, '');
 
 interface Attachment {
@@ -54,10 +54,14 @@ export default function Dashboard() {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+ 
+  const [isViewerVisible, setIsViewerVisible] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [viewerImages, setViewerImages] = useState<{uri: string}[]>([]);
+
   useEffect(() => {
     const fetchBroadcasts = async () => {
       try {
-       
         const cleanUrl = API_URL.replace(/\/$/, '');
         const response = await fetch(`${cleanUrl}/broadcasts`);
         
@@ -79,6 +83,21 @@ export default function Dashboard() {
 
     fetchBroadcasts();
   }, []);
+
+  const openImageViewer = (attachments: Attachment[], tappedMediaUri: string) => {
+   
+    const imagesOnly = attachments.filter(a => a.type === 'image');
+    
+    const formattedImages = imagesOnly.map(img => ({
+      uri: `${BASE_URL}${img.uri}`
+    }));
+    
+    const clickedIndex = imagesOnly.findIndex(img => img.uri === tappedMediaUri);
+    
+    setViewerImages(formattedImages);
+    setCurrentImageIndex(clickedIndex !== -1 ? clickedIndex : 0);
+    setIsViewerVisible(true);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -114,7 +133,6 @@ export default function Dashboard() {
                 <Text style={styles.postTitle}>{item.title}</Text>
                 <Text style={styles.postBody}>{item.message}</Text>
 
-             
                 {item.attachments && item.attachments.length > 0 && (
                   <View style={styles.mediaCarouselContainer}>
                     <ScrollView 
@@ -125,11 +143,18 @@ export default function Dashboard() {
                       {item.attachments.map((media, index) => (
                         <View key={index} style={styles.mediaWrapper}>
                           {media.type === 'image' ? (
-                            <Image 
-                              source={{ uri: `${BASE_URL}${media.uri}` }} 
+                           
+                            <TouchableOpacity 
                               style={styles.mediaItem} 
-                              resizeMode="cover" 
-                            />
+                              activeOpacity={0.9} 
+                              onPress={() => openImageViewer(item.attachments!, media.uri)}
+                            >
+                              <Image 
+                                source={{ uri: `${BASE_URL}${media.uri}` }} 
+                                style={styles.mediaItem} 
+                                resizeMode="cover" 
+                              />
+                            </TouchableOpacity>
                           ) : (
                             <FeedVideo videoUri={`${BASE_URL}${media.uri}`} />
                           )}
@@ -148,6 +173,15 @@ export default function Dashboard() {
           ))
         )}
       </ScrollView>
+      
+      <ImageView
+        images={viewerImages}
+        imageIndex={currentImageIndex}
+        visible={isViewerVisible}
+        onRequestClose={() => setIsViewerVisible(false)}
+        swipeToCloseEnabled={true}
+        doubleTapToZoomEnabled={true}
+      />
     </SafeAreaView>
   );
 }
