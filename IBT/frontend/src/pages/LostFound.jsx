@@ -901,7 +901,7 @@ const LostFound = () => {
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">Confirm Archiving</h3>
                         <p className="text-slate-600 mt-2 text-sm">
-                            Move Item <strong>#{archiveRow.trackingNo}</strong> to archives?
+                            Are you sure you want to move <strong>#{archiveRow.trackingNo}</strong> to archives?
                         </p>
                         <div className="mt-6 flex gap-3">
                             <button onClick={() => setArchiveRow(null)} title="Cancel Archive Action" className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">

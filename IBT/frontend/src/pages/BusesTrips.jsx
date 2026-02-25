@@ -1448,7 +1448,7 @@ const BusTrips = () => {
                 Confirm Archiving
               </h3>
               <p className="mt-2 text-sm text-slate-700">
-                Move{" "}
+                Are you sure you want to move{" "}
                 <span className="font-semibold">{archiveRow.templateNo}</span>{" "}
                 to Archives?
               </p>
