@@ -6,6 +6,7 @@ import FilterBar from "../components/common/Filterbar";
 import Field from "../components/common/Field"; 
 import { Eye, RotateCcw, Trash2, CalendarDays, Loader2, X, ListChecks } from "lucide-react";
 import { logActivity } from "../utils/logger"; 
+import NotificationToast from "../components/common/NotificationToast";
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
 
@@ -30,7 +31,24 @@ const Archive = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  
 
+  const [notificationState, setNotificationState] = useState({
+      isOpen: false,
+      type: '',
+      message: '',
+      autoClose: true,
+      duration: 3000
+  });
+
+  useEffect(() => {
+      if (notificationState.isOpen && notificationState.autoClose) {
+          const timer = setTimeout(() => {
+              setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
+          }, notificationState.duration);
+          return () => clearTimeout(timer);
+      }
+  }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
   // FETCH: Bridging Legacy and New Soft-Delete Data
   const fetchArchives = async () => {
     setIsLoading(true);
@@ -140,14 +158,14 @@ const Archive = () => {
       const id = restoreRow._id || restoreRow.id;
 
       if (restoreRow.isSoftDeleted) {
-        // New Soft-Delete Pattern: Hits module endpoint with PATCH
+        // New Soft-Delete Pattern
         const moduleMap = {
           "Bus Trip": "bustrips",
           "Terminal Fee": "terminal-fees",
           "Parking Ticket": "parking",
           "Lost & Found": "lostfound",
           "Report": "reports",
-          "Tenant": "tenants"
+          "Tenant": "tenants" // (Make sure Tenant is in this list too!)
         };
         const endpoint = moduleMap[restoreRow.type];
         res = await fetch(`${API_URL}/${endpoint}/${id}/restore`, { 
@@ -155,20 +173,37 @@ const Archive = () => {
             headers: { "Content-Type": "application/json" }
         });
       } else {
-        // Legacy Pattern: Hits original restore logic
+        // Legacy Pattern
         res = await fetch(`${API_URL}/archives/restore/${id}`, { method: "POST" });
       }
 
       if (!res.ok) throw new Error("Restore failed");
       await logActivity(role, "RESTORE_ITEM", `Restored ${restoreRow.description}`, "Archive");
+      
       setRestoreRow(null);
       fetchArchives(); 
+
+      // NEW: Trigger Success Toast!
+      setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: "Item restored successfully!",
+          autoClose: true,
+          duration: 3000
+      });
+
     } catch (e) {
       console.error("Restore Error", e);
-      alert("Failed to restore item.");
+      // NEW: Trigger Error Toast (Replaces the old alert)
+      setNotificationState({
+          isOpen: true,
+          type: 'error',
+          message: "Failed to restore item.",
+          autoClose: true,
+          duration: 3000
+      });
     }
   };
-
   const handleBulkDelete = async () => {
     if (!window.confirm(`Permanently delete ${selectedIds.length} items? This cannot be undone.`)) return;
     setIsLoading(true);
@@ -284,6 +319,13 @@ const Archive = () => {
           </div>
         </div>
       )}
+      
+      <NotificationToast
+          isOpen={notificationState.isOpen}
+          type={notificationState.type}
+          message={notificationState.message}
+          onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
+      />
     </Layout>
   );
 };
