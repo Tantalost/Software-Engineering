@@ -33,23 +33,6 @@ import {
   Settings,
 } from "lucide-react";
 
-
-const [notificationState, setNotificationState] = useState({
-  isOpen: false,
-  type: '',
-  message: '',
-  autoClose: true,
-  duration: 3000
-});
-
-useEffect(() => {
-  if (notificationState.isOpen && notificationState.autoClose) {
-    const timer = setTimeout(() => {
-      setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
-    }, notificationState.duration);
-    return () => clearTimeout(timer);
-  }
-}, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
 // --- NEW COMPONENT: Manage Companies & Buses Modal ---
 const ManageCompaniesModal = ({
   isOpen,
@@ -411,6 +394,23 @@ const BusTrips = () => {
   const COMPANY_API_URL = `${import.meta.env.VITE_API_URL}/api/companies`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
+
+  const [notificationState, setNotificationState] = useState({
+    isOpen: false,
+    type: '',
+    message: '',
+    autoClose: true,
+    duration: 3000
+  });
+
+  useEffect(() => {
+    if (notificationState.isOpen && notificationState.autoClose) {
+      const timer = setTimeout(() => {
+        setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
+      }, notificationState.duration);
+      return () => clearTimeout(timer);
+    }
+  }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
 
   // Fetch default price from backend on mount
   useEffect(() => {
