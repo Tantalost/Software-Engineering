@@ -27,6 +27,7 @@ const Topbar = ({ title, onMenuClick }) => {
 
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [existingAttachments, setExistingAttachments] = useState([]);
   const [viewingPost, setViewingPost] = useState(null); 
   const [fullscreenImage, setFullscreenImage] = useState(null); 
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -107,13 +108,15 @@ const Topbar = ({ title, onMenuClick }) => {
   const handleEditClick = (post) => {
     setEditMode(true);
     setEditId(post.id);
-    setBroadcastData({ title: post.title, message: post.message });
+    setBroadcastData({ title: post.title, message: post.message }) ;
+    setExistingAttachments(post.attachments || []);
     setBroadcastTab("create");
   };
 
   const resetForm = () => {
     setBroadcastData({ title: "", message: "" });
     setSelectedFiles([]);
+    setExistingAttachments([]);
     setScheduledDate("");
     setScheduledTime("");
     setPostTiming("now");
@@ -388,6 +391,32 @@ const Topbar = ({ title, onMenuClick }) => {
                     )}
                   </div>
 
+                    {editMode && existingAttachments.length > 0 && selectedFiles.length === 0 && (
+                      <div className="mt-4">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Attachments</p>
+                        <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                          {existingAttachments.map((att, idx) => (
+                            <div 
+                              key={idx} 
+                              className="relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer group"
+                              onClick={() => att.type === 'image' && setFullscreenImage(`${BASE_URL}${att.uri}`)}
+                            >
+                              {att.type === 'image' ? (
+                                <>
+                                  <img src={`${BASE_URL}${att.uri}`} alt="preview" className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={20} />
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="w-full h-full bg-slate-800 flex items-center justify-center text-[10px] text-white font-bold">VIDEO</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                   {!editMode && (
                     <div>
                       <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Post Timing</label>
@@ -479,7 +508,28 @@ const Topbar = ({ title, onMenuClick }) => {
                                 <span className="text-xs text-slate-500 font-medium">{b.date}</span>
                               </div>
                               <h4 className="font-bold text-slate-800 text-sm line-clamp-1">{b.title}</h4>
-                              <p className="text-xs text-slate-500 line-clamp-1 mt-1">{b.message}</p>
+                              <p className="text-xs text-slate-500 line-clamp-1 mt-1 mb-2">{b.message}</p>
+                              
+                              {b.attachments?.length > 0 && (
+                                <div className="flex gap-2">
+                                  {b.attachments.map((att, idx) => (
+                                    <div 
+                                      key={idx} 
+                                      className="w-8 h-8 rounded border border-gray-200 overflow-hidden cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation(); 
+                                        if (att.type === 'image') setFullscreenImage(`${BASE_URL}${att.uri}`);
+                                      }}
+                                    >
+                                      {att.type === 'image' ? (
+                                        <img src={`${BASE_URL}${att.uri}`} className="w-full h-full object-cover" alt="thumb" />
+                                      ) : (
+                                        <div className="w-full h-full bg-slate-800 flex items-center justify-center"><span className="text-[7px] font-bold text-white">VID</span></div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             
                             <div className="flex items-center space-x-1">
