@@ -764,25 +764,25 @@ const BusTrips = () => {
         "BusTrips",
       );
       await fetchBusTrips();
-      
+
       setNotificationState({
-          isOpen: true,
-          type: 'success',
-          message: `Successfully deleted ${selectedIds.length} records!`,
-          autoClose: true,
-          duration: 3000
+        isOpen: true,
+        type: 'success',
+        message: `Successfully deleted ${selectedIds.length} records!`,
+        autoClose: true,
+        duration: 3000
       });
-      
+
       setSelectedIds([]);
       setIsSelectionMode(false);
     } catch (e) {
       console.error(e);
       setNotificationState({
-          isOpen: true,
-          type: 'error',
-          message: "Failed to delete some records.",
-          autoClose: true,
-          duration: 3000
+        isOpen: true,
+        type: 'error',
+        message: "Failed to delete some records.",
+        autoClose: true,
+        duration: 3000
       });
     } finally {
       setIsLoading(false);
@@ -882,27 +882,27 @@ const BusTrips = () => {
     if (!deleteRow) return;
     try {
       const response = await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
-      
+
       if (!response.ok) throw new Error("Failed to delete");
-      
+
       fetchBusTrips();
       setDeleteRow(null);
-      
+
       setNotificationState({
-          isOpen: true,
-          type: 'success',
-          message: "Record successfully deleted!",
-          autoClose: true,
-          duration: 3000
+        isOpen: true,
+        type: 'success',
+        message: "Record successfully deleted!",
+        autoClose: true,
+        duration: 3000
       });
     } catch (error) {
       console.error(error);
       setNotificationState({
-          isOpen: true,
-          type: 'error',
-          message: "Failed to delete record.",
-          autoClose: true,
-          duration: 3000
+        isOpen: true,
+        type: 'error',
+        message: "Failed to delete record.",
+        autoClose: true,
+        duration: 3000
       });
     }
   };
@@ -1527,10 +1527,10 @@ const BusTrips = () => {
         </div>
       )}
       <NotificationToast
-          isOpen={notificationState.isOpen}
-          type={notificationState.type}
-          message={notificationState.message}
-          onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
+        isOpen={notificationState.isOpen}
+        type={notificationState.type}
+        message={notificationState.message}
+        onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
       />
     </Layout>
   );

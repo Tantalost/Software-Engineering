@@ -222,7 +222,7 @@ const LostFound = () => {
             if (response.ok) {
                 logActivity(role, "DELETE_LOSTFOUND", `Deleted Item #${deleteRow.trackingNo}`, "LostFound");
                 setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
-                
+
                 // Success Toast
                 setNotificationState({
                     isOpen: true,
@@ -334,7 +334,7 @@ const LostFound = () => {
                     autoClose: true,
                     duration: 3000
                 });
-                
+
                 setSelectedIds([]);
                 setIsSelectionMode(false);
 
@@ -354,7 +354,7 @@ const LostFound = () => {
                     autoClose: true,
                     duration: 3000
                 });
-                
+
                 fetchLostFound();
                 setSelectedIds([]);
                 setIsSelectionMode(false);
@@ -420,7 +420,7 @@ const LostFound = () => {
             );
 
             await Promise.all(deletePromises);
-            
+
             // Success Toast
             setNotificationState({
                 isOpen: true,
@@ -429,7 +429,7 @@ const LostFound = () => {
                 autoClose: true,
                 duration: 3000
             });
-            
+
             setShowSubmitModal(false);
             fetchLostFound();
 
