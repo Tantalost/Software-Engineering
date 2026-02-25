@@ -4,7 +4,7 @@ import CryptoJS from 'crypto-js';
 import mongoose from 'mongoose'; 
 import path from 'path';
 
-const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || " "; 
 
 export const getSecureDocument = async (req, res) => {
     try {

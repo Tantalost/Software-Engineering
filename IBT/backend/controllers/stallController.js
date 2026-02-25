@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 import CryptoJS from 'crypto-js';
 import path from 'path';
 
-const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || " "; 
 
 const createAdminNotification = async (title, message) => {
   try {
