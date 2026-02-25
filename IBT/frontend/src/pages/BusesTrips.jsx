@@ -1446,7 +1446,7 @@ const BusTrips = () => {
         onConfirm={handleDeleteConfirm}
         title="Delete Record"
         message="Are you sure you want to remove this bus record? This action cannot be undone."
-        itemName={deleteRow ? `Plate No: ${deleteRow.templateno}` : ""}
+        itemName={deleteRow ? `Plate No: ${deleteRow.templateNo}` : ""}
       />
 
       {showSubmitModal && (
