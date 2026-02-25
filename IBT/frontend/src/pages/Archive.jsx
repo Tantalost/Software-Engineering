@@ -45,7 +45,8 @@ const Archive = () => {
         { type: "Terminal Fee", url: "/terminal-fees/archived" },
         { type: "Parking Ticket", url: "/parking/archived" },
         { type: "Lost & Found", url: "/lostfound/archived" },
-        { type: "Report", url: "/reports/archived" }
+        { type: "Report", url: "/reports/archived" },
+        { type: "Tenant", url: "/tenants/archived" }
       ];
 
       const newArchivedResults = await Promise.all(
@@ -63,7 +64,8 @@ const Archive = () => {
               description: mod.type === "Bus Trip" ? `Trip: ${item.templateNo}` : 
                            mod.type === "Terminal Fee" ? `Ticket #${item.ticketNo}` :
                            mod.type === "Parking Ticket" ? `Plate #${item.plateNo}` :
-                           mod.type === "Lost & Found" ? `Item: ${item.description}` : 
+                           mod.type === "Lost & Found" ? `Item: ${item.description}` :
+                           mod.type === "Tenant" ? `Tenant: ${item.tenantName || item.name}` : 
                            `${mod.type} Report`,
               dateArchived: item.updatedAt,
               isSoftDeleted: true, // Flag for routing Restore/Delete
@@ -144,7 +146,8 @@ const Archive = () => {
           "Terminal Fee": "terminal-fees",
           "Parking Ticket": "parking",
           "Lost & Found": "lostfound",
-          "Report": "reports"
+          "Report": "reports",
+          "Tenant": "tenants"
         };
         const endpoint = moduleMap[restoreRow.type];
         res = await fetch(`${API_URL}/${endpoint}/${id}/restore`, { 
