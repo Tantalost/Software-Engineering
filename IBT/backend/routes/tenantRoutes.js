@@ -6,7 +6,10 @@ import {
   getTenants, 
   createTenant, 
   deleteTenant, 
-  updateTenant
+  updateTenant,
+  archiveTenant,      // Add this
+  restoreTenant,      // Add this
+  getArchivedTenants
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
