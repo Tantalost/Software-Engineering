@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { Avatar, Card, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
-import { Video, ResizeMode } from 'expo-av';
 
-import  API_URL  from '@/src/config'; 
+import API_URL from '@/src/config'; 
 
 const { width } = Dimensions.get('window');
+
+const BASE_URL = API_URL.replace(/\/api\/?$/, '');
 
 interface Attachment {
   type: 'image' | 'video';
@@ -32,20 +34,44 @@ interface NewsItem {
   attachments?: Attachment[];
 }
 
+const FeedVideo = ({ videoUri }: { videoUri: string }) => {
+  const player = useVideoPlayer(videoUri, player => {
+    player.loop = true;
+  });
+
+  return (
+    <VideoView
+      style={styles.mediaItem}
+      player={player}
+      allowsFullscreen
+      allowsPictureInPicture
+    />
+  );
+};
+
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
- 
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBroadcasts = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/broadcasts`);
-        const data = await response.json();
-        setNewsItems(data);
+       
+        const cleanUrl = API_URL.replace(/\/$/, '');
+        const response = await fetch(`${cleanUrl}/broadcasts`);
+        
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const data = await response.json();
+          setNewsItems(data);
+        } else {
+          const errorText = await response.text();
+          console.error("CRITICAL: Backend returned HTML instead of JSON. Here is the response:", errorText.substring(0, 150));
+          setNewsItems([]); 
+        }
       } catch (error) {
-        console.error("Error fetching broadcasts:", error);
+        console.error("Network error fetching broadcasts:", error);
       } finally {
         setLoading(false);
       }
@@ -88,6 +114,7 @@ export default function Dashboard() {
                 <Text style={styles.postTitle}>{item.title}</Text>
                 <Text style={styles.postBody}>{item.message}</Text>
 
+             
                 {item.attachments && item.attachments.length > 0 && (
                   <View style={styles.mediaCarouselContainer}>
                     <ScrollView 
@@ -99,19 +126,12 @@ export default function Dashboard() {
                         <View key={index} style={styles.mediaWrapper}>
                           {media.type === 'image' ? (
                             <Image 
-                              source={{ uri: `${API_URL}${media.uri}` }} 
+                              source={{ uri: `${BASE_URL}${media.uri}` }} 
                               style={styles.mediaItem} 
                               resizeMode="cover" 
                             />
                           ) : (
-                            <Video
-                              source={{ uri: `${API_URL}${media.uri}` }}
-                              style={styles.mediaItem}
-                              useNativeControls
-
-                              resizeMode={ResizeMode.CONTAIN}
-                              isLooping
-                            />
+                            <FeedVideo videoUri={`${BASE_URL}${media.uri}`} />
                           )}
                         </View>
                       ))}
