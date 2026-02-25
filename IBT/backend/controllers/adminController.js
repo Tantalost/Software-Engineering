@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto"; // Built-in Node module
 import Admin from "../models/Admin.js";
+import PasswordReset from "../models/PasswordReset.js"; // New model
 import sendEmail from "../utils/sendEmail.js";
 
 const sanitizeAdmin = (admin) => ({
@@ -48,39 +50,28 @@ export const deleteAdmin = async (req, res) => {
   }
 };
 
-// --- NEW AUTH FLOWS ---
+// --- AUTH FLOWS ---
 
-// 1. Send OTP (For EDITING credentials)
-// Logic: Super Admin requests this -> Save code to Target Admin DB -> Email code to Super Admin
 export const sendOtp = async (req, res) => {
   try {
-    // The frontend sends the email of the ADMIN BEING EDITED
     const targetEmail = req.body.email; 
-    
     if (!targetEmail) return res.status(400).json({ message: "Target email required." });
 
-    // 1. Find the Target Admin to generate the code for
     const targetAdmin = await Admin.findOne({ email: targetEmail.toLowerCase() });
     if (!targetAdmin) return res.status(404).json({ message: "Admin account not found." });
 
-    // 2. Generate OTP
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); 
 
-    // 3. Save OTP to the TARGET account (so updateAdmin can find/verify it later)
     targetAdmin.otpCode = otpCode;
     targetAdmin.otpExpiresAt = otpExpiresAt;
     await targetAdmin.save();
 
-    // 4. Send Email to SUPER ADMIN (The "Boss" Authorizing the change)
     const superAdminEmail = process.env.SUPERADMIN_EMAIL; 
-    
-    if (!superAdminEmail) {
-        return res.status(500).json({ message: "Server Error: SUPERADMIN_EMAIL not configured." });
-    }
+    if (!superAdminEmail) return res.status(500).json({ message: "Server Error: SUPERADMIN_EMAIL not configured." });
 
     await sendEmail({
-      email: superAdminEmail, // <--- SENT TO SUPER ADMIN
+      email: superAdminEmail, 
       subject: "Admin Account Update Authorization",
       message: `Authorization Required:\n\nYou are attempting to update the password for admin: ${targetAdmin.name} (${targetAdmin.email}).\n\nYour Verification OTP is: ${otpCode}\n\nIf you did not request this, please secure your account immediately.`
     });
@@ -92,7 +83,6 @@ export const sendOtp = async (req, res) => {
   }
 };
 
-// 2. Update Admin (Verifies the OTP stored on the admin record)
 export const updateAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -101,45 +91,27 @@ export const updateAdmin = async (req, res) => {
     const admin = await Admin.findById(id);
     if (!admin) return res.status(404).json({ message: "Admin not found." });
 
-    // Update Basic Info
     if (name) admin.name = name;
     if (email) admin.email = email.toLowerCase();
 
-    // If Password change is requested
     if (password) {
-      if (!otp) {
-        return res.status(400).json({ message: "OTP is required to change password." });
-      }
-
-      // Verify OTP (Checks the code we saved to this admin's record)
-      if (admin.otpCode !== otp) {
-        return res.status(401).json({ message: "Invalid OTP." });
-      }
-      if (new Date() > admin.otpExpiresAt) {
-        return res.status(401).json({ message: "OTP has expired." });
-      }
+      if (!otp) return res.status(400).json({ message: "OTP is required to change password." });
+      if (admin.otpCode !== otp) return res.status(401).json({ message: "Invalid OTP." });
+      if (new Date() > admin.otpExpiresAt) return res.status(401).json({ message: "OTP has expired." });
 
       admin.passwordHash = await bcrypt.hash(password, 10);
-      
-      // Cleanup
       admin.otpCode = undefined;
       admin.otpExpiresAt = undefined;
     }
 
     await admin.save();
-
-    return res.json({
-      message: "Admin updated successfully.",
-      admin: sanitizeAdmin(admin),
-    });
+    return res.json({ message: "Admin updated successfully.", admin: sanitizeAdmin(admin) });
   } catch (error) {
     console.error("Update Error:", error);
     return res.status(500).json({ message: "Failed to update admin." });
   }
 };
 
-// 3. Login Admin (Standard Login Flow)
-// Logic: User logs in -> OTP sent to THAT User
 export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -149,16 +121,22 @@ export const loginAdmin = async (req, res) => {
     }
 
     const admin = await Admin.findOne({ email: email.toLowerCase() });
+    
+    // Check if admin exists
     if (!admin) {
       return res.status(401).json({ message: "Invalid credentials." });
     }
 
+    // UPDATED: Check password and flag superadmin for reset
     const isMatch = await bcrypt.compare(password, admin.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      const isSuperAdmin = admin.role === 'superadmin';
+      return res.status(401).json({ 
+        message: "Invalid credentials.", 
+        showReset: isSuperAdmin // <--- This triggers the frontend "Forgot Password" button!
+      });
     }
 
-    // Generate OTP
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); 
 
@@ -166,11 +144,10 @@ export const loginAdmin = async (req, res) => {
     admin.otpExpiresAt = otpExpiresAt;
     await admin.save();
 
-    // SEND TO THE USER WHO IS LOGGING IN
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
         await sendEmail({
-          email: admin.email, // <--- SENT TO THE USER
+          email: admin.email,
           subject: "Your IBT Admin Login OTP",
           message: `Your login OTP is ${otpCode}. It expires in 5 minutes.`,
         });
@@ -186,7 +163,6 @@ export const loginAdmin = async (req, res) => {
   }
 };
 
-// 4. Verify Login OTP
 export const verifyAdminOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -196,7 +172,6 @@ export const verifyAdminOtp = async (req, res) => {
         return res.status(401).json({ message: "Invalid or expired OTP." });
     }
 
-    // Check expiration
     if (new Date() > admin.otpExpiresAt) {
         return res.status(401).json({ message: "OTP has expired." });
     }
@@ -205,11 +180,82 @@ export const verifyAdminOtp = async (req, res) => {
     admin.otpExpiresAt = undefined;
     await admin.save();
 
-    return res.json({ 
-        message: "Login successful.", 
-        admin: sanitizeAdmin(admin) 
-    });
+    return res.json({ message: "Login successful.", admin: sanitizeAdmin(admin) });
   } catch(e) {
       return res.status(500).json({message: "Verification failed."});
   }
 };
+
+// --- NEW FORGOT PASSWORD FLOWS ---
+
+export const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const admin = await Admin.findOne({ email: email.toLowerCase(), role: 'superadmin' });
+    
+    if (!admin) return res.status(404).json({ message: "Admin not found or unauthorized." });
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await PasswordReset.deleteMany({ email: admin.email });
+    await PasswordReset.create({ email: admin.email, otpHash, expiresAt });
+
+    await sendEmail({
+      email: admin.email,
+      subject: "Superadmin Password Reset Code",
+      message: `Your password reset code is: ${otp}\n\nThis code will expire in 10 minutes.`
+    });
+
+    res.status(200).json({ message: "Reset OTP sent to email." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const verifyResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const resetRecord = await PasswordReset.findOne({ email: email.toLowerCase() });
+
+    if (!resetRecord || resetRecord.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "OTP is invalid or has expired." });
+    }
+
+    const isMatch = await bcrypt.compare(otp, resetRecord.otpHash);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect OTP." });
+    }
+
+    // Generate secure temporary token to authorize the actual password change
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    resetRecord.resetToken = resetToken;
+    await resetRecord.save();
+
+    res.status(200).json({ message: "OTP verified.", resetToken });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, resetToken, newPassword } = req.body;
+    
+    const resetRecord = await PasswordReset.findOne({ email: email.toLowerCase(), resetToken });
+    if (!resetRecord || resetRecord.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired reset session." });
+    }
+
+    // Hash new password and update admin model directly
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await Admin.findOneAndUpdate({ email: email.toLowerCase() }, { passwordHash });
+
+    await PasswordReset.deleteMany({ email: email.toLowerCase() });
+
+    res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};a

@@ -21,22 +21,32 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
+  
+  // Multi-step navigation state
+  const [step, setStep] = useState("LOGIN"); // 'LOGIN', '2FA_OTP', 'FORGOT_OTP', 'RESET_PASSWORD'
+  const [showResetButton, setShowResetButton] = useState(false);
+  
+  // OTP and Reset States
   const [otp, setOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     document.title = "Login";
   }, []);
 
+  // --- 1. LOGIN HANDLER ---
   const handleCredentialsSubmit = async (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setError("Please enter your email and password.");
-      return;
-    }
+    if (e) e.preventDefault();
+    if (!email || !password) return setError("Please enter your email and password.");
+    
     setError("");
+    setSuccessMsg("");
     setIsLoading(true);
+    setShowResetButton(false);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/admins/login`, {
@@ -44,16 +54,17 @@ export default function AdminLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || "Invalid credentials. Please try again.");
+        setError(data.message || "Invalid credentials.");
+        // Detection: Show forgot password if backend flags it as a superadmin
+        if (data.showReset) setShowResetButton(true);
         return;
       }
 
       if (data.requiresOtp) {
-        setIsOtpStep(true);
+        setStep("2FA_OTP");
         setOtp("");
       } else {
         setError("Unexpected response from server.");
@@ -66,13 +77,12 @@ export default function AdminLogin() {
     }
   };
 
-  const handleOtpSubmit = async (e) => {
+  // --- 2. 2FA OTP HANDLER ---
+  const handle2FAOtpSubmit = async (e) => {
     e.preventDefault();
     const cleanedOtp = String(otp || "").trim();
-    if (!cleanedOtp) {
-      setError("Please enter the OTP sent to your email.");
-      return;
-    }
+    if (!cleanedOtp) return setError("Please enter the OTP.");
+    
     setError("");
     setIsLoading(true);
 
@@ -82,13 +92,9 @@ export default function AdminLogin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: cleanedOtp }),
       });
-
       const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.message || "Failed to verify OTP.");
-        return;
-      }
+      if (!res.ok) return setError(data.message || "Failed to verify OTP.");
 
       const { admin } = data;
       const role = admin.role;
@@ -99,143 +105,220 @@ export default function AdminLogin() {
       localStorage.setItem("authName", name);
       localStorage.setItem("authEmail", admin.email);
 
-      if (role === "parking") {
-        navigate("/parking");
-      } else if (role === "lostfound") {
-        navigate("/lost-found");
-      } else if (role === "bus") {
-        navigate("/buses-trips");
-      } else if (role === "ticket") {
-        navigate("/tickets");
-      } else if (role === "lease") {
-        navigate("/tenant-lease");
-      } else {
-        navigate("/dashboard");
-      }
+      const routes = { parking: "/parking", lostfound: "/lost-found", bus: "/buses-trips", ticket: "/tickets", lease: "/tenant-lease" };
+      navigate(routes[role] || "/dashboard");
+
     } catch (err) {
-      console.error("OTP verification error:", err);
-      setError("Failed to verify OTP. Please try again.");
+      console.error("OTP error:", err);
+      setError("Failed to verify OTP.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBackToLogin = () => {
-    setIsOtpStep(false);
-    setOtp("");
+  // --- 3. TRIGGER FORGOT PASSWORD ---
+  const handleForgotPasswordTrigger = async () => {
     setError("");
+    setSuccessMsg("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admins/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) return setError(data.message || "Failed to trigger reset.");
+      
+      setSuccessMsg("Reset code sent to your email.");
+      setStep("FORGOT_OTP");
+      setOtp("");
+    } catch (err) {
+      setError("System error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResendOtp = async () => {
-    if (!email || !password) {
-      setError("Please enter your email and password to resend OTP.");
-      setIsOtpStep(false);
-      return;
-    }
+  // --- 4. VERIFY RESET OTP ---
+  const handleResetOtpSubmit = async (e) => {
+    e.preventDefault();
+    const cleanedOtp = String(otp || "").trim();
+    if (!cleanedOtp) return setError("Please enter the reset code.");
+    
+    setError("");
+    setSuccessMsg("");
+    setIsLoading(true);
 
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admins/verify-reset-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: cleanedOtp }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) return setError(data.message || "Invalid or expired OTP.");
+
+      setResetToken(data.resetToken);
+      setSuccessMsg("OTP Verified. Please enter your new password.");
+      setStep("RESET_PASSWORD");
+      setOtp(""); // Clear OTP
+    } catch (err) {
+      setError("Failed to verify reset code.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- 5. EXECUTE PASSWORD RESET ---
+  const handleNewPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!newPassword) return setError("Please enter a new password.");
+    
     setError("");
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admins/login`, {
+      const res = await fetch(`${API_BASE_URL}/api/admins/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, resetToken, newPassword }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Failed to resend OTP.");
-        return;
-      }
 
-      // Stay on OTP step; OTP re-issued by backend
-      setIsOtpStep(true);
+      if (!res.ok) return setError(data.message || "Failed to reset password.");
+
+      setSuccessMsg("Password updated successfully! You can now log in.");
+      setStep("LOGIN");
+      setPassword("");
+      setNewPassword("");
+      setShowResetButton(false);
     } catch (err) {
-      console.error("Resend OTP error:", err);
-      setError("Failed to resend OTP. Please try again.");
+      setError("Failed to reset password.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSubmit = isOtpStep ? handleOtpSubmit : handleCredentialsSubmit;
+  // --- UTILS ---
+  const handleBackToLogin = () => {
+    setStep("LOGIN");
+    setOtp("");
+    setNewPassword("");
+    setError("");
+    setSuccessMsg("");
+  };
+
+  const handleResendOtp = async () => {
+    // Re-trigger the standard login flow to send a new 2FA OTP
+    handleCredentialsSubmit();
+    setSuccessMsg("A new OTP has been sent to your email.");
+  };
+
+  // Determine active submit handler based on step
+  const getSubmitHandler = () => {
+    if (step === "LOGIN") return handleCredentialsSubmit;
+    if (step === "2FA_OTP") return handle2FAOtpSubmit;
+    if (step === "FORGOT_OTP") return handleResetOtpSubmit;
+    if (step === "RESET_PASSWORD") return handleNewPasswordSubmit;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       <LoginBackground />
-      <form onSubmit={handleSubmit}>
-        {!isOtpStep ? (
+      <form onSubmit={getSubmitHandler()} className="z-10 relative">
+        
+        {step === "LOGIN" && (
           <LoginCard 
-            icon={
-              <img 
-                src={LOGO} 
-                alt="Logo" 
-                className="w-full h-full object-contain" 
-              />
-            }
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
             title="Admin Portal"
-            subtitle="Sign in to access your dashboard"
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
-            handleSubmit={handleSubmit}
+            subtitle={successMsg || "Sign in to access your dashboard"}
+            email={email} setEmail={setEmail}
+            password={password} setPassword={setPassword}
+            showPassword={showPassword} setShowPassword={setShowPassword}
+            handleSubmit={handleCredentialsSubmit}
             isLoading={isLoading}
             error={error}
             buttonText="Continue"
-          />
-        ) : (
-          <LoginCard 
-            icon={
-              <img 
-                src={LOGO} 
-                alt="Logo" 
-                className="w-full h-full object-contain" 
-              />
+            footer={
+              showResetButton && (
+                <div className="flex justify-center pt-2">
+                  <button 
+                    type="button" 
+                    onClick={handleForgotPasswordTrigger} 
+                    disabled={isLoading} 
+                    className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )
             }
-            title="OTP Verification"
-            subtitle="Enter the OTP sent to your email to complete login"
-            email={email}
-            setEmail={setEmail}
-            emailDisabled={true}
-            password={otp}
-            setPassword={setOtp}
-            showPassword={false}
-            setShowPassword={() => {}}
-            handleSubmit={handleSubmit}
-            isLoading={isLoading}
-            error={error}
-            passwordType="text"
-            passwordLabel="One-time password (OTP)"
-            passwordPlaceholder="Enter 6-digit code"
-            passwordIcon="Key"
-            showPasswordToggle={false}
+          />
+        )}
+
+        {step === "2FA_OTP" && (
+          <LoginCard 
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
+            title="OTP Verification" 
+            subtitle={successMsg || "Enter the OTP sent to your email to complete login"}
+            email={email} setEmail={setEmail} emailDisabled={true}
+            password={otp} setPassword={setOtp} passwordType="text"
+            passwordLabel="One-time password (OTP)" passwordPlaceholder="Enter 6-digit code" passwordIcon="Key"
+            showPassword={false} setShowPassword={() => {}} showPasswordToggle={false}
+            handleSubmit={handle2FAOtpSubmit} isLoading={isLoading} error={error}
             buttonText="Verify OTP"
             footer={
               <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={handleBackToLogin}
-                  disabled={isLoading}
-                  className="text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={isLoading}
-                  className="text-sm font-semibold text-teal-700 hover:text-teal-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  Resend OTP
-                </button>
+                <button type="button" onClick={handleBackToLogin} disabled={isLoading} className="text-sm font-semibold text-slate-400 hover:text-white transition-colors">Back</button>
+                <button type="button" onClick={handleResendOtp} disabled={isLoading} className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors">Resend OTP</button>
               </div>
             }
           />
         )}
+
+        {step === "FORGOT_OTP" && (
+          <LoginCard 
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
+            title="Password Reset" 
+            subtitle={successMsg || "Enter the 6-digit code sent to your email"}
+            email={email} setEmail={setEmail} emailDisabled={true}
+            password={otp} setPassword={setOtp} passwordType="text"
+            passwordLabel="Reset Code (OTP)" passwordPlaceholder="Enter 6-digit code" passwordIcon="Key"
+            showPassword={false} setShowPassword={() => {}} showPasswordToggle={false}
+            handleSubmit={handleResetOtpSubmit} isLoading={isLoading} error={error}
+            buttonText="Verify Code"
+            footer={
+              <div className="flex items-center justify-between pt-2">
+                <button type="button" onClick={handleBackToLogin} disabled={isLoading} className="text-sm font-semibold text-slate-400 hover:text-white transition-colors">Back to Login</button>
+                <button type="button" onClick={handleForgotPasswordTrigger} disabled={isLoading} className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors">Resend Code</button>
+              </div>
+            }
+          />
+        )}
+
+        {step === "RESET_PASSWORD" && (
+          <LoginCard 
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
+            title="Create New Password" 
+            subtitle={successMsg || "Your OTP was verified. Please enter a new password."}
+            email={email} setEmail={setEmail} emailDisabled={true}
+            password={newPassword} setPassword={setNewPassword}
+            passwordLabel="New Password" passwordPlaceholder="Enter new password"
+            showPassword={showPassword} setShowPassword={setShowPassword}
+            handleSubmit={handleNewPasswordSubmit} isLoading={isLoading} error={error}
+            buttonText="Update Password"
+            footer={
+              <div className="flex justify-center pt-2">
+                <button type="button" onClick={handleBackToLogin} disabled={isLoading} className="text-sm font-semibold text-slate-400 hover:text-white transition-colors">Cancel</button>
+              </div>
+            }
+          />
+        )}
+
       </form>
     </div>
   );

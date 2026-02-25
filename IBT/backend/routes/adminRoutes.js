@@ -7,6 +7,9 @@ import {
   sendOtp,
   loginAdmin,
   verifyAdminOtp,
+  requestPasswordReset, // New
+  verifyResetOtp,       // New
+  resetPassword         // New
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -22,4 +25,10 @@ router.post("/auth/send-otp", sendOtp);
 
 router.post("/login", loginAdmin);
 router.post("/verify-otp", verifyAdminOtp);
+
+// NEW: Forgot Password Routes
+router.post("/forgot-password", requestPasswordReset);
+router.post("/verify-reset-otp", verifyResetOtp);
+router.post("/reset-password", resetPassword);
+
 export default router;
