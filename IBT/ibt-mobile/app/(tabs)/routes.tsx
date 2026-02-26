@@ -105,7 +105,7 @@ export default function RoutesPage() {
  
   const filteredRoutes = useMemo(() => {
    
-    let data = routes.filter(item => item.status === 'Pending');
+    let data = routes.filter(item => item.status === 'Pending' || item.status === 'Arrived');
 
     if (activeFilterId && searchQuery === '') {
       return data.filter(item => item._id === activeFilterId);
@@ -131,68 +131,75 @@ export default function RoutesPage() {
   };
 
 
-  const renderItem = ({ item }: { item: BusTrip }) => (
-    <Card style={styles.card} mode="elevated">
-      <Card.Content>
-        <View style={styles.routeRow}>
-           <View style={{flex: 1}}>
-              <Text style={styles.label}>Route</Text>
-              <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
+  const renderItem = ({ item }: { item: BusTrip }) => {
+   
+    const hasArrived = item.status === 'Arrived';
+   
+    const isDelayed = !hasArrived && isPastArrival(item.date, item.time);
+    
+    let statusText = 'On Time';
+    let statusColor = '#2E7D32'; 
 
-              <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
-              <Text variant="bodyMedium" style={styles.value}>
-                {new Date(item.date).toLocaleDateString()}
-              </Text>
-           </View>
-           
-           <View style={{alignItems: 'flex-end'}}>
-             
-              <Text style={[
-                styles.label, 
-                isPastArrival(item.date, item.time) && { color: '#D32F2F', fontWeight: 'bold' }
-              ]}>
-                Expected Arrival
-              </Text>
-              
-              <Text variant="titleLarge" style={[
-                styles.timeValue, 
-                { color: isPastArrival(item.date, item.time) ? '#D32F2F' : '#0277BD' }
-              ]}>
-                {formatTime(item.time)}
-              </Text>
+    if (hasArrived) {
+        statusText = 'Arrived';
+        statusColor = '#2E7D32'; 
+    } else if (isDelayed) {
+        statusText = 'Delayed';
+        statusColor = '#D32F2F';
+    }
 
-              {isPastArrival(item.date, item.time) && (
-                <Text variant="bodySmall" style={{ color: '#D32F2F', marginTop: 2, fontStyle: 'italic' }}>
-                  Delayed
+    return (
+      <Card style={styles.card} mode="elevated">
+        <Card.Content>
+          <View style={styles.cardHeader}>
+            <View style={styles.companyContainer}>
+               <Avatar.Icon 
+                  size={36} 
+                  icon="bus" 
+                  style={{backgroundColor: '#E8F5E9'}} 
+                  color="#1B5E20"
+               />
+               <View>
+                  <Text variant="titleMedium" style={styles.companyName}>{item.company}</Text>
+                  <Text variant="bodySmall" style={styles.busType}>Plate No: {item.templateNo}</Text>
+               </View>
+            </View>
+            
+            <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+              <Text style={{ color: '#E65100', fontSize: 12, fontWeight: 'bold' }}>
+                {hasArrived ? 'Parking' : 'Pending'}
+              </Text>
+            </View>
+          </View>
+
+          <Divider style={styles.divider} />
+
+          <View style={styles.routeRow}>
+             <View style={{flex: 1}}>
+                <Text style={styles.label}>Route</Text>
+                <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
+
+                <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
+                <Text variant="bodyMedium" style={styles.value}>
+                  {new Date(item.date).toLocaleDateString()}
                 </Text>
-              )}
-           </View>
-        </View>
-
-        <Divider style={styles.divider} />
-
-        <View style={styles.routeRow}>
-           <View style={{flex: 1}}>
-              <Text style={styles.label}>Route</Text>
-              <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
-
-              <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
-              <Text variant="bodyMedium" style={styles.value}>
-                {new Date(item.date).toLocaleDateString()}
-              </Text>
-           </View>
-           
-           <View style={{alignItems: 'flex-end'}}>
+             </View>
              
-              <Text style={styles.label}>Expected Arrival</Text>
-              <Text variant="titleLarge" style={[styles.timeValue, { color: '#0277BD' }]}>
-                {formatTime(item.time)}
-              </Text>
-           </View>
-        </View>
-      </Card.Content>
-    </Card>
-  );
+             <View style={{alignItems: 'flex-end'}}>
+              
+                <Text style={[styles.label, { color: statusColor, fontWeight: 'bold' }]}>
+                  {statusText}
+                </Text>
+                
+                <Text variant="titleLarge" style={[styles.timeValue, { color: statusColor }]}>
+                  {formatTime(item.time)}
+                </Text>
+             </View>
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
