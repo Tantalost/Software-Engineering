@@ -33,12 +33,22 @@ export default function RoutesPage() {
 
   useFocusEffect(
     useCallback(() => {
+    
       if (params.tripId) {
         setActiveFilterId(params.tripId);
       } else if (params.search) {
         setSearchQuery(params.search);
       }
+      
       fetchRoutes();
+
+      const refreshInterval = setInterval(() => {
+        fetchRoutes();
+      }, 60000); 
+
+      return () => {
+        clearInterval(refreshInterval);
+      };
     }, [params])
   );
 
@@ -76,9 +86,26 @@ export default function RoutesPage() {
     return `${hour}:${minuteStr} ${ampm}`;
   };
 
+  const isPastArrival = (dateString: string, timeString: string) => {
+    if (!dateString || !timeString) return false;
+    
+    try {
+      const scheduledDate = new Date(dateString);
+      const [hours, minutes] = timeString.split(':').map(Number);
+      
+      scheduledDate.setHours(hours, minutes, 0, 0);
+      
+      const now = new Date();
+      return now > scheduledDate; 
+    } catch (error) {
+      return false;
+    }
+  };
+
  
   const filteredRoutes = useMemo(() => {
-    let data = routes;
+   
+    let data = routes.filter(item => item.status === 'Pending');
 
     if (activeFilterId && searchQuery === '') {
       return data.filter(item => item._id === activeFilterId);
@@ -90,7 +117,7 @@ export default function RoutesPage() {
         (item) =>
           item.route.toLowerCase().includes(query) ||
           item.company.toLowerCase().includes(query) ||
-          item.templateNo.toLowerCase().includes(query)
+          item.templateNo.toLowerCase().includes(query) 
       );
     }
 
@@ -107,20 +134,39 @@ export default function RoutesPage() {
   const renderItem = ({ item }: { item: BusTrip }) => (
     <Card style={styles.card} mode="elevated">
       <Card.Content>
-        <View style={styles.cardHeader}>
-          <View style={styles.companyContainer}>
-             <Avatar.Icon 
-                size={36} 
-                icon="bus" 
-                style={{backgroundColor: '#E8F5E9'}} 
-                color="#1B5E20"
-             />
-             <View>
-                <Text variant="titleMedium" style={styles.companyName}>{item.company}</Text>
-                <Text variant="bodySmall" style={styles.busType}>{item.busType || 'Standard Class'}</Text>
-             </View>
-          </View>
-         
+        <View style={styles.routeRow}>
+           <View style={{flex: 1}}>
+              <Text style={styles.label}>Route</Text>
+              <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
+
+              <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
+              <Text variant="bodyMedium" style={styles.value}>
+                {new Date(item.date).toLocaleDateString()}
+              </Text>
+           </View>
+           
+           <View style={{alignItems: 'flex-end'}}>
+             
+              <Text style={[
+                styles.label, 
+                isPastArrival(item.date, item.time) && { color: '#D32F2F', fontWeight: 'bold' }
+              ]}>
+                Expected Arrival
+              </Text>
+              
+              <Text variant="titleLarge" style={[
+                styles.timeValue, 
+                { color: isPastArrival(item.date, item.time) ? '#D32F2F' : '#0277BD' }
+              ]}>
+                {formatTime(item.time)}
+              </Text>
+
+              {isPastArrival(item.date, item.time) && (
+                <Text variant="bodySmall" style={{ color: '#D32F2F', marginTop: 2, fontStyle: 'italic' }}>
+                  Delayed
+                </Text>
+              )}
+           </View>
         </View>
 
         <Divider style={styles.divider} />
@@ -129,21 +175,20 @@ export default function RoutesPage() {
            <View style={{flex: 1}}>
               <Text style={styles.label}>Route</Text>
               <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
-           </View>
-           <View style={{alignItems: 'flex-end'}}>
-              <Text style={styles.label}>Departure</Text>
-              
 
-              <Text variant="titleMedium" style={styles.timeValue}>{formatTime(item.time)}</Text>
-              
-              <Text variant="bodySmall" style={styles.dateValue}>
+              <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
+              <Text variant="bodyMedium" style={styles.value}>
                 {new Date(item.date).toLocaleDateString()}
               </Text>
            </View>
-        </View>
-
-        <View style={styles.footerRow}>
-           <Text style={styles.templateId}>ID: {item.templateNo}</Text>
+           
+           <View style={{alignItems: 'flex-end'}}>
+             
+              <Text style={styles.label}>Expected Arrival</Text>
+              <Text variant="titleLarge" style={[styles.timeValue, { color: '#0277BD' }]}>
+                {formatTime(item.time)}
+              </Text>
+           </View>
         </View>
       </Card.Content>
     </Card>
