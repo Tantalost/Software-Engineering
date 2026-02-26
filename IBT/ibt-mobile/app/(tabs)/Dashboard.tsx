@@ -2,20 +2,21 @@ import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState, useEffect } from 'react';
 import { 
   ScrollView, 
-  StyleSheet, 
-  TextInput, 
+  StyleSheet,  
   View, 
   Image,
   ActivityIndicator,
   Dimensions,
   TouchableOpacity 
 } from 'react-native';
-import { Avatar, Card, Text } from 'react-native-paper';
+
+import { Avatar, Card, Text, Searchbar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import ImageView from "react-native-image-viewing"; 
 
 import API_URL from '@/src/config'; 
+import colors from '@/src/themes/stallsColors';
 
 const { width } = Dimensions.get('window');
 const BASE_URL = API_URL.replace(/\/api\/?$/, '');
@@ -101,19 +102,25 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+
+      <View style={styles.headerContainer}>
+        <Text variant="headlineMedium" style={styles.headerTitle}>News Feed</Text>
+
+        <Searchbar
+          placeholder="Search announcements..."
+          
+          style={styles.searchBar} 
+          inputStyle={styles.searchInput} 
+          value={searchQuery} 
+          onChangeText={setSearchQuery} 
+          iconColor="#1B5E20"
+          cursorColor={'#0000008e'}
+        />
+ 
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.feedTitle}>NEWS FEED</Text>
-
-        <View style={styles.searchSection}>
-          <TextInput 
-            style={styles.searchBar} 
-            value={searchQuery} 
-            onChangeText={setSearchQuery} 
-            placeholder="Search announcements..." 
-          />
-          <Icon name="magnify" size={24} color="#333" />
-        </View>
-
+        
         {loading ? (
            <ActivityIndicator size="large" color="#1B5E20" style={{ marginTop: 50 }} />
         ) : (
@@ -191,7 +198,18 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 20, paddingBottom: 100 },
   feedTitle: { fontSize: 28, fontWeight: '900', color: '#000', marginBottom: 20, marginTop: 10 },
   searchSection: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CCC', borderRadius: 8, paddingHorizontal: 15, marginBottom: 30, height: 48 },
-  searchBar: { flex: 1, fontSize: 16 },
+   searchBar: {
+    backgroundColor: '#F0F4F8',
+    elevation: 0,
+    borderRadius: 12,
+    height: 48,
+  },
+
+  searchInput: {
+    fontSize: 14,
+    alignSelf: 'center',
+    color: 'black',
+  },
   newsCard: { backgroundColor: '#FFF', borderRadius: 20, marginBottom: 20, borderWidth: 1, borderColor: '#E0E0E0', elevation: 3 },
   postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
   avatarBorder: { borderWidth: 1, borderColor: '#1B5E20', borderRadius: 20, padding: 2, marginRight: 12 },
@@ -200,6 +218,21 @@ const styles = StyleSheet.create({
   dateText: { fontSize: 11, color: '#666', marginTop: 1 },
   postTitle: { fontSize: 20, fontWeight: 'bold', color: '#000', marginBottom: 8 },
   postBody: { fontSize: 14, color: '#444', lineHeight: 20, marginBottom: 15 },
+
+   headerContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+
+   headerTitle: {
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginBottom: 12,
+  },
+
   mediaCarouselContainer: {
     marginTop: 10,
     borderRadius: 12,
@@ -224,4 +257,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   }
+
+  
 });

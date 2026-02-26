@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import API_URL from '../../src/config'; 
 
 
+
 interface BusTrip {
   _id: string;
   templateNo: string;
@@ -223,8 +224,9 @@ export default function RoutesPage() {
           }}
           value={searchQuery}
           style={styles.searchBar}
-          inputStyle={styles.searchInput}
+          inputStyle={styles.searchInput} 
           iconColor="#1B5E20"
+          cursorColor={'#0000008e'}
         />
 
         {activeFilterId && (
@@ -291,6 +293,7 @@ const styles = StyleSheet.create({
   searchInput: {
     fontSize: 14,
     alignSelf: 'center',
+    color: 'black',
   },
   filterBanner: {
     flexDirection: 'row',
