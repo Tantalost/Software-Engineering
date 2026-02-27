@@ -198,7 +198,7 @@ export default function ProfileScreen() {
       case 'TENANT': return colors.success || '#4CAF50';
       case 'VERIFICATION_PENDING': return colors.warning;
       case 'PAYMENT_UNLOCKED': return '#2196F3';
-      case 'CONTRACT_PENDING': return '#9C27B0';
+      case 'CONTRACT_PENDING': return '#E65100';
       default: return 'grey';
     }
   };
