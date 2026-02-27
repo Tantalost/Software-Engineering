@@ -181,13 +181,21 @@ export const submitApplication = async (req, res) => {
 };
 
 export const submitPayment = async (req, res) => {
-   
     try {
-        const { userId, paymentReference, paymentAmount } = req.body;
+        
+        const { userId, targetSlot, paymentReference, paymentAmount } = req.body;
+        
         let receiptUrl = "";
         if (req.file) { receiptUrl = req.file.filename; } else if (req.body.receiptUrl) { receiptUrl = req.body.receiptUrl; }
         if (!receiptUrl) return res.status(400).json({ message: "Receipt file is missing." });
-        const updatedApp = await TenantApplication.findOneAndUpdate({ userId: userId }, { receiptUrl, paymentReference, paymentAmount, status: 'PAYMENT_REVIEW', paymentSubmittedAt: new Date() }, { new: true });
+        
+       
+        const updatedApp = await TenantApplication.findOneAndUpdate(
+            { userId: userId, targetSlot: targetSlot }, 
+            { receiptUrl, paymentReference, paymentAmount, status: 'PAYMENT_REVIEW', paymentSubmittedAt: new Date() }, 
+            { new: true }
+        );
+        
         await createAdminNotification("Payment Receipt Uploaded", `Ref: ${paymentReference}. Verify payment for Applicant ID: ${userId.slice(-6)}.`);
         res.json(updatedApp);
       } catch (error) {
@@ -196,13 +204,21 @@ export const submitPayment = async (req, res) => {
 };
 
 export const uploadContract = async (req, res) => {
-   
     try {
-        const { userId } = req.body;
+       
+        const { userId, targetSlot } = req.body;
+        
         let contractUrl = "";
         if (req.file) contractUrl = req.file.filename;
-        if (!userId || !contractUrl) return res.status(400).json({ message: "Missing userId or contract file" });
-        const updatedApp = await TenantApplication.findOneAndUpdate({ userId: userId }, { contractUrl, status: 'CONTRACT_REVIEW', contractSubmittedAt: new Date() }, { new: true });
+        if (!userId || !targetSlot || !contractUrl) return res.status(400).json({ message: "Missing userId, targetSlot, or contract file" });
+        
+        
+        const updatedApp = await TenantApplication.findOneAndUpdate(
+            { userId: userId, targetSlot: targetSlot }, 
+            { contractUrl, status: 'CONTRACT_REVIEW', contractSubmittedAt: new Date() }, 
+            { new: true }
+        );
+        
         await createAdminNotification("Contract Signed", "A new signed contract has been uploaded.");
         if (!updatedApp) return res.status(404).json({ message: "Application not found" });
         res.json(updatedApp);

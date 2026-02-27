@@ -16,7 +16,7 @@ export type FileState = {
 };
 
 export type ApplicationData = {
-  status: 'VERIFICATION_PENDING' | 'PAYMENT_UNLOCKED' | 'PAYMENT_REVIEW' | 'CONTRACT_PENDING' | 'CONTRACT_REVIEW' | 'TENANT';
+  status: 'VERIFICATION_PENDING' | 'PAYMENT_UNLOCKED' | 'PAYMENT_REVIEW' | 'CONTRACT_PENDING' | 'CONTRACT_REVIEW' | 'TENANT' | 'REJECTED';
   targetSlot: string;
   floor: string; 
   contact: string;
