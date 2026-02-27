@@ -197,6 +197,35 @@ const Topbar = ({ title, onMenuClick }) => {
     }
   };
 
+  const handleMarkAsRead = async (notifId) => {
+  
+    const targetNotif = notifications.find(n => (n.id === notifId || n._id === notifId));
+    if (!targetNotif || targetNotif.read) return;
+
+   
+    setNotifications(prev => 
+      prev.map(n => (n.id === notifId || n._id === notifId) ? { ...n, read: true } : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+
+   
+    try {
+    
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/${notifId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        console.warn("Failed to update read status on the server.");
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
   const handleLogout = () => {
     setShowLogoutModal(false);
     localStorage.removeItem("isAdminLoggedIn");
@@ -237,6 +266,7 @@ const Topbar = ({ title, onMenuClick }) => {
                 <button
                   onClick={() => setShowBell((s) => !s)}
                   className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative cursor-pointer"
+                  
                 >
                   <Bell size={22} className="text-gray-600" />
                   {unreadCount > 0 && (
@@ -245,6 +275,42 @@ const Topbar = ({ title, onMenuClick }) => {
                     </span>
                   )}
                 </button>
+
+               {showBell && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
+                    <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                      <h3 className="text-sm font-semibold text-gray-700">Notifications</h3>
+                    </div>
+      
+                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-gray-500">
+                          No new notifications.
+                        </div>
+                      ) : (
+                            notifications.map((notif, index) => (
+                              <div 
+                                key={notif.id || index} 
+                                className={`p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors ${!notif.read ? 'bg-emerald-50/30' : ''}`}
+                              >
+                                {notif.title && <p className="text-sm font-semibold text-gray-800 mb-1">{notif.title}</p>}
+                                <p className="text-xs text-gray-600 line-clamp-2">{notif.message}</p>
+                              </div>
+                            ))
+                          )}
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setShowBell(false);
+                        navigate("/notifications");
+                      }}
+                      className="w-full p-3 text-center text-sm text-emerald-600 font-semibold hover:bg-gray-50 transition-colors border-t border-gray-100 cursor-pointer"
+                      >
+                        View All Notifications
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="hidden md:block relative" ref={userRef}>
