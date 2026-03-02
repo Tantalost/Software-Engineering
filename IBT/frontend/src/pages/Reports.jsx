@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import NotificationToast from "../components/common/NotificationToast";
 import { useLocation } from "react-router-dom";
 import Layout from "../components/layout/Layout";
 import headerImg from "../assets/Header.png";
@@ -101,6 +102,20 @@ const Reports = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [toast, setToast] = useState({
+    isOpen: false,
+    type: "success",
+    message: ""
+  });
+
+  const showToast = (type, message) => {
+    setToast({ isOpen: true, type, message });
+
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, isOpen: false }));
+    }, 3000);
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
@@ -131,6 +146,7 @@ const Reports = () => {
       setRecords(data.map((item) => ({ ...item, id: item._id || item.id })));
     } catch (err) {
       console.error(err);
+      showToast("error", "Failed to delete report.");
     } finally {
       setLoading(false);
     }
@@ -433,12 +449,18 @@ const Reports = () => {
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
-      await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+
       await logActivity(role, "DELETE_REPORT", `Deleted Report ${deleteRow.id}`, "Reports");
+
       setRecords(records.filter((r) => r.id !== deleteRow.id));
       setDeleteRow(null);
+
+      showToast("success", "Report deleted successfully.");
     } catch (err) {
       console.error(err);
+      showToast("error", "Failed to delete report.");
     }
   };
 
@@ -462,14 +484,14 @@ const Reports = () => {
 
       // Log the activity and update the UI
       await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${idToArchive}`, "Reports");
-      
+
       // Remove from the local records list to update the table immediately
       setRecords(records.filter((r) => r.id !== idToArchive));
-      
-      alert("Report moved to archives.");
+
+      showToast("success", "Report archived successfully.");
     } catch (e) {
       console.error("Archive Error:", e);
-      alert("Failed to archive report.");
+      showToast("error", "Failed to archive report.");
     }
   };
 
@@ -580,8 +602,8 @@ const Reports = () => {
             onClick={toggleSelectionMode}
             title={isSelectionMode ? "Cancel Selection" : "Select Records"}
             className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${isSelectionMode
-                ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
-                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
+              ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
+              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
               }`}
           >
             {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -747,6 +769,13 @@ const Reports = () => {
         title="Delete Record"
         message="Are you sure you want to remove this report? This action cannot be undone."
         itemName={deleteRow ? `${deleteRow.type} Report` : ""}
+      />
+
+      <NotificationToast
+        isOpen={toast.isOpen}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </Layout>
   );
