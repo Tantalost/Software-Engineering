@@ -5,8 +5,8 @@ Color Coding
 
 🔴 **To be Fixed**
 Revisions for web general 
-- application rejection should have a note 🔴 **To be Fixed**
-- fix mobile home module 🔴 **To be Fixed**
+- application rejection should have a note 🟢 **Done**
+- fix mobile home module 🟢 **Done**
 - dashboard export format 🔴 **To be Fixed**
 
 🟡 **In Progress**
@@ -14,9 +14,10 @@ Revisions for web general
 - Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress**
 
 NEW TO DO LIST (TenantLease Module)
-View modal - kailangan maview ang uploaded documents (Steph) 🔴 **To be Fixed**
-Edit modal - kailangan maview ang uploaded documents (Steph) 🔴 **To be Fixed**
-Download button - dapat same format sa mga ibang pdf exports (Jayna) 🔴 **To be Fixed**
+View modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
+Edit modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
+Download button - dapat same format sa mga ibang pdf exports (Jayna) 🟢 **Done**
+Logs - fix added tenant: "undefined" 🔴 **To be Fixed**
 
 NEW TO DO LIST (Report Module)
 View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container.
@@ -28,8 +29,6 @@ Delete Button - add toast message (Alviar) 🟢 **Done**
 NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. (Ven) 🔴 **To be Fixed**
 
-NEW TO DO LISTS (Deletion Request Module)
-Add Logs button para malaman mga ginawa ng admin here sa module (Alviar) 🟢 **Done**
 
 NEW TO DO LISTS (Terminal Fee Module)
 Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. (Alviar) 🔴 **To be Fixed**
@@ -51,6 +50,8 @@ UI fix: 🔴 **To be Fixed** (Steph)
 - The last name is not separated, it joins in the middle name.
 Add suffix (Jr, Sr, etc.)
 Add Products to be sold in the application review
+- Add tenant Modal - add progress bar for uploading docs
+
 
 
 
@@ -128,3 +129,7 @@ Archive Button - Adjust the backend for this. dapat hindi sya magiging multo sa 
 Delete Button - add a toast message, also check if nandun pa ang data sa mongodb, if meron pa kahit nadelete na, adjust ang backend (LLoyd) 🟢 **Done**
 Archive button - iadjust ang backend nito kay if mawala yung data sa tenant page, nagiging multo sya sa mobile kase ang data is nandun lang sa mongo database. Addition, if irestore ng admin, dapat magbalik sya sa tenant table. (LLoyd) 🟢 **Done**
 Delete button - iadjust din yung backend nito since nagiging ghost data sa mobile dinilete. Kahit nakadelete nasya, nandun parin ang data sa mongodb. (LLoyd) 🟢 **Done**
+
+
+NEW TO DO LISTS (Deletion Request Module)
+Add Logs button para malaman mga ginawa ng admin here sa module (Alviar) 🟢 **Done**
