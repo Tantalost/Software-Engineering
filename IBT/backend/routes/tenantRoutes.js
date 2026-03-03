@@ -7,8 +7,8 @@ import {
   createTenant, 
   deleteTenant, 
   updateTenant,
-  archiveTenant,      // Add this
-  restoreTenant,      // Add this
+  archiveTenant,    
+  restoreTenant,     
   getArchivedTenants
 } from "../controllers/tenantController.js";
 
@@ -44,12 +44,14 @@ router.post('/',
   upload.fields([
     { name: 'businessPermit', maxCount: 1 }, 
     { name: 'validID', maxCount: 1 },
-    { name: 'contract', maxCount: 1 }
+    { name: 'contract', maxCount: 1 },
+    { name: 'barangayClearance', maxCount: 1 },
+    { name: 'proofOfReceipt', maxCount: 1 }    
   ]), 
   createTenant
 );
 
-// Soft Delete Routes
+
 router.patch('/:id/archive', archiveTenant);
 router.patch('/:id/restore', restoreTenant);
 
@@ -59,7 +61,9 @@ router.put('/:id',
   upload.fields([
     { name: 'businessPermit', maxCount: 1 }, 
     { name: 'validID', maxCount: 1 },
-    { name: 'contract', maxCount: 1 }
+    { name: 'contract', maxCount: 1 },
+    { name: 'barangayClearance', maxCount: 1 }, 
+    { name: 'proofOfReceipt', maxCount: 1 }     
   ]), 
   updateTenant
 );

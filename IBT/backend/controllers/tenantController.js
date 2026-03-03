@@ -86,14 +86,20 @@ export const createTenant = async (req, res) => {
     const businessPermit = getFile('businessPermit');
     const validID = getFile('validID');
     const contract = getFile('contract');
+    const barangayClearance = getFile('barangayClearance'); 
+    const proofOfReceipt = getFile('proofOfReceipt');
 
     const tenantData = {
         ...req.body,
         documents: {
-            businessPermit: businessPermit,
-            validID: validID,
-            contract: contract
-        }
+           
+            ...(req.body.documents || {}),
+            businessPermit: businessPermit || req.body.documents?.businessPermit,
+            validID: validID || req.body.documents?.validID,
+            contract: contract || req.body.documents?.contract,
+            barangayClearance: barangayClearance || req.body.documents?.barangayClearance, 
+            proofOfReceipt: proofOfReceipt || req.body.documents?.proofOfReceipt          
+      }
     };
 
     const newTenant = new Tenant(tenantData);
@@ -164,10 +170,14 @@ export const updateTenant = async (req, res) => {
     const newPermit = getFile('businessPermit');
     const newID = getFile('validID');
     const newContract = getFile('contract');
+    const newClearance = getFile('barangayClearance'); 
+    const newReceipt = getFile('proofOfReceipt');     
 
     if (newPermit) updateData['documents.businessPermit'] = newPermit;
     if (newID) updateData['documents.validID'] = newID;
     if (newContract) updateData['documents.contract'] = newContract;
+    if (newClearance) updateData['documents.barangayClearance'] = newClearance; 
+    if (newReceipt) updateData['documents.proofOfReceipt'] = newReceipt;
 
     const updatedTenant = await Tenant.findByIdAndUpdate(
       req.params.id,
