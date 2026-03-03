@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import NotificationToast from "../components/common/NotificationToast";
 import { useLocation } from "react-router-dom";
 import Layout from "../components/layout/Layout";
 import headerImg from "../assets/Header.png";
@@ -129,6 +130,20 @@ const Reports = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [toast, setToast] = useState({
+    isOpen: false,
+    type: "success",
+    message: ""
+  });
+
+  const showToast = (type, message) => {
+    setToast({ isOpen: true, type, message });
+
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, isOpen: false }));
+    }, 3000);
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
 
@@ -173,6 +188,7 @@ const Reports = () => {
       setRecords(data.map((item) => ({ ...item, id: item._id || item.id })));
     } catch (err) {
       console.error(err);
+      showToast("error", "Failed to delete report.");
     } finally {
       setLoading(false);
     }
@@ -556,6 +572,7 @@ const Reports = () => {
       showToast("Report deleted successfully.", "delete");
     } catch (err) {
       console.error(err);
+      showToast("error", "Failed to delete report.");
     }
   };
 
@@ -579,11 +596,11 @@ const Reports = () => {
       await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${idToArchive}`, "Reports");
       
       setRecords(records.filter((r) => r.id !== idToArchive));
-      
-      alert("Report moved to archives.");
+
+      showToast("success", "Report archived successfully.");
     } catch (e) {
       console.error("Archive Error:", e);
-      alert("Failed to archive report.");
+      showToast("error", "Failed to archive report.");
     }
   };
 
