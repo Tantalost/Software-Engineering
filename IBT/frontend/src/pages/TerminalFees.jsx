@@ -573,25 +573,16 @@ const TerminalFees = () => {
     setArchiveRow(null);
 
     try {
-      const archiveRes = await fetch(`${API_URL}/archives`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Terminal Fee",
-          description: `Ticket #${rowToArchive.ticketNo} - ${rowToArchive.passengerType}`,
-          originalData: rowToArchive,
-          archivedBy: role,
-        }),
+      const idToArchive = rowToArchive._id || rowToArchive.id;
+      if (!idToArchive) throw new Error("System Error: Record ID is missing.");
+
+
+      const archiveRes = await fetch(`${API_URL}/terminal-fees/${idToArchive}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" }
       });
+
       if (!archiveRes.ok) throw new Error("Failed to archive");
-
-      const idToDelete = rowToArchive._id || rowToArchive.id;
-      if (!idToDelete) throw new Error("System Error: Record ID is missing.");
-
-      const deleteRes = await fetch(`${API_URL}/terminal-fees/${idToDelete}`, {
-        method: "DELETE",
-      });
-      if (!deleteRes.ok) throw new Error("Failed to remove from active list");
 
       await fetchFees();
       await logActivity(
@@ -783,7 +774,7 @@ const TerminalFees = () => {
 
       {/* --- Main container justified to the right --- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
-        {/* --- Inner button group justified to the right --- */}
+        
         <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
           {role === "superadmin" && (
             <button

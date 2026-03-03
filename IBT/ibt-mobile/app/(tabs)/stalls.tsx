@@ -44,7 +44,8 @@ import {
   ContractPendingView, 
   PaymentReviewView, 
   PaymentUnlockedView, 
-  TenantView 
+  TenantView,
+  RejectedView
 } from '@/src/components/stalls/StatusViews';
 
 const SECRET_KEY = process.env.EXPO_PUBLIC_ENCRYPTION_KEY || " "; 
@@ -426,11 +427,12 @@ export default function StallsPage() {
     const isOccupiedServerSide = isStallOccupied(slotLabel);
 
     if (alreadyApplied) { 
-        if (!isOccupiedServerSide && alreadyApplied.status === 'TENANT') {
+        
+        if (!isOccupiedServerSide && (alreadyApplied.status === 'TENANT' || alreadyApplied.status === 'REJECTED')) {
              setSelectedStall(prev => prev === slotLabel ? null : slotLabel);
              return; 
         }
-        return Alert.alert('Active', `You already have an application for ${slotLabel}. Switch tabs to view it.`); 
+        return Alert.alert('Active', `You already have an active application for ${slotLabel}. Switch tabs to view it.`); 
     }
 
     if (isOccupiedServerSide) { return Alert.alert('Occupied', `Slot ${slotLabel} is taken.`); }
@@ -541,6 +543,10 @@ export default function StallsPage() {
     }
 
     if (currentApp.status === "TENANT") return <TenantView currentApp={currentApp} />;
+
+    if (currentApp.status === "REJECTED") {
+        return <RejectedView currentApp={currentApp} />;
+    }
     
     return null;
   };

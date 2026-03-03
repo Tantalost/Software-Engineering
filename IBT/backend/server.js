@@ -19,11 +19,13 @@ import notifications from "./routes/notifications.js";
 import companyRoutes from "./routes/companyRoutes.js"; 
 import adminRoutes from "./routes/adminRoutes.js";
 
-
+import broadcastRoutes from "./routes/broadcastRoutes.js";
 import stallRoutes from "./routes/stallRoutes.js"; 
 import lostFoundRoutes from './routes/lostNFoundRoutes.js';
 import busRoutes from './routes/busRoutes.js';
 import authRoutes from "./routes/authRoutes.js";
+
+import { startCleanUP } from './utils/cleanUP.js';
 
 connectDB();
 
@@ -37,13 +39,13 @@ mongoose.connection.once('open', () => {
     bucketName: 'uploads' 
   });
   
-  console.log("GridFS Bucket initialized (pointed to 'test' database)");
+  console.log("GridFS Bucket initialized ");
 });
 
 app.use(cors({
     origin: "*", 
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
 }));
 
 app.use(express.json({ limit: '50mb' })); 
@@ -51,11 +53,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 
 app.get('/', (req, res) => res.send("IBT Unified Management System API is working"));
-
-
-
-
-
 
 
 app.use("/api/bustrips", busTripRoutes);
@@ -78,6 +75,7 @@ app.use("/api/stalls", stallRoutes);
 app.use('/api/lost-found', lostFoundRoutes);
 app.use('/api/bus-routes', busRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/broadcasts", broadcastRoutes);
 
 
 app.get('/api/files/:filename', async (req, res) => {
@@ -102,6 +100,7 @@ app.get('/api/files/:filename', async (req, res) => {
   }
 });
 
+startCleanUP();
 
 const PORT = process.env.PORT || 10000; 
 app.listen(PORT, '0.0.0.0', () => console.log(`Unified Server running on port ${PORT}`));

@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import API_URL from '../../src/config'; 
 
 
+
 interface BusTrip {
   _id: string;
   templateNo: string;
@@ -33,12 +34,22 @@ export default function RoutesPage() {
 
   useFocusEffect(
     useCallback(() => {
+    
       if (params.tripId) {
         setActiveFilterId(params.tripId);
       } else if (params.search) {
         setSearchQuery(params.search);
       }
+      
       fetchRoutes();
+
+      const refreshInterval = setInterval(() => {
+        fetchRoutes();
+      }, 60000); 
+
+      return () => {
+        clearInterval(refreshInterval);
+      };
     }, [params])
   );
 
@@ -76,9 +87,26 @@ export default function RoutesPage() {
     return `${hour}:${minuteStr} ${ampm}`;
   };
 
+  const isPastArrival = (dateString: string, timeString: string) => {
+    if (!dateString || !timeString) return false;
+    
+    try {
+      const scheduledDate = new Date(dateString);
+      const [hours, minutes] = timeString.split(':').map(Number);
+      
+      scheduledDate.setHours(hours, minutes, 0, 0);
+      
+      const now = new Date();
+      return now > scheduledDate; 
+    } catch (error) {
+      return false;
+    }
+  };
+
  
   const filteredRoutes = useMemo(() => {
-    let data = routes;
+   
+    let data = routes.filter(item => item.status === 'Pending' || item.status === 'Arrived');
 
     if (activeFilterId && searchQuery === '') {
       return data.filter(item => item._id === activeFilterId);
@@ -90,7 +118,7 @@ export default function RoutesPage() {
         (item) =>
           item.route.toLowerCase().includes(query) ||
           item.company.toLowerCase().includes(query) ||
-          item.templateNo.toLowerCase().includes(query)
+          item.templateNo.toLowerCase().includes(query) 
       );
     }
 
@@ -104,50 +132,75 @@ export default function RoutesPage() {
   };
 
 
-  const renderItem = ({ item }: { item: BusTrip }) => (
-    <Card style={styles.card} mode="elevated">
-      <Card.Content>
-        <View style={styles.cardHeader}>
-          <View style={styles.companyContainer}>
-             <Avatar.Icon 
-                size={36} 
-                icon="bus" 
-                style={{backgroundColor: '#E8F5E9'}} 
-                color="#1B5E20"
-             />
-             <View>
-                <Text variant="titleMedium" style={styles.companyName}>{item.company}</Text>
-                <Text variant="bodySmall" style={styles.busType}>{item.busType || 'Standard Class'}</Text>
+  const renderItem = ({ item }: { item: BusTrip }) => {
+   
+    const hasArrived = item.status === 'Arrived';
+   
+    const isDelayed = !hasArrived && isPastArrival(item.date, item.time);
+    
+    let statusText = 'On Time';
+    let statusColor = '#2E7D32'; 
+
+    if (hasArrived) {
+        statusText = 'Arrived';
+        statusColor = '#2E7D32'; 
+    } else if (isDelayed) {
+        statusText = 'Delayed';
+        statusColor = '#D32F2F';
+    }
+
+    return (
+      <Card style={styles.card} mode="elevated">
+        <Card.Content>
+          <View style={styles.cardHeader}>
+            <View style={styles.companyContainer}>
+               <Avatar.Icon 
+                  size={36} 
+                  icon="bus" 
+                  style={{backgroundColor: '#E8F5E9'}} 
+                  color="#1B5E20"
+               />
+               <View>
+                  <Text variant="titleMedium" style={styles.companyName}>{item.company}</Text>
+                  <Text variant="bodySmall" style={styles.busType}>Plate No: {item.templateNo}</Text>
+               </View>
+            </View>
+            
+            <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+              <Text style={{ color: '#E65100', fontSize: 12, fontWeight: 'bold' }}>
+                {hasArrived ? 'Parking' : 'Pending'}
+              </Text>
+            </View>
+          </View>
+
+          <Divider style={styles.divider} />
+
+          <View style={styles.routeRow}>
+             <View style={{flex: 1}}>
+                <Text style={styles.label}>Route</Text>
+                <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
+
+                <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
+                <Text variant="bodyMedium" style={styles.value}>
+                  {new Date(item.date).toLocaleDateString()}
+                </Text>
+             </View>
+             
+             <View style={{alignItems: 'flex-end'}}>
+              
+                <Text style={[styles.label, { color: statusColor, fontWeight: 'bold' }]}>
+                  {statusText}
+                </Text>
+                
+                <Text variant="titleLarge" style={[styles.timeValue, { color: statusColor }]}>
+                  {formatTime(item.time)}
+                </Text>
              </View>
           </View>
-         
-        </View>
-
-        <Divider style={styles.divider} />
-
-        <View style={styles.routeRow}>
-           <View style={{flex: 1}}>
-              <Text style={styles.label}>Route</Text>
-              <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
-           </View>
-           <View style={{alignItems: 'flex-end'}}>
-              <Text style={styles.label}>Departure</Text>
-              
-
-              <Text variant="titleMedium" style={styles.timeValue}>{formatTime(item.time)}</Text>
-              
-              <Text variant="bodySmall" style={styles.dateValue}>
-                {new Date(item.date).toLocaleDateString()}
-              </Text>
-           </View>
-        </View>
-
-        <View style={styles.footerRow}>
-           <Text style={styles.templateId}>ID: {item.templateNo}</Text>
-        </View>
-      </Card.Content>
-    </Card>
-  );
+        </Card.Content>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -171,8 +224,9 @@ export default function RoutesPage() {
           }}
           value={searchQuery}
           style={styles.searchBar}
-          inputStyle={styles.searchInput}
+          inputStyle={styles.searchInput} 
           iconColor="#1B5E20"
+          cursorColor={'#0000008e'}
         />
 
         {activeFilterId && (
@@ -239,6 +293,7 @@ const styles = StyleSheet.create({
   searchInput: {
     fontSize: 14,
     alignSelf: 'center',
+    color: 'black',
   },
   filterBanner: {
     flexDirection: 'row',

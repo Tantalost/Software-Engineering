@@ -27,7 +27,8 @@ export default function TabLayout() {
 
   return (
     <Tabs
-       screenOptions={{
+      initialRouteName="index" 
+      screenOptions={{
         headerShown: false,
         tabBarShowLabel: true, 
       

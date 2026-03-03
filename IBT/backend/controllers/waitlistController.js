@@ -101,12 +101,14 @@ export const createWaitlistEntry = async (req, res) => {
 export const updateWaitlistEntry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, rejectionReason } = req.body; 
+
     const applicant = await TenantApplication.findByIdAndUpdate(id, req.body, { new: true });
     if (!applicant) return res.status(404).json({ error: "Applicant not found" });
 
     let message = "";
     let subject = "";
+
     if (status === "PAYMENT_UNLOCKED") {
         subject = "Application Approved - Payment Unlocked";
         message = `Dear ${applicant.name},\n\nYour application has been approved!\n\nPlease open the app to view the "Stall Order of Payment".`;
@@ -115,11 +117,28 @@ export const updateWaitlistEntry = async (req, res) => {
         subject = "Action Required: Upload Contract";
         message = `Dear ${applicant.name},\n\nWe have verified your payment. Please upload your Signed Contract.`;
     }
+   
+    if (status === "REJECTED") {
+        subject = "Stall Application Update: Rejected";
+        message = `Dear ${applicant.name},\n\nWe regret to inform you that your application for slot ${applicant.targetSlot} has been rejected.\n\nReason: ${rejectionReason || "Did not meet required criteria or incomplete documentation."}\n\nIf you have any questions, please contact administration.`;
+        console.log("Rejection block triggered! Subject set."); // <-- ADD THIS
+    }
+
+    console.log("Applicant Email exists?:", applicant.email); // <-- ADD THIS
 
     if (subject && applicant.email) {
-        try { await sendEmail({ email: applicant.email, subject: subject, message: message }); } 
-        catch (emailError) { console.error("Email failed:", emailError.message); }
+        try { 
+            console.log("Attempting to send email to:", applicant.email); // <-- ADD THIS
+            await sendEmail({ email: applicant.email, subject: subject, message: message }); 
+            console.log("Email function completed without crashing."); // <-- ADD THIS
+        } 
+        catch (emailError) { 
+            console.error("Email failed:", emailError.message); 
+        }
+    } else {
+        console.log("Skipped sending email. Missing subject or applicant email."); // <-- ADD THIS
     }
+    
     res.status(200).json(applicant);
   } catch (error) {
     res.status(500).json({ error: error.message });

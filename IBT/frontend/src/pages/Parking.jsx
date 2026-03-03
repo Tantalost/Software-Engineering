@@ -483,33 +483,27 @@ const Parking = () => {
     setArchiveRow(null);
 
     try {
-      const idToDelete = rowToArchive._id || rowToArchive.id;
-      if (!idToDelete) throw new Error("Record ID is missing.");
+      const idToArchive = rowToArchive._id || rowToArchive.id;
+      if (!idToArchive) throw new Error("Record ID is missing.");
 
-      const archiveRes = await fetch(ARCHIVE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Parking",
-          description: `Ticket #${rowToArchive.ticketNo} - ${rowToArchive.type}`,
-          originalData: rowToArchive,
-          archivedBy: role
-        })
+      // Send a PATCH request to our new soft-delete endpoint
+      const archiveRes = await fetch(`${API_URL}/${idToArchive}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" }
       });
-      if (!archiveRes.ok) throw new Error("Failed to save to archive");
 
-      const deleteRes = await fetch(`${API_URL}/${idToDelete}`, { method: "DELETE" });
-      if (!deleteRes.ok) throw new Error("Failed to remove from active list");
+      if (!archiveRes.ok) throw new Error("Failed to archive");
 
+      // Log the activity and re-fetch the data to update the table
       await logActivity(role, "ARCHIVE_PARKING", `Archived Parking Ticket #${rowToArchive.ticketNo}`, "Parking");
-      setRecords(prev => prev.filter(r => r.id !== idToDelete));
+      fetchParkingTickets();
 
       setNotificationState({
         isOpen: true,
         type: 'success',
         message: `Ticket #${rowToArchive.ticketNo} was successfully moved to Archives.`,
         autoClose: true,
-        duration: 1000
+        duration: 2000
       });
     } catch (e) {
       console.error("Failed to archive:", e);
@@ -519,7 +513,7 @@ const Parking = () => {
         type: 'error',
         message: `Failed to archive Ticket #${rowToArchive.ticketNo}. Please check network connection.`,
         autoClose: true,
-        duration: 1000
+        duration: 2000
       });
     }
   };
@@ -840,8 +834,8 @@ const Parking = () => {
             onClick={toggleSelectionMode}
             title={isSelectionMode ? "Cancel Selection" : "Select Records"}
             className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 cursor-pointer rounded-xl transition-all border ${isSelectionMode
-                ? "bg-red-500 text-white shadow-md"
-                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+              ? "bg-red-500 text-white shadow-md"
+              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
               }`}
           >
             {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -945,9 +939,6 @@ const Parking = () => {
             <p className="text-slate-600 mt-2 text-sm">
               Are you sure you want to move Ticket <strong>#{archiveRow.ticketNo}</strong> to the Archives?
               <br />
-              <span className="font-semibold text-xs text-red-500">
-                This item will be permanently removed from the active parking list.
-              </span>
             </p>
             <div className="mt-6 flex gap-3">
               <button onClick={() => setArchiveRow(null)} className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors">

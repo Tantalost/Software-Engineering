@@ -14,9 +14,12 @@ import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
 import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History, ListChecks, X, Tag, Save, Info, CheckCircle, XCircle } from "lucide-react";
 
+import NotificationToast from "../components/common/NotificationToast";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import headerImg from "../assets/Header.png";
+import footerImg from "../assets/FOOTER.png";
 
 const formatDateTimeForExport = (dateStr) => {
     if (!dateStr) return "-";
@@ -99,6 +102,22 @@ const LostFound = () => {
     }, [editRow]);
 
 
+    const [notificationState, setNotificationState] = useState({
+        isOpen: false,
+        type: '',
+        message: '',
+        autoClose: true,
+        duration: 3000
+    });
+
+    useEffect(() => {
+        if (notificationState.isOpen && notificationState.autoClose) {
+            const timer = setTimeout(() => {
+                setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
+            }, notificationState.duration);
+            return () => clearTimeout(timer);
+        }
+    }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
     const handleAddClick = () => {
         const autoTracking = `LF-${Date.now().toString().slice(-6)}`;
         const now = new Date();
@@ -159,27 +178,38 @@ const LostFound = () => {
         setArchiveRow(null);
 
         try {
-            const archiveRes = await fetch(`${API_URL}/archives`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    type: "LostFound",
-                    originalData: row,
-                    archivedBy: role
-                })
+            const idToArchive = row._id || row.id;
+            if (!idToArchive) throw new Error("Record ID is missing.");
+
+            const archiveRes = await fetch(`${API_URL}/${idToArchive}/archive`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" }
             });
+
             if (!archiveRes.ok) throw new Error("Failed to archive");
 
-            const deleteRes = await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
-            if (!deleteRes.ok) throw new Error("Failed to remove from active list");
-
             logActivity(role, "ARCHIVE_LOSTFOUND", `Archived Item #${row.trackingNo}`, "LostFound");
-            setRecords(prev => prev.filter(r => r.id !== row.id));
-            alert("Item archived successfully!");
+            fetchLostFound();
+
+            // Success Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: "Item archived successfully!",
+                autoClose: true,
+                duration: 3000
+            });
 
         } catch (error) {
             console.error("Error archiving:", error);
-            alert("Failed to archive item.");
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to archive item.",
+                autoClose: true,
+                duration: 3000
+            });
         }
     };
 
@@ -192,9 +222,26 @@ const LostFound = () => {
             if (response.ok) {
                 logActivity(role, "DELETE_LOSTFOUND", `Deleted Item #${deleteRow.trackingNo}`, "LostFound");
                 setRecords(prev => prev.filter(r => r.id !== deleteRow.id));
-            }
+
+                // Success Toast
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Item permanently deleted!",
+                    autoClose: true,
+                    duration: 3000
+                });
+            } else throw new Error("Delete failed");
         } catch (error) {
             console.error("Error deleting:", error);
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to delete item.",
+                autoClose: true,
+                duration: 3000
+            });
         } finally {
             setDeleteRow(null);
         }
@@ -279,7 +326,15 @@ const LostFound = () => {
                     "superadmin"
                 );
 
-                alert(`Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`);
+                // Success Toast (Request)
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: `Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`,
+                    autoClose: true,
+                    duration: 3000
+                });
+
                 setSelectedIds([]);
                 setIsSelectionMode(false);
 
@@ -291,7 +346,15 @@ const LostFound = () => {
                 await Promise.all(deletePromises);
                 logActivity(role, "BULK_DELETE", `Deleted ${selectedIds.length} items via bulk action`, "LostFound");
 
-                alert(`Successfully deleted ${selectedIds.length} records`);
+                // Success Toast (Direct Delete)
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: `Successfully deleted ${selectedIds.length} records.`,
+                    autoClose: true,
+                    duration: 3000
+                });
+
                 fetchLostFound();
                 setSelectedIds([]);
                 setIsSelectionMode(false);
@@ -299,7 +362,14 @@ const LostFound = () => {
 
         } catch (error) {
             console.error("Bulk action failed", error);
-            alert("Failed to process some records.");
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to process some records.",
+                autoClose: true,
+                duration: 3000
+            });
         } finally {
             setIsLoading(false);
         }
@@ -350,13 +420,29 @@ const LostFound = () => {
             );
 
             await Promise.all(deletePromises);
-            alert("Report submitted successfully! The table has been cleared.");
+
+            // Success Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: "Report submitted successfully! The table has been cleared.",
+                autoClose: true,
+                duration: 3000
+            });
+
             setShowSubmitModal(false);
             fetchLostFound();
 
         } catch (error) {
             console.error(error);
-            alert("Failed to submit report.");
+            // Error Toast
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to submit report.",
+                autoClose: true,
+                duration: 3000
+            });
         } finally {
             setIsReporting(false);
         }
@@ -377,12 +463,38 @@ const LostFound = () => {
             alert("No records to export.");
             return;
         }
-        const dataToExport = getExportData(filtered);
-        const headers = Object.keys(dataToExport[0]).join(',');
-        const rows = dataToExport.map(row =>
-            Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(',')
-        ).join('\n');
-        const csvContent = headers + '\n' + rows;
+
+        const operator = localStorage.getItem("authName") || "Admin";
+        const dateStr = new Date().toLocaleDateString();
+
+
+        const totalItems = filtered.length;
+        const unclaimed = filtered.filter(i => i.status === "Unclaimed").length;
+        const claimed = filtered.filter(i => i.status === "Claimed").length;
+
+        const rows = [
+            ["", "", "LOST & FOUND REPORTS", "", ""],
+            [`Date: ${dateStr}`, "", "", `Total Items: ${totalItems}`, ""],
+            [`Operator: ${operator}`, "", "", `Unclaimed: ${unclaimed}`, `Claimed: ${claimed}`],
+            [], // Spacer
+            ["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]
+        ];
+
+        filtered.forEach(item => {
+            rows.push([
+                item.trackingNo,
+                item.itemType || "-",
+                item.location,
+                formatDateTimeForExport(item.dateTime),
+                item.status,
+                item.description
+            ]);
+        });
+
+        const csvContent = rows
+            .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -391,8 +503,8 @@ const LostFound = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        logActivity(role, "EXPORT_CSV", `Exported ${dataToExport.length} Lost & Found records to CSV`, "LostFound");
+
+        logActivity(role, "EXPORT_CSV", `Exported ${filtered.length} Lost & Found records to CSV`, "LostFound");
     };
 
     const handleExportPDF = () => {
@@ -400,40 +512,46 @@ const LostFound = () => {
             alert("No records to export.");
             return;
         }
-        const dataToExport = getExportData(filtered);
-        const headers = Object.keys(dataToExport[0]);
-        const body = dataToExport.map(item => Object.values(item));
-        const doc = new jsPDF('portrait', 'mm', 'a4');
-        doc.setFontSize(16);
-        doc.setTextColor(34, 34, 34);
-        doc.text("Lost & Found Records Report", 14, 15);
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 22);
-        autoTable(doc, {
-            startY: 30,
-            head: [headers],
-            body: body,
-            theme: 'grid',
-            headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontSize: 9, halign: 'center' },
-            styles: { fontSize: 8, cellPadding: 3, valign: 'middle', textColor: [51, 51, 51] },
-            alternateRowStyles: { fillColor: [240, 255, 240] }
-        });
-        doc.save(`LostFound_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-        logActivity(role, "EXPORT_PDF", `Exported ${dataToExport.length} Lost & Found records to PDF`, "LostFound");
-    };
 
-    const handleExportExcel = () => {
-        if (filtered.length === 0) {
-            alert("No records to export.");
-            return;
-        }
-        const dataToExport = getExportData(filtered);
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "LostFound_Records");
-        XLSX.writeFile(workbook, `LostFound_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-        logActivity(role, "EXPORT_EXCEL", `Exported ${dataToExport.length} Lost & Found records to Excel`, "LostFound");
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        if (headerImg) doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("LOST & FOUND REPORTS", pageWidth / 2, 45, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+        doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, 15, 61);
+
+        doc.text(`Total Items: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
+        doc.text(`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`, pageWidth - 15, 61, { align: "right" });
+
+        autoTable(doc, {
+            startY: 70,
+            margin: { bottom: 35 },
+            head: [["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]],
+            body: filtered.map(item => [
+                item.trackingNo,
+                item.itemType || "-",
+                item.location,
+                formatDateTimeForExport(item.dateTime),
+                item.status,
+                item.description
+            ]),
+            headStyles: { fillColor: [220, 38, 38] },
+            styles: { fontSize: 9 },
+            didDrawPage: (data) => {
+
+                if (footerImg) doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+            },
+        });
+
+        doc.save(`LostFound_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        logActivity(role, "EXPORT_PDF", `Exported ${filtered.length} Lost & Found records to PDF`, "LostFound");
     };
 
     const tableColumns = isSelectionMode
@@ -447,9 +565,14 @@ const LostFound = () => {
                     className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
             </div>,
-            "Tracking No", "Item Type", "Location", "DateTime", "Status"
+            "Tracking No", "Item Type", "Location", "Date & Time", "Status"
         ]
-        : ["Tracking No", "Item Type", "Location", "DateTime", "Status"];
+        : ["Tracking No", "Item Type", "Location", "Date & Time", "Status"];
+
+
+    const handleExportExcel = () => {
+        handleExportCSV();
+    };
 
     return (
         <Layout title="Lost and Found Records">
@@ -529,8 +652,8 @@ const LostFound = () => {
                                 onClick={toggleSelectionMode}
                                 title={isSelectionMode ? "Exit Multi-Selection Mode" : "Enter Multi-Selection Mode"}
                                 className={`flex items-center justify-center h-10 cursor-pointer w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
-                                        ? "bg-red-500 text-white shadow-md"
-                                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                    ? "bg-red-500 text-white shadow-md"
+                                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                                     }`}
                             >
                                 {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -780,8 +903,8 @@ const LostFound = () => {
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Unclaimed' })}
                                             title="Mark Item as Unclaimed"
                                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === 'Unclaimed'
-                                                    ? 'bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1'
-                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                                ? 'bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
                                                 }`}
                                         >
                                             <XCircle size={18} />
@@ -792,8 +915,8 @@ const LostFound = () => {
                                             onClick={() => setEditFormData({ ...editFormData, status: 'Claimed' })}
                                             title="Mark Item as Claimed"
                                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === 'Claimed'
-                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
-                                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
                                                 }`}
                                         >
                                             <CheckCircle size={18} />
@@ -863,7 +986,7 @@ const LostFound = () => {
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">Confirm Archiving</h3>
                         <p className="text-slate-600 mt-2 text-sm">
-                            Move Item <strong>#{archiveRow.trackingNo}</strong> to archives?
+                            Are you sure you want to move <strong>#{archiveRow.trackingNo}</strong> to archives?
                         </p>
                         <div className="mt-6 flex gap-3">
                             <button onClick={() => setArchiveRow(null)} title="Cancel Archive Action" className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 cursor-pointer">
@@ -919,7 +1042,12 @@ const LostFound = () => {
                     </div>
                 </div>
             )}
-
+            <NotificationToast
+                isOpen={notificationState.isOpen}
+                type={notificationState.type}
+                message={notificationState.message}
+                onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
+            />
         </Layout>
     );
 };

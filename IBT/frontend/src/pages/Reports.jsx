@@ -559,36 +559,30 @@ const Reports = () => {
     }
   };
 
-  // SINGLE ARCHIVE
   const confirmArchive = async () => {
     if (!archiveRow) return;
     const row = archiveRow;
     setArchiveRow(null);
 
     try {
-      await fetch(ARCHIVE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "Report",
-          description: `${row.type} Report by ${row.author}`,
-          originalData: row,
-          archivedBy: role,
-        }),
+      const idToArchive = row._id || row.id;
+      if (!idToArchive) throw new Error("Record ID is missing.");
+
+     
+      const response = await fetch(`${API_URL}/${idToArchive}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" }
       });
 
-      await fetch(`${API_URL}/${row.id}`, { method: "DELETE" });
-      await logActivity(
-        role,
-        "ARCHIVE_REPORT",
-        `Archived Report ${row.id}`,
-        "Reports",
-      );
+      if (!response.ok) throw new Error("Failed to archive report");
 
-      setRecords(records.filter((r) => r.id !== row.id));
-      showToast("Report archived successfully.", "archive");
+      await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${idToArchive}`, "Reports");
+      
+      setRecords(records.filter((r) => r.id !== idToArchive));
+      
+      alert("Report moved to archives.");
     } catch (e) {
-      console.error(e);
+      console.error("Archive Error:", e);
       alert("Failed to archive report.");
     }
   };
@@ -894,7 +888,7 @@ const Reports = () => {
               Confirm Archiving
             </h3>
             <p className="text-slate-600 mt-2 text-sm">
-              Archive Report <strong>{archiveRow.id}</strong>?
+              Are you sure you want to move <strong>{archiveRow.id}</strong> to archives?
             </p>
             <div className="mt-6 flex gap-3">
               <button
