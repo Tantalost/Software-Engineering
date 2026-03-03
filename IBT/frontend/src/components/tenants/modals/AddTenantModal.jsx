@@ -6,7 +6,7 @@ import CryptoJS from "crypto-js";
 
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
 
-const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
+const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent" }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
@@ -113,8 +113,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             referenceNo: generateRef(), 
             email: "",
             contactNo: "",
-            tenantType: "Permanent", 
-            _id: "", 
+            tenantType: activeTab === "night" ? "Night Market" : "Permanent", 
+            _id: "",
         });
         setProductCategory("Food and Beverages");
         setOtherProductDetails("");

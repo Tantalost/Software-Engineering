@@ -1025,6 +1025,7 @@ const TenantLease = () => {
                 onClose={() => { setShowAddModal(false); setTransferApplicant(null); }}
                 onSave={handleAddTenant}
                 tenants={records}
+                activeTab={activeTab}
                 initialData={transferApplicant ? {
                     name: transferApplicant.name,
                     contactNo: transferApplicant.contact,
