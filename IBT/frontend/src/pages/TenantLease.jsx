@@ -101,7 +101,7 @@ const TenantLease = () => {
         const interval = setInterval(() => {
             fetchTenants();
             fetchWaitlist();
-        }, 30000); 
+        }, 30000);
 
         return () => clearInterval(interval);
     }, []);
@@ -460,12 +460,12 @@ const TenantLease = () => {
         try {
             const waitlistId = transferApplicant?.id || transferApplicant?._id;
             const formData = new FormData();
-            
+
             Object.keys(newTenant).forEach(key => {
                 if (key === 'documents') return;
                 formData.append(key, newTenant[key]);
             });
-            
+
             if (waitlistId) {
                 formData.append('transferWaitlistId', waitlistId);
             }
@@ -484,53 +484,53 @@ const TenantLease = () => {
 
             const response = await fetch(`${API_URL}/tenants`, {
                 method: 'POST',
-                body: formData, 
+                body: formData,
             });
-            
+
             if (response.ok) {
                 setShowAddModal(false);
-                setNotificationState({ 
-                    isOpen: true, 
-                    type: 'success', 
-                    message: "Tenant Added Successfully! Welcome email sent.", 
-                    autoClose: true, 
-                    duration: 3000 
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Tenant Added Successfully! Welcome email sent.",
+                    autoClose: true,
+                    duration: 3000
                 });
                 await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
-                fetchTenants(); 
-                fetchWaitlist(); 
+                fetchTenants();
+                fetchWaitlist();
                 setTransferApplicant(null);
             } else {
                 const err = await response.json();
                 setNotificationState({ isOpen: true, type: 'error', message: `Error saving to database: ${err.error || 'Unknown error'}`, autoClose: true, duration: 3000 });
             }
-        } catch (e) { 
-            console.error(e); 
+        } catch (e) {
+            console.error(e);
             setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not save tenant.", autoClose: true, duration: 3000 });
         }
     };
 
     const handleRejectApplicant = async (id, reason) => {
         try {
-            const response = await fetch(`${API_URL}/waitlist/${id}`, { 
+            const response = await fetch(`${API_URL}/waitlist/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    status: "REJECTED", 
-                    rejectionReason: reason 
+                body: JSON.stringify({
+                    status: "REJECTED",
+                    rejectionReason: reason
                 })
             });
 
             if (response.ok) {
-                setNotificationState({ 
-                    isOpen: true, 
-                    type: 'success', 
-                    message: "Application rejected. The applicant has been notified via email.", 
-                    autoClose: true, 
-                    duration: 3000 
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Application rejected. The applicant has been notified via email.",
+                    autoClose: true,
+                    duration: 3000
                 });
                 await logActivity(role, "REJECT_APPLICANT", `Rejected waitlist applicant ID #${id}. Reason: ${reason}`, "Tenants");
-                
+
                 fetchWaitlist();
                 if (showReviewModal) setShowReviewModal(false);
             } else {
@@ -549,7 +549,7 @@ const TenantLease = () => {
 
         try {
             const idToArchive = rowToArchive._id || rowToArchive.id;
-            
+
             // Call the new PATCH archive endpoint
             const res = await fetch(`${API_URL}/tenants/${idToArchive}/archive`, {
                 method: "PATCH",
@@ -567,7 +567,7 @@ const TenantLease = () => {
                 autoClose: true,
                 duration: 2000
             });
-            
+
             fetchTenants(); // Refresh the table
         } catch (e) {
             console.error("Failed to archive:", e);
@@ -649,6 +649,59 @@ const TenantLease = () => {
         }));
     };
 
+    const handleSingleExportPDF = (t) => {
+        if (!t) return;
+
+        const doc = new jsPDF("p", "mm", "a4");
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // 1. Add Header (Same as Bulk Export)
+        doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+
+        // 2. Title & Header Info
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("TENANT LEASE SUMMARY", pageWidth / 2, 45, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 15, 55);
+        doc.text(`Operator: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
+
+        // 3. Data Table
+        autoTable(doc, {
+            startY: 70,
+            margin: { left: 15, right: 15 },
+            head: [["Description", "Details"]],
+            body: [
+                ["Slot Number", t.slotNo || "-"],
+                ["Reference Number", t.referenceNo || t.referenceno || "-"],
+                ["Tenant Name", t.tenantName || t.name || "-"],
+                ["Email Address", t.email || "-"],
+                ["Contact Number", t.contactNo || "-"],
+                ["Lease Period", `${formatDate(t.StartDateTime)} to ${formatDate(t.DueDateTime || t.EndDateTime)}`],
+                ["Rent Amount", `PHP ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                ["Utility Amount", `PHP ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                ["Total Due", `PHP ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                ["Current Status", t.status || "-"]
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [220, 38, 38] }, // Using the Red-600 color from your bulk report
+            styles: { cellPadding: 5, fontSize: 10 },
+            columnStyles: {
+                0: { fontStyle: 'bold', width: 50 },
+            }
+        });
+
+        // 4. Add Footer (Same as Bulk Export)
+        const footerY = pageHeight - 30;
+        doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, 30);
+
+        doc.save(`Lease_Summary_${t.slotNo}_${t.tenantName?.replace(/\s+/g, '_')}.pdf`);
+        logActivity(role, "EXPORT_PDF", `Exported individual PDF: ${t.tenantName}`, "Tenants");
+    };
+
     const handleExportExcel = () => {
         if (filtered.length === 0) return alert("No records to export.");
 
@@ -657,11 +710,11 @@ const TenantLease = () => {
 
         const rows = [
             ["", "", "TENANTS AND LEASE REPORTS", "", "", "", ""],
-            [], 
+            [],
             [`Date: ${dateStr}`, "", "", `No. of Payments: ${filtered.length}`, "", "", ""],
             [`Operator: ${operator}`, "", "", `Revenue: ₱${mapStats.totalRevenue.toFixed(2)}`, "", "", ""],
-            [], 
-            ["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"] 
+            [],
+            ["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]
         ];
 
         filtered.forEach((t) => {
@@ -693,7 +746,7 @@ const TenantLease = () => {
     const handleExportPDF = () => {
         if (filtered.length === 0) return alert("No records to export.");
 
-        const doc = new jsPDF("l", "mm", "a4"); 
+        const doc = new jsPDF("l", "mm", "a4");
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -724,11 +777,11 @@ const TenantLease = () => {
                 `₱${(t.utilityAmount || 0).toFixed(2)}`,
                 `₱${(t.totalAmount || 0).toFixed(2)}`
             ]),
-            headStyles: { fillColor: [220, 38, 38] }, 
+            headStyles: { fillColor: [220, 38, 38] },
             styles: { fontSize: 8, halign: 'center' },
             columnStyles: {
-                1: { halign: 'left' }, 
-                2: { halign: 'left' }, 
+                1: { halign: 'left' },
+                2: { halign: 'left' },
             },
             didDrawPage: (data) => {
                 doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
@@ -776,7 +829,7 @@ const TenantLease = () => {
                     <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center cursor-pointer" title='Add New Tenant'>
                         + Add New
                     </button>
-                    
+
                     {role === "superadmin" && (
                         <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer" title='Notify All Tenants'>
                             Broadcast
@@ -809,7 +862,7 @@ const TenantLease = () => {
                         {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
                     </button>
                 </div>
-        
+
                 <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                     <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
                     {(role === "superadmin" || role === "lease") && (
@@ -890,10 +943,17 @@ const TenantLease = () => {
                 })}
                 actions={(row) => {
                     if (isSelectionMode) return null;
+                    const fullRecord = records.find(r => r.id === row.id);
                     return (
                         <div className="flex justify-end items-center space-x-2">
                             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
-                            <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Download Rent Statement"><Download size={16} /></button>
+                            <button
+                                onClick={() => handleSingleExportPDF(fullRecord)}
+                                className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
+                                title="Rent Statement"
+                            >
+                                <Download size={16} />
+                            </button>
                             <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
                             <button onClick={() => setArchiveRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer" title="Archive Record"><Archive size={16} /></button>
                             {(role === "superadmin") && (
@@ -978,11 +1038,11 @@ const TenantLease = () => {
             />
 
             {editRow && (
-                <EditTenantLease 
-                    row={editRow} 
-                    tenants={records} 
-                    onClose={() => setEditRow(null)} 
-                    onSave={async (updatedData) => { 
+                <EditTenantLease
+                    row={editRow}
+                    tenants={records}
+                    onClose={() => setEditRow(null)}
+                    onSave={async (updatedData) => {
                         try {
                             const idToUpdate = updatedData._id || updatedData.id;
                             if (!idToUpdate) {
@@ -992,7 +1052,7 @@ const TenantLease = () => {
 
                             const formData = new FormData();
                             Object.keys(updatedData).forEach(key => {
-                                if (key === 'documents') return; 
+                                if (key === 'documents') return;
                                 formData.append(key, updatedData[key]);
                             });
 
@@ -1010,8 +1070,8 @@ const TenantLease = () => {
 
                             const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
                                 method: 'PUT',
-                                body: formData 
-                            }); 
+                                body: formData
+                            });
 
                             if (!response.ok) {
                                 const errorData = await response.json();
@@ -1019,23 +1079,23 @@ const TenantLease = () => {
                             }
                             setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
                             await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
-                            fetchTenants(); 
-                            setEditRow(null); 
-                        } catch (error) { 
-                            console.error("Update Error:", error); 
+                            fetchTenants();
+                            setEditRow(null);
+                        } catch (error) {
+                            console.error("Update Error:", error);
                             setNotificationState({ isOpen: true, type: 'error', message: `Failed to update record: ${error.message}`, autoClose: true, duration: 3000 });
                         }
                     }}
                 />
             )}
-      
-            <DeleteModal 
-                isOpen={!!deleteRow} 
-                onClose={() => setDeleteRow(null)} 
-                onConfirm={handleDeleteConfirm} 
-                title="Delete Record" 
-                message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion." 
-                itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} 
+
+            <DeleteModal
+                isOpen={!!deleteRow}
+                onClose={() => setDeleteRow(null)}
+                onConfirm={handleDeleteConfirm}
+                title="Delete Record"
+                message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion."
+                itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""}
             />
 
             <BroadcastModal
