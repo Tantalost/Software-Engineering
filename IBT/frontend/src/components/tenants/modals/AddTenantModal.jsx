@@ -220,13 +220,15 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         const processedDocs = { ...documents };
         
         for (const key of Object.keys(processedDocs)) {
-            const file = processedDocs[key];
-            if (file && typeof file !== 'string') {
-               
-                processedDocs[key] = await encryptFile(file);
-               
-                processedDocs[key].name = file.name; 
-            }
+          const file = processedDocs[key];
+          if (file && typeof file !== 'string') {
+       
+            const encryptedBlob = await encryptFile(file);
+        
+            processedDocs[key] = new File([encryptedBlob], file.name, {
+              type: 'application/octet-stream'
+            });
+          }
         }
 
         const newTenant = {
