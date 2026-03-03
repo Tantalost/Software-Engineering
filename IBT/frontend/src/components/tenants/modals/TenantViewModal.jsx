@@ -3,7 +3,7 @@ import { X, FileText, Eye, Loader2 } from "lucide-react";
 import CryptoJS from "crypto-js";
 import Field from "../../common/Field"; 
 
-const API_URL = `${import.meta.env.MONGODB_URL}/api`;
+const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
 
