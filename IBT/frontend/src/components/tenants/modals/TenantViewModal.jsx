@@ -75,7 +75,7 @@ const DecryptedDocument = ({ url, label }) => {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-emerald-500">
         <Loader2 className="animate-spin mb-2" size={24} />
-        <span className="text-[10px] font-bold uppercase tracking-wide">Decrypting...</span>
+        <span className="text-[10px] font-bold uppercase tracking-wide">Loading...</span>
       </div>
     );
   }
