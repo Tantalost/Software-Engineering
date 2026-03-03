@@ -161,20 +161,6 @@ const Reports = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
-  const [toast, setToast] = useState({
-    show: false,
-    message: "",
-    type: "success",
-  });
-
-  const showToast = (message, type = "success") => {
-    setToast({ show: true, message, type });
-
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, show: false }));
-    }, 3000);
-  };
-
   const role = localStorage.getItem("authRole") || "superadmin";
   const API_URL = `${import.meta.env.VITE_API_URL}/api/reports`;
   const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
