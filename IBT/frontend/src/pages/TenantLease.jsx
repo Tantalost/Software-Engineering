@@ -1159,6 +1159,7 @@ const TenantLease = () => {
                 onSave={handleAddTenant}
                 tenants={records}
                 activeTab={activeTab}
+                defaultNightPrice={defaultNightPrice}
                 initialData={transferApplicant ? {
                     name: transferApplicant.name,
                     contactNo: transferApplicant.contact,
