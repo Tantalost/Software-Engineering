@@ -36,7 +36,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
   }, [showMapModal, formData.tenantType]);
 
-  const [productCategory, setProductCategory] = useState("Food and Beverages");
+  const [productCategory, setProductCategory] = useState("food_non_alcoholic");
   const [otherProductDetails, setOtherProductDetails] = useState("");
 
   const [rentAmount, setRentAmount] = useState(0);
@@ -109,12 +109,12 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             });
         }
 
-        const incomingProduct = initialData.products || "Food and Beverages";
-        if (["Food and Beverages", "Clothing"].includes(incomingProduct)) {
+        const incomingProduct = initialData.products || "food_non_alcoholic";
+        if (["food_non_alcoholic", "clothes_textiles", "accessories", "footwears", "kitchenwares", "agricultural_produce"].includes(incomingProduct)) {
           setProductCategory(incomingProduct);
           setOtherProductDetails("");
         } else {
-          setProductCategory("Other");
+          setProductCategory("other");
           setOtherProductDetails(incomingProduct);
         }
 
@@ -130,7 +130,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             tenantType: activeTab === "night" ? "Night Market" : "Permanent", 
             _id: "",
         });
-        setProductCategory("Food and Beverages");
+        setProductCategory("food_non_alcoholic");
         setOtherProductDetails("");
         setDocuments({
             businessPermit: null, validID: null, barangayClearance: null, proofOfReceipt: null, contract: null,
@@ -247,7 +247,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             ...restOfFormData,
             tenantName: combinedName,
             ...(_id ? { _id } : {}),
-            products: productCategory === "Other" ? otherProductDetails : productCategory,
+            products: productCategory === "other" ? otherProductDetails : productCategory,
             rentAmount,
             utilityAmount: parseFloat(utilityAmount),
             totalAmount,
@@ -524,12 +524,16 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Category</label>
                   <select className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={productCategory} onChange={(e) => setProductCategory(e.target.value)}>
-                    <option value="Food and Beverages">Food and Beverages</option>
-                    <option value="Clothing">Clothing</option>
-                    <option value="Other">Other (Please specify)</option>
+                    <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
+                    <option value="clothes_textiles">Clothes and textiles</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="footwears">Footwears</option>
+                    <option value="kitchenwares">Kitchenwares</option>
+                    <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
+                    <option value="other">Others, please specify</option>
                   </select>
                 </div>
-                {productCategory === "Other" && (
+                {productCategory === "other" && (
                   <div className="flex flex-col gap-1 animate-fadeIn">
                     <label className="text-xs font-semibold text-slate-600">Specify Product</label>
                     <input type="text" required placeholder="Enter product details..." className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={otherProductDetails} onChange={(e) => setOtherProductDetails(e.target.value)} />

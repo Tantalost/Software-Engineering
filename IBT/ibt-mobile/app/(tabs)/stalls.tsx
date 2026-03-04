@@ -80,7 +80,7 @@ export default function StallsPage() {
     lastName: '',
     contact: '',
     email: '',
-    productType: 'food', 
+    productType: 'food_non_alcoholic', 
     otherProduct: '',
   });
 

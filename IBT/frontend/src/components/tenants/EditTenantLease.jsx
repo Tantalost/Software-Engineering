@@ -33,11 +33,11 @@ const formatDateTimeForInput = (dateStr) => {
 
 const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   
-  const standardCategories = ["Food and Beverages", "Clothing"];
-  const initialCategory = standardCategories.includes(row.products) ? row.products : "Other";
+  const standardCategories = ["food_non_alcoholic", "clothes_textiles", "accessories", "footwears", "kitchenwares", "agricultural_produce"];
+  const initialCategory = standardCategories.includes(row.products) ? row.products : "other";
   const initialOther = standardCategories.includes(row.products) ? "" : row.products;
 
-  const [productCategory, setProductCategory] = useState(initialCategory || "Food and Beverages");
+  const [productCategory, setProductCategory] = useState(initialCategory || "food_non_alcoholic");
   const [otherProductDetails, setOtherProductDetails] = useState(initialOther || "");
 
   const [formData, setFormData] = useState({
@@ -126,7 +126,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const finalProduct = productCategory === "Other" ? otherProductDetails : productCategory;
+    const finalProduct = productCategory === "other" ? otherProductDetails : productCategory;
 
     const formatForTable = (isoString) => {
         if (!isoString) return "";
@@ -195,12 +195,16 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                     value={productCategory}
                     onChange={(e) => setProductCategory(e.target.value)}
                   >
-                    <option value="Food and Beverages">Food and Beverages</option>
-                    <option value="Clothing">Clothing</option>
-                    <option value="Other">Other (Please specify)</option>
+                    <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
+                    <option value="clothes_textiles">Clothes and textiles</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="footwears">Footwears</option>
+                    <option value="kitchenwares">Kitchenwares</option>
+                    <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
+                    <option value="other">Others, please specify</option>
                   </select>
                 </div>
-                {productCategory === "Other" && (
+                {productCategory === "other" && (
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-slate-700">Specify Product</label>
                     <input 
