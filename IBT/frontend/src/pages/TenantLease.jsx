@@ -184,19 +184,41 @@ const TenantLease = () => {
 
     const mapStats = useMemo(() => {
         let available = 0; let paid = 0; let revenue = 0;
-        const SECTION_CAPACITY = 30;
-        for (let i = 0; i < SECTION_CAPACITY; i++) {
-            let slotLabel = activeTab === "permanent" ? `A-${101 + i}` : `NM-${(i + 1).toString().padStart(2, '0')}`;
+        let totalSlots = 0;
+        let slotLabels = [];
+
+        if (activeTab === "permanent") {
+            totalSlots = 30;
+            for (let i = 0; i < totalSlots; i++) {
+                slotLabels.push(`A-${101 + i}`);
+            }
+        } else {
+            
+            const nmNumbers = [
+                32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18,
+                17, 16, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+                33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+                48, 49, 50, 51, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64
+            ];
+            totalSlots = nmNumbers.length;
+            nmNumbers.forEach(num => slotLabels.push(`NM-${num.toString().padStart(2, '0')}`));
+        }
+
+        slotLabels.forEach(slotLabel => {
             const tenant = records.find(r =>
                 (r.slotNo === slotLabel || r.slotno === slotLabel) &&
                 (activeTab === "permanent" ? (r.tenantType === "Permanent" || !r.tenantType) : r.tenantType === "Night Market")
             );
+            
             if (tenant && tenant.status !== "Available") {
                 paid++;
                 revenue += (parseFloat(tenant.rentAmount) || 0) + (parseFloat(tenant.utilityAmount) || 0);
-            } else available++;
-        }
-        return { availableSlots: available, nonAvailableSlots: paid, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
+            } else {
+                available++;
+            }
+        });
+
+        return { availableSlots: available, nonAvailableSlots: paid, totalSlots: totalSlots, totalRevenue: revenue };
     }, [records, activeTab]);
 
     const handleSubmitReport = async () => {

@@ -467,8 +467,10 @@ export default function StallsPage() {
                         <Text style={{color: colors.textMedium}}>Under Review</Text>
                     </View>
                     </View><View style={styles.summaryItem}><View style={[styles.legendDot, {backgroundColor: colors.primaryLight}]}/><Text style={{color: colors.textMedium}}>Selected</Text></View></View>
-                    <Card style={[styles.layoutCard]}><Card.Content>
-                      
+                    <Card style={[styles.layoutCard]}>
+                  <Card.Content>
+   
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
                       <StallGrid 
                         selectedFloor={selectedFloor}
                         occupiedStalls={occupiedStalls}
@@ -476,8 +478,9 @@ export default function StallsPage() {
                         selectedStall={selectedStall}
                         onStallPress={handleStallPress}
                       />
-                      
-                      </Card.Content></Card>
+                    </ScrollView>
+                  </Card.Content>
+                </Card>
                     {selectedStall && (<Card style={styles.infoCard}><Card.Content><Text style={{color: colors.black}} variant="titleMedium">Slot Selected: {selectedStall}</Text>
                     
                   <Button 

@@ -37,15 +37,15 @@ export default function StallGrid({ selectedFloor, occupiedStalls, pendingStalls
         }
 
         return (
-            <TouchableOpacity 
-                key={slotLabel} 
-                style={[styles.stallBase, buttonStyle]} 
-                onPress={() => onStallPress(slotLabel)} 
-                disabled={occupied || isPending}
-            >
-                <Text style={[styles.slotLabelMain, textStyle]}>{slotLabel}</Text>
-            </TouchableOpacity>
-        ); 
+          <TouchableOpacity 
+            key={slotLabel} 
+            style={[selectedFloor === 'Permanent' ? styles.stallBase : styles.stallBaseNightMarket, buttonStyle]} 
+            onPress={() => onStallPress(slotLabel)} 
+            disabled={occupied || isPending}
+          >
+            <Text style={[styles.slotLabelMain, textStyle]}>{slotLabel}</Text>
+          </TouchableOpacity>
+        );
       })}
     </View>
   );

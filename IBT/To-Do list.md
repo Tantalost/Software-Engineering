@@ -14,10 +14,9 @@ Revisions for web general
 - Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress**
 
 NEW TO DO LIST (TenantLease Module)
-View modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
-Edit modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
-Download button - dapat same format sa mga ibang pdf exports (Jayna) 🟢 **Done**
-Logs - fix added tenant: "undefined" 🔴 **To be Fixed**
+
+Logs - fix added tenant: "undefined" 🔴 **To be Fixed** (Lloyd)
+Add Setup price for slot night market (Lloyd)
 
 NEW TO DO LIST (Report Module)
 View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container.
@@ -34,8 +33,7 @@ NEW TO DO LISTS (Terminal Fee Module)
 Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. (Alviar) 🔴 **To be Fixed**
 
 
-Admin Login Page (Anyone)
-- cursor hidden while clicking the input bar 🔴 **To be Fixed**
+Admin Login Page (Alviar)
 - layout revised 🔴 **To be Fixed**
 
 
@@ -51,6 +49,10 @@ UI fix: 🔴 **To be Fixed** (Steph)
 Add suffix (Jr, Sr, etc.)
 Add Products to be sold in the application review
 - Add tenant Modal - add progress bar for uploading docs
+
+A Must do task
+iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
+
 
 
 
@@ -133,3 +135,7 @@ Delete button - iadjust din yung backend nito since nagiging ghost data sa mobil
 
 NEW TO DO LISTS (Deletion Request Module)
 Add Logs button para malaman mga ginawa ng admin here sa module (Alviar) 🟢 **Done**
+
+View modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
+Edit modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
+Download button - dapat same format sa mga ibang pdf exports (Jayna) 🟢 **Done**
