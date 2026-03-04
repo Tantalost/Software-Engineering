@@ -46,7 +46,7 @@ Add Products to be sold in the application review
 
 (Lloyd)
 Broadcast Modal 🔴 **To be Fixed**
--Cant click the image to view it intently by zooming in or out after uploading the image attachment. 
+- Cant click the image to view it intently by zooming in or out after uploading the image attachment. 
 - cant view the image of the posted history 
 - cant view the previous uploaded image in the edit broadcast same as when after uploading the image in new broadcast part.
 
