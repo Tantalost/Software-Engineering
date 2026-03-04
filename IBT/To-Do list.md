@@ -3,46 +3,40 @@ Color Coding
 🟡 **In Progress**
 🟢 **Done**
 
-🔴 **To be Fixed**
-Revisions for web general 
-- application rejection should have a note 🟢 **Done**
-- fix mobile home module 🟢 **Done**
-- dashboard export format 🔴 **To be Fixed**
 
 🟡 **In Progress**
 Revisions for web general 
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟡 **In Progress**
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees.
 
-NEW TO DO LIST (TenantLease Module)
+🔴 **To be Fixed**
+**PRIORITY**
+iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
-Logs - fix added tenant: "undefined" 🔴 **To be Fixed** (Lloyd)
-Add Setup price for slot night market (Lloyd)
+Revisions for web general 
+- dashboard export format 🔴 **To be Fixed**
 
+(Jayna)
 NEW TO DO LIST (Report Module)
 View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container.
-Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. (Jayna) 🔴 **To be Fixed**
-Add "X" icon button sa view modal (Ven) 🔴 **To be Fixed**
-Archive Button - add toast message (Alviar) 🟢 **Done**
-Delete Button - add toast message (Alviar) 🟢 **Done**
+Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🔴 **To be Fixed**
 
+(Ven)
 NEW TO DO LIST (Parking Module)
-Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. (Ven) 🔴 **To be Fixed**
+Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🔴 **To be Fixed**
+Add "X" icon button sa view modal 🔴 **To be Fixed**
 
-
+(Alviar)
 NEW TO DO LISTS (Terminal Fee Module)
-Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. (Alviar) 🔴 **To be Fixed**
-
-
-Admin Login Page (Alviar)
+Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🔴 **To be Fixed**
+Admin Login Page
 - layout revised 🔴 **To be Fixed**
 
-
-Next payment due details (Tenant List Module) 🔴 **To be Fixed** (Steph)
+(Steph)
+Next payment due details (Tenant List Module) 🔴 **To be Fixed**
 - Date 
 - next amount to be paid
 - add button for send payment receipt so that if the user is already paid it will shows in the payment record history
-
-UI fix: 🔴 **To be Fixed** (Steph)
+UI fix: 🔴 **To be Fixed**
 - Application red circle where there is a new application should not be shown after the rejection was read.
 - can't view uploaded documents after the contract review phase, in the add tenant modal.
 - The last name is not separated, it joins in the middle name.
@@ -50,11 +44,11 @@ Add suffix (Jr, Sr, etc.)
 Add Products to be sold in the application review
 - Add tenant Modal - add progress bar for uploading docs
 
-A Must do task
-iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
-
-
-Broadcast Modal (LLoyd) 🔴 **To be Fixed**
+(Lloyd)
+NEW TO DO LIST (TenantLease Module)
+Logs - fix added tenant: "undefined" 🔴 **To be Fixed**
+Add Setup price for slot night market 🔴 **To be Fixed**
+Broadcast Modal 🔴 **To be Fixed**
 -Cant click the image to view it intently by zooming in or out after uploading the image attachment. 
 - cant view the image of the posted history 
 - cant view the previous uploaded image in the edit broadcast same as when after uploading the image in new broadcast part.
@@ -63,19 +57,11 @@ Broadcast Modal (LLoyd) 🔴 **To be Fixed**
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 🟢 **Done**
+Revisions for web general 
+- application rejection should have a note 🟢 **Done**
+- fix mobile home module 🟢 **Done**
+
 REVISIONS FOR WEB
 - Fix ang Position ng Set Target sa Dashboard - 🟢 **Done**
 - Buses Page dapat maka add New Company Buses - 🟢 **Done**
@@ -143,4 +129,6 @@ Add Logs button para malaman mga ginawa ng admin here sa module (Alviar) 🟢 **
 
 View modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
 Edit modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
+Archive Button - add toast message (Alviar) 🟢 **Done**
+Delete Button - add toast message (Alviar) 🟢 **Done**
 Download button - dapat same format sa mga ibang pdf exports (Jayna) 🟢 **Done**
