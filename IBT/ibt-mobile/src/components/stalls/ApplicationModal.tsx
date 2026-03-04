@@ -80,6 +80,16 @@ export default function ApplicationModal({
                 <FileUploadButton label="Valid ID" fileKey="validId" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
                 <FileUploadButton label="Brgy Clearance" fileKey="clearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
 
+                {selectedFloor === 'Night Market' && (
+                  <>
+                    <Text variant="titleMedium" style={[styles.sectionHeader, { marginTop: 15 }]}>Night Market Requirements</Text>
+                    <Text style={{fontSize: 12, color:'grey', marginBottom: 10}}>Tap to upload images (JPG/PNG) or PDFs</Text>
+                    
+                    <FileUploadButton label="Community Tax Certificate" fileKey="communityTax" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                    <FileUploadButton label="Police Clearance" fileKey="policeClearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                  </>
+                )}
+
                 <View style={styles.billingSummary}>
                     <Text style={[{fontWeight:'bold', color: colors.black }]}>Initial Payment:</Text>
                     <Text variant="titleLarge" style={{color: colors.primary, fontWeight:'bold'}}>{modalBilling.amountLabel}</Text>
@@ -105,7 +115,9 @@ export default function ApplicationModal({
                 <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Fee:</Text><Text style={styles.reviewValue}>{modalBilling.amountLabel}</Text></View>
 
                 <View style={{marginTop: 20, padding: 10, backgroundColor: '#e8f5e9', borderRadius: 5}}>
-                    <Text style={{color: '#2e7d32', fontSize: 12, fontStyle:'italic'}}><Icon name="check-circle" /> Requirements attached: Permit, Valid ID, Clearance.</Text>
+                    <Text style={{color: '#2e7d32', fontSize: 12, fontStyle:'italic'}}>
+                        <Icon name="check-circle" size={14} /> Requirements attached: Permit, Valid ID, Clearance{selectedFloor === 'Night Market' ? ', Community Tax, Police Clearance' : ''}.
+                    </Text>
                 </View>
 
                 <View style={styles.modalActions}>

@@ -517,6 +517,13 @@ const TenantLease = () => {
                 if (newTenant.documents.proofOfReceipt instanceof File) {
                     formData.append('proofOfReceipt', newTenant.documents.proofOfReceipt);
                 }
+
+                if (newTenant.documents.communityTax instanceof File) {
+                    formData.append('communityTax', newTenant.documents.communityTax);
+                }
+                if (newTenant.documents.policeClearance instanceof File) {
+                    formData.append('policeClearance', newTenant.documents.policeClearance);
+                }
             }
 
             const response = await fetch(`${API_URL}/tenants`, {
@@ -1070,7 +1077,9 @@ const TenantLease = () => {
                         validID: transferApplicant.validIdUrl,
                         barangayClearance: transferApplicant.clearanceUrl,
                         proofOfReceipt: transferApplicant.receiptUrl,
-                        contract: transferApplicant.contractUrl
+                        contract: transferApplicant.contractUrl,
+                        communityTax: transferApplicant.communityTaxUrl, 
+                        policeClearance: transferApplicant.policeClearanceUrl 
                     }
                 } : null}
             />
@@ -1110,6 +1119,13 @@ const TenantLease = () => {
                                 }
                                 if (updatedData.documents.proofOfReceipt instanceof File) {
                                     formData.append('proofOfReceipt', updatedData.documents.proofOfReceipt);
+                                }
+
+                                if (updatedData.documents.communityTax instanceof File) {
+                                    formData.append('communityTax', updatedData.documents.communityTax);
+                                }
+                                if (updatedData.documents.policeClearance instanceof File) {
+                                    formData.append('policeClearance', updatedData.documents.policeClearance);
                                 }
                             }
 

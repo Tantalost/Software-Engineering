@@ -30,7 +30,7 @@ const ApplicationReviewModal = ({
   const safeData = reviewData || {};
   const isPermanent = (safeData.floor === "Permanent" || safeData.tenantType === "Permanent");
 
-  const documents = useMemo(() => {
+ const documents = useMemo(() => {
     if (!reviewData) return []; 
     const showContractSlot = isPermanent || reviewData.contractUrl;
     return [
@@ -38,7 +38,9 @@ const ApplicationReviewModal = ({
       { label: "Business Permit", url: getFileUrl(reviewData.permitUrl) },
       { label: "Brgy Clearance", url: getFileUrl(reviewData.clearanceUrl) },
       { label: "Payment Receipt", url: getFileUrl(reviewData.receiptUrl) },
-      ...(showContractSlot ? [{ label: "Signed Contract", url: getFileUrl(reviewData.contractUrl) }] : [])
+      ...(showContractSlot ? [{ label: "Signed Contract", url: getFileUrl(reviewData.contractUrl) }] : []),
+      ...(!isPermanent && reviewData.communityTaxUrl ? [{ label: "Community Tax", url: getFileUrl(reviewData.communityTaxUrl) }] : []),
+      ...(!isPermanent && reviewData.policeClearanceUrl ? [{ label: "Police Clearance", url: getFileUrl(reviewData.policeClearanceUrl) }] : [])
     ];
   }, [reviewData, isPermanent]);
 

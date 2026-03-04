@@ -42,7 +42,9 @@ router.post('/apply',
   upload.fields([
     { name: 'permit', maxCount: 1 }, 
     { name: 'validId', maxCount: 1 },
-    { name: 'clearance', maxCount: 1 }
+    { name: 'clearance', maxCount: 1 },
+    { name: 'communityTax', maxCount: 1 },
+    { name: 'policeClearance', maxCount: 1 }
   ]), 
   submitApplication
 );

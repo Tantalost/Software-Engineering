@@ -46,7 +46,9 @@ router.post('/',
     { name: 'validID', maxCount: 1 },
     { name: 'contract', maxCount: 1 },
     { name: 'barangayClearance', maxCount: 1 },
-    { name: 'proofOfReceipt', maxCount: 1 }    
+    { name: 'proofOfReceipt', maxCount: 1 },
+    { name: 'communityTax', maxCount: 1 },    
+    { name: 'policeClearance', maxCount: 1 }    
   ]), 
   createTenant
 );
@@ -63,7 +65,9 @@ router.put('/:id',
     { name: 'validID', maxCount: 1 },
     { name: 'contract', maxCount: 1 },
     { name: 'barangayClearance', maxCount: 1 }, 
-    { name: 'proofOfReceipt', maxCount: 1 }     
+    { name: 'proofOfReceipt', maxCount: 1 }, 
+    { name: 'communityTax', maxCount: 1 },    
+    { name: 'policeClearance', maxCount: 1 }   
   ]), 
   updateTenant
 );
