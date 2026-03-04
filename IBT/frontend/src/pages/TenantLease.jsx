@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import jsPDF from 'jspdf';
 import autoTable from "jspdf-autotable";
-import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History } from "lucide-react";
+import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle } from "lucide-react";
 
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
@@ -50,6 +50,11 @@ const TenantLease = () => {
     const [waitlistData, setWaitlistData] = useState([]);
     const [alerts, setAlerts] = useState([]);
 
+    const [defaultNightPrice, setDefaultNightPrice] = useState(150);
+    const [showSetPriceModal, setShowSetPriceModal] = useState(false);
+    const [newNightPrice, setNewNightPrice] = useState("");
+    const [isSettingPrice, setIsSettingPrice] = useState(false);
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [showNotify, setShowNotify] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
@@ -93,6 +98,83 @@ const TenantLease = () => {
         autoClose: true,
         duration: 3000
     });
+
+    useEffect(() => {
+        const fetchDefaultNightPrice = async () => {
+            try {
+                // Note: Make sure this endpoint exists on your backend!
+                const response = await fetch(`${API_URL}/tenants/night-market/default-price`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setDefaultNightPrice(data.defaultPrice);
+                    localStorage.setItem("defaultNightPrice", data.defaultPrice.toString());
+                }
+            } catch (error) {
+                console.error("Error fetching default night price:", error);
+                const saved = localStorage.getItem("defaultNightPrice");
+                if (saved) setDefaultNightPrice(Number(saved));
+            }
+        };
+        fetchDefaultNightPrice();
+    }, []);
+
+    const handleSetPrice = async () => {
+        if (!newNightPrice || isNaN(newNightPrice)) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid price.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        const priceValue = Number(newNightPrice);
+        if (priceValue <= 0) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Price must be greater than 0.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        setIsSettingPrice(true);
+
+        try {
+            // Note: Ensure you have this PUT route set up in your Node/Express backend!
+            const response = await fetch(`${API_URL}/tenants/update-night-market-prices`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newPrice: priceValue }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to update prices in database");
+            }
+
+            const result = await response.json();
+
+            setDefaultNightPrice(priceValue);
+            localStorage.setItem("defaultNightPrice", priceValue.toString());
+
+            await fetchTenants();
+
+            await logActivity(
+                role,
+                "SET_NIGHT_MARKET_PRICE",
+                `Set default night market fee to ₱${newNightPrice} (Updated ${result.modifiedCount || 0} tenants)`,
+                "Tenants",
+            );
+
+            setShowSetPriceModal(false);
+            setNewNightPrice("");
+
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: `Price updated successfully! ${result.modifiedCount || 0} tenants updated.`,
+                autoClose: true,
+                duration: 4000
+            });
+        } catch (err) {
+            console.error(err);
+            setNotificationState({ isOpen: true, type: 'error', message: "Failed to set price: " + err.message, autoClose: true, duration: 3000 });
+        } finally {
+            setIsSettingPrice(false);
+        }
+    };
 
     useEffect(() => {
         fetchTenants();
@@ -193,7 +275,7 @@ const TenantLease = () => {
                 slotLabels.push(`A-${101 + i}`);
             }
         } else {
-           
+
             const nmNumbers = [
                 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18,
                 17, 16, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
@@ -208,14 +290,14 @@ const TenantLease = () => {
 
         slotLabels.forEach(slotLabel => {
             const tenant = records.find(r =>
-             
+
                 (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) &&
                 (activeTab === "permanent" ? (r.tenantType === "Permanent" || !r.tenantType) : r.tenantType === "Night Market")
             );
-            
+
             if (tenant && tenant.status !== "Available") {
-                paid++; 
-                
+                paid++;
+
                 const tenantId = tenant._id || tenant.id;
                 if (!countedTenantIds.has(tenantId)) {
                     countedTenantIds.add(tenantId);
@@ -500,7 +582,7 @@ const TenantLease = () => {
                 formData.append('transferWaitlistId', waitlistId);
             }
 
-           if (newTenant.documents) {
+            if (newTenant.documents) {
                 if (newTenant.documents.businessPermit instanceof File) {
                     formData.append('businessPermit', newTenant.documents.businessPermit);
                 }
@@ -510,7 +592,7 @@ const TenantLease = () => {
                 if (newTenant.documents.contract instanceof File) {
                     formData.append('contract', newTenant.documents.contract);
                 }
-               
+
                 if (newTenant.documents.barangayClearance instanceof File) {
                     formData.append('barangayClearance', newTenant.documents.barangayClearance);
                 }
@@ -540,7 +622,7 @@ const TenantLease = () => {
                     autoClose: true,
                     duration: 3000
                 });
-                await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
+                await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.tenantName || newTenant.name || 'Unknown'}`, "Tenants");
                 fetchTenants();
                 fetchWaitlist();
                 setTransferApplicant(null);
@@ -880,6 +962,20 @@ const TenantLease = () => {
                         </button>
                     )}
 
+                    {role === "superadmin" && activeTab === "night" && (
+                        <button
+                            onClick={() => {
+                                setNewNightPrice(defaultNightPrice.toString());
+                                setShowSetPriceModal(true);
+                            }}
+                            className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-2"
+                            title='Set Night Market Price'
+                        >
+                            <Settings size={18} />
+                            <span className="hidden sm:inline">Set Price</span>
+                        </button>
+                    )}
+
                     <ExportMenu
                         onPrint={() => window.print()}
                         onExportExcel={handleExportExcel}
@@ -1113,7 +1209,7 @@ const TenantLease = () => {
                                 if (updatedData.documents.contract instanceof File) {
                                     formData.append('contract', updatedData.documents.contract);
                                 }
-                              
+
                                 if (updatedData.documents.barangayClearance instanceof File) {
                                     formData.append('barangayClearance', updatedData.documents.barangayClearance);
                                 }
@@ -1189,6 +1285,72 @@ const TenantLease = () => {
                 onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
             />
 
+            {showSetPriceModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+                        <div className="flex items-center justify-between mb-5 border-b pb-3">
+                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <Settings size={20} className="text-emerald-600" /> Night Market Fee Settings
+                            </h3>
+                            <button
+                                onClick={() => setShowSetPriceModal(false)}
+                                className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors cursor-pointer"
+                                title="Close"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <p className="text-sm text-slate-600 mb-5">
+                            Set the new standard rent rate for Night Market tenants. Changes take effect upon saving.
+                        </p>
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                                    Global Night Market Fee
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
+                                        ₱
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={newNightPrice}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/[^0-9.]/g, "");
+                                            setNewNightPrice(value);
+                                        }}
+                                        className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex justify-end gap-3 border-t pt-4">
+                            <button
+                                onClick={() => setShowSetPriceModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSetPrice}
+                                disabled={isSettingPrice || !newNightPrice}
+                                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                            >
+                                {isSettingPrice ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <CheckCircle size={16} />
+                                )}
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 };

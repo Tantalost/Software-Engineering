@@ -1,6 +1,7 @@
 import Tenant from "../models/Tenant.js";
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
+import Settings from "../models/Settings.js";
 
 export const getTenants = async (req, res) => {
   try {
@@ -197,6 +198,64 @@ export const updateTenant = async (req, res) => {
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Update Tenant Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- DYNAMIC PRICING FOR NIGHT MARKET ---
+
+// Get default night market price from settings
+export const getDefaultNightPrice = async (req, res) => {
+  try {
+    const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150;
+    res.status(200).json({ defaultPrice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update default price and apply to unpaid/due Night Market tenants
+export const updateAllNightMarketPrices = async (req, res) => {
+  try {
+    const { newPrice } = req.body;
+
+    if (!newPrice || isNaN(newPrice) || newPrice < 0) {
+      return res.status(400).json({ error: "Valid price is required." });
+    }
+
+    const priceValue = parseFloat(newPrice);
+    const priceString = priceValue.toString(); // For TenantApplication which uses String
+
+    // 1. Update or create the global price setting
+    await Settings.findOneAndUpdate(
+      { key: "defaultNightPrice" },
+      { key: "defaultNightPrice", value: priceValue },
+      { upsert: true, new: true }
+    );
+
+    // 2. Update existing active tenants who have unpaid "Due" balances
+    const tenantResult = await Tenant.updateMany(
+      { tenantType: "Night Market", status: "Due" },
+      { rentAmount: priceValue }
+    );
+
+    // 3. Update pending applications that haven't reached the payment review stage yet
+    // Assuming 'floor' is where "Night Market" is stored based on your React transfer logic
+    const applicationResult = await TenantApplication.updateMany(
+      { 
+        floor: "Night Market", 
+        status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED'] } 
+      },
+      { paymentAmount: priceString }
+    );
+
+    res.status(200).json({
+      message: `Updated global price. Modified ${tenantResult.modifiedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
+      tenantModifiedCount: tenantResult.modifiedCount,
+      applicationModifiedCount: applicationResult.modifiedCount
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
