@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
  
   card: { backgroundColor: colors.white, marginVertical: 10, borderRadius: 10, overflow: 'hidden' },
 
- 
+
   nightMarketContainer: {
     flexDirection: 'column',
     alignItems: 'flex-start', 
@@ -145,27 +145,28 @@ const styles = StyleSheet.create({
   },
   nmRow: {
     flexDirection: 'row',
-    alignItems: 'center',
   },
   nmBlock: {
     flexDirection: 'row',
   },
+  
   nmWalkwayVertical: {
-    width: 30, 
+    width: 32, 
   },
   nmWalkwayHorizontal: {
-    height: 40, 
+    height: 45, 
     width: '100%',
   },
-  
+
   stallBaseNightMarket: { 
-    width: 45, 
-    height: 45, 
-    margin: 2, 
+    width: 55,  
+    height: 55, 
+    margin: 3, 
     borderRadius: 8, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
+ 
 });
 
 

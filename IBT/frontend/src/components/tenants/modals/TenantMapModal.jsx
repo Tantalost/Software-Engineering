@@ -1,7 +1,21 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { X } from "lucide-react";
 
 const TenantMapModal = ({ isOpen, onClose, activeTab, records, onSelectSlot }) => {
+
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'night' && scrollRef.current) {
+    
+      setTimeout(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+        }
+      }, 50);
+    }
+  }, [isOpen, activeTab]);
+
   if (!isOpen) return null;
 
  
@@ -93,15 +107,14 @@ const TenantMapModal = ({ isOpen, onClose, activeTab, records, onSelectSlot }) =
             </div>
           </div>
 
-          {/* 2. Branch Layout Logic */}
           {activeTab === 'permanent' ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
               {Array.from({ length: 30 }).map((_, i) => renderSlot(`A-${101 + i}`))}
             </div>
           ) : (
-            <div className="overflow-x-auto pb-4 custom-scrollbar">
+            <div ref={scrollRef} className="overflow-x-auto pb-4 custom-scrollbar">
               <div className="min-w-max flex flex-col items-start bg-slate-200/50 p-4 rounded-xl border border-slate-200">
-                {/* Top Row */}
+              
                 <div className="flex flex-row items-center mb-10">
                   <div className="flex flex-row gap-1">{topBlock1.map(num => renderSlot(`NM-${num.toString().padStart(2, '0')}`))}</div>
                   <div className="w-8 flex-shrink-0"></div> 

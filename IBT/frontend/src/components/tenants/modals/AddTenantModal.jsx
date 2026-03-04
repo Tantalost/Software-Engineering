@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Loader2, ZoomIn } from "lucide-react";
 
 import CryptoJS from "crypto-js";
@@ -23,6 +23,18 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [tempSelectedSlots, setTempSelectedSlots] = useState([]); 
+
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (showMapModal && formData.tenantType === 'Night Market' && scrollRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+        }
+      }, 50);
+    }
+  }, [showMapModal, formData.tenantType]);
 
   const [productCategory, setProductCategory] = useState("Food and Beverages");
   const [otherProductDetails, setOtherProductDetails] = useState("");
@@ -437,7 +449,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                               } else {
                                  
                                   return (
-                                      <div className="overflow-x-auto pb-4 custom-scrollbar">
+                                      <div ref={scrollRef} className="overflow-x-auto pb-4 custom-scrollbar">
                                           <div className="min-w-max flex flex-col items-start bg-slate-200/50 p-4 rounded-xl border border-slate-200">
                                            
                                               <div className="flex flex-row items-center mb-10">

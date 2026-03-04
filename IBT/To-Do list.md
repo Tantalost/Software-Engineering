@@ -54,6 +54,11 @@ A Must do task
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
 
+Broadcast Modal (LLoyd) 🔴 **To be Fixed**
+-Cant click the image to view it intently by zooming in or out after uploading the image attachment. 
+- cant view the image of the posted history 
+- cant view the previous uploaded image in the edit broadcast same as when after uploading the image in new broadcast part.
+
 
 
 

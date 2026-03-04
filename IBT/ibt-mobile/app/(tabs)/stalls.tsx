@@ -468,19 +468,16 @@ export default function StallsPage() {
                     </View>
                     </View><View style={styles.summaryItem}><View style={[styles.legendDot, {backgroundColor: colors.primaryLight}]}/><Text style={{color: colors.textMedium}}>Selected</Text></View></View>
                     <Card style={[styles.layoutCard]}>
-                  <Card.Content>
-   
-                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                      <StallGrid 
-                        selectedFloor={selectedFloor}
-                        occupiedStalls={occupiedStalls}
-                        pendingStalls={pendingStalls}
-                        selectedStall={selectedStall}
-                        onStallPress={handleStallPress}
-                      />
-                    </ScrollView>
-                  </Card.Content>
-                </Card>
+                      <Card.Content>
+                        <StallGrid 
+                          selectedFloor={selectedFloor}
+                          occupiedStalls={occupiedStalls}
+                          pendingStalls={pendingStalls}
+                          selectedStall={selectedStall}
+                          onStallPress={handleStallPress}
+                        />
+                      </Card.Content>
+                    </Card>
                     {selectedStall && (<Card style={styles.infoCard}><Card.Content><Text style={{color: colors.black}} variant="titleMedium">Slot Selected: {selectedStall}</Text>
                     
                   <Button 
