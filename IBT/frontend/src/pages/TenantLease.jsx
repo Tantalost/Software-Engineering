@@ -533,7 +533,7 @@ const TenantLease = () => {
                     autoClose: true,
                     duration: 3000
                 });
-                await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
+                await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.tenantName || newTenant.name || 'Unknown'}`, "Tenants");
                 fetchTenants();
                 fetchWaitlist();
                 setTransferApplicant(null);
