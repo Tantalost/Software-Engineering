@@ -6,7 +6,7 @@ import CryptoJS from "crypto-js";
 
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
 
-const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent" }) => {
+const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 1120 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
@@ -166,7 +166,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         calculatedDueDate = formatDateTimeForInput(d);
       }
     } else {
-      baseRent = 160 * 7; 
+      // Use the dynamic price passed from the parent component instead of hardcoding 160 * 7
+      baseRent = defaultNightPrice; 
       if (startDate) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + 7); 
@@ -177,7 +178,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     setRentAmount(baseRent * slotCount);
     setDueDate(calculatedDueDate);
 
-  }, [formData.tenantType, startDate, formData.slotNo]); 
+  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice]);
 
   useEffect(() => {
     setTotalAmount(parseFloat(rentAmount || 0) + parseFloat(utilityAmount || 0));
