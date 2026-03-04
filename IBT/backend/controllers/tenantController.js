@@ -200,7 +200,7 @@ export const updateTenant = async (req, res) => {
 export const getDefaultNightPrice = async (req, res) => {
   try {
     const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
-    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150; // Fallback to 150
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150;
     res.status(200).json({ defaultPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -217,24 +217,35 @@ export const updateAllNightMarketPrices = async (req, res) => {
     }
 
     const priceValue = parseFloat(newPrice);
+    const priceString = priceValue.toString(); // For TenantApplication which uses String
 
-    // Update or create the default price setting in database
+    // 1. Update or create the global price setting
     await Settings.findOneAndUpdate(
       { key: "defaultNightPrice" },
       { key: "defaultNightPrice", value: priceValue },
       { upsert: true, new: true }
     );
 
-    // Optional: Update all Night Market tenants whose status is "Due" to reflect the new price.
-    // (We only update "Due" so we don't accidentally overwrite historical "Paid" records)
-    const result = await Tenant.updateMany(
+    // 2. Update existing active tenants who have unpaid "Due" balances
+    const tenantResult = await Tenant.updateMany(
       { tenantType: "Night Market", status: "Due" },
       { rentAmount: priceValue }
     );
 
+    // 3. Update pending applications that haven't reached the payment review stage yet
+    // Assuming 'floor' is where "Night Market" is stored based on your React transfer logic
+    const applicationResult = await TenantApplication.updateMany(
+      { 
+        floor: "Night Market", 
+        status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED'] } 
+      },
+      { paymentAmount: priceString }
+    );
+
     res.status(200).json({
-      message: `Updated default price and ${result.modifiedCount} due night market tenants.`,
-      modifiedCount: result.modifiedCount
+      message: `Updated global price. Modified ${tenantResult.modifiedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
+      tenantModifiedCount: tenantResult.modifiedCount,
+      applicationModifiedCount: applicationResult.modifiedCount
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
