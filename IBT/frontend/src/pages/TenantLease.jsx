@@ -193,7 +193,7 @@ const TenantLease = () => {
                 slotLabels.push(`A-${101 + i}`);
             }
         } else {
-            
+           
             const nmNumbers = [
                 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18,
                 17, 16, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
@@ -204,15 +204,23 @@ const TenantLease = () => {
             nmNumbers.forEach(num => slotLabels.push(`NM-${num.toString().padStart(2, '0')}`));
         }
 
+        const countedTenantIds = new Set();
+
         slotLabels.forEach(slotLabel => {
             const tenant = records.find(r =>
-                (r.slotNo === slotLabel || r.slotno === slotLabel) &&
+             
+                (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) &&
                 (activeTab === "permanent" ? (r.tenantType === "Permanent" || !r.tenantType) : r.tenantType === "Night Market")
             );
             
             if (tenant && tenant.status !== "Available") {
-                paid++;
-                revenue += (parseFloat(tenant.rentAmount) || 0) + (parseFloat(tenant.utilityAmount) || 0);
+                paid++; 
+                
+                const tenantId = tenant._id || tenant.id;
+                if (!countedTenantIds.has(tenantId)) {
+                    countedTenantIds.add(tenantId);
+                    revenue += (parseFloat(tenant.rentAmount) || 0) + (parseFloat(tenant.utilityAmount) || 0);
+                }
             } else {
                 available++;
             }

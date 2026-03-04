@@ -361,16 +361,10 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                         <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-600"></div><span className="text-sm font-medium text-slate-600">Selected (Current)</span></div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                        {Array.from({ length: 30 }).map((_, i) => {
-                            let slotLabel = "";
-                            if (formData.tenantType === "Permanent") {
-                                slotLabel = `A-${101 + i}`; 
-                            } else {
-                                const num = i + 1;
-                                slotLabel = `NM-${num.toString().padStart(2, '0')}`;
-                            }
-
+                    {/* --- Start of Replaced Map Code --- */}
+                    {(() => {
+                        // 1. Helper function for individual slots
+                        const renderSlotBox = (slotLabel) => {
                             const occupiedByOther = tenants.some(r => 
                                 (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) 
                                 && (r.tenantType === formData.tenantType)
@@ -391,18 +385,63 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                                 statusText = "Selected";
                             }
 
+                            const isNightMarket = formData.tenantType === "Night Market";
+                            const baseClasses = isNightMarket 
+                                ? "w-14 h-14 flex-shrink-0 rounded-lg flex flex-col items-center justify-center p-1 cursor-pointer transition-all duration-200"
+                                : "aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200";
+                            
+                            const displayLabel = isNightMarket ? slotLabel.replace('NM-', '') : slotLabel;
+
                             return (
                                 <div 
                                     key={slotLabel} 
                                     onClick={() => handleToggleSlot(slotLabel, occupiedByOther)}
-                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200 ${statusColor}`}
+                                    className={`${baseClasses} ${statusColor}`}
+                                    title={`${slotLabel} - ${statusText}`}
                                 >
-                                    <span className="text-lg font-bold opacity-90">{slotLabel}</span>
+                                    <span className={`${isNightMarket ? 'text-sm' : 'text-lg'} font-bold opacity-90`}>{displayLabel}</span>
                                     <span className="text-[10px] text-center truncate w-full px-1 leading-tight mt-1">{statusText}</span>
                                 </div>
                             );
-                        })}
-                    </div>
+                        };
+
+                        if (formData.tenantType === "Permanent") {
+                            return (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                                    {Array.from({ length: 30 }).map((_, i) => renderSlotBox(`A-${101 + i}`))}
+                                </div>
+                            );
+                        } else {
+                            
+                            return (
+                                <div className="overflow-x-auto pb-4 custom-scrollbar">
+                                    <div className="min-w-max flex flex-col items-start bg-slate-200/50 p-4 rounded-xl border border-slate-200">
+                                      
+                                        <div className="flex flex-row items-center mb-10">
+                                            <div className="flex flex-row gap-1">{[32, 31, 30, 29, 28, 27, 26].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[25, 24, 23, 22, 21, 20, 19, 18].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-10 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[17, 16, 15, 14, 12, 11, 10, 9].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[8, 7, 6, 5, 4, 3, 2, 1].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                        </div>
+                                      
+                                        <div className="flex flex-row items-center">
+                                            <div className="flex flex-row gap-1">{[33, 34, 35, 36, 37, 38, 39].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[40, 41, 42, 43, 44, 45, 46, 47].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-10 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[48, 49, 50, 51, 53, 54, 55, 56].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[57, 58, 59, 60, 61, 62, 63, 64].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                    })()}
+                   
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end gap-3">

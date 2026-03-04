@@ -92,12 +92,19 @@ export const getOccupiedStalls = async (req, res) => {
 };
 
 export const getPendingStalls = async (req, res) => {
-  
   try {
     const { floor } = req.query; 
     const activeStatuses = ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED', 'PAYMENT_REVIEW', 'CONTRACT_PENDING', 'CONTRACT_REVIEW'];
     const pendingApps = await TenantApplication.find({ floor: floor, status: { $in: activeStatuses } }).select('targetSlot'); 
-    const pendingLabels = pendingApps.map(app => app.targetSlot);
+    
+    
+    let pendingLabels = [];
+    pendingApps.forEach(app => {
+        if (app.targetSlot) {
+            const slots = app.targetSlot.split(',').map(s => s.trim());
+            pendingLabels.push(...slots);
+        }
+    });
     res.json(pendingLabels);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -119,7 +126,7 @@ export const getMyApplication = async (req, res) => {
         
         tenants.forEach(tenant => {
            
-            const existingAppIndex = combinedApps.findIndex(app => app.targetSlot === tenant.slotNo);
+            const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
             
             if (existingAppIndex >= 0) {
             
@@ -157,7 +164,10 @@ export const submitApplication = async (req, res) => {
             if (files.clearance?.[0]) data.clearanceUrl = files.clearance[0].filename;
         }
 
-        const existingTenant = await Tenant.findOne({ slotNo: data.targetSlot });
+        const existingTenant = await Tenant.findOne({ 
+          slotNo: { $regex: new RegExp(`\\b${data.targetSlot}\\b`, 'i') } 
+        });
+
         if (existingTenant) return res.status(400).json({ message: "Sorry, this slot was just taken by another user." });
         
         const pendingApp = await TenantApplication.findOne({ 
