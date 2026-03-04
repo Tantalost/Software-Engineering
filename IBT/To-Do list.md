@@ -44,14 +44,6 @@ Add suffix (Jr, Sr, etc.)
 Add Products to be sold in the application review
 - Add tenant Modal - add progress bar for uploading docs
 
-(Lloyd)
-Broadcast Modal 🔴 **To be Fixed**
--Cant click the image to view it intently by zooming in or out after uploading the image attachment. 
-- cant view the image of the posted history 
-- cant view the previous uploaded image in the edit broadcast same as when after uploading the image in new broadcast part.
-
-
-
 
 
 🟢 **Done**
@@ -129,7 +121,12 @@ Edit modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
 Archive Button - add toast message (Alviar) 🟢 **Done**
 Delete Button - add toast message (Alviar) 🟢 **Done**
 Download button - dapat same format sa mga ibang pdf exports (Jayna) 🟢 **Done**
-(John)
+
+(Lloyd)
 NEW TO DO LIST (TenantLease Module)
 Logs - fix added tenant: "undefined" 🟢 **Done**
 Add Setup price for slot night market 🟢 **Done**
+Broadcast Modal 🟢 **Done**
+- Cant click the image to view it intently by zooming in or out after uploading the image attachment. 
+- Cant view the image of the posted history 
+- Cant view the previous uploaded image in the edit broadcast same as when after uploading the image in new broadcast part.

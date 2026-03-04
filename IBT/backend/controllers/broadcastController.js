@@ -88,6 +88,7 @@ export const getAdminBroadcasts = async (req, res) => {
         message: b.message,
         status: isScheduled ? 'Scheduled' : 'Posted',
         date: formattedDate,
+        attachments: b.attachments || [],
       };
     });
 
