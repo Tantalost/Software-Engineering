@@ -130,7 +130,9 @@ const TenantViewModal = ({ viewRow, onClose }) => {
     { key: 'id', label: "Valid ID", url: getFullUrl(viewRow.documents?.validID || viewRow.validIdUrl) },
     { key: 'clearance', label: "Barangay Clearance", url: getFullUrl(viewRow.documents?.barangayClearance || viewRow.clearanceUrl) },
     { key: 'receipt', label: "Proof of Receipt", url: getFullUrl(viewRow.documents?.proofOfReceipt || viewRow.receiptUrl) },
-    { key: 'contract', label: "Signed Contract", url: getFullUrl(viewRow.documents?.contract || viewRow.contractUrl) }
+    { key: 'contract', label: "Signed Contract", url: getFullUrl(viewRow.documents?.contract || viewRow.contractUrl) },
+    { key: 'communityTax', label: "Community Tax", url: getFullUrl(viewRow.documents?.communityTax || viewRow.communityTaxUrl) },
+    { key: 'policeClearance', label: "Police Clearance", url: getFullUrl(viewRow.documents?.policeClearance || viewRow.policeClearanceUrl) }
   ].filter(doc => doc.url);
 
   return (

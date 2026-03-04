@@ -162,6 +162,8 @@ export const submitApplication = async (req, res) => {
             if (files.permit?.[0]) data.permitUrl = files.permit[0].filename;
             if (files.validId?.[0]) data.validIdUrl = files.validId[0].filename;
             if (files.clearance?.[0]) data.clearanceUrl = files.clearance[0].filename;
+            if (files.communityTax?.[0]) data.communityTaxUrl = files.communityTax[0].filename;
+            if (files.policeClearance?.[0]) data.policeClearanceUrl = files.policeClearance[0].filename;
         }
 
         const existingTenant = await Tenant.findOne({ 

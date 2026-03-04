@@ -49,7 +49,6 @@ export const getArchivedTenants = async (req, res) => {
   }
 };
 
-// --- HARD DELETE ---
 export const deleteTenant = async (req, res) => {
   try {
     await Tenant.findByIdAndDelete(req.params.id);
@@ -89,6 +88,8 @@ export const createTenant = async (req, res) => {
     const contract = getFile('contract');
     const barangayClearance = getFile('barangayClearance'); 
     const proofOfReceipt = getFile('proofOfReceipt');
+    const communityTax = getFile('communityTax');       
+    const policeClearance = getFile('policeClearance');
 
     const tenantData = {
         ...req.body,
@@ -99,7 +100,9 @@ export const createTenant = async (req, res) => {
             validID: validID || req.body.documents?.validID,
             contract: contract || req.body.documents?.contract,
             barangayClearance: barangayClearance || req.body.documents?.barangayClearance, 
-            proofOfReceipt: proofOfReceipt || req.body.documents?.proofOfReceipt          
+            proofOfReceipt: proofOfReceipt || req.body.documents?.proofOfReceipt,
+            communityTax: communityTax || req.body.documents?.communityTax,             
+            policeClearance: policeClearance || req.body.documents?.policeClearance 
       }
     };
 
@@ -172,13 +175,18 @@ export const updateTenant = async (req, res) => {
     const newID = getFile('validID');
     const newContract = getFile('contract');
     const newClearance = getFile('barangayClearance'); 
-    const newReceipt = getFile('proofOfReceipt');     
+    const newReceipt = getFile('proofOfReceipt');
+    const newCommunityTax = getFile('communityTax');      
+    const newPoliceClearance = getFile('policeClearance');     
 
     if (newPermit) updateData['documents.businessPermit'] = newPermit;
     if (newID) updateData['documents.validID'] = newID;
     if (newContract) updateData['documents.contract'] = newContract;
     if (newClearance) updateData['documents.barangayClearance'] = newClearance; 
     if (newReceipt) updateData['documents.proofOfReceipt'] = newReceipt;
+    if (newCommunityTax) updateData['documents.communityTax'] = newCommunityTax;             
+    if (newPoliceClearance) updateData['documents.policeClearance'] = newPoliceClearance;
+
 
     const updatedTenant = await Tenant.findByIdAndUpdate(
       req.params.id,

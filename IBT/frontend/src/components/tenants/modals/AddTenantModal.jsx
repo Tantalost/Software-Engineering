@@ -104,6 +104,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 barangayClearance: initialData.documents.barangayClearance || null,
                 proofOfReceipt: initialData.documents.proofOfReceipt || null,
                 contract: initialData.documents.contract || null,
+                communityTax: initialData.documents.communityTax || null, 
+                policeClearance: initialData.documents.policeClearance || null,
             });
         }
 
@@ -131,11 +133,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         setProductCategory("Food and Beverages");
         setOtherProductDetails("");
         setDocuments({
-            businessPermit: null,
-            validID: null,
-            barangayClearance: null,
-            proofOfReceipt: null,
-            contract: null,
+            businessPermit: null, validID: null, barangayClearance: null, proofOfReceipt: null, contract: null,
+            communityTax: null, policeClearance: null 
         });
         setTempSelectedSlots([]); 
       }
@@ -587,6 +586,9 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
                   if (formData.tenantType === "Permanent") {
                     docFields.push({ label: 'Signed Contract', key: 'contract' });
+                  } else if (formData.tenantType === "Night Market") {
+                    docFields.push({ label: 'Community Tax', key: 'communityTax' });
+                    docFields.push({ label: 'Police Clearance', key: 'policeClearance' });
                   }
 
                   return docFields.map(({ label, key }) => {
