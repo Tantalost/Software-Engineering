@@ -9,7 +9,9 @@ import {
   updateTenant,
   archiveTenant,    
   restoreTenant,     
-  getArchivedTenants
+  getArchivedTenants,
+  getDefaultNightPrice,          
+  updateAllNightMarketPrices
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -39,6 +41,8 @@ const upload = multer({ storage });
 
 router.get('/', getTenants);
 router.get('/archived', getArchivedTenants);
+router.get('/night-market/default-price', getDefaultNightPrice);
+router.put('/update-night-market-prices', updateAllNightMarketPrices);
 
 router.post('/', 
   upload.fields([

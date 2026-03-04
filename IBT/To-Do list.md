@@ -46,8 +46,9 @@ Add Products to be sold in the application review
 
 (Lloyd)
 NEW TO DO LIST (TenantLease Module)
-Logs - fix added tenant: "undefined" 🔴 **To be Fixed**
+Logs - fix added tenant: "undefined" 🟢 **Done**
 Add Setup price for slot night market 🔴 **To be Fixed**
+
 Broadcast Modal 🔴 **To be Fixed**
 -Cant click the image to view it intently by zooming in or out after uploading the image attachment. 
 - cant view the image of the posted history 

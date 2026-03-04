@@ -1,6 +1,7 @@
 import Tenant from "../models/Tenant.js";
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
+import Settings from "../models/Settings.js";
 
 export const getTenants = async (req, res) => {
   try {
@@ -189,6 +190,53 @@ export const updateTenant = async (req, res) => {
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Update Tenant Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- DYNAMIC PRICING FOR NIGHT MARKET ---
+
+// Get default night market price from settings
+export const getDefaultNightPrice = async (req, res) => {
+  try {
+    const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150; // Fallback to 150
+    res.status(200).json({ defaultPrice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update default price and apply to unpaid/due Night Market tenants
+export const updateAllNightMarketPrices = async (req, res) => {
+  try {
+    const { newPrice } = req.body;
+
+    if (!newPrice || isNaN(newPrice) || newPrice < 0) {
+      return res.status(400).json({ error: "Valid price is required." });
+    }
+
+    const priceValue = parseFloat(newPrice);
+
+    // Update or create the default price setting in database
+    await Settings.findOneAndUpdate(
+      { key: "defaultNightPrice" },
+      { key: "defaultNightPrice", value: priceValue },
+      { upsert: true, new: true }
+    );
+
+    // Optional: Update all Night Market tenants whose status is "Due" to reflect the new price.
+    // (We only update "Due" so we don't accidentally overwrite historical "Paid" records)
+    const result = await Tenant.updateMany(
+      { tenantType: "Night Market", status: "Due" },
+      { rentAmount: priceValue }
+    );
+
+    res.status(200).json({
+      message: `Updated default price and ${result.modifiedCount} due night market tenants.`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
