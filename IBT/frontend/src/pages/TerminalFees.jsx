@@ -20,6 +20,7 @@ import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
+import NotificationToast from "../components/common/NotificationToast";
 import ViewModal from "../components/common/ViewModal";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
@@ -30,7 +31,7 @@ import TerminalFilter from "../components/terminal/TerminalFilter";
 import { logActivity } from "../utils/logger";
 import { submitPageReport } from "../utils/reportService";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`;
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
 
 const getInitialBasePrices = () => {
   const storedPrices = localStorage.getItem("terminalBasePrices");
@@ -291,7 +292,7 @@ const TerminalFees = () => {
 
       const adminName = localStorage.getItem("authName") || "Ticket Admin";
       await submitPageReport("Terminal Fees", reportPayload, adminName);
-      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
+      await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1324,19 +1325,6 @@ const TerminalFees = () => {
         </div>
       )}
 
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-[100] flex items-center gap-3 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl animate-in slide-in-from-bottom-5 fade-in">
-          <CheckCircle className="text-emerald-400" size={22} />
-          <span className="font-semibold text-sm">{toast}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="ml-4 text-slate-400 hover:text-white"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
@@ -1375,6 +1363,7 @@ const TerminalFees = () => {
           </div>
         </div>
       )}
+      <NotificationToast message={toast} />
     </Layout>
   );
 };

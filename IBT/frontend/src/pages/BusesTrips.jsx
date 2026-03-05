@@ -49,7 +49,7 @@ const ManageCompaniesModal = ({
   const [newBusRoute, setNewBusRoute] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const API_URL = `${import.meta.env.VITE_API_URL}/api/companies`;
+  const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
 
 
   useEffect(() => {
@@ -387,8 +387,8 @@ const BusTrips = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const role = localStorage.getItem("authRole") || "bus";
-  const API_URL = `${import.meta.env.VITE_API_URL}/api/bustrips`;
-  const COMPANY_API_URL = `${import.meta.env.VITE_API_URL}/api/companies`;
+  const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/bustrips`;
+  const COMPANY_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
 

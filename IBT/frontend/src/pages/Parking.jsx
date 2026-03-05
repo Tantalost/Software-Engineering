@@ -132,8 +132,8 @@ const Parking = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const role = localStorage.getItem("authRole") || "superadmin";
-  const API_URL = `${import.meta.env.VITE_API_URL}/api/parking`;
-  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
+  const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/parking`;
+  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -595,7 +595,7 @@ const Parking = () => {
       const adminName = localStorage.getItem("authName") || "Parking Admin";
       await submitPageReport("Parking", reportPayload, adminName);
 
-      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
+      await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1046,19 +1046,19 @@ const Parking = () => {
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 text-center transition-all duration-300 relative">
             <button onClick={() => setShowAddModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">✕</button>
             <h1 className="text-3xl font-bold text-gray-800 mb-8">
               {step === 1 ? "Select Vehicle" : "Enter Details"}
             </h1>
             {step === 1 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
-                <button onClick={() => handleSelectType('Car')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-cyan-500 bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
+                <button onClick={() => handleSelectType('Car')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
                   <Car size={80} className="mb-4" />
                   <span className="text-2xl font-bold mt-2">CAR / JEEP</span>
                   <span className="text-sm opacity-70 mt-1 font-medium"> ₱{priceSettings.carRate}.00 / hr</span>
                 </button>
-                <button onClick={() => handleSelectType('Motorcycle')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] border-[3px] border-orange-500 bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
+                <button onClick={() => handleSelectType('Motorcycle')} className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1">
                   <Bike size={80} className="mb-4" />
                   <span className="text-2xl font-bold mt-2">MOTORCYCLE</span>
                   <span className="text-sm opacity-70 mt-1 font-medium"> ₱{priceSettings.motorcycleRate}.00 / hr</span>
@@ -1150,7 +1150,16 @@ const Parking = () => {
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">View Parking Ticket</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-semibold text-slate-800">View Parking Ticket</h3>
+              <button
+                onClick={() => setViewRow(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
               <Field label="Ticket No" value={viewRow.ticketNo || "N/A"} />
               <Field label="Plate No" value={viewRow.plateNo || "N/A"} />

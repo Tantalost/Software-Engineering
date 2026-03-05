@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Upload, FileText, PhilippinePeso, Map, Check, ChevronDown, Eye } from "lucide-react";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`; 
 
 const FormInput = ({ label, type = "text", readOnly = false, ...props }) => (
   <div className="flex flex-col gap-1">
