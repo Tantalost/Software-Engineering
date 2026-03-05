@@ -836,6 +836,13 @@ const Reports = () => {
                   <span className="font-mono text-slate-700">{viewRow.id}</span>
                 </p>
               </div>
+              <button
+                onClick={() => setViewRow(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+                title="Close"
+              >
+                <X size={24} />
+              </button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
