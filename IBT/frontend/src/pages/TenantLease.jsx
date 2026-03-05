@@ -832,14 +832,17 @@ const TenantLease = () => {
         if (filtered.length === 0) return alert("No records to export.");
 
         const dateStr = new Date().toLocaleDateString();
-        const operator = localStorage.getItem("authName") || "Tenant Admin";
+        // Removed operator reference to match the PDF update
 
         const rows = [
-            ["", "", "TENANTS AND LEASE REPORTS", "", "", "", ""],
+            // Simulated Header Space (Matches PDF Title)
+            ["", "", "TENANTS AND LEASE REPORTS"],
             [],
-            [`Date: ${dateStr}`, "", "", `No. of Payments: ${filtered.length}`, "", "", ""],
-            [`Operator: ${operator}`, "", "", `Revenue: ₱${mapStats.totalRevenue.toFixed(2)}`, "", "", ""],
+            // Alignment: Left-side info and Right-side info on the same row (simulated)
+            [`Date: ${dateStr}`, "", "", "", "", `No. of Payments: ${filtered.length}`],
+            [`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", "", "", ""],
             [],
+            // Table Headers
             ["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]
         ];
 
@@ -849,12 +852,13 @@ const TenantLease = () => {
                 t.tenantName || t.name || "-",
                 t.email || "-",
                 t.contactNo || "-",
-                `₱${(t.rentAmount || 0).toFixed(2)}`,
-                `₱${(t.utilityAmount || 0).toFixed(2)}`,
-                `₱${(t.totalAmount || 0).toFixed(2)}`
+                `Php ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ]);
         });
 
+        // Create the CSV content
         const csvContent = rows
             .map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))
             .join("\n");
@@ -866,7 +870,7 @@ const TenantLease = () => {
         link.setAttribute("download", `Tenants_Lease_Report_${new Date().toISOString().split("T")[0]}.csv`);
         link.click();
 
-        logActivity(role, "EXPORT_EXCEL", `Exported ${filtered.length} Tenant records`, "Tenants");
+        logActivity(role, "EXPORT_EXCEL", `Exported ${filtered.length} Tenant records with PDF-matching format`, "Tenants");
     };
 
     const handleExportPDF = () => {
@@ -884,24 +888,33 @@ const TenantLease = () => {
 
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Operator: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
 
+        // Position Date on the left
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+
+        // REMOVED: Operator line
+
+        // Update Revenue formatting and alignment to prevent border overflow
         doc.text(`No. of Payments: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
-        doc.text(`Revenue: ₱${mapStats.totalRevenue.toFixed(2)}`, pageWidth - 15, 61, { align: "right" });
+        doc.text(
+            `Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            pageWidth - 15,
+            61,
+            { align: "right" }
+        );
 
         autoTable(doc, {
             startY: 70,
-            margin: { bottom: 35 },
+            margin: { bottom: 35, left: 15, right: 15 }, // Ensure margins match header alignment
             head: [["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]],
             body: filtered.map((t) => [
                 t.slotNo || "-",
                 t.tenantName || t.name || "-",
                 t.email || "-",
                 t.contactNo || "-",
-                `₱${(t.rentAmount || 0).toFixed(2)}`,
-                `₱${(t.utilityAmount || 0).toFixed(2)}`,
-                `₱${(t.totalAmount || 0).toFixed(2)}`
+                `Php ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ]),
             headStyles: { fillColor: [220, 38, 38] },
             styles: { fontSize: 8, halign: 'center' },
@@ -1175,8 +1188,8 @@ const TenantLease = () => {
                         barangayClearance: transferApplicant.clearanceUrl,
                         proofOfReceipt: transferApplicant.receiptUrl,
                         contract: transferApplicant.contractUrl,
-                        communityTax: transferApplicant.communityTaxUrl, 
-                        policeClearance: transferApplicant.policeClearanceUrl 
+                        communityTax: transferApplicant.communityTaxUrl,
+                        policeClearance: transferApplicant.policeClearanceUrl
                     }
                 } : null}
             />
