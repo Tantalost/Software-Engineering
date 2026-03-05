@@ -39,6 +39,7 @@ const ManageCompaniesModal = ({
   companyData,
   fetchCompanies,
   role,
+  setNotificationState,
 }) => {
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
@@ -66,89 +67,186 @@ const ManageCompaniesModal = ({
 
 
   const handleAddCompany = async () => {
-    if (!newCompanyName.trim()) return;
-    setIsProcessing(true);
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newCompanyName }),
+  if (!newCompanyName.trim()) return;
+  setIsProcessing(true);
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCompanyName }),
+    });
+    if (res.ok) {
+      await fetchCompanies();
+      setNewCompanyName("");
+      setIsEditingCompany(false);
+      
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Company "${newCompanyName}" added successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-      if (res.ok) {
-        await fetchCompanies();
-        setNewCompanyName("");
-        setIsEditingCompany(false);
-      } else {
-        alert("Failed to create company");
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsProcessing(false);
+    } else {
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to create company",
+        autoClose: true,
+        duration: 3000
+      });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error creating company",
+      autoClose: true,
+      duration: 3000
+    });
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const handleDeleteCompany = async (id) => {
-    if (!window.confirm("Delete this company and all its buses?")) return;
-    try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        await fetchCompanies();
-        if (selectedCompanyId === id) setSelectedCompanyId(null);
-      }
-    } catch (err) {
-      console.error(err);
+  if (!window.confirm("Delete this company and all its buses?")) return;
+  try {
+    const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      const deletedCompany = companyData.find(c => c._id === id);
+      await fetchCompanies();
+      if (selectedCompanyId === id) setSelectedCompanyId(null);
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Company "${deletedCompany?.name}" deleted successfully!`,
+        autoClose: true,
+        duration: 3000
+      });
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to delete company",
+        autoClose: true,
+        duration: 3000
+      });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error deleting company",
+      autoClose: true,
+      duration: 3000
+    });
+  }
+};
 
 
   const handleAddBus = async () => {
-    if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
+  if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
 
-    const updatedBuses = [
-      ...activeCompany.buses,
-      { plateNumber: newBusPlate, route: newBusRoute },
-    ];
+  const updatedBuses = [
+    ...activeCompany.buses,
+    { plateNumber: newBusPlate, route: newBusRoute },
+  ];
 
-    try {
-      const res = await fetch(`${API_URL}/${activeCompany._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+  try {
+    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+    });
+
+    if (res.ok) {
+      await fetchCompanies();
+      
+      // ADD THIS TOAST MESSAGE
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Bus ${newBusPlate} added successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-
-      if (res.ok) {
-        await fetchCompanies();
-        setNewBusPlate("");
-        setNewBusRoute("");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleDeleteBus = async (plateNumber) => {
-    if (!activeCompany) return;
-    if (!window.confirm(`Remove bus ${plateNumber}?`)) return;
-
-    const updatedBuses = activeCompany.buses.filter(
-      (b) => b.plateNumber !== plateNumber,
-    );
-
-    try {
-      const res = await fetch(`${API_URL}/${activeCompany._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+      
+      setNewBusPlate("");
+      setNewBusRoute("");
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to add bus",
+        autoClose: true,
+        duration: 3000
       });
-
-      if (res.ok) {
-        await fetchCompanies();
-      }
-    } catch (err) {
-      console.error(err);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error adding bus",
+      autoClose: true,
+      duration: 3000
+    });
+  }
+};
+
+const handleDeleteBus = async (plateNumber) => {
+  if (!activeCompany) return;
+  if (!window.confirm(`Remove bus ${plateNumber}?`)) return;
+
+  const updatedBuses = activeCompany.buses.filter(
+    (b) => b.plateNumber !== plateNumber,
+  );
+
+  try {
+    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+    });
+
+    if (res.ok) {
+      await fetchCompanies();
+      
+      // ADD THIS TOAST MESSAGE
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Bus ${plateNumber} removed successfully!`,
+        autoClose: true,
+        duration: 3000
+      });
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to remove bus",
+        autoClose: true,
+        duration: 3000
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error removing bus",
+      autoClose: true,
+      duration: 3000
+    });
+  }
+};
+
 
   if (!isOpen) return null;
 
@@ -437,57 +535,70 @@ const BusTrips = () => {
   const [isSettingPrice, setIsSettingPrice] = useState(false);
 
   const handleSetPrice = async () => {
-    if (!newPrice || isNaN(newPrice)) {
-      alert("Please enter a valid price.");
-      return;
+  if (!newPrice || isNaN(newPrice)) {
+    alert("Please enter a valid price.");
+    return;
+  }
+
+  const priceValue = Number(newPrice);
+  if (priceValue <= 0) {
+    alert("Please enter a valid price greater than 0.");
+    return;
+  }
+
+  setIsSettingPrice(true);
+
+  try {
+    const response = await fetch(`${API_URL}/update-prices/all`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPrice: priceValue }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update prices in database");
     }
 
-    const priceValue = Number(newPrice);
-    if (priceValue <= 0) {
-      alert("Please enter a valid price greater than 0.");
-      return;
-    }
+    const result = await response.json();
 
-    setIsSettingPrice(true);
+    setDefaultPrice(priceValue);
+    localStorage.setItem("defaultBusPrice", priceValue.toString());
 
-    try {
+    await fetchBusTrips();
 
-      const response = await fetch(`${API_URL}/update-prices/all`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPrice: priceValue }),
-      });
+    await logActivity(
+      role,
+      "SET_DEFAULT_PRICE",
+      `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
+      "BusTrips",
+    );
 
-      if (!response.ok) {
-        throw new Error("Failed to update prices in database");
-      }
+    setShowSetPriceModal(false);
+    setNewPrice("");
+    
 
-      const result = await response.json();
+    setNotificationState({
+      isOpen: true,
+      type: 'success',
+      message: `Prices updated to ₱${priceValue}!`,
+      autoClose: true,
+      duration: 3000
+    });
+  } catch (err) {
+    console.error(err);
+    
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Failed to set price: " + err.message,
+      autoClose: true,
+      duration: 3000
+    });
+  } finally {
+    setIsSettingPrice(false);
+  }
+};
 
-
-      setDefaultPrice(priceValue);
-      localStorage.setItem("defaultBusPrice", priceValue.toString());
-
-
-      await fetchBusTrips();
-
-      await logActivity(
-        role,
-        "SET_DEFAULT_PRICE",
-        `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
-        "BusTrips",
-      );
-
-      setShowSetPriceModal(false);
-      setNewPrice("");
-      alert(`Price updated successfully! ${result.modifiedCount || 0} pending trips updated. All new trips will use ₱${newPrice}.`);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to set price: " + err.message);
-    } finally {
-      setIsSettingPrice(false);
-    }
-  };
 
 
   const [newBusData, setNewBusData] = useState({
@@ -619,34 +730,57 @@ const BusTrips = () => {
 
 
   const handleCreateRecord = async (e) => {
-    e.preventDefault();
-    try {
+  e.preventDefault();
+  try {
+    const tripData = {
+      ...newBusData,
+      price: newBusData.price || defaultPrice
+    };
 
-      const tripData = {
-        ...newBusData,
-        price: newBusData.price || defaultPrice
-      };
-
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tripData),
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tripData),
+    });
+    if (response.ok) {
+      const newItem = await response.json();
+      await logActivity(
+        role,
+        "CREATE_TRIP",
+        `Created Trip ${newItem.templateNo} - ${newItem.route}`,
+        "BusTrips",
+      );
+      fetchBusTrips();
+      setShowAddModal(false);
+      
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Bus trip ${newItem.templateNo} created successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-      if (response.ok) {
-        const newItem = await response.json();
-        await logActivity(
-          role,
-          "CREATE_TRIP",
-          `Created Trip ${newItem.templateNo} - ${newItem.route}`,
-          "BusTrips",
-        );
-        fetchBusTrips();
-        setShowAddModal(false);
-      }
-    } catch (error) {
-      console.error("Error creating:", error);
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to create bus trip",
+        autoClose: true,
+        duration: 3000
+      });
     }
-  };
+  } catch (error) {
+    console.error("Error creating:", error);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error creating bus trip",
+      autoClose: true,
+      duration: 3000
+    });
+  }
+};
 
   //EXCEL
   const handleExportExcel = () => {
@@ -943,33 +1077,54 @@ const BusTrips = () => {
 
   const handleArchive = (row) => setArchiveRow(row);
   const confirmArchive = async () => {
-    if (!archiveRow) return;
-    try {
+  if (!archiveRow) return;
+  try {
+    const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+    });
 
-      const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+    if (archiveRes.ok) {
+      await logActivity(
+        role,
+        "ARCHIVE_TRIP",
+        `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`,
+        "BusTrips",
+      );
+
+      fetchBusTrips();
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Bus ${archiveRow.templateNo} archived successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-
-
-      if (archiveRes.ok) {
-        await logActivity(
-          role,
-          "ARCHIVE_TRIP",
-          `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`,
-          "BusTrips",
-        );
-
-        fetchBusTrips();
-      } else {
-        console.error("Failed to archive bus trip");
-      }
-    } catch (e) {
-      console.error("Error archiving:", e);
-    } finally {
-      setArchiveRow(null);
+    } else {
+      console.error("Failed to archive bus trip");
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to archive bus trip",
+        autoClose: true,
+        duration: 3000
+      });
     }
-  };
+  } catch (e) {
+    console.error("Error archiving:", e);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error archiving bus trip",
+      autoClose: true,
+      duration: 3000
+    });
+  } finally {
+    setArchiveRow(null);
+  }
+};
+
 
 
   const tableColumns = isSelectionMode
