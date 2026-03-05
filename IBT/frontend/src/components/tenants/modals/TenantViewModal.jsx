@@ -162,6 +162,12 @@ const TenantViewModal = ({ viewRow, onClose }) => {
                 <Field label="Lease Type" value={viewRow.tenantType || viewRow.floor || "Permanent"} />
                 <Field label="Contact No" value={viewRow.contactNo || viewRow.contact} />
                 <Field label="Email Address" value={viewRow.email} />
+
+                <Field 
+                  label="Products to be Sold" 
+                  value={viewRow.products || viewRow.product ? String(viewRow.products || viewRow.product).replace(/_/g, ' ') : "N/A"} 
+                />
+                
             </div>
           </section>
 

@@ -483,6 +483,13 @@ const TenantLease = () => {
             setReviewData(fullData);
             setShowWaitlistModal(false);
             setShowReviewModal(true);
+
+            setWaitlistData(prev => prev.map(item => 
+                (item.id === applicant.id || item._id === applicant.id) 
+                    ? { ...item, adminViewed: true } 
+                    : item
+            ));
+            
         } catch (error) {
             console.error("Error fetching full details:", error);
             setNotificationState({
@@ -945,6 +952,8 @@ const TenantLease = () => {
         ]
         : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"];
 
+        const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
+
     return (
         <Layout title="Tenants/Lease Management">
             <div className="mb-6">
@@ -1012,7 +1021,11 @@ const TenantLease = () => {
                     </button>
                     <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
                         <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
-                        {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
+                        {actionRequiredCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                {actionRequiredCount}
+                            </span>
+                        )}
                     </button>
                 </div>
 

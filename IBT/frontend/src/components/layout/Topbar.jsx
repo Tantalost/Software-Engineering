@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { 
-  Menu, Bell, ChevronDown, X, AlertTriangle, Radio, Upload, 
+  Menu, Bell, ChevronDown, X, AlertTriangle, Megaphone, Upload, 
   Eye, Edit, Trash2, ZoomIn, ZoomOut 
 } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
@@ -50,7 +50,6 @@ const Topbar = ({ title, onMenuClick }) => {
 
   const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:10000").replace(/\/api\/?$/, '');
 
-  // Helper to safely format image URLs whether they are relative or absolute
   const getImageUrl = (uri) => {
     if (!uri) return '';
     return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
@@ -261,7 +260,7 @@ const Topbar = ({ title, onMenuClick }) => {
                 className="p-2.5 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-all cursor-pointer"
                 title="Broadcast Message"
               >
-                <Radio size={22} />
+                <Megaphone size={22} />
               </button>
 
               <div className="hidden sm:block relative" ref={bellRef}>
@@ -375,7 +374,7 @@ const Topbar = ({ title, onMenuClick }) => {
             <div className="p-6 pb-4 flex justify-between items-start border-b border-gray-100">
               <div>
                 <h2 className="text-2xl font-bold text-slate-800">
-                  {editMode ? "Edit Broadcast" : "Broadcast Center"}
+                  {editMode ? "Edit Post" : "New Post Announcement"}
                 </h2>
                 
                 <div className="flex space-x-4 mt-4 border-b border-gray-200">
@@ -383,7 +382,7 @@ const Topbar = ({ title, onMenuClick }) => {
                     onClick={() => { setBroadcastTab("create"); resetForm(); }}
                     className={`pb-2 text-sm font-semibold transition-colors ${broadcastTab === "create" ? "text-emerald-600 border-b-2 border-emerald-600" : "text-slate-400 hover:text-slate-600"}`}
                   >
-                    {editMode ? "Editing Post" : "New Broadcast"}
+                    {editMode ? "Editing Post" : "New Post Announcement"}
                   </button>
                   <button 
                     onClick={() => { setBroadcastTab("manage"); setEditMode(false); }}

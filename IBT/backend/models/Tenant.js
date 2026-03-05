@@ -21,6 +21,16 @@ const TenantSchema = new mongoose.Schema({
   rentAmount: Number,
   utilityAmount: Number,
   totalAmount: Number,
+
+  feeBreakdown: {
+    garbageFee: { type: Number, default: 0 },
+    permitFee: { type: Number, default: 0 },
+    businessTaxes: { type: Number, default: 0 },
+    electricity: { type: Number, default: 0 },
+    water: { type: Number, default: 0 },
+    otherAmount: { type: Number, default: 0 },
+    otherSpecify: { type: String, default: "" }
+  },
   
  
   StartDateTime: Date,

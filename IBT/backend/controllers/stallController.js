@@ -181,7 +181,7 @@ export const submitApplication = async (req, res) => {
         
         const newApp = await TenantApplication.findOneAndUpdate(
             { userId: data.userId, targetSlot: data.targetSlot }, 
-            { ...data, status: 'VERIFICATION_PENDING' }, 
+            { ...data, status: 'VERIFICATION_PENDING', adminViewed: false },
             { new: true, upsert: true }
         );
 
@@ -204,7 +204,7 @@ export const submitPayment = async (req, res) => {
        
         const updatedApp = await TenantApplication.findOneAndUpdate(
             { userId: userId, targetSlot: targetSlot }, 
-            { receiptUrl, paymentReference, paymentAmount, status: 'PAYMENT_REVIEW', paymentSubmittedAt: new Date() }, 
+            { receiptUrl, paymentReference, paymentAmount, status: 'PAYMENT_REVIEW', paymentSubmittedAt: new Date(), adminViewed: false },
             { new: true }
         );
         
@@ -227,7 +227,7 @@ export const uploadContract = async (req, res) => {
         
         const updatedApp = await TenantApplication.findOneAndUpdate(
             { userId: userId, targetSlot: targetSlot }, 
-            { contractUrl, status: 'CONTRACT_REVIEW', contractSubmittedAt: new Date() }, 
+            { contractUrl, status: 'CONTRACT_REVIEW', contractSubmittedAt: new Date(), adminViewed: false },
             { new: true }
         );
         
