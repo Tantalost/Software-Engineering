@@ -555,7 +555,7 @@ const BusTrips = () => {
 
   const totalTrips = filtered.length;
   const paidTrips = filtered.filter((t) => t.status === "Paid").length;
-  const pendingTrips = filtered.filter((t) => t.status === "Pending").length;
+  const pendingTrips = filtered.filter((t) => t.status === "Arrived").length;
   const totalRevenue = filtered
     .filter((t) => t.status === "Paid")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
