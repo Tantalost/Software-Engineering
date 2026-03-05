@@ -119,6 +119,28 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         });
         setTempSelectedSlots([]); 
       }
+      
+      else {
+        setFormData({
+            slotNo: "",
+            firstName: "",
+            middleName: "",
+            lastName: "",
+            suffix: "", 
+            referenceNo: generateRef(), 
+            email: "",
+            contactNo: "",
+            tenantType: activeTab === "night" ? "Night Market" : "Permanent", 
+            _id: "",
+        });
+        setProductCategory("food_non_alcoholic");
+        setOtherProductDetails("");
+        setDocuments({
+            businessPermit: null, validID: null, barangayClearance: null, proofOfReceipt: null, contract: null,
+            communityTax: null, policeClearance: null 
+        });
+        setTempSelectedSlots([]); 
+      }
 
       setStartDate(formatDateTimeForInput(new Date()));
       setUtilityAmount(0);
