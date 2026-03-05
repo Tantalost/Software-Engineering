@@ -31,6 +31,7 @@ export type FormData = {
   firstName: string;
   middleName: string;
   lastName: string;
+  suffix: string;
   contact: string;
   email: string;
   productType: string;

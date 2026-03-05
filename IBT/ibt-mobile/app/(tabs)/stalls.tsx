@@ -78,6 +78,7 @@ export default function StallsPage() {
     firstName: '',
     middleName: '',
     lastName: '',
+    suffix: '',
     contact: '',
     email: '',
     productType: 'food_non_alcoholic', 
@@ -332,7 +333,7 @@ export default function StallsPage() {
     setTimeout(async () => {
         try {
           const formPayload = new FormData();
-          const fullCombinedName = `${formData.firstName} ${formData.middleName} ${formData.lastName}`;
+          const fullCombinedName = `${formData.firstName} ${formData.middleName ? formData.middleName + ' ' : ''}${formData.lastName}${formData.suffix ? ' ' + formData.suffix : ''}`.replace(/\s+/g, ' ').trim();
           
           formPayload.append('userId', user.id);
           formPayload.append('name', fullCombinedName);

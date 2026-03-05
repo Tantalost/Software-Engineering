@@ -91,8 +91,20 @@ export const createTenant = async (req, res) => {
     const communityTax = getFile('communityTax');       
     const policeClearance = getFile('policeClearance');
 
+    let parsedFeeBreakdown = {};
+    if (req.body.feeBreakdown) {
+        try {
+            parsedFeeBreakdown = typeof req.body.feeBreakdown === 'string' 
+                ? JSON.parse(req.body.feeBreakdown) 
+                : req.body.feeBreakdown;
+        } catch (e) {
+            console.error("Error parsing feeBreakdown:", e);
+        }
+    }
+
     const tenantData = {
         ...req.body,
+        feeBreakdown: parsedFeeBreakdown,
         documents: {
            
             ...(req.body.documents || {}),
@@ -163,6 +175,16 @@ IBT Management
 export const updateTenant = async (req, res) => {
   try {
     const updateData = { ...req.body };
+
+    if (updateData.feeBreakdown) {
+        try {
+            updateData.feeBreakdown = typeof updateData.feeBreakdown === 'string' 
+                ? JSON.parse(updateData.feeBreakdown) 
+                : updateData.feeBreakdown;
+        } catch (e) {
+            console.error("Error parsing feeBreakdown:", e);
+        }
+    }
 
     const getFile = (fieldName) => {
         if (req.files && req.files[fieldName] && req.files[fieldName][0]) {

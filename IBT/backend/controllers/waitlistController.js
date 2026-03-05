@@ -80,9 +80,14 @@ export const getWaitlist = async (req, res) => {
 
 export const getWaitlistById = async (req, res) => {
   try {
-    const entry = await TenantApplication.findById(req.params.id);
+    const entry = await TenantApplication.findByIdAndUpdate(
+        req.params.id,
+        { adminViewed: true }, 
+        { new: true }
+    );
     if (!entry) return res.status(404).json({ error: "Not Found" });
     res.status(200).json(entry);
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -103,7 +108,11 @@ export const updateWaitlistEntry = async (req, res) => {
     const { id } = req.params;
     const { status, rejectionReason } = req.body; 
 
-    const applicant = await TenantApplication.findByIdAndUpdate(id, req.body, { new: true });
+    const applicant = await TenantApplication.findByIdAndUpdate(
+        id, 
+        { ...req.body, adminViewed: true }, 
+        { new: true }
+    );
     if (!applicant) return res.status(404).json({ error: "Applicant not found" });
 
     let message = "";
@@ -121,22 +130,22 @@ export const updateWaitlistEntry = async (req, res) => {
     if (status === "REJECTED") {
         subject = "Stall Application Update: Rejected";
         message = `Dear ${applicant.name},\n\nWe regret to inform you that your application for slot ${applicant.targetSlot} has been rejected.\n\nReason: ${rejectionReason || "Did not meet required criteria or incomplete documentation."}\n\nIf you have any questions, please contact administration.`;
-        console.log("Rejection block triggered! Subject set."); // <-- ADD THIS
+        console.log("Rejection block triggered! Subject set."); 
     }
 
-    console.log("Applicant Email exists?:", applicant.email); // <-- ADD THIS
+    console.log("Applicant Email exists?:", applicant.email); 
 
     if (subject && applicant.email) {
         try { 
-            console.log("Attempting to send email to:", applicant.email); // <-- ADD THIS
+            console.log("Attempting to send email to:", applicant.email); 
             await sendEmail({ email: applicant.email, subject: subject, message: message }); 
-            console.log("Email function completed without crashing."); // <-- ADD THIS
+            console.log("Email function completed without crashing."); 
         } 
         catch (emailError) { 
             console.error("Email failed:", emailError.message); 
         }
     } else {
-        console.log("Skipped sending email. Missing subject or applicant email."); // <-- ADD THIS
+        console.log("Skipped sending email. Missing subject or applicant email.");
     }
     
     res.status(200).json(applicant);

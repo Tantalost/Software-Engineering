@@ -40,6 +40,17 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   const [productCategory, setProductCategory] = useState(initialCategory || "food_non_alcoholic");
   const [otherProductDetails, setOtherProductDetails] = useState(initialOther || "");
 
+  const parseFeeBreakdown = (data) => {
+    if (!data) return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" };
+    if (typeof data === 'string') {
+        try { return JSON.parse(data); } 
+        catch (e) { return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" }; }
+    }
+    return data;
+  };
+
+  const [feeBreakdown, setFeeBreakdown] = useState(parseFeeBreakdown(row.feeBreakdown));
+
   const [formData, setFormData] = useState({
     ...row,
     rentAmount: row.rentAmount || 0,
@@ -108,10 +119,18 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   }, [formData.editStart, formData.tenantType]);
 
   useEffect(() => {
+    const calculatedUtils = (parseFloat(feeBreakdown.garbageFee) || 0) +
+                  (parseFloat(feeBreakdown.permitFee) || 0) +
+                  (parseFloat(feeBreakdown.businessTaxes) || 0) +
+                  (parseFloat(feeBreakdown.electricity) || 0) +
+                  (parseFloat(feeBreakdown.water) || 0) +
+                  (parseFloat(feeBreakdown.otherAmount) || 0);
+
     const rent = parseFloat(formData.rentAmount) || 0;
-    const util = parseFloat(formData.utilityFee) || 0;
-    setTotalAmount(rent + util);
-  }, [formData.rentAmount, formData.utilityFee]);
+    
+    setFormData(prev => ({ ...prev, utilityFee: calculatedUtils })); 
+    setTotalAmount(rent + calculatedUtils);
+  }, [formData.rentAmount, feeBreakdown]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -143,6 +162,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
       rentAmount: parseFloat(formData.rentAmount),
       utilityAmount: parseFloat(formData.utilityFee),
       totalAmount: totalAmount,
+      feeBreakdown: JSON.stringify(feeBreakdown),
       StartDateTime: formatForTable(formData.editStart),
       DueDateTime: formatForTable(formData.editDue), 
       EndDateTime: formatForTable(formData.editDue), 
@@ -220,12 +240,23 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
           </div>
 
           <div className="pt-4 border-t border-slate-100">
-             <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-600">Financial Configuration</h4>
+             <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-600">Financial Breakdown</h4>
              <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
                 <FormInput label="Monthly Rent" type="number" name="rentAmount" value={formData.rentAmount} readOnly={true} />
-                <FormInput label="Utility Fee" type="input" name="utilityFee" value={formData.utilityFee} onChange={handleChange} placeholder="Enter Amount"/>
-                 <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-slate-700">Total Amount</label>
+                
+                <FormInput label="Garbage Fee" type="number" value={feeBreakdown.garbageFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, garbageFee: e.target.value})} />
+                <FormInput label="Permit Fee" type="number" value={feeBreakdown.permitFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, permitFee: e.target.value})} />
+                <FormInput label="Business Taxes" type="number" value={feeBreakdown.businessTaxes} onChange={(e) => setFeeBreakdown({...feeBreakdown, businessTaxes: e.target.value})} />
+                <FormInput label="Electricity" type="number" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} />
+                <FormInput label="Water" type="number" value={feeBreakdown.water} onChange={(e) => setFeeBreakdown({...feeBreakdown, water: e.target.value})} />
+                <FormInput label="Others (Amount)" type="number" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} />
+                
+                <div className="md:col-span-2">
+                    <FormInput label="Others (Please specify)" type="text" value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} placeholder="Specify what the other fee is for..." />
+                </div>
+
+                 <div className="flex flex-col gap-1 md:col-start-3">
+                    <label className="text-sm font-medium text-slate-700">Total Amount Due</label>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-600">
                            <PhilippinePeso size={14} />
@@ -298,9 +329,10 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(() => {
                 
-                  const baseKeys = ['businessPermit', 'validID', 'barangayClearance', 'proofOfReceipt'];
+                 const baseKeys = ['businessPermit', 'validID', 'proofOfReceipt'];
+                  
                   if (formData.tenantType === "Permanent") {
-                      baseKeys.push('contract');
+                      baseKeys.push('barangayClearance', 'contract');
                   } else if (formData.tenantType === "Night Market") {
                       baseKeys.push('communityTax', 'policeClearance');
                   }
