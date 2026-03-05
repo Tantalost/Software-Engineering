@@ -48,7 +48,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const bellRef = useRef(null);
   const userRef = useRef(null);
 
-  const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
+  const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:10000").replace(/\/api\/?$/, '');
 
   // Helper to safely format image URLs whether they are relative or absolute
   const getImageUrl = (uri) => {
@@ -63,7 +63,8 @@ const Topbar = ({ title, onMenuClick }) => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`);
+      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
+      const res = await fetch(`${baseUrl}/api/notifications`);
       if (res.ok) {
         const data = await res.json();
         const myRole = localStorage.getItem("authRole") || "superadmin";
@@ -79,7 +80,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const fetchAdminBroadcasts = async () => {
     setIsLoadingBroadcasts(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/broadcasts/admin`);
+      const res = await fetch(`${BASE_URL}/api/broadcasts/admin`);
       if (res.ok) {
         const data = await res.json();
         setAdminBroadcasts(data);
@@ -94,7 +95,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const confirmDeleteBroadcast = async () => {
     if (!postToDelete) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/broadcasts/${postToDelete}`, {
+      const res = await fetch(`${BASE_URL}/api/broadcasts/${postToDelete}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -178,8 +179,8 @@ const Topbar = ({ title, onMenuClick }) => {
     setIsSubmitting(true);
     try {
       const url = editMode 
-        ? `${import.meta.env.VITE_API_URL}/api/broadcasts/${editId}` 
-        : `${import.meta.env.VITE_API_URL}/api/broadcasts`;
+        ? `${BASE_URL}/api/broadcasts/${editId}` 
+        : `${BASE_URL}/api/broadcasts`;
       
       const res = await fetch(url, {
         method: editMode ? 'PUT' : 'POST',
@@ -213,7 +214,7 @@ const Topbar = ({ title, onMenuClick }) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/${notifId}/read`, {
+      const res = await fetch(`${BASE_URL}/api/notifications/${notifId}/read`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

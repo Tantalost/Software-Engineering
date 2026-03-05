@@ -4,7 +4,7 @@ import LOGO from "../assets/LOGO.png";
 import LoginBackground from "../components/login/LoginBackground";
 import LoginCard from "../components/login/LoginCard";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
 
 const roleNames = {
   superadmin: "Super Admin",

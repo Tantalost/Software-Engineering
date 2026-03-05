@@ -34,8 +34,8 @@ import { sendNotification } from "../utils/notificationService.js";
 import { submitPageReport } from "../utils/reportService.js";
 import { sendBroadcast, archiveTenantRecord, requestBulkDeletion } from "../services/tenantServices.js";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`;
-const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
+const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
 
 const TenantLease = () => {
     const [searchQuery, setSearchQuery] = useState("");

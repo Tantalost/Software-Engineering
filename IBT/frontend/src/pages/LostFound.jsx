@@ -52,7 +52,7 @@ const LostFound = () => {
     const [selectedIds, setSelectedIds] = useState([]);
 
     const role = localStorage.getItem("authRole") || "superadmin";
-    const API_URL = `${import.meta.env.VITE_API_URL}/api/lostfound`;
+    const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/lostfound`;
 
 
     const [newItem, setNewItem] = useState({

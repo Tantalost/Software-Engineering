@@ -3,7 +3,7 @@ import Layout from "../components/layout/Layout";
 import DeleteModal from "../components/common/DeleteModal";
 import { CheckCircle, XCircle, X, UserX, ShieldCheck, Send } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
 
 const roleLabels = {
     superadmin: "Super Admin",
