@@ -17,8 +17,8 @@ Revisions for web general
 
 (Jayna)
 NEW TO DO LIST (Report Module)
-View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container.
-Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🔴 **To be Fixed**
+View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
+Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
 
 (Ven)
 NEW TO DO LIST (Parking Module)
