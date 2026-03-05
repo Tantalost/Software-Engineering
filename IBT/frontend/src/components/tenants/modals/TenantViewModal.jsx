@@ -122,7 +122,7 @@ const TenantViewModal = ({ viewRow, onClose }) => {
   const getFullUrl = (filename) => {
     if (!filename) return null;
     if (filename.startsWith('http')) return filename;
-    return `${API_URL}/files/${filename}`; 
+    return `${API_URL}/stalls/doc/${filename}`;
   };
 
   const documentList = [
@@ -134,6 +134,17 @@ const TenantViewModal = ({ viewRow, onClose }) => {
     { key: 'communityTax', label: "Community Tax", url: getFullUrl(viewRow.documents?.communityTax || viewRow.communityTaxUrl) },
     { key: 'policeClearance', label: "Police Clearance", url: getFullUrl(viewRow.documents?.policeClearance || viewRow.policeClearanceUrl) }
   ].filter(doc => doc.url);
+
+  const parseFeeBreakdown = (data) => {
+    if (!data) return {};
+    if (typeof data === 'string') {
+        try { return JSON.parse(data); } 
+        catch (e) { return {}; }
+    }
+    return data;
+  };
+  
+  const fees = parseFeeBreakdown(viewRow.feeBreakdown);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -171,15 +182,33 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             </div>
           </section>
 
-          <section>
+         <section>
             <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Financial Details
+              Financial Breakdown
             </h4>
-            <div className="grid grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <Field label="Rent Amount" value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString()}` : "₱0.00"} />
-                <Field label="Utility Fee" value={viewRow.utilityAmount ? `₱${Number(viewRow.utilityAmount).toLocaleString()}` : "₱0.00"} />
-                <Field label="Total Due" value={viewRow.totalAmount ? `₱${Number(viewRow.totalAmount).toLocaleString()}` : "₱0.00"} />
+            
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <Field label="Rent Amount" value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString()}` : "₱0.00"} />
+                    <Field label="Garbage Fee" value={`₱${Number(fees.garbageFee || 0).toLocaleString()}`} />
+                    <Field label="Permit Fee" value={`₱${Number(fees.permitFee || 0).toLocaleString()}`} />
+                    <Field label="Business Taxes" value={`₱${Number(fees.businessTaxes || 0).toLocaleString()}`} />
+                    <Field label="Electricity" value={`₱${Number(fees.electricity || 0).toLocaleString()}`} />
+                    <Field label="Water" value={`₱${Number(fees.water || 0).toLocaleString()}`} />
+                    
+                    {Number(fees.otherAmount) > 0 && (
+                        <Field label={`Others (${fees.otherSpecify || 'Unspecified'})`} value={`₱${Number(fees.otherAmount).toLocaleString()}`} />
+                    )}
+                </div>
+                
+                <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-4">
+                    <Field label="Total Additional Fees" value={viewRow.utilityAmount ? `₱${Number(viewRow.utilityAmount).toLocaleString()}` : "₱0.00"} />
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Due</p>
+                        <p className="font-bold text-emerald-600 text-lg">{viewRow.totalAmount ? `₱${Number(viewRow.totalAmount).toLocaleString()}` : "₱0.00"}</p>
+                    </div>
+                </div>
             </div>
           </section>
 
