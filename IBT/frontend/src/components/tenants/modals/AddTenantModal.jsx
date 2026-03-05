@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Loader2, ZoomIn } from "lucide-react";
 
 import CryptoJS from "crypto-js";
@@ -6,7 +6,7 @@ import CryptoJS from "crypto-js";
 
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
 
-const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null }) => {
+const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 1120 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
@@ -24,7 +24,19 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   const [showMapModal, setShowMapModal] = useState(false);
   const [tempSelectedSlots, setTempSelectedSlots] = useState([]); 
 
-  const [productCategory, setProductCategory] = useState("Food and Beverages");
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (showMapModal && formData.tenantType === 'Night Market' && scrollRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+        }
+      }, 50);
+    }
+  }, [showMapModal, formData.tenantType]);
+
+  const [productCategory, setProductCategory] = useState("food_non_alcoholic");
   const [otherProductDetails, setOtherProductDetails] = useState("");
 
   const [rentAmount, setRentAmount] = useState(0);
@@ -92,15 +104,17 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 barangayClearance: initialData.documents.barangayClearance || null,
                 proofOfReceipt: initialData.documents.proofOfReceipt || null,
                 contract: initialData.documents.contract || null,
+                communityTax: initialData.documents.communityTax || null, 
+                policeClearance: initialData.documents.policeClearance || null,
             });
         }
 
-        const incomingProduct = initialData.products || "Food and Beverages";
-        if (["Food and Beverages", "Clothing"].includes(incomingProduct)) {
+        const incomingProduct = initialData.products || "food_non_alcoholic";
+        if (["food_non_alcoholic", "clothes_textiles", "accessories", "footwears", "kitchenwares", "agricultural_produce"].includes(incomingProduct)) {
           setProductCategory(incomingProduct);
           setOtherProductDetails("");
         } else {
-          setProductCategory("Other");
+          setProductCategory("other");
           setOtherProductDetails(incomingProduct);
         }
 
@@ -113,17 +127,14 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             referenceNo: generateRef(), 
             email: "",
             contactNo: "",
-            tenantType: "Permanent", 
-            _id: "", 
+            tenantType: activeTab === "night" ? "Night Market" : "Permanent", 
+            _id: "",
         });
-        setProductCategory("Food and Beverages");
+        setProductCategory("food_non_alcoholic");
         setOtherProductDetails("");
         setDocuments({
-            businessPermit: null,
-            validID: null,
-            barangayClearance: null,
-            proofOfReceipt: null,
-            contract: null,
+            businessPermit: null, validID: null, barangayClearance: null, proofOfReceipt: null, contract: null,
+            communityTax: null, policeClearance: null 
         });
         setTempSelectedSlots([]); 
       }
@@ -155,7 +166,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         calculatedDueDate = formatDateTimeForInput(d);
       }
     } else {
-      baseRent = 160 * 7; 
+      // Use the dynamic price passed from the parent component instead of hardcoding 160 * 7
+      baseRent = defaultNightPrice; 
       if (startDate) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + 7); 
@@ -166,7 +178,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     setRentAmount(baseRent * slotCount);
     setDueDate(calculatedDueDate);
 
-  }, [formData.tenantType, startDate, formData.slotNo]); 
+  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice]);
 
   useEffect(() => {
     setTotalAmount(parseFloat(rentAmount || 0) + parseFloat(utilityAmount || 0));
@@ -220,20 +232,22 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         const processedDocs = { ...documents };
         
         for (const key of Object.keys(processedDocs)) {
-            const file = processedDocs[key];
-            if (file && typeof file !== 'string') {
-               
-                processedDocs[key] = await encryptFile(file);
-               
-                processedDocs[key].name = file.name; 
-            }
+          const file = processedDocs[key];
+          if (file && typeof file !== 'string') {
+       
+            const encryptedBlob = await encryptFile(file);
+        
+            processedDocs[key] = new File([encryptedBlob], file.name, {
+              type: 'application/octet-stream'
+            });
+          }
         }
 
         const newTenant = {
             ...restOfFormData,
             tenantName: combinedName,
             ...(_id ? { _id } : {}),
-            products: productCategory === "Other" ? otherProductDetails : productCategory,
+            products: productCategory === "other" ? otherProductDetails : productCategory,
             rentAmount,
             utilityAmount: parseFloat(utilityAmount),
             totalAmount,
@@ -388,32 +402,81 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                         </div>
             
                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto flex-1">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                            {Array.from({ length: 30 }).map((_, i) => {
-                                let slotLabel = formData.tenantType === "Permanent" ? `A-${101 + i}` : `NM-${(i + 1).toString().padStart(2, '0')}`;
-                                const tenant = tenants.find(r => 
-                                    (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) 
-                                    && (r.tenantType === formData.tenantType)
-                                    && r.status !== "Available" 
-                                );
-                                const isSelected = tempSelectedSlots.includes(slotLabel);
-                                let statusColor = "bg-white border-2 border-dashed border-slate-300 text-slate-400 hover:border-emerald-500 hover:text-emerald-500";
-                                let statusText = "Available";
-                                if (tenant) {
-                                    statusText = tenant.tenantName || tenant.name;
-                                    statusColor = "bg-slate-200 text-slate-500 border-transparent opacity-60 cursor-not-allowed";
-                                } else if (isSelected) {
-                                    statusColor = "bg-blue-500 text-white border-2 border-blue-600 shadow-md transform scale-105";
-                                    statusText = "Selected";
-                                }
-                                return (
-                                <div key={slotLabel} onClick={() => handleToggleSlot(slotLabel, tenant)} className={`aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200 ${statusColor}`}>
-                                    <span className="text-lg font-bold opacity-90">{slotLabel}</span>
-                                    <span className="text-[10px] text-center truncate w-full px-1 leading-tight mt-1">{statusText}</span>
-                                </div>
-                                );
-                            })}
-                            </div>
+                           
+                            {(() => {
+                             
+                              const renderSlotBox = (slotLabel) => {
+                                  const tenant = tenants.find(r => 
+                                      (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) 
+                                      && (r.tenantType === formData.tenantType)
+                                      && r.status !== "Available" 
+                                  );
+                                  const isSelected = tempSelectedSlots.includes(slotLabel);
+                                  
+                                  let statusColor = "bg-white border-2 border-dashed border-slate-300 text-slate-400 hover:border-emerald-500 hover:text-emerald-500";
+                                  let statusText = "Available";
+                                  
+                                  if (tenant) {
+                                      statusText = tenant.tenantName || tenant.name;
+                                      statusColor = "bg-slate-200 text-slate-500 border-transparent opacity-60 cursor-not-allowed";
+                                  } else if (isSelected) {
+                                      statusColor = "bg-blue-500 text-white border-2 border-blue-600 shadow-md transform scale-105";
+                                      statusText = "Selected";
+                                  }
+
+                                  const isNightMarket = formData.tenantType === "Night Market";
+                                  const baseClasses = isNightMarket 
+                                      ? "w-14 h-14 flex-shrink-0 rounded-lg flex flex-col items-center justify-center p-1 cursor-pointer transition-all duration-200"
+                                      : "aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200";
+                                  
+                                  const displayLabel = isNightMarket ? slotLabel.replace('NM-', '') : slotLabel;
+
+                                  return (
+                                      <div key={slotLabel} onClick={() => handleToggleSlot(slotLabel, tenant)} className={`${baseClasses} ${statusColor}`} title={`${slotLabel} - ${statusText}`}>
+                                          <span className={`${isNightMarket ? 'text-sm' : 'text-lg'} font-bold opacity-90`}>{displayLabel}</span>
+                                          <span className="text-[10px] text-center truncate w-full px-1 leading-tight mt-1">{statusText}</span>
+                                      </div>
+                                  );
+                              };
+
+                             
+                              if (formData.tenantType === "Permanent") {
+                                  return (
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                                          {Array.from({ length: 30 }).map((_, i) => renderSlotBox(`A-${101 + i}`))}
+                                      </div>
+                                  );
+                              } else {
+                                 
+                                  return (
+                                      <div ref={scrollRef} className="overflow-x-auto pb-4 custom-scrollbar">
+                                          <div className="min-w-max flex flex-col items-start bg-slate-200/50 p-4 rounded-xl border border-slate-200">
+                                           
+                                              <div className="flex flex-row items-center mb-10">
+                                                  <div className="flex flex-row gap-1">{[32, 31, 30, 29, 28, 27, 26].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                                  <div className="w-8 flex-shrink-0"></div>
+                                                  <div className="flex flex-row gap-1">{[25, 24, 23, 22, 21, 20, 19, 18].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                                  <div className="w-10 flex-shrink-0"></div>
+                                                  <div className="flex flex-row gap-1">{[17, 16, 15, 14, 12, 11, 10, 9].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                                  <div className="w-8 flex-shrink-0"></div>
+                                                  <div className="flex flex-row gap-1">{[8, 7, 6, 5, 4, 3, 2, 1].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                              </div>
+                                             
+                                              <div className="flex flex-row items-center">
+                                                  <div className="flex flex-row gap-1">{[33, 34, 35, 36, 37, 38, 39].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                                  <div className="w-8 flex-shrink-0"></div>
+                                                  <div className="flex flex-row gap-1">{[40, 41, 42, 43, 44, 45, 46, 47].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                                  <div className="w-10 flex-shrink-0"></div>
+                                                  <div className="flex flex-row gap-1">{[48, 49, 50, 51, 53, 54, 55, 56].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                                  <div className="w-8 flex-shrink-0"></div>
+                                                  <div className="flex flex-row gap-1">{[57, 58, 59, 60, 61, 62, 63, 64].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  );
+                              }
+                            })()}
+                           
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end gap-3">
@@ -461,12 +524,16 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Category</label>
                   <select className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={productCategory} onChange={(e) => setProductCategory(e.target.value)}>
-                    <option value="Food and Beverages">Food and Beverages</option>
-                    <option value="Clothing">Clothing</option>
-                    <option value="Other">Other (Please specify)</option>
+                    <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
+                    <option value="clothes_textiles">Clothes and textiles</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="footwears">Footwears</option>
+                    <option value="kitchenwares">Kitchenwares</option>
+                    <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
+                    <option value="other">Others, please specify</option>
                   </select>
                 </div>
-                {productCategory === "Other" && (
+                {productCategory === "other" && (
                   <div className="flex flex-col gap-1 animate-fadeIn">
                     <label className="text-xs font-semibold text-slate-600">Specify Product</label>
                     <input type="text" required placeholder="Enter product details..." className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={otherProductDetails} onChange={(e) => setOtherProductDetails(e.target.value)} />
@@ -523,6 +590,9 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
                   if (formData.tenantType === "Permanent") {
                     docFields.push({ label: 'Signed Contract', key: 'contract' });
+                  } else if (formData.tenantType === "Night Market") {
+                    docFields.push({ label: 'Community Tax', key: 'communityTax' });
+                    docFields.push({ label: 'Police Clearance', key: 'policeClearance' });
                   }
 
                   return docFields.map(({ label, key }) => {

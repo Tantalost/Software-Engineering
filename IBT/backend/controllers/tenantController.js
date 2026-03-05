@@ -1,6 +1,7 @@
 import Tenant from "../models/Tenant.js";
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
+import Settings from "../models/Settings.js";
 
 export const getTenants = async (req, res) => {
   try {
@@ -48,7 +49,6 @@ export const getArchivedTenants = async (req, res) => {
   }
 };
 
-// --- HARD DELETE ---
 export const deleteTenant = async (req, res) => {
   try {
     await Tenant.findByIdAndDelete(req.params.id);
@@ -86,14 +86,24 @@ export const createTenant = async (req, res) => {
     const businessPermit = getFile('businessPermit');
     const validID = getFile('validID');
     const contract = getFile('contract');
+    const barangayClearance = getFile('barangayClearance'); 
+    const proofOfReceipt = getFile('proofOfReceipt');
+    const communityTax = getFile('communityTax');       
+    const policeClearance = getFile('policeClearance');
 
     const tenantData = {
         ...req.body,
         documents: {
-            businessPermit: businessPermit,
-            validID: validID,
-            contract: contract
-        }
+           
+            ...(req.body.documents || {}),
+            businessPermit: businessPermit || req.body.documents?.businessPermit,
+            validID: validID || req.body.documents?.validID,
+            contract: contract || req.body.documents?.contract,
+            barangayClearance: barangayClearance || req.body.documents?.barangayClearance, 
+            proofOfReceipt: proofOfReceipt || req.body.documents?.proofOfReceipt,
+            communityTax: communityTax || req.body.documents?.communityTax,             
+            policeClearance: policeClearance || req.body.documents?.policeClearance 
+      }
     };
 
     const newTenant = new Tenant(tenantData);
@@ -164,10 +174,19 @@ export const updateTenant = async (req, res) => {
     const newPermit = getFile('businessPermit');
     const newID = getFile('validID');
     const newContract = getFile('contract');
+    const newClearance = getFile('barangayClearance'); 
+    const newReceipt = getFile('proofOfReceipt');
+    const newCommunityTax = getFile('communityTax');      
+    const newPoliceClearance = getFile('policeClearance');     
 
     if (newPermit) updateData['documents.businessPermit'] = newPermit;
     if (newID) updateData['documents.validID'] = newID;
     if (newContract) updateData['documents.contract'] = newContract;
+    if (newClearance) updateData['documents.barangayClearance'] = newClearance; 
+    if (newReceipt) updateData['documents.proofOfReceipt'] = newReceipt;
+    if (newCommunityTax) updateData['documents.communityTax'] = newCommunityTax;             
+    if (newPoliceClearance) updateData['documents.policeClearance'] = newPoliceClearance;
+
 
     const updatedTenant = await Tenant.findByIdAndUpdate(
       req.params.id,
@@ -179,6 +198,64 @@ export const updateTenant = async (req, res) => {
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Update Tenant Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- DYNAMIC PRICING FOR NIGHT MARKET ---
+
+// Get default night market price from settings
+export const getDefaultNightPrice = async (req, res) => {
+  try {
+    const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150;
+    res.status(200).json({ defaultPrice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update default price and apply to unpaid/due Night Market tenants
+export const updateAllNightMarketPrices = async (req, res) => {
+  try {
+    const { newPrice } = req.body;
+
+    if (!newPrice || isNaN(newPrice) || newPrice < 0) {
+      return res.status(400).json({ error: "Valid price is required." });
+    }
+
+    const priceValue = parseFloat(newPrice);
+    const priceString = priceValue.toString(); // For TenantApplication which uses String
+
+    // 1. Update or create the global price setting
+    await Settings.findOneAndUpdate(
+      { key: "defaultNightPrice" },
+      { key: "defaultNightPrice", value: priceValue },
+      { upsert: true, new: true }
+    );
+
+    // 2. Update existing active tenants who have unpaid "Due" balances
+    const tenantResult = await Tenant.updateMany(
+      { tenantType: "Night Market", status: "Due" },
+      { rentAmount: priceValue }
+    );
+
+    // 3. Update pending applications that haven't reached the payment review stage yet
+    // Assuming 'floor' is where "Night Market" is stored based on your React transfer logic
+    const applicationResult = await TenantApplication.updateMany(
+      { 
+        floor: "Night Market", 
+        status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED'] } 
+      },
+      { paymentAmount: priceString }
+    );
+
+    res.status(200).json({
+      message: `Updated global price. Modified ${tenantResult.modifiedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
+      tenantModifiedCount: tenantResult.modifiedCount,
+      applicationModifiedCount: applicationResult.modifiedCount
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };

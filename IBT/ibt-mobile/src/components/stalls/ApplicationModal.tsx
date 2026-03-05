@@ -60,17 +60,20 @@ export default function ApplicationModal({
                 <TextInput label="Email Address" value={formData.email} onChangeText={(text) => setFormData({ ...formData, email: text })} keyboardType="email-address" autoCapitalize="none" mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
 
                 <Text variant="titleMedium" style={styles.sectionHeader}>2. Business Details</Text>
-                <Text style={{marginBottom: 5, color: '#555'}}>Product Type:</Text>
+                <Text style={{marginBottom: 5, color: '#555'}}>Product Category:</Text>
                 
                 <RadioButton.Group onValueChange={value => setFormData({ ...formData, productType: value })} value={formData.productType}>
-                  <View style={styles.radioRow}><RadioButton value="food" color={colors.primary} /><Text style={{color: colors.black}}>Food & Beverages</Text></View>
-                  <View style={styles.radioRow}><RadioButton value="dry_goods" color={colors.primary} /><Text style={{color: colors.black}}>Dry Goods (Clothes, etc.)</Text></View>
-                  <View style={styles.radioRow}><RadioButton value="accessories" color={colors.primary} /><Text style={{color: colors.black}}>Accessories / Gadgets</Text></View>
-                  <View style={styles.radioRow}><RadioButton value="other" color={colors.primary} /><Text style={{color: colors.black}}>Others</Text></View>
+                  <View style={styles.radioRow}><RadioButton value="food_non_alcoholic" color={colors.primary} /><Text style={{color: colors.black}}>Food and non-alcoholic beverages</Text></View>
+                  <View style={styles.radioRow}><RadioButton value="clothes_textiles" color={colors.primary} /><Text style={{color: colors.black}}>Clothes and textiles</Text></View>
+                  <View style={styles.radioRow}><RadioButton value="accessories" color={colors.primary} /><Text style={{color: colors.black}}>Accessories</Text></View>
+                  <View style={styles.radioRow}><RadioButton value="footwears" color={colors.primary} /><Text style={{color: colors.black}}>Footwears</Text></View>
+                  <View style={styles.radioRow}><RadioButton value="kitchenwares" color={colors.primary} /><Text style={{color: colors.black}}>Kitchenwares</Text></View>
+                  <View style={styles.radioRow}><RadioButton value="agricultural_produce" color={colors.primary} /><Text style={{color: colors.black}}>Fruits, vegetables and other agricultural produce</Text></View>
+                  <View style={styles.radioRow}><RadioButton value="other" color={colors.primary} /><Text style={{color: colors.black}}>Others, please specify</Text></View>
                 </RadioButton.Group>
 
                 {formData.productType === 'other' && (
-                  <TextInput label="Please specify product" value={formData.otherProduct} onChangeText={(text) => setFormData({ ...formData, otherProduct: text })} mode="outlined" outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} textColor='black' />
+                  <TextInput label="Please specify product category" value={formData.otherProduct} onChangeText={(text) => setFormData({ ...formData, otherProduct: text })} mode="outlined" outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} textColor='black' />
                 )}
 
                 <Text variant="titleMedium" style={styles.sectionHeader}>3. Requirements</Text>
@@ -79,6 +82,8 @@ export default function ApplicationModal({
                 <FileUploadButton label="Business Permit" fileKey="permit" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
                 <FileUploadButton label="Valid ID" fileKey="validId" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
                 <FileUploadButton label="Brgy Clearance" fileKey="clearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                <FileUploadButton label="Community Tax Certificate" fileKey="communityTax" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                <FileUploadButton label="Police Clearance" fileKey="policeClearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
 
                 <View style={styles.billingSummary}>
                     <Text style={[{fontWeight:'bold', color: colors.black }]}>Initial Payment:</Text>
@@ -105,7 +110,9 @@ export default function ApplicationModal({
                 <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Fee:</Text><Text style={styles.reviewValue}>{modalBilling.amountLabel}</Text></View>
 
                 <View style={{marginTop: 20, padding: 10, backgroundColor: '#e8f5e9', borderRadius: 5}}>
-                    <Text style={{color: '#2e7d32', fontSize: 12, fontStyle:'italic'}}><Icon name="check-circle" /> Requirements attached: Permit, Valid ID, Clearance.</Text>
+                    <Text style={{color: '#2e7d32', fontSize: 12, fontStyle:'italic'}}>
+                        <Icon name="check-circle" size={14} /> Requirements attached: Permit, Valid ID, Clearance{selectedFloor === 'Night Market' ? ', Community Tax, Police Clearance' : ''}.
+                    </Text>
                 </View>
 
                 <View style={styles.modalActions}>

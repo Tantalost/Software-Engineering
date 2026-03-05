@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import jsPDF from 'jspdf';
 import autoTable from "jspdf-autotable";
-import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History } from "lucide-react";
+import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle } from "lucide-react";
 
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
@@ -50,6 +50,11 @@ const TenantLease = () => {
     const [waitlistData, setWaitlistData] = useState([]);
     const [alerts, setAlerts] = useState([]);
 
+    const [defaultNightPrice, setDefaultNightPrice] = useState(150);
+    const [showSetPriceModal, setShowSetPriceModal] = useState(false);
+    const [newNightPrice, setNewNightPrice] = useState("");
+    const [isSettingPrice, setIsSettingPrice] = useState(false);
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [showNotify, setShowNotify] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
@@ -95,13 +100,90 @@ const TenantLease = () => {
     });
 
     useEffect(() => {
+        const fetchDefaultNightPrice = async () => {
+            try {
+                // Note: Make sure this endpoint exists on your backend!
+                const response = await fetch(`${API_URL}/tenants/night-market/default-price`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setDefaultNightPrice(data.defaultPrice);
+                    localStorage.setItem("defaultNightPrice", data.defaultPrice.toString());
+                }
+            } catch (error) {
+                console.error("Error fetching default night price:", error);
+                const saved = localStorage.getItem("defaultNightPrice");
+                if (saved) setDefaultNightPrice(Number(saved));
+            }
+        };
+        fetchDefaultNightPrice();
+    }, []);
+
+    const handleSetPrice = async () => {
+        if (!newNightPrice || isNaN(newNightPrice)) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid price.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        const priceValue = Number(newNightPrice);
+        if (priceValue <= 0) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Price must be greater than 0.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        setIsSettingPrice(true);
+
+        try {
+            // Note: Ensure you have this PUT route set up in your Node/Express backend!
+            const response = await fetch(`${API_URL}/tenants/update-night-market-prices`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newPrice: priceValue }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to update prices in database");
+            }
+
+            const result = await response.json();
+
+            setDefaultNightPrice(priceValue);
+            localStorage.setItem("defaultNightPrice", priceValue.toString());
+
+            await fetchTenants();
+
+            await logActivity(
+                role,
+                "SET_NIGHT_MARKET_PRICE",
+                `Set default night market fee to ₱${newNightPrice} (Updated ${result.modifiedCount || 0} tenants)`,
+                "Tenants",
+            );
+
+            setShowSetPriceModal(false);
+            setNewNightPrice("");
+
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: `Price updated successfully! ${result.modifiedCount || 0} tenants updated.`,
+                autoClose: true,
+                duration: 4000
+            });
+        } catch (err) {
+            console.error(err);
+            setNotificationState({ isOpen: true, type: 'error', message: "Failed to set price: " + err.message, autoClose: true, duration: 3000 });
+        } finally {
+            setIsSettingPrice(false);
+        }
+    };
+
+    useEffect(() => {
         fetchTenants();
         fetchWaitlist();
 
         const interval = setInterval(() => {
             fetchTenants();
             fetchWaitlist();
-        }, 30000); 
+        }, 30000);
 
         return () => clearInterval(interval);
     }, []);
@@ -184,19 +266,49 @@ const TenantLease = () => {
 
     const mapStats = useMemo(() => {
         let available = 0; let paid = 0; let revenue = 0;
-        const SECTION_CAPACITY = 30;
-        for (let i = 0; i < SECTION_CAPACITY; i++) {
-            let slotLabel = activeTab === "permanent" ? `A-${101 + i}` : `NM-${(i + 1).toString().padStart(2, '0')}`;
+        let totalSlots = 0;
+        let slotLabels = [];
+
+        if (activeTab === "permanent") {
+            totalSlots = 30;
+            for (let i = 0; i < totalSlots; i++) {
+                slotLabels.push(`A-${101 + i}`);
+            }
+        } else {
+
+            const nmNumbers = [
+                32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18,
+                17, 16, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+                33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+                48, 49, 50, 51, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64
+            ];
+            totalSlots = nmNumbers.length;
+            nmNumbers.forEach(num => slotLabels.push(`NM-${num.toString().padStart(2, '0')}`));
+        }
+
+        const countedTenantIds = new Set();
+
+        slotLabels.forEach(slotLabel => {
             const tenant = records.find(r =>
-                (r.slotNo === slotLabel || r.slotno === slotLabel) &&
+
+                (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) &&
                 (activeTab === "permanent" ? (r.tenantType === "Permanent" || !r.tenantType) : r.tenantType === "Night Market")
             );
+
             if (tenant && tenant.status !== "Available") {
                 paid++;
-                revenue += (parseFloat(tenant.rentAmount) || 0) + (parseFloat(tenant.utilityAmount) || 0);
-            } else available++;
-        }
-        return { availableSlots: available, nonAvailableSlots: paid, totalSlots: SECTION_CAPACITY, totalRevenue: revenue };
+
+                const tenantId = tenant._id || tenant.id;
+                if (!countedTenantIds.has(tenantId)) {
+                    countedTenantIds.add(tenantId);
+                    revenue += (parseFloat(tenant.rentAmount) || 0) + (parseFloat(tenant.utilityAmount) || 0);
+                }
+            } else {
+                available++;
+            }
+        });
+
+        return { availableSlots: available, nonAvailableSlots: paid, totalSlots: totalSlots, totalRevenue: revenue };
     }, [records, activeTab]);
 
     const handleSubmitReport = async () => {
@@ -460,12 +572,12 @@ const TenantLease = () => {
         try {
             const waitlistId = transferApplicant?.id || transferApplicant?._id;
             const formData = new FormData();
-            
+
             Object.keys(newTenant).forEach(key => {
                 if (key === 'documents') return;
                 formData.append(key, newTenant[key]);
             });
-            
+
             if (waitlistId) {
                 formData.append('transferWaitlistId', waitlistId);
             }
@@ -480,57 +592,71 @@ const TenantLease = () => {
                 if (newTenant.documents.contract instanceof File) {
                     formData.append('contract', newTenant.documents.contract);
                 }
+
+                if (newTenant.documents.barangayClearance instanceof File) {
+                    formData.append('barangayClearance', newTenant.documents.barangayClearance);
+                }
+                if (newTenant.documents.proofOfReceipt instanceof File) {
+                    formData.append('proofOfReceipt', newTenant.documents.proofOfReceipt);
+                }
+
+                if (newTenant.documents.communityTax instanceof File) {
+                    formData.append('communityTax', newTenant.documents.communityTax);
+                }
+                if (newTenant.documents.policeClearance instanceof File) {
+                    formData.append('policeClearance', newTenant.documents.policeClearance);
+                }
             }
 
             const response = await fetch(`${API_URL}/tenants`, {
                 method: 'POST',
-                body: formData, 
+                body: formData,
             });
-            
+
             if (response.ok) {
                 setShowAddModal(false);
-                setNotificationState({ 
-                    isOpen: true, 
-                    type: 'success', 
-                    message: "Tenant Added Successfully! Welcome email sent.", 
-                    autoClose: true, 
-                    duration: 3000 
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Tenant Added Successfully! Welcome email sent.",
+                    autoClose: true,
+                    duration: 3000
                 });
-                await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.name}`, "Tenants");
-                fetchTenants(); 
-                fetchWaitlist(); 
+                await logActivity(role, "ADD_TENANT", `Added new tenant: ${newTenant.tenantName || newTenant.name || 'Unknown'}`, "Tenants");
+                fetchTenants();
+                fetchWaitlist();
                 setTransferApplicant(null);
             } else {
                 const err = await response.json();
                 setNotificationState({ isOpen: true, type: 'error', message: `Error saving to database: ${err.error || 'Unknown error'}`, autoClose: true, duration: 3000 });
             }
-        } catch (e) { 
-            console.error(e); 
+        } catch (e) {
+            console.error(e);
             setNotificationState({ isOpen: true, type: 'error', message: "Server Error: Could not save tenant.", autoClose: true, duration: 3000 });
         }
     };
 
     const handleRejectApplicant = async (id, reason) => {
         try {
-            const response = await fetch(`${API_URL}/waitlist/${id}`, { 
+            const response = await fetch(`${API_URL}/waitlist/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    status: "REJECTED", 
-                    rejectionReason: reason 
+                body: JSON.stringify({
+                    status: "REJECTED",
+                    rejectionReason: reason
                 })
             });
 
             if (response.ok) {
-                setNotificationState({ 
-                    isOpen: true, 
-                    type: 'success', 
-                    message: "Application rejected. The applicant has been notified via email.", 
-                    autoClose: true, 
-                    duration: 3000 
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Application rejected. The applicant has been notified via email.",
+                    autoClose: true,
+                    duration: 3000
                 });
                 await logActivity(role, "REJECT_APPLICANT", `Rejected waitlist applicant ID #${id}. Reason: ${reason}`, "Tenants");
-                
+
                 fetchWaitlist();
                 if (showReviewModal) setShowReviewModal(false);
             } else {
@@ -549,7 +675,7 @@ const TenantLease = () => {
 
         try {
             const idToArchive = rowToArchive._id || rowToArchive.id;
-            
+
             // Call the new PATCH archive endpoint
             const res = await fetch(`${API_URL}/tenants/${idToArchive}/archive`, {
                 method: "PATCH",
@@ -567,7 +693,7 @@ const TenantLease = () => {
                 autoClose: true,
                 duration: 2000
             });
-            
+
             fetchTenants(); // Refresh the table
         } catch (e) {
             console.error("Failed to archive:", e);
@@ -649,6 +775,59 @@ const TenantLease = () => {
         }));
     };
 
+    const handleSingleExportPDF = (t) => {
+        if (!t) return;
+
+        const doc = new jsPDF("p", "mm", "a4");
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // 1. Add Header (Same as Bulk Export)
+        doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+
+        // 2. Title & Header Info
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("TENANT LEASE SUMMARY", pageWidth / 2, 45, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 15, 55);
+        doc.text(`Operator: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
+
+        // 3. Data Table
+        autoTable(doc, {
+            startY: 70,
+            margin: { left: 15, right: 15 },
+            head: [["Description", "Details"]],
+            body: [
+                ["Slot Number", t.slotNo || "-"],
+                ["Reference Number", t.referenceNo || t.referenceno || "-"],
+                ["Tenant Name", t.tenantName || t.name || "-"],
+                ["Email Address", t.email || "-"],
+                ["Contact Number", t.contactNo || "-"],
+                ["Lease Period", `${formatDate(t.StartDateTime)} to ${formatDate(t.DueDateTime || t.EndDateTime)}`],
+                ["Rent Amount", `PHP ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                ["Utility Amount", `PHP ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                ["Total Due", `PHP ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                ["Current Status", t.status || "-"]
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [220, 38, 38] }, // Using the Red-600 color from your bulk report
+            styles: { cellPadding: 5, fontSize: 10 },
+            columnStyles: {
+                0: { fontStyle: 'bold', width: 50 },
+            }
+        });
+
+        // 4. Add Footer (Same as Bulk Export)
+        const footerY = pageHeight - 30;
+        doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, 30);
+
+        doc.save(`Lease_Summary_${t.slotNo}_${t.tenantName?.replace(/\s+/g, '_')}.pdf`);
+        logActivity(role, "EXPORT_PDF", `Exported individual PDF: ${t.tenantName}`, "Tenants");
+    };
+
     const handleExportExcel = () => {
         if (filtered.length === 0) return alert("No records to export.");
 
@@ -657,11 +836,11 @@ const TenantLease = () => {
 
         const rows = [
             ["", "", "TENANTS AND LEASE REPORTS", "", "", "", ""],
-            [], 
+            [],
             [`Date: ${dateStr}`, "", "", `No. of Payments: ${filtered.length}`, "", "", ""],
             [`Operator: ${operator}`, "", "", `Revenue: ₱${mapStats.totalRevenue.toFixed(2)}`, "", "", ""],
-            [], 
-            ["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"] 
+            [],
+            ["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]
         ];
 
         filtered.forEach((t) => {
@@ -693,7 +872,7 @@ const TenantLease = () => {
     const handleExportPDF = () => {
         if (filtered.length === 0) return alert("No records to export.");
 
-        const doc = new jsPDF("l", "mm", "a4"); 
+        const doc = new jsPDF("l", "mm", "a4");
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -724,11 +903,11 @@ const TenantLease = () => {
                 `₱${(t.utilityAmount || 0).toFixed(2)}`,
                 `₱${(t.totalAmount || 0).toFixed(2)}`
             ]),
-            headStyles: { fillColor: [220, 38, 38] }, 
+            headStyles: { fillColor: [220, 38, 38] },
             styles: { fontSize: 8, halign: 'center' },
             columnStyles: {
-                1: { halign: 'left' }, 
-                2: { halign: 'left' }, 
+                1: { halign: 'left' },
+                2: { halign: 'left' },
             },
             didDrawPage: (data) => {
                 doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
@@ -776,10 +955,24 @@ const TenantLease = () => {
                     <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center cursor-pointer" title='Add New Tenant'>
                         + Add New
                     </button>
-                    
+
                     {role === "superadmin" && (
                         <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer" title='Notify All Tenants'>
                             Broadcast
+                        </button>
+                    )}
+
+                    {role === "superadmin" && activeTab === "night" && (
+                        <button
+                            onClick={() => {
+                                setNewNightPrice(defaultNightPrice.toString());
+                                setShowSetPriceModal(true);
+                            }}
+                            className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-2"
+                            title='Set Night Market Price'
+                        >
+                            <Settings size={18} />
+                            <span className="hidden sm:inline">Set Price</span>
                         </button>
                     )}
 
@@ -809,7 +1002,7 @@ const TenantLease = () => {
                         {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
                     </button>
                 </div>
-        
+
                 <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                     <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
                     {(role === "superadmin" || role === "lease") && (
@@ -890,10 +1083,17 @@ const TenantLease = () => {
                 })}
                 actions={(row) => {
                     if (isSelectionMode) return null;
+                    const fullRecord = records.find(r => r.id === row.id);
                     return (
                         <div className="flex justify-end items-center space-x-2">
                             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
-                            <button onClick={() => generateRentStatementPDF(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Download Rent Statement"><Download size={16} /></button>
+                            <button
+                                onClick={() => handleSingleExportPDF(fullRecord)}
+                                className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
+                                title="Rent Statement"
+                            >
+                                <Download size={16} />
+                            </button>
                             <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
                             <button onClick={() => setArchiveRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer" title="Archive Record"><Archive size={16} /></button>
                             {(role === "superadmin") && (
@@ -958,6 +1158,8 @@ const TenantLease = () => {
                 onClose={() => { setShowAddModal(false); setTransferApplicant(null); }}
                 onSave={handleAddTenant}
                 tenants={records}
+                activeTab={activeTab}
+                defaultNightPrice={defaultNightPrice}
                 initialData={transferApplicant ? {
                     name: transferApplicant.name,
                     contactNo: transferApplicant.contact,
@@ -972,17 +1174,19 @@ const TenantLease = () => {
                         validID: transferApplicant.validIdUrl,
                         barangayClearance: transferApplicant.clearanceUrl,
                         proofOfReceipt: transferApplicant.receiptUrl,
-                        contract: transferApplicant.contractUrl
+                        contract: transferApplicant.contractUrl,
+                        communityTax: transferApplicant.communityTaxUrl, 
+                        policeClearance: transferApplicant.policeClearanceUrl 
                     }
                 } : null}
             />
 
             {editRow && (
-                <EditTenantLease 
-                    row={editRow} 
-                    tenants={records} 
-                    onClose={() => setEditRow(null)} 
-                    onSave={async (updatedData) => { 
+                <EditTenantLease
+                    row={editRow}
+                    tenants={records}
+                    onClose={() => setEditRow(null)}
+                    onSave={async (updatedData) => {
                         try {
                             const idToUpdate = updatedData._id || updatedData.id;
                             if (!idToUpdate) {
@@ -992,7 +1196,7 @@ const TenantLease = () => {
 
                             const formData = new FormData();
                             Object.keys(updatedData).forEach(key => {
-                                if (key === 'documents') return; 
+                                if (key === 'documents') return;
                                 formData.append(key, updatedData[key]);
                             });
 
@@ -1006,12 +1210,26 @@ const TenantLease = () => {
                                 if (updatedData.documents.contract instanceof File) {
                                     formData.append('contract', updatedData.documents.contract);
                                 }
+
+                                if (updatedData.documents.barangayClearance instanceof File) {
+                                    formData.append('barangayClearance', updatedData.documents.barangayClearance);
+                                }
+                                if (updatedData.documents.proofOfReceipt instanceof File) {
+                                    formData.append('proofOfReceipt', updatedData.documents.proofOfReceipt);
+                                }
+
+                                if (updatedData.documents.communityTax instanceof File) {
+                                    formData.append('communityTax', updatedData.documents.communityTax);
+                                }
+                                if (updatedData.documents.policeClearance instanceof File) {
+                                    formData.append('policeClearance', updatedData.documents.policeClearance);
+                                }
                             }
 
                             const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
                                 method: 'PUT',
-                                body: formData 
-                            }); 
+                                body: formData
+                            });
 
                             if (!response.ok) {
                                 const errorData = await response.json();
@@ -1019,23 +1237,23 @@ const TenantLease = () => {
                             }
                             setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
                             await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
-                            fetchTenants(); 
-                            setEditRow(null); 
-                        } catch (error) { 
-                            console.error("Update Error:", error); 
+                            fetchTenants();
+                            setEditRow(null);
+                        } catch (error) {
+                            console.error("Update Error:", error);
                             setNotificationState({ isOpen: true, type: 'error', message: `Failed to update record: ${error.message}`, autoClose: true, duration: 3000 });
                         }
                     }}
                 />
             )}
-      
-            <DeleteModal 
-                isOpen={!!deleteRow} 
-                onClose={() => setDeleteRow(null)} 
-                onConfirm={handleDeleteConfirm} 
-                title="Delete Record" 
-                message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion." 
-                itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""} 
+
+            <DeleteModal
+                isOpen={!!deleteRow}
+                onClose={() => setDeleteRow(null)}
+                onConfirm={handleDeleteConfirm}
+                title="Delete Record"
+                message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion."
+                itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""}
             />
 
             <BroadcastModal
@@ -1068,6 +1286,72 @@ const TenantLease = () => {
                 onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
             />
 
+            {showSetPriceModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+                        <div className="flex items-center justify-between mb-5 border-b pb-3">
+                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <Settings size={20} className="text-emerald-600" /> Night Market Fee Settings
+                            </h3>
+                            <button
+                                onClick={() => setShowSetPriceModal(false)}
+                                className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors cursor-pointer"
+                                title="Close"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <p className="text-sm text-slate-600 mb-5">
+                            Set the new standard rent rate for Night Market tenants. Changes take effect upon saving.
+                        </p>
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                                    Global Night Market Fee
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
+                                        ₱
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={newNightPrice}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/[^0-9.]/g, "");
+                                            setNewNightPrice(value);
+                                        }}
+                                        className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex justify-end gap-3 border-t pt-4">
+                            <button
+                                onClick={() => setShowSetPriceModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSetPrice}
+                                disabled={isSettingPrice || !newNightPrice}
+                                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                            >
+                                {isSettingPrice ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <CheckCircle size={16} />
+                                )}
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 };

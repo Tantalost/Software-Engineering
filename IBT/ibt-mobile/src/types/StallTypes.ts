@@ -13,6 +13,8 @@ export type FileState = {
   clearance: DocumentPicker.DocumentPickerAsset | null;
   receipt: DocumentPicker.DocumentPickerAsset | null;
   contract: DocumentPicker.DocumentPickerAsset | null;
+  communityTax: DocumentPicker.DocumentPickerAsset | null;
+  policeClearance: DocumentPicker.DocumentPickerAsset | null;
 };
 
 export type ApplicationData = {

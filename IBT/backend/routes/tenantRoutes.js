@@ -7,9 +7,11 @@ import {
   createTenant, 
   deleteTenant, 
   updateTenant,
-  archiveTenant,      // Add this
-  restoreTenant,      // Add this
-  getArchivedTenants
+  archiveTenant,    
+  restoreTenant,     
+  getArchivedTenants,
+  getDefaultNightPrice,          
+  updateAllNightMarketPrices
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -39,17 +41,23 @@ const upload = multer({ storage });
 
 router.get('/', getTenants);
 router.get('/archived', getArchivedTenants);
+router.get('/night-market/default-price', getDefaultNightPrice);
+router.put('/update-night-market-prices', updateAllNightMarketPrices);
 
 router.post('/', 
   upload.fields([
     { name: 'businessPermit', maxCount: 1 }, 
     { name: 'validID', maxCount: 1 },
-    { name: 'contract', maxCount: 1 }
+    { name: 'contract', maxCount: 1 },
+    { name: 'barangayClearance', maxCount: 1 },
+    { name: 'proofOfReceipt', maxCount: 1 },
+    { name: 'communityTax', maxCount: 1 },    
+    { name: 'policeClearance', maxCount: 1 }    
   ]), 
   createTenant
 );
 
-// Soft Delete Routes
+
 router.patch('/:id/archive', archiveTenant);
 router.patch('/:id/restore', restoreTenant);
 
@@ -59,7 +67,11 @@ router.put('/:id',
   upload.fields([
     { name: 'businessPermit', maxCount: 1 }, 
     { name: 'validID', maxCount: 1 },
-    { name: 'contract', maxCount: 1 }
+    { name: 'contract', maxCount: 1 },
+    { name: 'barangayClearance', maxCount: 1 }, 
+    { name: 'proofOfReceipt', maxCount: 1 }, 
+    { name: 'communityTax', maxCount: 1 },    
+    { name: 'policeClearance', maxCount: 1 }   
   ]), 
   updateTenant
 );

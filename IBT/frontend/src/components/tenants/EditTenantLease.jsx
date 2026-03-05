@@ -33,11 +33,11 @@ const formatDateTimeForInput = (dateStr) => {
 
 const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   
-  const standardCategories = ["Food and Beverages", "Clothing"];
-  const initialCategory = standardCategories.includes(row.products) ? row.products : "Other";
+  const standardCategories = ["food_non_alcoholic", "clothes_textiles", "accessories", "footwears", "kitchenwares", "agricultural_produce"];
+  const initialCategory = standardCategories.includes(row.products) ? row.products : "other";
   const initialOther = standardCategories.includes(row.products) ? "" : row.products;
 
-  const [productCategory, setProductCategory] = useState(initialCategory || "Food and Beverages");
+  const [productCategory, setProductCategory] = useState(initialCategory || "food_non_alcoholic");
   const [otherProductDetails, setOtherProductDetails] = useState(initialOther || "");
 
   const [formData, setFormData] = useState({
@@ -86,6 +86,9 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
     validID: null,
     barangayClearance: null,
     proofOfReceipt: null,
+    contract: null,         
+    communityTax: null,    
+    policeClearance: null    
   });
 
   const [status, setStatus] = useState(row.status || "Paid");
@@ -123,7 +126,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const finalProduct = productCategory === "Other" ? otherProductDetails : productCategory;
+    const finalProduct = productCategory === "other" ? otherProductDetails : productCategory;
 
     const formatForTable = (isoString) => {
         if (!isoString) return "";
@@ -150,7 +153,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
     onSave(processedData);
   };
 
-  // HELPER: Get Secure URL
+
   const getFileUrl = (pathOrString) => {
     if (!pathOrString) return null;
     if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) {
@@ -192,12 +195,16 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                     value={productCategory}
                     onChange={(e) => setProductCategory(e.target.value)}
                   >
-                    <option value="Food and Beverages">Food and Beverages</option>
-                    <option value="Clothing">Clothing</option>
-                    <option value="Other">Other (Please specify)</option>
+                    <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
+                    <option value="clothes_textiles">Clothes and textiles</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="footwears">Footwears</option>
+                    <option value="kitchenwares">Kitchenwares</option>
+                    <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
+                    <option value="other">Others, please specify</option>
                   </select>
                 </div>
-                {productCategory === "Other" && (
+                {productCategory === "other" && (
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-slate-700">Specify Product</label>
                     <input 
@@ -289,46 +296,57 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
           <div className="pt-4 border-t border-slate-100">
              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-blue-500">Documents (Upload)</h4>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {['businessPermit', 'validID', 'barangayClearance', 'proofOfReceipt'].map((key) => {
-                   const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                   const currentFile = documents[key];
-                   const isExistingFile = typeof currentFile === 'string';
+                {(() => {
+                
+                  const baseKeys = ['businessPermit', 'validID', 'barangayClearance', 'proofOfReceipt'];
+                  if (formData.tenantType === "Permanent") {
+                      baseKeys.push('contract');
+                  } else if (formData.tenantType === "Night Market") {
+                      baseKeys.push('communityTax', 'policeClearance');
+                  }
 
-                   return (
-                    <div key={key} className="relative border border-dashed border-slate-300 rounded-lg p-3 hover:bg-slate-50 transition-colors group">
-                      {isExistingFile && (
-                        <button 
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            const secureUrl = getFileUrl(currentFile);
-                            window.open(secureUrl, '_blank', 'noopener,noreferrer');
-                          }}
-                          className="absolute top-2 right-2 p-1.5 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all z-10"
-                          title="View Current File"
-                        >
-                           <Eye size={16} />
-                        </button>
-                      )}
+                  return baseKeys.map((key) => {
+                    
+                     const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                     const currentFile = documents[key];
+                     const isExistingFile = typeof currentFile === 'string';
 
-                      <label className="block cursor-pointer">
-                        <span className="block text-xs font-semibold text-slate-600 mb-1">{label}</span>
-                        <input type="file" className="hidden" onChange={(e) => handleFileChange(e, key)} />
-                        <div className="flex items-center gap-2">
-                            <div className={`p-1.5 rounded-md ${currentFile ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
-                                {currentFile ? <FileText size={16} /> : <Upload size={16} />}
-                            </div>
-                            <div className="flex flex-col overflow-hidden pr-6">
-                                <span className="text-xs text-slate-700 truncate w-32 font-medium">{currentFile ? (currentFile.name || "File Attached") : "No file uploaded"}</span>
-                                <span className="text-[10px] text-slate-400">{currentFile ? "Click to replace" : "Click to upload"}</span>
-                            </div>
-                        </div>
-                      </label>
-                    </div>
-                   );
-                })}
+                     return (
+                      <div key={key} className="relative border border-dashed border-slate-300 rounded-lg p-3 hover:bg-slate-50 transition-colors group">
+                        {isExistingFile && (
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              
+                              const secureUrl = getFileUrl(currentFile);
+                              window.open(secureUrl, '_blank', 'noopener,noreferrer');
+                            }}
+                            className="absolute top-2 right-2 p-1.5 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all z-10"
+                            title="View Current File"
+                          >
+                             <Eye size={16} />
+                          </button>
+                        )}
+
+                        <label className="block cursor-pointer">
+                          <span className="block text-xs font-semibold text-slate-600 mb-1">{label}</span>
+                          <input type="file" className="hidden" onChange={(e) => handleFileChange(e, key)} />
+                          <div className="flex items-center gap-2">
+                              <div className={`p-1.5 rounded-md ${currentFile ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
+                                  {currentFile ? <FileText size={16} /> : <Upload size={16} />}
+                              </div>
+                              <div className="flex flex-col overflow-hidden pr-6">
+                                  <span className="text-xs text-slate-700 truncate w-32 font-medium">{currentFile ? (currentFile.name || "File Attached") : "No file uploaded"}</span>
+                                  <span className="text-[10px] text-slate-400">{currentFile ? "Click to replace" : "Click to upload"}</span>
+                              </div>
+                          </div>
+                        </label>
+                      </div>
+                     );
+                  });
+                })()}
              </div>
           </div>
         </form>
@@ -361,16 +379,10 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                         <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-600"></div><span className="text-sm font-medium text-slate-600">Selected (Current)</span></div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                        {Array.from({ length: 30 }).map((_, i) => {
-                            let slotLabel = "";
-                            if (formData.tenantType === "Permanent") {
-                                slotLabel = `A-${101 + i}`; 
-                            } else {
-                                const num = i + 1;
-                                slotLabel = `NM-${num.toString().padStart(2, '0')}`;
-                            }
-
+                   
+                    {(() => {
+                     
+                        const renderSlotBox = (slotLabel) => {
                             const occupiedByOther = tenants.some(r => 
                                 (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) 
                                 && (r.tenantType === formData.tenantType)
@@ -391,18 +403,63 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                                 statusText = "Selected";
                             }
 
+                            const isNightMarket = formData.tenantType === "Night Market";
+                            const baseClasses = isNightMarket 
+                                ? "w-14 h-14 flex-shrink-0 rounded-lg flex flex-col items-center justify-center p-1 cursor-pointer transition-all duration-200"
+                                : "aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200";
+                            
+                            const displayLabel = isNightMarket ? slotLabel.replace('NM-', '') : slotLabel;
+
                             return (
                                 <div 
                                     key={slotLabel} 
                                     onClick={() => handleToggleSlot(slotLabel, occupiedByOther)}
-                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all duration-200 ${statusColor}`}
+                                    className={`${baseClasses} ${statusColor}`}
+                                    title={`${slotLabel} - ${statusText}`}
                                 >
-                                    <span className="text-lg font-bold opacity-90">{slotLabel}</span>
+                                    <span className={`${isNightMarket ? 'text-sm' : 'text-lg'} font-bold opacity-90`}>{displayLabel}</span>
                                     <span className="text-[10px] text-center truncate w-full px-1 leading-tight mt-1">{statusText}</span>
                                 </div>
                             );
-                        })}
-                    </div>
+                        };
+
+                        if (formData.tenantType === "Permanent") {
+                            return (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                                    {Array.from({ length: 30 }).map((_, i) => renderSlotBox(`A-${101 + i}`))}
+                                </div>
+                            );
+                        } else {
+                            
+                            return (
+                                <div className="overflow-x-auto pb-4 custom-scrollbar">
+                                    <div className="min-w-max flex flex-col items-start bg-slate-200/50 p-4 rounded-xl border border-slate-200">
+                                      
+                                        <div className="flex flex-row items-center mb-10">
+                                            <div className="flex flex-row gap-1">{[32, 31, 30, 29, 28, 27, 26].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[25, 24, 23, 22, 21, 20, 19, 18].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-10 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[17, 16, 15, 14, 12, 11, 10, 9].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[8, 7, 6, 5, 4, 3, 2, 1].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                        </div>
+                                      
+                                        <div className="flex flex-row items-center">
+                                            <div className="flex flex-row gap-1">{[33, 34, 35, 36, 37, 38, 39].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[40, 41, 42, 43, 44, 45, 46, 47].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-10 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[48, 49, 50, 51, 53, 54, 55, 56].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                            <div className="w-8 flex-shrink-0"></div>
+                                            <div className="flex flex-row gap-1">{[57, 58, 59, 60, 61, 62, 63, 64].map(num => renderSlotBox(`NM-${num.toString().padStart(2, '0')}`))}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                    })()}
+                   
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end gap-3">

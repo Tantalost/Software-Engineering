@@ -80,7 +80,7 @@ export default function StallsPage() {
     lastName: '',
     contact: '',
     email: '',
-    productType: 'food', 
+    productType: 'food_non_alcoholic', 
     otherProduct: '',
   });
 
@@ -89,7 +89,8 @@ export default function StallsPage() {
   });
 
   const [files, setFiles] = useState<FileState>({
-    permit: null, validId: null, clearance: null, receipt: null, contract: null
+    permit: null, validId: null, clearance: null, receipt: null, contract: null,
+    communityTax: null, policeClearance: null
   });
 
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
@@ -221,9 +222,17 @@ export default function StallsPage() {
     }
   }, [myApplications]);
 
-  const pickFile = async (fileType: keyof FileState) => {
+ const pickFile = async (fileType: keyof FileState) => {
     try {
-      const docType = fileType === 'contract' ? 'application/pdf' : ['image/*'];
+      
+      let docType: string | string[] = ['image/*']; 
+      
+      if (fileType === 'contract') {
+          docType = 'application/pdf';
+      } else if (fileType === 'communityTax' || fileType === 'policeClearance') {
+          docType = ['image/*', 'application/pdf']; 
+      }
+
       const result = await DocumentPicker.getDocumentAsync({ type: docType, copyToCacheDirectory: true });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -261,8 +270,18 @@ export default function StallsPage() {
   };
 
   const handleReview = () => {
-    if (!formData.firstName || !formData.contact || !selectedStall) { return Alert.alert("Incomplete", "Please fill in Name, Contact & Select a Stall."); }
-    if (!files.permit || !files.validId || !files.clearance) { return Alert.alert("Missing Photos", "Please upload Permit, Valid ID, and Barangay Clearance."); }
+    if (!formData.firstName || !formData.contact || !selectedStall) { 
+        return Alert.alert("Incomplete", "Please fill in Name, Contact & Select a Stall."); 
+    }
+    if (!files.permit || !files.validId || !files.clearance) { 
+        return Alert.alert("Missing Photos", "Please upload Permit, Valid ID, and Barangay Clearance."); 
+    }
+    
+    if (selectedFloor === 'Night Market') {
+        if (!files.communityTax || !files.policeClearance) {
+            return Alert.alert("Missing Documents", "Please upload the Community Tax Certificate and Police Clearance.");
+        }
+    }
     setModalStep('review');
   };
 
@@ -331,6 +350,15 @@ export default function StallsPage() {
           appendFile(formPayload, 'permit', files.permit, encPermit);
           appendFile(formPayload, 'validId', files.validId, encValidId);
           appendFile(formPayload, 'clearance', files.clearance, encClearance);
+
+
+          if (selectedFloor === 'Night Market') {
+              const encCommTax = await encryptFileBeforeUpload(files.communityTax!.uri, files.communityTax!.name || 'communityTax.file');
+              const encPolice = await encryptFileBeforeUpload(files.policeClearance!.uri, files.policeClearance!.name || 'policeClearance.file');
+
+              appendFile(formPayload, 'communityTax', files.communityTax, encCommTax);
+              appendFile(formPayload, 'policeClearance', files.policeClearance, encPolice);
+          }
 
           const res = await fetch(`${API_URL}/stalls/apply`, {
             method: 'POST',
@@ -467,17 +495,17 @@ export default function StallsPage() {
                         <Text style={{color: colors.textMedium}}>Under Review</Text>
                     </View>
                     </View><View style={styles.summaryItem}><View style={[styles.legendDot, {backgroundColor: colors.primaryLight}]}/><Text style={{color: colors.textMedium}}>Selected</Text></View></View>
-                    <Card style={[styles.layoutCard]}><Card.Content>
-                      
-                      <StallGrid 
-                        selectedFloor={selectedFloor}
-                        occupiedStalls={occupiedStalls}
-                        pendingStalls={pendingStalls}
-                        selectedStall={selectedStall}
-                        onStallPress={handleStallPress}
-                      />
-                      
-                      </Card.Content></Card>
+                    <Card style={[styles.layoutCard]}>
+                      <Card.Content>
+                        <StallGrid 
+                          selectedFloor={selectedFloor}
+                          occupiedStalls={occupiedStalls}
+                          pendingStalls={pendingStalls}
+                          selectedStall={selectedStall}
+                          onStallPress={handleStallPress}
+                        />
+                      </Card.Content>
+                    </Card>
                     {selectedStall && (<Card style={styles.infoCard}><Card.Content><Text style={{color: colors.black}} variant="titleMedium">Slot Selected: {selectedStall}</Text>
                     
                   <Button 

@@ -50,6 +50,12 @@ const Topbar = ({ title, onMenuClick }) => {
 
   const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
 
+  // Helper to safely format image URLs whether they are relative or absolute
+  const getImageUrl = (uri) => {
+    if (!uri) return '';
+    return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
+  };
+
   const showToast = (type, message) => {
     setToast({ isOpen: true, type, message });
     setTimeout(() => setToast({ isOpen: false, type: 'success', message: '' }), 3000);
@@ -198,19 +204,15 @@ const Topbar = ({ title, onMenuClick }) => {
   };
 
   const handleMarkAsRead = async (notifId) => {
-  
     const targetNotif = notifications.find(n => (n.id === notifId || n._id === notifId));
     if (!targetNotif || targetNotif.read) return;
 
-   
     setNotifications(prev => 
       prev.map(n => (n.id === notifId || n._id === notifId) ? { ...n, read: true } : n)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
 
-   
     try {
-    
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/${notifId}/read`, {
         method: 'PUT',
         headers: {
@@ -262,11 +264,9 @@ const Topbar = ({ title, onMenuClick }) => {
               </button>
 
               <div className="hidden sm:block relative" ref={bellRef}>
-              
                 <button
                   onClick={() => setShowBell((s) => !s)}
                   className="p-2.5 hover:bg-gray-100 rounded-xl transition-all relative cursor-pointer"
-                  
                 >
                   <Bell size={22} className="text-gray-600" />
                   {unreadCount > 0 && (
@@ -326,7 +326,6 @@ const Topbar = ({ title, onMenuClick }) => {
                 </button>
                  {showUser && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
-                    
                      <button
                       onClick={() => {
                         setShowUser(false);
@@ -442,35 +441,50 @@ const Topbar = ({ title, onMenuClick }) => {
                       {editMode && <p className="text-[10px] text-amber-500 mt-1">Uploading new files replaces old ones</p>}
                     </div>
                     
+                    {/* Fixed Preview For NEWLY UPLOADED Files */}
                     {selectedFiles.length > 0 && (
                       <div className="flex gap-3 mt-4 overflow-x-auto pb-2 custom-scrollbar">
-                        {Array.from(selectedFiles).map((file, idx) => (
-                          <div key={idx} className="relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-                            {file.type.startsWith('image/') ? (
-                              <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
+                        {Array.from(selectedFiles).map((file, idx) => {
+                          const isImage = file.type.startsWith('image/');
+                          return (
+                          <div 
+                            key={idx} 
+                            className={`relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm ${isImage ? 'cursor-pointer group' : ''}`}
+                            onClick={() => isImage && setFullscreenImage(URL.createObjectURL(file))}
+                          >
+                            {isImage ? (
+                              <>
+                                <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
+                                  <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={20} />
+                                </div>
+                              </>
                             ) : (
                               <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-slate-500 font-bold">VIDEO</div>
                             )}
                           </div>
-                        ))}
+                        )})}
                       </div>
                     )}
                   </div>
 
+                    {/* Fixed Preview For EXISTING Files in EDIT MODE */}
                     {editMode && existingAttachments.length > 0 && selectedFiles.length === 0 && (
                       <div className="mt-4">
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Attachments</p>
                         <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-                          {existingAttachments.map((att, idx) => (
+                          {existingAttachments.map((att, idx) => {
+                            const isImage = att.type?.toLowerCase() === 'image';
+                            return (
                             <div 
                               key={idx} 
-                              className="relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm cursor-pointer group"
-                              onClick={() => att.type === 'image' && setFullscreenImage(`${BASE_URL}${att.uri}`)}
+                              className={`relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm ${isImage ? 'cursor-pointer group' : ''}`}
+                              onClick={() => isImage && setFullscreenImage(getImageUrl(att.uri))}
                             >
-                              {att.type === 'image' ? (
+                              {isImage ? (
                                 <>
-                                  <img src={`${BASE_URL}${att.uri}`} alt="preview" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                  <img src={getImageUrl(att.uri)} alt="preview" className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
                                     <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={20} />
                                   </div>
                                 </>
@@ -478,7 +492,7 @@ const Topbar = ({ title, onMenuClick }) => {
                                 <div className="w-full h-full bg-slate-800 flex items-center justify-center text-[10px] text-white font-bold">VIDEO</div>
                               )}
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </div>
                     )}
@@ -528,17 +542,20 @@ const Topbar = ({ title, onMenuClick }) => {
                     <p className="text-xs text-gray-400 mb-4">{viewingPost.date}</p>
                     <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{viewingPost.message}</p>
                     
+                    {/* Fixed Preview For Viewing Opened Post in History */}
                     {viewingPost.attachments?.length > 0 && (
                       <div className="mt-6">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Attachments</h4>
                         <div className="grid grid-cols-2 gap-3">
-                          {viewingPost.attachments.map((att, idx) => (
-                            <div key={idx} className="relative h-32 rounded-xl overflow-hidden border border-gray-200 group cursor-pointer"
-                                 onClick={() => att.type === 'image' && setFullscreenImage(`${BASE_URL}${att.uri}`)}>
-                              {att.type === 'image' ? (
+                          {viewingPost.attachments.map((att, idx) => {
+                            const isImage = att.type?.toLowerCase() === 'image';
+                            return (
+                            <div key={idx} className={`relative h-32 rounded-xl overflow-hidden border border-gray-200 ${isImage ? 'group cursor-pointer' : ''}`}
+                                 onClick={() => isImage && setFullscreenImage(getImageUrl(att.uri))}>
+                              {isImage ? (
                                 <>
-                                  <img src={`${BASE_URL}${att.uri}`} alt="attachment" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                  <img src={getImageUrl(att.uri)} alt="attachment" className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
                                     <ZoomIn className="text-white opacity-0 group-hover:opacity-100" />
                                   </div>
                                 </>
@@ -548,7 +565,7 @@ const Topbar = ({ title, onMenuClick }) => {
                                 </div>
                               )}
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </div>
                     )}
@@ -576,24 +593,32 @@ const Topbar = ({ title, onMenuClick }) => {
                               <h4 className="font-bold text-slate-800 text-sm line-clamp-1">{b.title}</h4>
                               <p className="text-xs text-slate-500 line-clamp-1 mt-1 mb-2">{b.message}</p>
                               
+                              {/* Fixed Preview For History List Images */}
                               {b.attachments?.length > 0 && (
                                 <div className="flex gap-2">
-                                  {b.attachments.map((att, idx) => (
+                                  {b.attachments.map((att, idx) => {
+                                    const isImage = att.type?.toLowerCase() === 'image';
+                                    return (
                                     <div 
                                       key={idx} 
-                                      className="w-8 h-8 rounded border border-gray-200 overflow-hidden cursor-pointer"
+                                      className={`w-8 h-8 rounded border border-gray-200 overflow-hidden relative ${isImage ? 'cursor-pointer group' : ''}`}
                                       onClick={(e) => {
                                         e.stopPropagation(); 
-                                        if (att.type === 'image') setFullscreenImage(`${BASE_URL}${att.uri}`);
+                                        if (isImage) setFullscreenImage(getImageUrl(att.uri));
                                       }}
                                     >
-                                      {att.type === 'image' ? (
-                                        <img src={`${BASE_URL}${att.uri}`} className="w-full h-full object-cover" alt="thumb" />
+                                      {isImage ? (
+                                        <>
+                                          <img src={getImageUrl(att.uri)} className="w-full h-full object-cover" alt="thumb" />
+                                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
+                                            <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={10} />
+                                          </div>
+                                        </>
                                       ) : (
                                         <div className="w-full h-full bg-slate-800 flex items-center justify-center"><span className="text-[7px] font-bold text-white">VID</span></div>
                                       )}
                                     </div>
-                                  ))}
+                                  )})}
                                 </div>
                               )}
                             </div>
