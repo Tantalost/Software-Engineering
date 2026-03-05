@@ -35,11 +35,11 @@ const Dashboard = () => {
     return saved
       ? JSON.parse(saved)
       : {
-          tickets: 5000,
-          bus: 4000,
-          tenants: 10000,
-          parking: 3000,
-        };
+        tickets: 5000,
+        bus: 4000,
+        tenants: 10000,
+        parking: 3000,
+      };
   });
 
   const [toast, setToast] = useState({
@@ -528,20 +528,36 @@ const Dashboard = () => {
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`View: ${payload.meta.view}`, 15, 55);
-      doc.text(`Date: ${payload.meta.date}`, 15, 61);
-      doc.text(`Generated: ${payload.meta.generatedAt}`, 15, 67);
+
+      doc.text(`Generated: ${payload.meta.generatedAt}`, 15, 55);
 
       // 3. Revenue Summary Table
       autoTable(doc, {
-        startY: 75,
+        startY: 65,
         head: [["Module", "Revenue", "Target", "Progress"]],
-        body: payload.stats.map((s) => [
-          s.label,
-          s.value,
-          s.subtitle.replace("Target: ", ""),
-          s.change,
-        ]),
+        body: payload.stats.map((s) => {
+          const moduleKey = s.label.toLowerCase().split(" ")[0];
+          const baseMonthlyTarget = targets[moduleKey] || 0;
+
+          let targetVal = 0;
+          if (filterView === "day") targetVal = baseMonthlyTarget / 30;
+          else if (filterView === "week") targetVal = baseMonthlyTarget / 4;
+          else if (filterView === "month") targetVal = baseMonthlyTarget;
+          else if (filterView === "year") targetVal = baseMonthlyTarget * 12;
+
+          const percentReached = targetVal > 0
+            ? Math.round((s.rawValue / targetVal) * 100)
+            : 0;
+
+          const progressText = `${percentReached}% of Target`;
+
+          return [
+            s.label,
+            `Php ${Number(s.rawValue).toLocaleString()}`,
+            `Php ${Math.round(targetVal).toLocaleString()}`,
+            progressText,
+          ];
+        }),
         headStyles: { fillColor: [220, 38, 38] },
         styles: { fontSize: 9 },
         margin: { bottom: 20 },
@@ -558,72 +574,116 @@ const Dashboard = () => {
         head: [["Module", "Revenue"]],
         body: payload.donut.map((d) => [
           d.name,
-          `₱${d.value.toLocaleString()}`,
+          `Php ${d.value.toLocaleString()}`,
         ]),
         headStyles: { fillColor: [220, 38, 38] },
         styles: { fontSize: 9 },
         margin: { bottom: 35 },
       });
 
-      // 5. Add Footer Branding on every page
+      // 5. Add Footer Branding
       doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
 
       doc.save(`Dashboard_Report_${filterView}_${Date.now()}.pdf`);
-      console.log("PDF exported successfully!");
     } catch (err) {
       console.error("PDF export failed:", err);
       alert("Failed to export PDF. Please try again.");
     }
   };
 
-  // --- EXPORT TO EXCEL ---
+  // --- EXPORT TO EXCEL (PDF-STYLE FORMATTING) ---
   const exportToExcel = () => {
     try {
       const payload = getExportPayload();
       const wb = XLSX.utils.book_new();
 
-      // --- Stats Sheet ---
-      const statsSheet = XLSX.utils.json_to_sheet(
-        payload.stats.map((s) => ({
-          Module: s.label,
-          Revenue: Number(String(s.value).replace(/[^0-9.-]+/g, "")),
-          Target: Number(String(s.subtitle).replace(/[^0-9.-]+/g, "")),
-          Progress: s.change,
-        })),
-      );
-      XLSX.utils.book_append_sheet(wb, statsSheet, "Revenue Summary");
+      // 1. Prepare the Header and Metadata
+      const header = [
+        ["CITY OF ZAMBOANGA"],
+        ["INTEGRADO TERMINAL DE ZAMBOANGA"],
+        ["DASHBOARD REPORT"],
+        [`Generated: ${payload.meta.generatedAt}`],
+        [], // Spacer
+      ];
 
-      // --- Donut Sheet ---
-      const donutSheet = XLSX.utils.json_to_sheet(
-        payload.donut.map((d) => ({
-          Module: d.name,
-          Revenue: d.value,
-        })),
-      );
-      XLSX.utils.book_append_sheet(wb, donutSheet, "Revenue Breakdown");
+      // 2. Prepare Revenue Summary Table
+      const summaryHeader = [["REVENUE SUMMARY"]];
+      const summaryTableHeaders = [["Module", "Revenue", "Target", "Progress"]];
+      const summaryRows = payload.stats.map((s) => {
+        const moduleKey = s.label.toLowerCase().split(" ")[0];
+        const baseMonthlyTarget = targets[moduleKey] || 0;
 
-      // --- Analytics Sheet ---
-      const analyticsSheet = XLSX.utils.json_to_sheet(payload.analytics);
-      XLSX.utils.book_append_sheet(wb, analyticsSheet, "Trends");
+        let targetVal = 0;
+        if (filterView === "day") targetVal = baseMonthlyTarget / 30;
+        else if (filterView === "week") targetVal = baseMonthlyTarget / 4;
+        else if (filterView === "month") targetVal = baseMonthlyTarget;
+        else if (filterView === "year") targetVal = baseMonthlyTarget * 12;
 
-      // --- Recent Activity Sheet ---
-      const activitySheet = XLSX.utils.json_to_sheet(
-        payload.activity.map((a) => ({
-          Message: a.message,
-          Status: a.status,
-          Date: a.date ? new Date(a.date).toLocaleString() : "",
-        })),
-      );
-      XLSX.utils.book_append_sheet(wb, activitySheet, "Recent Activity");
+        const percentReached = targetVal > 0
+          ? Math.round((s.rawValue / targetVal) * 100)
+          : 0;
 
-      // --- Save Excel file ---
+        return [
+          s.label,
+          `Php ${Number(s.rawValue).toLocaleString()}`,
+          `Php ${Math.round(targetVal).toLocaleString()}`,
+          `${percentReached}% of Target`
+        ];
+      });
+
+      // 3. Prepare Revenue Breakdown Table
+      const breakdownHeader = [[], ["REVENUE BREAKDOWN"]];
+      const breakdownTableHeaders = [["Module", "Revenue"]];
+      const breakdownRows = payload.donut.map((d) => [
+        d.name,
+        `Php ${d.value.toLocaleString()}`
+      ]);
+
+      // 4. Prepare Footer (Contact Details)
+      const footer = [
+        [], // Spacer
+        ["MCLL HIGHWAY, DIVISORIA, ZAMBOANGA CITY"],
+        ["TEL NOS: (062) 955-7806 / (062) 991-1630"],
+        ["Email: zamboangacityibt@email.com"],
+        ["Website: www.zamboangacity.gov.ph"]
+      ];
+
+      // 5. Combine all sections into one Array of Arrays
+      const finalData = [
+        ...header,
+        ...summaryHeader,
+        ...summaryTableHeaders,
+        ...summaryRows,
+        ...breakdownHeader,
+        ...breakdownTableHeaders,
+        ...breakdownRows,
+        ...footer
+      ];
+
+      // 6. Create worksheet and set column widths for readability
+      const ws = XLSX.utils.aoa_to_sheet(finalData);
+
+      // Set column widths (wch = width in characters)
+      ws['!cols'] = [
+        { wch: 30 }, // Module Column
+        { wch: 20 }, // Revenue Column
+        { wch: 20 }, // Target Column
+        { wch: 25 }  // Progress Column
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "Dashboard Report");
+
+      // Save file
       XLSX.writeFile(wb, `Dashboard_Report_${filterView}_${Date.now()}.xlsx`);
+      console.log("Excel exported successfully with PDF-like layout!");
 
-      console.log("Excel exported successfully!");
     } catch (err) {
       console.error("Excel export failed:", err);
+      alert("Failed to export Excel. Please try again.");
     }
   };
+
+
 
   const handleDownload = (format) => {
     if (format === "pdf") exportToPDF();
@@ -685,11 +745,10 @@ const Dashboard = () => {
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-2 duration-300">
           <div
             className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border
-        ${
-          toast.type === "success"
-            ? "bg-white border-green-200 text-green-700"
-            : "bg-white border-red-200 text-red-700"
-        }`}
+        ${toast.type === "success"
+                ? "bg-white border-green-200 text-green-700"
+                : "bg-white border-red-200 text-red-700"
+              }`}
           >
             {/* Icon */}
             <span className="text-lg">

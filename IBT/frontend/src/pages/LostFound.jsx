@@ -466,20 +466,25 @@ const LostFound = () => {
 
         const operator = localStorage.getItem("authName") || "Admin";
         const dateStr = new Date().toLocaleDateString();
+        const timeStr = new Date().toLocaleTimeString();
 
-
-        const totalItems = filtered.length;
-        const unclaimed = filtered.filter(i => i.status === "Unclaimed").length;
-        const claimed = filtered.filter(i => i.status === "Claimed").length;
-
+        // 1. SIMULATED HEADER (Matches PDF branding and title)
         const rows = [
-            ["", "", "LOST & FOUND REPORTS", "", ""],
-            [`Date: ${dateStr}`, "", "", `Total Items: ${totalItems}`, ""],
-            [`Operator: ${operator}`, "", "", `Unclaimed: ${unclaimed}`, `Claimed: ${claimed}`],
+            ["INTEGRADO TERMINAL DE ZAMBOANGA"], // Mimics Header.png text
+            ["LOST & FOUND REPORTS"],           // Report Title
             [], // Spacer
+
+            // 2. METADATA (Aligned to simulate left/right PDF positioning)
+            [`Date: ${dateStr}`, "", "", "", `Total Items: ${filtered.length}`],
+            [`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`],
+            [`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`],
+            [], // Spacer
+
+            // 3. TABLE HEADERS
             ["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]
         ];
 
+        // 4. TABLE DATA
         filtered.forEach(item => {
             rows.push([
                 item.trackingNo,
@@ -490,7 +495,7 @@ const LostFound = () => {
                 item.description
             ]);
         });
-
+        // 6. CSV GENERATION LOGIC
         const csvContent = rows
             .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
             .join('\n');
@@ -504,7 +509,7 @@ const LostFound = () => {
         link.click();
         document.body.removeChild(link);
 
-        logActivity(role, "EXPORT_CSV", `Exported ${filtered.length} Lost & Found records to CSV`, "LostFound");
+        logActivity(role, "EXPORT_CSV", `Exported ${filtered.length} Lost & Found records to Excel-converted format`, "LostFound");
     };
 
     const handleExportPDF = () => {
@@ -525,8 +530,6 @@ const LostFound = () => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, 15, 61);
-
         doc.text(`Total Items: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
         doc.text(`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`, pageWidth - 15, 61, { align: "right" });
 

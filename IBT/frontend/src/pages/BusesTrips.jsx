@@ -44,14 +44,14 @@ const ManageCompaniesModal = ({
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState("");
 
- 
+
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusRoute, setNewBusRoute] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
 
-  
+
   useEffect(() => {
     if (!isOpen) {
       setSelectedCompanyId(null);
@@ -64,7 +64,7 @@ const ManageCompaniesModal = ({
 
   const activeCompany = companyData.find((c) => c._id === selectedCompanyId);
 
- 
+
   const handleAddCompany = async () => {
     if (!newCompanyName.trim()) return;
     setIsProcessing(true);
@@ -101,7 +101,7 @@ const ManageCompaniesModal = ({
     }
   };
 
-  
+
   const handleAddBus = async () => {
     if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
 
@@ -155,7 +155,7 @@ const ManageCompaniesModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-4xl h-[600px] flex rounded-2xl bg-white shadow-2xl overflow-hidden">
-       
+
         <div className="w-1/3 bg-slate-50 border-r border-slate-200 flex flex-col">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
             <h3 className="font-bold text-slate-700">Companies</h3>
@@ -236,7 +236,7 @@ const ManageCompaniesModal = ({
           </div>
         </div>
 
-     
+
         <div className="w-2/3 flex flex-col bg-white">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center">
             <h3 className="font-bold text-slate-800">
@@ -290,7 +290,7 @@ const ManageCompaniesModal = ({
                 </div>
               </div>
 
-              
+
               <div className="flex-1 overflow-y-auto p-4">
                 {activeCompany.buses && activeCompany.buses.length > 0 ? (
                   <table className="w-full text-sm text-left">
@@ -356,33 +356,33 @@ const ManageCompaniesModal = ({
 
 
 const BusTrips = () => {
-  
+
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
-  const [companyData, setCompanyData] = useState([]); 
+  const [companyData, setCompanyData] = useState([]);
 
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showManageCompaniesModal, setShowManageCompaniesModal] =
     useState(false);
 
-  
+
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
- 
+
   const [archiveRow, setArchiveRow] = useState(null);
-  
+
   const [deleteRow, setDeleteRow] = useState(null);
   const [logoutRow, setLogoutRow] = useState(null);
   const [ticketRefInput, setTicketRefInput] = useState("");
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
 
- 
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -409,7 +409,7 @@ const BusTrips = () => {
     }
   }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
 
-  
+
   useEffect(() => {
     const fetchDefaultPrice = async () => {
       try {
@@ -417,18 +417,18 @@ const BusTrips = () => {
         if (response.ok) {
           const data = await response.json();
           setDefaultPrice(data.defaultPrice);
-         
+
           localStorage.setItem("defaultBusPrice", data.defaultPrice.toString());
         }
       } catch (error) {
         console.error("Error fetching default price:", error);
-       
+
         const saved = localStorage.getItem("defaultBusPrice");
         if (saved) setDefaultPrice(Number(saved));
       }
     };
     fetchDefaultPrice();
-   
+
   }, []);
 
 
@@ -451,7 +451,7 @@ const BusTrips = () => {
     setIsSettingPrice(true);
 
     try {
-     
+
       const response = await fetch(`${API_URL}/update-prices/all`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -464,11 +464,11 @@ const BusTrips = () => {
 
       const result = await response.json();
 
-     
+
       setDefaultPrice(priceValue);
       localStorage.setItem("defaultBusPrice", priceValue.toString());
 
-      
+
       await fetchBusTrips();
 
       await logActivity(
@@ -489,7 +489,7 @@ const BusTrips = () => {
     }
   };
 
-  
+
   const [newBusData, setNewBusData] = useState({
     templateNo: "",
     route: "",
@@ -497,10 +497,10 @@ const BusTrips = () => {
     time: "",
     date: new Date().toISOString().split("T")[0],
     status: "Pending",
-    price: 75, 
+    price: 75,
   });
 
-  
+
   const fetchBusTrips = async () => {
     setIsLoading(true);
     try {
@@ -579,33 +579,33 @@ const BusTrips = () => {
       }),
       date: new Date().toISOString().split("T")[0],
       status: "Pending",
-      price: defaultPrice, 
+      price: defaultPrice,
     });
 
     setShowAddModal(true);
   };
 
- 
+
   const handleAddFormCompanyChange = (e) => {
     const selectedCompName = e.target.value;
     setNewBusData((prev) => ({
       ...prev,
       company: selectedCompName,
-      templateNo: "", 
-      route: "", 
+      templateNo: "",
+      route: "",
     }));
   };
 
- 
+
   const handleAddFormPlateChange = (e) => {
     const plate = e.target.value;
 
-  
+
     const selectedCompObj = companyData.find(
       (c) => c.name === newBusData.company,
     );
 
-   
+
     const selectedBus = selectedCompObj?.buses.find(
       (b) => b.plateNumber === plate,
     );
@@ -617,11 +617,11 @@ const BusTrips = () => {
     }));
   };
 
-  
+
   const handleCreateRecord = async (e) => {
     e.preventDefault();
     try {
-    
+
       const tripData = {
         ...newBusData,
         price: newBusData.price || defaultPrice
@@ -648,29 +648,38 @@ const BusTrips = () => {
     }
   };
 
- 
+  //EXCEL
   const handleExportExcel = () => {
     if (filtered.length === 0) return alert("No records to export.");
 
     const operator = localStorage.getItem("authName") || "Admin";
     const dateStr = new Date().toLocaleDateString();
 
-   
+    // 1. Create the Header Structure (Mirroring the PDF/Official Seal area)
     const rows = [
-      ["", "", "", "BUS PARKING REPORTS", "", "", "", ""],
-      [`Date: ${dateStr}`, "", "", "", `No. of Bus: ${filtered.length}`, "", "", ""],
-      [`Operator: ${operator}`, "", "", "", `Revenue: ₱${totalRevenue.toFixed(2)}`, "", "", ""],
-      [], 
+      ["CITY OF ZAMBOANGA"],
+      ["OFICINA DEL ADMINISTRADOR"],
+      ["INTEGRADO TERMINAL DE ZAMBOANGA"],
+      [""], // Spacer
+      ["BUS PARKING REPORTS"],
+      [""], // Spacer
+
+      // 2. Metadata Row (Mirroring PDF's Date, Operator, Count, and Revenue)
+      [`Date: ${dateStr}`, "", "", "", `No. of Bus: ${filtered.length}`],
+      [`Operator: ${operator}`, "", "", "", `Revenue: Php ${totalRevenue.toFixed(2)}`],
+      [""], // Spacer
+
+      // 3. Table Headers
       ["Plate No.", "Ticket Ref.", "Route", "Price", "Arrival", "Departure", "Company", "Status"]
     ];
 
-    
+    // 4. Data Rows
     filtered.forEach((item) => {
       rows.push([
         item.templateNo || item.templateno || "-",
         item.ticketReferenceNo || "-",
         item.route || "-",
-        `₱${(item.price || 75).toFixed(2)}`,
+        `Php ${(item.price || 75).toFixed(2)}`,
         item.time || "-",
         item.departureTime || "-",
         item.company || "-",
@@ -678,6 +687,13 @@ const BusTrips = () => {
       ]);
     });
 
+    // 5. Footer Information
+    rows.push([""]);
+    rows.push(["MCLL HIGHWAY, DIVISORIA, ZAMBOANGA CITY"]);
+    rows.push(["Email: zamboangacityibt@email.com"]);
+    rows.push(["Ta Date Buen Servicio"]);
+
+    // Convert to CSV format
     const csvContent = rows
       .map((row) => row.map((val) => `"${val}"`).join(","))
       .join("\n");
@@ -689,34 +705,36 @@ const BusTrips = () => {
     link.click();
   };
 
-  
+  // PDF Export Fix
   const handleExportPDF = () => {
     if (filtered.length === 0) return alert("No records to export.");
 
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15; // Standardized margin for both text and table
 
-   
+    // Header Image
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-    
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("BUS PARKING REPORTS", pageWidth / 2, 45, { align: "center" });
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-    doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, 15, 61);
 
-    doc.text(`No. of Bus: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
-    doc.text(`Revenue: ₱${totalRevenue.toFixed(2)}`, pageWidth - 15, 61, { align: "right" });
+    // Left-aligned header info
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
+    doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, margin, 61);
 
-    
+    // Fixed right-alignment: Uses pageWidth - margin to stay within table bounds
+    doc.text(`No. of Bus: ${filtered.length}`, pageWidth - margin, 55, { align: "right" });
+    doc.text(`Revenue: Php ${totalRevenue.toFixed(2)}`, pageWidth - margin, 61, { align: "right" });
+
     autoTable(doc, {
       startY: 70,
-      margin: { bottom: 35 },
+      margin: { left: margin, right: margin, bottom: 35 }, // Explicitly set horizontal margins
       head: [[
         "Plate No.", "Ticket Ref.", "Route", "Price",
         "Arrival", "Departure", "Company", "Status"
@@ -725,16 +743,15 @@ const BusTrips = () => {
         item.templateNo || "-",
         item.ticketReferenceNo || "-",
         item.route || "-",
-        `₱${(item.price || 75).toFixed(2)}`,
+        `Php ${(item.price || 75).toFixed(2)}`, // Replaced symbol with "Php"
         item.time || "-",
         item.departureTime || "-",
         item.company || "-",
         item.status || "-",
       ]),
-      headStyles: { fillColor: [220, 38, 38] }, 
+      headStyles: { fillColor: [220, 38, 38] },
       styles: { fontSize: 9 },
       didDrawPage: (data) => {
-      
         doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
       },
     });
@@ -742,7 +759,7 @@ const BusTrips = () => {
     doc.save(`IBT_Bus_Parking_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
- 
+
   const handleBulkDelete = async () => {
     if (!window.confirm(`Delete ${selectedIds.length} records?`)) return;
     setIsLoading(true);
@@ -784,7 +801,7 @@ const BusTrips = () => {
     }
   };
 
- 
+
   const handleSubmitReport = async () => {
     setIsReporting(true);
     try {
@@ -832,11 +849,11 @@ const BusTrips = () => {
     setTicketRefInput("");
   };
 
- 
+
   const confirmLogout = async () => {
     if (!logoutRow || !ticketRefInput) return;
 
-    
+
     const isDuplicate = records.some(
       (record) =>
         record.ticketReferenceNo &&
@@ -928,13 +945,13 @@ const BusTrips = () => {
   const confirmArchive = async () => {
     if (!archiveRow) return;
     try {
-     
+
       const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
       });
 
-      
+
       if (archiveRes.ok) {
         await logActivity(
           role,
@@ -954,7 +971,7 @@ const BusTrips = () => {
     }
   };
 
-  
+
   const tableColumns = isSelectionMode
     ? [
       <div key="header-check" className="flex items-center">
@@ -992,7 +1009,7 @@ const BusTrips = () => {
 
   return (
     <Layout title="Bus Trips Management">
-      
+
       <div className="mb-6">
         <StatCardGroupBus
           totalTrips={totalTrips}
@@ -1004,7 +1021,7 @@ const BusTrips = () => {
 
       <div className="px-4 lg:px-8">
         <div className="flex flex-col gap-4 w-full">
-         
+
           <BusTripFilters
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -1015,9 +1032,9 @@ const BusTrips = () => {
             uniqueCompanies={availableCompanies}
           />
 
-         
+
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
-          
+
             {isSelectionMode && selectedIds.length > 0 && (
               <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                 <span className="text-xs font-semibold text-slate-600 px-2">
@@ -1035,7 +1052,7 @@ const BusTrips = () => {
             <div
               className={`flex flex-wrap items-center justify-end gap-3 ${isSelectionMode ? "ml-auto" : "w-full"}`}
             >
-             
+
               {role === "bus" && (
                 <button
                   onClick={() => setShowSubmitModal(true)}
@@ -1045,7 +1062,7 @@ const BusTrips = () => {
                   <span>Submit Report</span>
                 </button>
               )}
-             
+
               {role === "superadmin" && (
                 <button
                   onClick={() => {
@@ -1141,7 +1158,7 @@ const BusTrips = () => {
             })}
             actions={(row) => (
               <div className="flex justify-end items-center space-x-2">
-               
+
                 {row.status === "Pending" && (
                   <button
                     onClick={() => handleMarkArrived(row)}
@@ -1151,8 +1168,8 @@ const BusTrips = () => {
                     <span className="text-xs">Arrive</span>
                   </button>
                 )}
-                
-               
+
+
                 {row.status === "Arrived" && (
                   <button
                     onClick={() => handleLogoutClick(row)}
