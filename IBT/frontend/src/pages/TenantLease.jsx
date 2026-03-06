@@ -1151,7 +1151,7 @@ const TenantLease = () => {
                 recipient={messagingRow}
                 body={emailBody}
                 setBody={setEmailBody}
-                onSend={handleSendEmail}
+                onSend={sendTenantEmail}
             />
 
             <ApplicationReviewModal
