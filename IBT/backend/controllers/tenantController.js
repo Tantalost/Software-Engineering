@@ -309,7 +309,7 @@ export const updateAllNightMarketPrices = async (req, res) => {
 export const getDefaultPermanentPrice = async (req, res) => {
   try {
     const priceSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
-    const defaultPrice = priceSetting ? Number(priceSetting.value) : 3000; // Defaulting to 3000
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 6000;
     res.status(200).json({ defaultPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
