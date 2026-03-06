@@ -54,6 +54,8 @@ const TenantLease = () => {
     const [showSetPriceModal, setShowSetPriceModal] = useState(false);
     const [newNightPrice, setNewNightPrice] = useState("");
     const [isSettingPrice, setIsSettingPrice] = useState(false);
+    const [defaultPermanentPrice, setDefaultPermanentPrice] = useState(6000);
+    const [newPermanentPrice, setNewPermanentPrice] = useState("");
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [showNotify, setShowNotify] = useState(false);
@@ -102,7 +104,6 @@ const TenantLease = () => {
     useEffect(() => {
         const fetchDefaultNightPrice = async () => {
             try {
-                // Note: Make sure this endpoint exists on your backend!
                 const response = await fetch(`${API_URL}/tenants/night-market/default-price`);
                 if (response.ok) {
                     const data = await response.json();
@@ -115,16 +116,36 @@ const TenantLease = () => {
                 if (saved) setDefaultNightPrice(Number(saved));
             }
         };
+
+        const fetchDefaultPermanentPrice = async () => {
+            try {
+                const response = await fetch(`${API_URL}/tenants/permanent/default-price`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setDefaultPermanentPrice(data.defaultPrice);
+                    localStorage.setItem("defaultPermanentPrice", data.defaultPrice.toString());
+                }
+            } catch (error) {
+                console.error("Error fetching default permanent price:", error);
+                const saved = localStorage.getItem("defaultPermanentPrice");
+                if (saved) setDefaultPermanentPrice(Number(saved));
+            }
+        };
+
         fetchDefaultNightPrice();
+        fetchDefaultPermanentPrice();
     }, []);
 
     const handleSetPrice = async () => {
-        if (!newNightPrice || isNaN(newNightPrice)) {
+        const isNightMarket = activeTab === "night";
+        const currentNewPrice = isNightMarket ? newNightPrice : newPermanentPrice;
+
+        if (!currentNewPrice || isNaN(currentNewPrice)) {
             setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid price.", autoClose: true, duration: 3000 });
             return;
         }
 
-        const priceValue = Number(newNightPrice);
+        const priceValue = Number(currentNewPrice);
         if (priceValue <= 0) {
             setNotificationState({ isOpen: true, type: 'error', message: "Price must be greater than 0.", autoClose: true, duration: 3000 });
             return;
@@ -133,8 +154,9 @@ const TenantLease = () => {
         setIsSettingPrice(true);
 
         try {
-            // Note: Ensure you have this PUT route set up in your Node/Express backend!
-            const response = await fetch(`${API_URL}/tenants/update-night-market-prices`, {
+            const endpoint = isNightMarket ? '/tenants/update-night-market-prices' : '/tenants/update-permanent-prices';
+
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ newPrice: priceValue }),
@@ -146,20 +168,29 @@ const TenantLease = () => {
 
             const result = await response.json();
 
-            setDefaultNightPrice(priceValue);
-            localStorage.setItem("defaultNightPrice", priceValue.toString());
+            if (isNightMarket) {
+                setDefaultNightPrice(priceValue);
+                localStorage.setItem("defaultNightPrice", priceValue.toString());
+            } else {
+                setDefaultPermanentPrice(priceValue);
+                localStorage.setItem("defaultPermanentPrice", priceValue.toString());
+            }
 
             await fetchTenants();
 
+            const actionName = isNightMarket ? "SET_NIGHT_MARKET_PRICE" : "SET_PERMANENT_PRICE";
+            const slotName = isNightMarket ? "night market" : "permanent";
+
             await logActivity(
                 role,
-                "SET_NIGHT_MARKET_PRICE",
-                `Set default night market fee to ₱${newNightPrice} (Updated ${result.modifiedCount || 0} tenants)`,
+                actionName,
+                `Set default ${slotName} fee to ₱${priceValue} (Updated ${result.modifiedCount || 0} tenants)`,
                 "Tenants",
             );
 
             setShowSetPriceModal(false);
             setNewNightPrice("");
+            setNewPermanentPrice("");
 
             setNotificationState({
                 isOpen: true,
@@ -484,12 +515,12 @@ const TenantLease = () => {
             setShowWaitlistModal(false);
             setShowReviewModal(true);
 
-            setWaitlistData(prev => prev.map(item => 
-                (item.id === applicant.id || item._id === applicant.id) 
-                    ? { ...item, adminViewed: true } 
+            setWaitlistData(prev => prev.map(item =>
+                (item.id === applicant.id || item._id === applicant.id)
+                    ? { ...item, adminViewed: true }
                     : item
             ));
-            
+
         } catch (error) {
             console.error("Error fetching full details:", error);
             setNotificationState({
@@ -594,9 +625,9 @@ const TenantLease = () => {
                 docKeys.forEach(docKey => {
                     const docValue = newTenant.documents[docKey];
                     if (docValue instanceof File) {
-                        formData.append(docKey, docValue); 
+                        formData.append(docKey, docValue);
                     } else if (typeof docValue === 'string' && docValue.trim() !== "") {
-                        formData.append(docKey, docValue); 
+                        formData.append(docKey, docValue);
                     }
                 });
             }
@@ -990,7 +1021,7 @@ const TenantLease = () => {
         ]
         : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"];
 
-        const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
+    const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
     return (
         <Layout title="Tenants/Lease Management">
@@ -1016,14 +1047,18 @@ const TenantLease = () => {
                         + Add New
                     </button>
 
-                    {role === "superadmin" && activeTab === "night" && (
+                    {role === "superadmin" && (
                         <button
                             onClick={() => {
-                                setNewNightPrice(defaultNightPrice.toString());
+                                if (activeTab === "night") {
+                                    setNewNightPrice(defaultNightPrice.toString());
+                                } else {
+                                    setNewPermanentPrice(defaultPermanentPrice.toString());
+                                }
                                 setShowSetPriceModal(true);
                             }}
                             className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-2"
-                            title='Set Night Market Price'
+                            title='Set Default Price'
                         >
                             <Settings size={18} />
                             <span className="hidden sm:inline">Set Price</span>
@@ -1218,6 +1253,7 @@ const TenantLease = () => {
                 tenants={records}
                 activeTab={activeTab}
                 defaultNightPrice={defaultNightPrice}
+                defaultPermanentPrice={defaultPermanentPrice}
                 initialData={transferApplicant ? {
                     name: transferApplicant.name,
                     contactNo: transferApplicant.contact,
@@ -1265,7 +1301,7 @@ const TenantLease = () => {
                                     if (docValue instanceof File) {
                                         formData.append(docKey, docValue);
                                     } else if (typeof docValue === 'string' && docValue.trim() !== "") {
-                                        formData.append(docKey, docValue); 
+                                        formData.append(docKey, docValue);
                                     }
                                 });
                             }
@@ -1335,7 +1371,8 @@ const TenantLease = () => {
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
                         <div className="flex items-center justify-between mb-5 border-b pb-3">
                             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <Settings size={20} className="text-emerald-600" /> Night Market Fee Settings
+                                <Settings size={20} className="text-emerald-600" />
+                                {activeTab === "night" ? "Night Market Fee Settings" : "Permanent Slot Fee Settings"}
                             </h3>
                             <button
                                 onClick={() => setShowSetPriceModal(false)}
@@ -1347,13 +1384,13 @@ const TenantLease = () => {
                         </div>
 
                         <p className="text-sm text-slate-600 mb-5">
-                            Set the new standard rent rate for Night Market tenants. Changes take effect upon saving.
+                            Set the new standard rent rate for {activeTab === "night" ? "Night Market" : "Permanent"} tenants. Changes take effect upon saving.
                         </p>
 
                         <div className="space-y-5">
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Global Night Market Fee
+                                    Global {activeTab === "night" ? "Night Market" : "Permanent"} Fee
                                 </label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -1361,10 +1398,14 @@ const TenantLease = () => {
                                     </span>
                                     <input
                                         type="text"
-                                        value={newNightPrice}
+                                        value={activeTab === "night" ? newNightPrice : newPermanentPrice}
                                         onChange={(e) => {
                                             const value = e.target.value.replace(/[^0-9.]/g, "");
-                                            setNewNightPrice(value);
+                                            if (activeTab === "night") {
+                                                setNewNightPrice(value);
+                                            } else {
+                                                setNewPermanentPrice(value);
+                                            }
                                         }}
                                         className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
                                         placeholder="0.00"
@@ -1382,7 +1423,7 @@ const TenantLease = () => {
                             </button>
                             <button
                                 onClick={handleSetPrice}
-                                disabled={isSettingPrice || !newNightPrice}
+                                disabled={isSettingPrice || (activeTab === "night" ? !newNightPrice : !newPermanentPrice)}
                                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                             >
                                 {isSettingPrice ? (

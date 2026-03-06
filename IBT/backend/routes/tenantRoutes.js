@@ -12,7 +12,9 @@ import {
   getArchivedTenants,
   getDefaultNightPrice,          
   updateAllNightMarketPrices,
-  sendTenantEmail
+  sendTenantEmail,
+  getDefaultPermanentPrice,
+  updateAllPermanentPrices
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -44,6 +46,8 @@ router.get('/', getTenants);
 router.get('/archived', getArchivedTenants);
 router.get('/night-market/default-price', getDefaultNightPrice);
 router.put('/update-night-market-prices', updateAllNightMarketPrices);
+router.get('/permanent/default-price', getDefaultPermanentPrice);
+router.put('/update-permanent-prices', updateAllPermanentPrices);
 router.post('/send-email', sendTenantEmail);
 
 router.post('/', 

@@ -6,7 +6,7 @@ import CryptoJS from "crypto-js";
 
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
 
-const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 1120 }) => {
+const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 1120, defaultPermanentPrice = 6000 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
@@ -171,14 +171,13 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     const slotCount = formData.slotNo ? formData.slotNo.split(',').length : 1;
 
     if (formData.tenantType === "Permanent") {
-      baseRent = 6000;
+      baseRent = defaultPermanentPrice; // <-- Changed from 6000 to defaultPermanentPrice
       if (startDate) {
         const d = new Date(startDate);
         d.setMonth(d.getMonth() + 1); 
         calculatedDueDate = formatDateTimeForInput(d);
       }
     } else {
-      
       baseRent = defaultNightPrice; 
       if (startDate) {
         const d = new Date(startDate);
@@ -190,7 +189,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     setRentAmount(baseRent * slotCount);
     setDueDate(calculatedDueDate);
 
-  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice]);
+  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice]);
 
   useEffect(() => {
     const calculatedUtils = (parseFloat(feeBreakdown.garbageFee) || 0) +
