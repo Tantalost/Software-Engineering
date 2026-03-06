@@ -1,15 +1,6 @@
 import User from "../models/User.js";
-import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 
 export const requestPasswordReset = async (req, res) => {
   try {
@@ -26,14 +17,29 @@ export const requestPasswordReset = async (req, res) => {
     user.otpExpires = Date.now() + 10 * 60 * 1000; 
     await user.save();
 
-    const mailOptions = {
-      from: `"Stall Application Support" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: "Your Password Reset Code",
-      text: `Your verification code is: ${otp}\n\nThis code will expire in 10 minutes.`,
-    };
+    const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": process.env.EMAIL_PASS, 
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        sender: { 
+            name: "Stall Application Support", 
+            email: process.env.EMAIL_USER 
+        },
+        to: [{ email: user.email }],
+        subject: "Your Password Reset Code",
+        textContent: `Your verification code is: ${otp}\n\nThis code will expire in 10 minutes.`
+      })
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (!brevoRes.ok) {
+        const errorData = await brevoRes.text();
+        console.error("Brevo API Error:", errorData);
+        throw new Error("Failed to send email via Brevo.");
+    }
 
     res.status(200).json({ message: "Verification code sent to email." });
 
