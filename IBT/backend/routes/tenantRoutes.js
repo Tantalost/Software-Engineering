@@ -1,7 +1,6 @@
 import express from "express";
 import multer from 'multer';
 import { GridFsStorage } from 'multer-gridfs-storage';
-import { sendTenantEmail } from '../controllers/tenantController.js';
 import "dotenv/config"; 
 import { 
   getTenants, 
@@ -12,7 +11,8 @@ import {
   restoreTenant,     
   getArchivedTenants,
   getDefaultNightPrice,          
-  updateAllNightMarketPrices
+  updateAllNightMarketPrices,
+  sendTenantEmail
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
