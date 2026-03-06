@@ -752,6 +752,58 @@ const TenantLease = () => {
         }
     };
 
+    const handleSendEmail = async (recipient, body) => {
+        if (!recipient?.email) {
+            setNotificationState({ isOpen: true, type: 'error', message: "This tenant does not have an email address on file.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        if (!body.trim()) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Please enter a message body.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/tenants/send-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: recipient.email,
+                    subject: `Update regarding your lease (Slot ${recipient.slotNo || 'N/A'})`,
+                    message: body
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to send email");
+            }
+
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: `Email sent successfully to ${recipient.tenantName || recipient.name}!`,
+                autoClose: true,
+                duration: 3000
+            });
+
+            await logActivity(role, "SEND_EMAIL", `Sent email to ${recipient.tenantName || recipient.name}`, "Tenants");
+
+            setShowEmailModal(false);
+            setEmailBody("");
+
+        } catch (error) {
+            console.error("Email Error:", error);
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: error.message || "Failed to send email. Check backend connection.",
+                autoClose: true,
+                duration: 3000
+            });
+        }
+    };
+
     const getExportData = () => {
         return filtered.map(t => ({
             "Slot No": t.slotNo,
@@ -1151,7 +1203,7 @@ const TenantLease = () => {
                 recipient={messagingRow}
                 body={emailBody}
                 setBody={setEmailBody}
-                onSend={sendTenantEmail}
+                onSend={handleSendEmail}
             />
 
             <ApplicationReviewModal
