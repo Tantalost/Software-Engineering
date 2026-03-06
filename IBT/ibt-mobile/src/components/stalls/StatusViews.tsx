@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, View, Image } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, View, Image, Modal } from 'react-native';
 import { Card, Text, Button, Divider, TextInput } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import styles from '@/src/styles/stallsStyle'; 
@@ -132,17 +132,10 @@ export const RejectedView = ({ currentApp }: { currentApp: any }) => {
 };
 
 
-export const TenantView = ({ 
-  currentApp, 
-  paymentData, 
-  setPaymentData, 
-  submitRenewal, 
-  applying, 
-  files, 
-  uploadProgress, 
-  onPickFile 
-}: any) => {
+export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRenewal, applying, files, uploadProgress, onPickFile }: any) => {
   
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+
   const receiptImageUri = currentApp.receiptUrl 
     ? `${API_URL}/stalls/doc/${currentApp.receiptUrl}` 
     : null;
@@ -157,8 +150,14 @@ export const TenantView = ({
 
   const totalAmount = currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString() : "0.00";
 
+  const handleRenewalSubmit = () => {
+      submitRenewal();
+      setPaymentModalVisible(false); 
+  };
+
   return (
     <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+      
       <Card style={[styles.card, { borderColor: colors.success, borderWidth: 1, marginBottom: 20 }]}>
         <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
           <Icon name="check-decagram" size={80} color={colors.success} />
@@ -171,11 +170,9 @@ export const TenantView = ({
           <Text style={{ color: colors.textDark, marginTop: 5 }}>
             Floor: {currentApp.floor}
           </Text>
-          
         </Card.Content>
       </Card>
 
-     
       <Card style={{ marginBottom: 20, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 }}>
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
@@ -189,22 +186,19 @@ export const TenantView = ({
 
           <Divider style={{ marginVertical: 15 }} />
           
-          <Text variant="titleSmall" style={{ color: '#166534', fontWeight: 'bold', marginBottom: 10 }}>Submit Next Payment</Text>
-          <TextInput 
-            label="OR / Reference No." 
-            value={paymentData.referenceNo} 
-            onChangeText={(t: string) => setPaymentData({...paymentData, referenceNo: t})} 
-            mode="outlined" style={styles.input} activeOutlineColor={colors.success} textColor={colors.black} 
-          />
-          <FileUploadButton label="Receipt Photo" fileKey="receipt" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-          
-          <Button mode="contained" onPress={submitRenewal} loading={applying} style={{ backgroundColor: colors.success, marginTop: 10 }} textColor={colors.white}>
-            Send Payment Receipt
+          <Button 
+            mode="contained" 
+            icon="upload"
+            onPress={() => setPaymentModalVisible(true)} 
+            style={{ backgroundColor: colors.success }} 
+            textColor={colors.white}
+          >
+            Submit Next Payment
           </Button>
         </Card.Content>
       </Card>
 
-   
+     
       <Card style={{ marginBottom: 20, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 }}>
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
@@ -214,25 +208,15 @@ export const TenantView = ({
             </Text>
           </View>
           
-          <View style={{ 
-            backgroundColor: '#ffffff', 
-            padding: 15, 
-            borderRadius: 10, 
-            marginBottom: 15,
-            borderWidth: 1, 
-            borderColor: colors.success 
-          }}>
-            
+          <View style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
             <Text variant="bodyMedium" style={{ marginBottom: 5, color: '#121213', fontWeight: 'bold'  }}>
               <Text style={{ fontWeight: 'medium', color: '#121213' }}>Reference No: </Text> 
               {currentApp.paymentReference || "N/A"}  
             </Text>
-            
             <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold' }}>
               <Text style={{ fontWeight: 'medium', color: '#121213' }}>Amount Paid: </Text> 
               ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString() : "0.00"}
             </Text>
-
           </View>
          
           {receiptImageUri ? (
@@ -256,6 +240,50 @@ export const TenantView = ({
           )}
         </Card.Content>
       </Card>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={paymentModalVisible}
+        onRequestClose={() => setPaymentModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: 'white', padding: 25, borderRadius: 15, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, elevation: 5 }}>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+               <Icon name="cash-register" size={28} color={colors.success} style={{ marginRight: 10 }} />
+               <Text variant="titleLarge" style={{ color: '#166534', fontWeight: 'bold' }}>Upload Receipt</Text>
+            </View>
+            
+            <Text style={{ marginBottom: 20, color: '#444', lineHeight: 20 }}>
+              Please provide the reference number and attach a photo of your receipt for the upcoming due amount of <Text style={{fontWeight:'bold'}}>₱{totalAmount}</Text>.
+            </Text>
+
+            <TextInput 
+                label="OR / Reference No." 
+                value={paymentData.referenceNo} 
+                onChangeText={(t: string) => setPaymentData({...paymentData, referenceNo: t})} 
+                mode="outlined" 
+                style={[styles.input, { marginBottom: 15 }]} 
+                activeOutlineColor={colors.success} 
+                textColor={colors.black} 
+            />
+            
+            <FileUploadButton label="Receipt Photo" fileKey="receipt" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 25, gap: 10 }}>
+              <Button onPress={() => setPaymentModalVisible(false)} textColor="grey">
+                Cancel
+              </Button>
+              <Button mode="contained" onPress={handleRenewalSubmit} loading={applying} style={{ backgroundColor: colors.success }} textColor={colors.white}>
+                Send Payment
+              </Button>
+            </View>
+
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 };

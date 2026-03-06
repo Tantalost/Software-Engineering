@@ -443,7 +443,7 @@ const Topbar = ({ title, onMenuClick }) => {
                               onClick={applyRentReminderTemplate}
                               className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 font-medium transition-colors cursor-pointer"
                           >
-                              📋 Permanent Rent Due (1st-5th)
+                               Permanent Rent Due (1st-5th)
                           </button>
                       </div>
                   </div>

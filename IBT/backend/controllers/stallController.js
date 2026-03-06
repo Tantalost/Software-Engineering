@@ -132,7 +132,7 @@ export const getMyApplication = async (req, res) => {
                 combinedApps[existingAppIndex].start = tenant.StartDateTime;
                 combinedApps[existingAppIndex].due = tenant.DueDateTime;
                 combinedApps[existingAppIndex].totalAmount = tenant.totalAmount; 
-                combinedApps[existingAppIndex].tenantId = tenant._id;
+                combinedApps[existingAppIndex].tenantId = tenant._id; 
             } else {
                 combinedApps.push({
                     status: 'TENANT',
