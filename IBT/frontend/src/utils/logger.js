@@ -1,4 +1,4 @@
-const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`; 
 
 export const logActivity = async (user, action, details, module = "General") => {
   try {

@@ -162,8 +162,8 @@ const Reports = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const role = localStorage.getItem("authRole") || "superadmin";
-  const API_URL = `${import.meta.env.VITE_API_URL}/api/reports`;
-  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
+  const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
+  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
 
   const fetchReports = async () => {
     try {
@@ -244,9 +244,10 @@ const Reports = () => {
     if (filtered.length === 0) return alert("No records to export.");
 
     const dateStr = new Date().toLocaleDateString();
+    const timeStr = new Date().toLocaleTimeString();
     const operator = localStorage.getItem("authName") || "Admin";
 
-    // Helper to extract revenue safely from different report structures
+    // Helper to extract revenue safely
     const getRevenue = (item) =>
       item.data?.statistics?.totalRevenue ||
       item.data?.statistics?.revenue ||
@@ -257,38 +258,38 @@ const Reports = () => {
       0,
     );
 
-    // Define rows to match the "OVERALL REPORTS" reference (Source 6 & 7)
+    // 1. SIMULATED HEADER (Matches PDF branding and title)
     const rows = [
-      ["", "", "OVERALL REPORTS", ""],
+      ["INTEGRADO TERMINAL DE ZAMBOANGA"], // Mimics Header image text
+      ["OVERALL TERMINAL REPORTS"],        // Report Title
       [], // Spacer
-      [
-        `Date: ${dateStr}`,
-        "",
-        "Overall Total Revenue",
-        `₱${overallTotalRevenue.toFixed(2)}`,
-      ],
-      [`Operator: ${operator}`, "", "", ""],
+
+      // 2. METADATA (Simulated PDF Alignment)
+      [`Date: ${dateStr}`, "", "", `Overall Total Revenue: Php ${overallTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
       [], // Spacer
-      ["Report ID", "Department", "Operator", "Revenue"], // Table Headers (Source 6)
+
+      // 3. TABLE HEADERS
+      ["Report ID", "Department", "Operator", "Revenue"]
     ];
 
-    // Map filtered records to the required columns
+    // 4. TABLE DATA (Standardized "Php" formatting)
     filtered.forEach((item) => {
       rows.push([
         item.id ? item.id.substring(0, 8).toUpperCase() : "-",
         item.type || "-",
         item.author || "-",
-        `₱${getRevenue(item).toFixed(2)}`,
+        `Php ${getRevenue(item).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
       ]);
     });
 
+    // 6. GENERATION LOGIC WITH UTF-8 BOM
     const csvContent = rows
       .map((row) =>
         row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","),
       )
       .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -301,7 +302,7 @@ const Reports = () => {
     logActivity(
       role,
       "EXPORT_OVERALL_EXCEL",
-      `Exported Overall Report summary`,
+      `Exported Overall Report summary to Excel-converted format`,
       "Reports",
     );
   };
@@ -571,7 +572,7 @@ const Reports = () => {
       const idToArchive = row._id || row.id;
       if (!idToArchive) throw new Error("Record ID is missing.");
 
-     
+
       const response = await fetch(`${API_URL}/${idToArchive}/archive`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" }
@@ -580,7 +581,7 @@ const Reports = () => {
       if (!response.ok) throw new Error("Failed to archive report");
 
       await logActivity(role, "ARCHIVE_REPORT", `Archived Report ${idToArchive}`, "Reports");
-      
+
       setRecords(records.filter((r) => r.id !== idToArchive));
 
       showToast("success", "Report archived successfully.");
@@ -592,19 +593,19 @@ const Reports = () => {
 
   const tableColumns = isSelectionMode
     ? [
-        <div key="header-check" className="flex items-center">
-          <input
-            type="checkbox"
-            checked={isAllSelected}
-            onChange={handleSelectAll}
-            className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-          />
-        </div>,
-        "Report ID",
-        "Type",
-        "Author",
-        "Date",
-      ]
+      <div key="header-check" className="flex items-center">
+        <input
+          type="checkbox"
+          checked={isAllSelected}
+          onChange={handleSelectAll}
+          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+        />
+      </div>,
+      "Report ID",
+      "Type",
+      "Author",
+      "Date",
+    ]
     : ["Report ID", "Type", "Author", "Date"];
 
   return (
@@ -726,11 +727,10 @@ const Reports = () => {
             <button
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${
-                isSelectionMode
+              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${isSelectionMode
                   ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
                   : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
-              }`}
+                }`}
             >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
             </button>
@@ -836,6 +836,13 @@ const Reports = () => {
                   <span className="font-mono text-slate-700">{viewRow.id}</span>
                 </p>
               </div>
+              <button
+                onClick={() => setViewRow(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+                title="Close"
+              >
+                <X size={24} />
+              </button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -923,15 +930,14 @@ const Reports = () => {
       {toast.show && (
         <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right-5 fade-in duration-300">
           <div
-            className={`min-w-[280px] max-w-sm px-5 py-4 rounded-2xl shadow-2xl border flex items-start gap-3 ${
-              toast.type === "delete"
+            className={`min-w-[280px] max-w-sm px-5 py-4 rounded-2xl shadow-2xl border flex items-start gap-3 ${toast.type === "delete"
                 ? "bg-red-50 border-red-200 text-red-700"
                 : toast.type === "archive"
                   ? "bg-yellow-50 border-yellow-200 text-yellow-700"
                   : toast.type === "error"
                     ? "bg-red-50 border-red-200 text-red-700"
                     : "bg-emerald-50 border-emerald-200 text-emerald-700"
-            }`}
+              }`}
           >
             <div className="mt-0.5">
               {toast.type === "delete" && <Trash2 size={18} />}

@@ -23,6 +23,8 @@ const TenantApplicationSchema = new mongoose.Schema({
     ],
     default: 'VERIFICATION_PENDING'
   },
+
+  adminViewed: { type: Boolean, default: false },
   
   rejectionReason: String, 
 

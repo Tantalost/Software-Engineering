@@ -34,8 +34,8 @@ import { sendNotification } from "../utils/notificationService.js";
 import { submitPageReport } from "../utils/reportService.js";
 import { sendBroadcast, archiveTenantRecord, requestBulkDeletion } from "../services/tenantServices.js";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`;
-const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
+const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
 
 const TenantLease = () => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -483,6 +483,13 @@ const TenantLease = () => {
             setReviewData(fullData);
             setShowWaitlistModal(false);
             setShowReviewModal(true);
+
+            setWaitlistData(prev => prev.map(item => 
+                (item.id === applicant.id || item._id === applicant.id) 
+                    ? { ...item, adminViewed: true } 
+                    : item
+            ));
+            
         } catch (error) {
             console.error("Error fetching full details:", error);
             setNotificationState({
@@ -583,29 +590,15 @@ const TenantLease = () => {
             }
 
             if (newTenant.documents) {
-                if (newTenant.documents.businessPermit instanceof File) {
-                    formData.append('businessPermit', newTenant.documents.businessPermit);
-                }
-                if (newTenant.documents.validID instanceof File) {
-                    formData.append('validID', newTenant.documents.validID);
-                }
-                if (newTenant.documents.contract instanceof File) {
-                    formData.append('contract', newTenant.documents.contract);
-                }
-
-                if (newTenant.documents.barangayClearance instanceof File) {
-                    formData.append('barangayClearance', newTenant.documents.barangayClearance);
-                }
-                if (newTenant.documents.proofOfReceipt instanceof File) {
-                    formData.append('proofOfReceipt', newTenant.documents.proofOfReceipt);
-                }
-
-                if (newTenant.documents.communityTax instanceof File) {
-                    formData.append('communityTax', newTenant.documents.communityTax);
-                }
-                if (newTenant.documents.policeClearance instanceof File) {
-                    formData.append('policeClearance', newTenant.documents.policeClearance);
-                }
+                const docKeys = ['businessPermit', 'validID', 'contract', 'barangayClearance', 'proofOfReceipt', 'communityTax', 'policeClearance'];
+                docKeys.forEach(docKey => {
+                    const docValue = newTenant.documents[docKey];
+                    if (docValue instanceof File) {
+                        formData.append(docKey, docValue); 
+                    } else if (typeof docValue === 'string' && docValue.trim() !== "") {
+                        formData.append(docKey, docValue); 
+                    }
+                });
             }
 
             const response = await fetch(`${API_URL}/tenants`, {
@@ -832,14 +825,17 @@ const TenantLease = () => {
         if (filtered.length === 0) return alert("No records to export.");
 
         const dateStr = new Date().toLocaleDateString();
-        const operator = localStorage.getItem("authName") || "Tenant Admin";
+        // Removed operator reference to match the PDF update
 
         const rows = [
-            ["", "", "TENANTS AND LEASE REPORTS", "", "", "", ""],
+            // Simulated Header Space (Matches PDF Title)
+            ["", "", "TENANTS AND LEASE REPORTS"],
             [],
-            [`Date: ${dateStr}`, "", "", `No. of Payments: ${filtered.length}`, "", "", ""],
-            [`Operator: ${operator}`, "", "", `Revenue: ₱${mapStats.totalRevenue.toFixed(2)}`, "", "", ""],
+            // Alignment: Left-side info and Right-side info on the same row (simulated)
+            [`Date: ${dateStr}`, "", "", "", "", `No. of Payments: ${filtered.length}`],
+            [`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", "", "", ""],
             [],
+            // Table Headers
             ["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]
         ];
 
@@ -849,12 +845,13 @@ const TenantLease = () => {
                 t.tenantName || t.name || "-",
                 t.email || "-",
                 t.contactNo || "-",
-                `₱${(t.rentAmount || 0).toFixed(2)}`,
-                `₱${(t.utilityAmount || 0).toFixed(2)}`,
-                `₱${(t.totalAmount || 0).toFixed(2)}`
+                `Php ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ]);
         });
 
+        // Create the CSV content
         const csvContent = rows
             .map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))
             .join("\n");
@@ -866,7 +863,7 @@ const TenantLease = () => {
         link.setAttribute("download", `Tenants_Lease_Report_${new Date().toISOString().split("T")[0]}.csv`);
         link.click();
 
-        logActivity(role, "EXPORT_EXCEL", `Exported ${filtered.length} Tenant records`, "Tenants");
+        logActivity(role, "EXPORT_EXCEL", `Exported ${filtered.length} Tenant records with PDF-matching format`, "Tenants");
     };
 
     const handleExportPDF = () => {
@@ -884,24 +881,33 @@ const TenantLease = () => {
 
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Operator: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
 
+        // Position Date on the left
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+
+        // REMOVED: Operator line
+
+        // Update Revenue formatting and alignment to prevent border overflow
         doc.text(`No. of Payments: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
-        doc.text(`Revenue: ₱${mapStats.totalRevenue.toFixed(2)}`, pageWidth - 15, 61, { align: "right" });
+        doc.text(
+            `Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            pageWidth - 15,
+            61,
+            { align: "right" }
+        );
 
         autoTable(doc, {
             startY: 70,
-            margin: { bottom: 35 },
+            margin: { bottom: 35, left: 15, right: 15 }, // Ensure margins match header alignment
             head: [["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]],
             body: filtered.map((t) => [
                 t.slotNo || "-",
                 t.tenantName || t.name || "-",
                 t.email || "-",
                 t.contactNo || "-",
-                `₱${(t.rentAmount || 0).toFixed(2)}`,
-                `₱${(t.utilityAmount || 0).toFixed(2)}`,
-                `₱${(t.totalAmount || 0).toFixed(2)}`
+                `Php ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ]),
             headStyles: { fillColor: [220, 38, 38] },
             styles: { fontSize: 8, halign: 'center' },
@@ -931,6 +937,8 @@ const TenantLease = () => {
             "Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"
         ]
         : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"];
+
+        const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
     return (
         <Layout title="Tenants/Lease Management">
@@ -999,7 +1007,11 @@ const TenantLease = () => {
                     </button>
                     <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
                         <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
-                        {waitlistData.length > 0 && (<span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{waitlistData.length}</span>)}
+                        {actionRequiredCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                {actionRequiredCount}
+                            </span>
+                        )}
                     </button>
                 </div>
 
@@ -1175,8 +1187,8 @@ const TenantLease = () => {
                         barangayClearance: transferApplicant.clearanceUrl,
                         proofOfReceipt: transferApplicant.receiptUrl,
                         contract: transferApplicant.contractUrl,
-                        communityTax: transferApplicant.communityTaxUrl, 
-                        policeClearance: transferApplicant.policeClearanceUrl 
+                        communityTax: transferApplicant.communityTaxUrl,
+                        policeClearance: transferApplicant.policeClearanceUrl
                     }
                 } : null}
             />
@@ -1201,29 +1213,15 @@ const TenantLease = () => {
                             });
 
                             if (updatedData.documents) {
-                                if (updatedData.documents.businessPermit instanceof File) {
-                                    formData.append('businessPermit', updatedData.documents.businessPermit);
-                                }
-                                if (updatedData.documents.validID instanceof File) {
-                                    formData.append('validID', updatedData.documents.validID);
-                                }
-                                if (updatedData.documents.contract instanceof File) {
-                                    formData.append('contract', updatedData.documents.contract);
-                                }
-
-                                if (updatedData.documents.barangayClearance instanceof File) {
-                                    formData.append('barangayClearance', updatedData.documents.barangayClearance);
-                                }
-                                if (updatedData.documents.proofOfReceipt instanceof File) {
-                                    formData.append('proofOfReceipt', updatedData.documents.proofOfReceipt);
-                                }
-
-                                if (updatedData.documents.communityTax instanceof File) {
-                                    formData.append('communityTax', updatedData.documents.communityTax);
-                                }
-                                if (updatedData.documents.policeClearance instanceof File) {
-                                    formData.append('policeClearance', updatedData.documents.policeClearance);
-                                }
+                                const docKeys = ['businessPermit', 'validID', 'contract', 'barangayClearance', 'proofOfReceipt', 'communityTax', 'policeClearance'];
+                                docKeys.forEach(docKey => {
+                                    const docValue = updatedData.documents[docKey];
+                                    if (docValue instanceof File) {
+                                        formData.append(docKey, docValue);
+                                    } else if (typeof docValue === 'string' && docValue.trim() !== "") {
+                                        formData.append(docKey, docValue); 
+                                    }
+                                });
                             }
 
                             const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {

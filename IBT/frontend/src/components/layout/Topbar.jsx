@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { 
-  Menu, Bell, ChevronDown, X, AlertTriangle, Radio, Upload, 
+  Menu, Bell, ChevronDown, X, AlertTriangle, Megaphone, Upload, 
   Eye, Edit, Trash2, ZoomIn, ZoomOut 
 } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
@@ -48,9 +48,8 @@ const Topbar = ({ title, onMenuClick }) => {
   const bellRef = useRef(null);
   const userRef = useRef(null);
 
-  const BASE_URL = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
+  const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:10000").replace(/\/api\/?$/, '');
 
-  // Helper to safely format image URLs whether they are relative or absolute
   const getImageUrl = (uri) => {
     if (!uri) return '';
     return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
@@ -63,7 +62,8 @@ const Topbar = ({ title, onMenuClick }) => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`);
+      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
+      const res = await fetch(`${baseUrl}/api/notifications`);
       if (res.ok) {
         const data = await res.json();
         const myRole = localStorage.getItem("authRole") || "superadmin";
@@ -79,7 +79,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const fetchAdminBroadcasts = async () => {
     setIsLoadingBroadcasts(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/broadcasts/admin`);
+      const res = await fetch(`${BASE_URL}/api/broadcasts/admin`);
       if (res.ok) {
         const data = await res.json();
         setAdminBroadcasts(data);
@@ -94,7 +94,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const confirmDeleteBroadcast = async () => {
     if (!postToDelete) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/broadcasts/${postToDelete}`, {
+      const res = await fetch(`${BASE_URL}/api/broadcasts/${postToDelete}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -178,8 +178,8 @@ const Topbar = ({ title, onMenuClick }) => {
     setIsSubmitting(true);
     try {
       const url = editMode 
-        ? `${import.meta.env.VITE_API_URL}/api/broadcasts/${editId}` 
-        : `${import.meta.env.VITE_API_URL}/api/broadcasts`;
+        ? `${BASE_URL}/api/broadcasts/${editId}` 
+        : `${BASE_URL}/api/broadcasts`;
       
       const res = await fetch(url, {
         method: editMode ? 'PUT' : 'POST',
@@ -213,7 +213,7 @@ const Topbar = ({ title, onMenuClick }) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/${notifId}/read`, {
+      const res = await fetch(`${BASE_URL}/api/notifications/${notifId}/read`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -260,7 +260,7 @@ const Topbar = ({ title, onMenuClick }) => {
                 className="p-2.5 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-all cursor-pointer"
                 title="Broadcast Message"
               >
-                <Radio size={22} />
+                <Megaphone size={22} />
               </button>
 
               <div className="hidden sm:block relative" ref={bellRef}>
@@ -374,7 +374,7 @@ const Topbar = ({ title, onMenuClick }) => {
             <div className="p-6 pb-4 flex justify-between items-start border-b border-gray-100">
               <div>
                 <h2 className="text-2xl font-bold text-slate-800">
-                  {editMode ? "Edit Broadcast" : "Broadcast Center"}
+                  {editMode ? "Edit Post" : "New Post Announcement"}
                 </h2>
                 
                 <div className="flex space-x-4 mt-4 border-b border-gray-200">
@@ -382,7 +382,7 @@ const Topbar = ({ title, onMenuClick }) => {
                     onClick={() => { setBroadcastTab("create"); resetForm(); }}
                     className={`pb-2 text-sm font-semibold transition-colors ${broadcastTab === "create" ? "text-emerald-600 border-b-2 border-emerald-600" : "text-slate-400 hover:text-slate-600"}`}
                   >
-                    {editMode ? "Editing Post" : "New Broadcast"}
+                    {editMode ? "Editing Post" : "New Post Announcement"}
                   </button>
                   <button 
                     onClick={() => { setBroadcastTab("manage"); setEditMode(false); }}

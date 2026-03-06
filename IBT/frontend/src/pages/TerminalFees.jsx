@@ -20,6 +20,7 @@ import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
+import NotificationToast from "../components/common/NotificationToast";
 import ViewModal from "../components/common/ViewModal";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
@@ -30,7 +31,7 @@ import TerminalFilter from "../components/terminal/TerminalFilter";
 import { logActivity } from "../utils/logger";
 import { submitPageReport } from "../utils/reportService";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`;
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
 
 const getInitialBasePrices = () => {
   const storedPrices = localStorage.getItem("terminalBasePrices");
@@ -127,32 +128,32 @@ const TerminalFees = () => {
   };
 
   const handleSaveBasePrices = () => {
-  const newPrices = {};
-  let hasError = false;
+    const newPrices = {};
+    let hasError = false;
 
-  for (const key in modalPrices) {
-    const priceString = String(modalPrices[key]);
-    if (priceString === "" || priceString === ".") {
-      newPrices[key] = 0.0;
-    } else {
-      const numValue = parseFloat(priceString);
-      if (isNaN(numValue) || numValue < 0) {
-        showToastMessage("Error: Price must be a valid non-negative number.");
-        hasError = true;
-        break;
+    for (const key in modalPrices) {
+      const priceString = String(modalPrices[key]);
+      if (priceString === "" || priceString === ".") {
+        newPrices[key] = 0.0;
+      } else {
+        const numValue = parseFloat(priceString);
+        if (isNaN(numValue) || numValue < 0) {
+          showToastMessage("Error: Price must be a valid non-negative number.");
+          hasError = true;
+          break;
+        }
+        newPrices[key] = parseFloat(numValue.toFixed(2));
       }
-      newPrices[key] = parseFloat(numValue.toFixed(2));
     }
-  }
 
-  if (!hasError) {
-    setBasePrices(newPrices); 
-    setShowPriceModal(false);
-    showToastMessage(
-      "Base prices updated successfully! New tickets will use these prices."
-    );
-  }
-};
+    if (!hasError) {
+      setBasePrices(newPrices);
+      setShowPriceModal(false);
+      showToastMessage(
+        "Base prices updated successfully! New tickets will use these prices."
+      );
+    }
+  };
 
   const handleOpenPriceModal = () => {
     setModalPrices({
@@ -266,7 +267,7 @@ const TerminalFees = () => {
           ...rest,
           price:
             typeof rest.price === "number"
-              ? `₱${rest.price.toFixed(2)}`
+              ? `Php ${rest.price.toFixed(2)}`
               : rest.price,
           date: rest.date ? new Date(rest.date).toLocaleDateString() : "-",
           time: to12HourFormat(rest.time),
@@ -291,7 +292,7 @@ const TerminalFees = () => {
 
       const adminName = localStorage.getItem("authName") || "Ticket Admin";
       await submitPageReport("Terminal Fees", reportPayload, adminName);
-      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
+      await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -612,37 +613,38 @@ const TerminalFees = () => {
     if (filtered.length === 0) return alert("No records to export.");
 
     const dateStr = new Date().toLocaleDateString();
-    const operator = localStorage.getItem("authName") || "Ticket Admin";
 
-    // Define rows to match the "Passenger Reports" reference format
     const rows = [
-      ["", "", "PASSENGER REPORTS", "", ""],
-      [], // Spacer
+      ["CITY OF ZAMBOANGA"],
+      ["OFICINA DEL ADMINISTRADOR"],
+      ["INTEGRADO TERMINAL DE ZAMBOANGA"],
+      [""],
+      ["PASSENGER REPORTS"],
+      [""],
       [
         `Date: ${dateStr}`,
-        `No. Regular: ${stats.regular}`,
         "",
-        `No. of Passengers: ${stats.total}`,
         "",
+        "",
+        `No. of Passengers: ${stats.total}`
       ],
       [
-        `Operator: ${operator}`,
-        `No. Student/Senior: ${stats.student + stats.senior}`,
         "",
-        `Revenue: ₱${stats.revenue.toFixed(2)}`,
         "",
+        "",
+        "",
+        `Revenue: Php ${stats.revenue.toFixed(2)}`
       ],
-      [], // Spacer before table
-      ["Ticket No", "Passenger Type", "Price", "Time", "Date"], // Table Headers
+      [],
+      ["Ticket No", "Passenger Type", "Price", "Time", "Date"],
     ];
 
-    // Append data rows from your records
+
     filtered.forEach((item) => {
       rows.push([
         item.ticketNo || "-",
         item.passengerType || "-",
-        `₱${(item.price || 0).toFixed(2)}`,
-        item.time || "-",
+        `Php ${(item.price || 0).toFixed(2)}`,
         item.date ? new Date(item.date).toLocaleDateString() : "-",
       ]);
     });
@@ -666,7 +668,7 @@ const TerminalFees = () => {
     logActivity(
       role,
       "EXPORT_CSV",
-      `Exported ${filtered.length} Terminal Fees records`,
+      `Exported ${filtered.length} Terminal Fees records (Standard Report Format)`,
       "TerminalFees",
     );
   };
@@ -677,56 +679,45 @@ const TerminalFees = () => {
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const tableRightEdge = pageWidth - margin;
 
-    // 1. Header Branding
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
-
-    // 2. Report Title & Metadata (Matching Source 4)
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("PASSENGER REPORTS", pageWidth / 2, 45, { align: "center" });
-
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-
-    // Metadata Grid
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-    doc.text(
-      `Operator: ${localStorage.getItem("authName") || "Ticket Admin"}`,
-      15,
-      61,
-    );
-
-    doc.text(`No. Regular: ${stats.regular}`, 60, 55);
-    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, 60, 61);
-
-    doc.text(`No. of Passengers: ${stats.total}`, pageWidth - 15, 55, {
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
+    doc.text(`No. Regular: ${stats.regular}`, 75, 55);
+    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, 75, 61);
+    doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, {
       align: "right",
     });
-    doc.text(`Revenue: ₱${stats.revenue.toFixed(2)}`, pageWidth - 15, 61, {
+    doc.text(`Revenue: Php ${stats.revenue.toFixed(2)}`, tableRightEdge, 61, {
       align: "right",
     });
 
-    // 3. Data Table
     autoTable(doc, {
       startY: 70,
-      margin: { bottom: 35 },
+      margin: { left: margin, right: margin, bottom: 35 },
       head: [["Ticket No", "Passenger Type", "Price", "Time", "Date"]],
       body: filtered.map((item) => [
         item.ticketNo || "-",
         item.passengerType || "-",
-        `₱${(item.price || 0).toFixed(2)}`,
+        `Php ${(item.price || 0).toFixed(2)}`,
         item.time || "-",
         item.date ? new Date(item.date).toLocaleDateString() : "-",
       ]),
-      headStyles: { fillColor: [220, 38, 38] }, // Red branding matching IBT logo
+      headStyles: { fillColor: [220, 38, 38] },
       styles: { fontSize: 9, halign: "center" },
       columnStyles: {
-        0: { halign: "left" }, // Ticket No
-        1: { halign: "left" }, // Passenger Type
+        0: { halign: "left" },
+        1: { halign: "left" },
+        2: { halign: "right" },
       },
       didDrawPage: (data) => {
-        // 4. Footer Branding on every page
+
         doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
       },
     });
@@ -734,6 +725,7 @@ const TerminalFees = () => {
     doc.save(
       `Terminal_Fees_Report_${new Date().toISOString().slice(0, 10)}.pdf`,
     );
+
     logActivity(
       role,
       "EXPORT_PDF",
@@ -744,20 +736,20 @@ const TerminalFees = () => {
 
   const tableColumns = isSelectionMode
     ? [
-        <div key="header-check" className="flex items-center">
-          <input
-            type="checkbox"
-            checked={isAllSelected}
-            onChange={handleSelectAll}
-            className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-          />
-        </div>,
-        "Ticket No",
-        "Passenger Type",
-        "Time",
-        "Date",
-        "Price",
-      ]
+      <div key="header-check" className="flex items-center">
+        <input
+          type="checkbox"
+          checked={isAllSelected}
+          onChange={handleSelectAll}
+          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+        />
+      </div>,
+      "Ticket No",
+      "Passenger Type",
+      "Time",
+      "Date",
+      "Price",
+    ]
     : ["Ticket No", "Passenger Type", "Time", "Date", "Price"];
 
   return (
@@ -774,7 +766,7 @@ const TerminalFees = () => {
 
       {/* --- Main container justified to the right --- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
-        
+
         <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
           {role === "superadmin" && (
             <button
@@ -862,11 +854,10 @@ const TerminalFees = () => {
             <button
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-                isSelectionMode
+              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
                   ? "bg-red-500  text-white shadow-md"
                   : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-              }`}
+                }`}
             >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
             </button>
@@ -1268,12 +1259,12 @@ const TerminalFees = () => {
                   value={
                     editRow.date
                       ? new Date(editRow.date).toLocaleString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
                       : ""
                   }
                   disabled
@@ -1334,19 +1325,6 @@ const TerminalFees = () => {
         </div>
       )}
 
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-[100] flex items-center gap-3 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl animate-in slide-in-from-bottom-5 fade-in">
-          <CheckCircle className="text-emerald-400" size={22} />
-          <span className="font-semibold text-sm">{toast}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="ml-4 text-slate-400 hover:text-white"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
@@ -1385,6 +1363,7 @@ const TerminalFees = () => {
           </div>
         </div>
       )}
+      <NotificationToast message={toast} />
     </Layout>
   );
 };

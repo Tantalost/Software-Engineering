@@ -8,7 +8,7 @@ import { Eye, RotateCcw, Trash2, CalendarDays, Loader2, X, ListChecks } from "lu
 import { logActivity } from "../utils/logger"; 
 import NotificationToast from "../components/common/NotificationToast";
 
-const API_URL = `${import.meta.env.VITE_API_URL}/api`; 
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`; 
 
 const Archive = () => {
   const role = localStorage.getItem("authRole");

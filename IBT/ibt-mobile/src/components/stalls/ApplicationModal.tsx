@@ -51,6 +51,7 @@ export default function ApplicationModal({
                 <TextInput label="First Name" value={formData.firstName} onChangeText={(text) => setFormData({ ...formData, firstName: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
                 <TextInput label="Middle Name (Optional)" value={formData.middleName} onChangeText={(text) => setFormData({ ...formData, middleName: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
                 <TextInput label="Last Name" value={formData.lastName} onChangeText={(text) => setFormData({ ...formData, lastName: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
+                <TextInput label="Suffix (e.g., Jr., Sr., III) - Optional" value={formData.suffix} onChangeText={(text) => setFormData({ ...formData, suffix: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
                 
                 <View style={styles.phoneRow}>
                   <View style={styles.prefixContainer}><Text style={styles.prefixText}>+63</Text></View>
@@ -82,9 +83,14 @@ export default function ApplicationModal({
                 <FileUploadButton label="Business Permit" fileKey="permit" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
                 <FileUploadButton label="Valid ID" fileKey="validId" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
                 <FileUploadButton label="Brgy Clearance" fileKey="clearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-                <FileUploadButton label="Community Tax Certificate" fileKey="communityTax" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-                <FileUploadButton label="Police Clearance" fileKey="policeClearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-
+                
+                {selectedFloor === 'Night Market' && (
+                  <>
+                    <FileUploadButton label="Community Tax Certificate" fileKey="communityTax" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                    <FileUploadButton label="Police Clearance" fileKey="policeClearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                  </>
+                )}
+                
                 <View style={styles.billingSummary}>
                     <Text style={[{fontWeight:'bold', color: colors.black }]}>Initial Payment:</Text>
                     <Text variant="titleLarge" style={{color: colors.primary, fontWeight:'bold'}}>{modalBilling.amountLabel}</Text>

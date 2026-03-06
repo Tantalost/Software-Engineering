@@ -22,7 +22,7 @@ const ApplicationReviewModal = ({
   const getFileUrl = (pathOrString) => {
     if (!pathOrString || typeof pathOrString !== 'string') return null;
     if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) return pathOrString;
-    return `${import.meta.env.VITE_API_URL}/api/stalls/doc/${pathOrString}`; 
+    return `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/stalls/doc/${pathOrString}`; 
   };
 
   const openPdf = (url) => window.open(url, '_blank');
@@ -151,10 +151,18 @@ const ApplicationReviewModal = ({
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100"><User size={18} className="text-emerald-600" /> Applicant Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
                 <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label><p className="font-semibold text-slate-800 text-lg">{reviewData.name || "N/A"}</p></div>
                 <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact</label><p className="font-medium text-slate-800">{reviewData.contact || "N/A"}</p></div>
                 <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email</label><p className="font-medium text-slate-800">{reviewData.email || "N/A"}</p></div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Products to be Sold</label>
+                  <p className="font-medium text-slate-800 capitalize">
+                    {reviewData.product ? reviewData.product.replace(/_/g, ' ') : "N/A"}
+                  </p>
+                </div>
+
                 <div>
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Target Slot</label>
                   <p className="font-medium text-slate-800 flex items-center gap-2">

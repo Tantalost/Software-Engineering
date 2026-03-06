@@ -14,6 +14,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     firstName: "", 
     middleName: "",
     lastName: "",
+    suffix: "",
     referenceNo: "", 
     email: "",
     contactNo: "",
@@ -41,6 +42,17 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
   const [rentAmount, setRentAmount] = useState(0);
   const [utilityAmount, setUtilityAmount] = useState(0);
+
+  const [feeBreakdown, setFeeBreakdown] = useState({
+    garbageFee: 0,
+    permitFee: 0,
+    businessTaxes: 0,
+    electricity: 0,
+    water: 0,
+    otherAmount: 0,
+    otherSpecify: ""
+  });
+
   const [totalAmount, setTotalAmount] = useState(0);
 
   const [startDate, setStartDate] = useState("");
@@ -67,8 +79,13 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
       if (initialData) {
         const fullName = initialData.name || initialData.tenantName || "";
-        const nameParts = fullName.split(" ");
-        let fName = "", mName = "", lName = "";
+        let nameParts = fullName.trim().split(/\s+/);
+        let fName = "", mName = "", lName = "", parsedSuffix = "";
+
+        const suffixList = ["jr", "jr.", "sr", "sr.", "ii", "iii", "iv", "v"];
+        if (nameParts.length > 1 && suffixList.includes(nameParts[nameParts.length - 1].toLowerCase())) {
+            parsedSuffix = nameParts.pop(); 
+        }
 
         if (nameParts.length === 1) {
             fName = nameParts[0];
@@ -77,8 +94,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             lName = nameParts[1];
         } else if (nameParts.length > 2) {
             fName = nameParts[0];
-            lName = nameParts[nameParts.length - 1];
-            mName = nameParts.slice(1, -1).join(" ");
+            lName = nameParts.pop(); 
+            mName = nameParts.slice(1).join(" "); 
         }
 
         setFormData({
@@ -87,43 +104,34 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
           firstName: fName,
           middleName: mName,
           lastName: lName,
+          suffix: parsedSuffix || initialData.suffix || "", 
           email: initialData.email || "",
           contactNo: initialData.contactNo || "",
           tenantType: initialData.tenantType || "Permanent", 
           _id: initialData._id || "",
         });
 
-        if (initialData.slotNo) {
-            setTempSelectedSlots(initialData.slotNo.split(', '));
-        }
-
-        if (initialData.documents) {
-            setDocuments({
-                businessPermit: initialData.documents.businessPermit || null,
-                validID: initialData.documents.validID || null,
-                barangayClearance: initialData.documents.barangayClearance || null,
-                proofOfReceipt: initialData.documents.proofOfReceipt || null,
-                contract: initialData.documents.contract || null,
-                communityTax: initialData.documents.communityTax || null, 
-                policeClearance: initialData.documents.policeClearance || null,
-            });
-        }
-
-        const incomingProduct = initialData.products || "food_non_alcoholic";
-        if (["food_non_alcoholic", "clothes_textiles", "accessories", "footwears", "kitchenwares", "agricultural_produce"].includes(incomingProduct)) {
-          setProductCategory(incomingProduct);
-          setOtherProductDetails("");
-        } else {
-          setProductCategory("other");
-          setOtherProductDetails(incomingProduct);
-        }
-
-      } else {
+        setProductCategory("food_non_alcoholic");
+        setOtherProductDetails("");
+        setDocuments({
+            businessPermit: initialData.documents?.businessPermit || null, 
+            validID: initialData.documents?.validID || null, 
+            barangayClearance: initialData.documents?.barangayClearance || null, 
+            proofOfReceipt: initialData.documents?.proofOfReceipt || null, 
+            contract: initialData.documents?.contract || null,
+            communityTax: initialData.documents?.communityTax || null, 
+            policeClearance: initialData.documents?.policeClearance || null 
+        });
+        setTempSelectedSlots([]); 
+      }
+      
+      else {
         setFormData({
             slotNo: "",
             firstName: "",
             middleName: "",
             lastName: "",
+            suffix: "", 
             referenceNo: generateRef(), 
             email: "",
             contactNo: "",
@@ -141,6 +149,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
       setStartDate(formatDateTimeForInput(new Date()));
       setUtilityAmount(0);
+        setFeeBreakdown({
+          garbageFee: 0, permitFee: 0, businessTaxes: 0, 
+          electricity: 0, water: 0, otherAmount: 0, otherSpecify: ""
+        });
       setIsSubmitting(false);
     }
   }, [isOpen, initialData]); 
@@ -166,7 +178,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         calculatedDueDate = formatDateTimeForInput(d);
       }
     } else {
-      // Use the dynamic price passed from the parent component instead of hardcoding 160 * 7
+      
       baseRent = defaultNightPrice; 
       if (startDate) {
         const d = new Date(startDate);
@@ -181,8 +193,16 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice]);
 
   useEffect(() => {
-    setTotalAmount(parseFloat(rentAmount || 0) + parseFloat(utilityAmount || 0));
-  }, [rentAmount, utilityAmount]);
+    const calculatedUtils = (parseFloat(feeBreakdown.garbageFee) || 0) +
+                  (parseFloat(feeBreakdown.permitFee) || 0) +
+                  (parseFloat(feeBreakdown.businessTaxes) || 0) +
+                  (parseFloat(feeBreakdown.electricity) || 0) +
+                  (parseFloat(feeBreakdown.water) || 0) +
+                  (parseFloat(feeBreakdown.otherAmount) || 0);
+                  
+    setUtilityAmount(calculatedUtils);
+    setTotalAmount(parseFloat(rentAmount || 0) + calculatedUtils);
+  }, [rentAmount, feeBreakdown]);
 
   const handleFileChange = (e, docType) => {
     if (e.target.files && e.target.files[0]) {
@@ -226,8 +246,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             }).replace(',', ''); 
         };
 
-        const { _id, firstName, middleName, lastName, ...restOfFormData } = formData;
-        const combinedName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
+        const { _id, firstName, middleName, lastName, suffix, ...restOfFormData } = formData;
+        const combinedName = `${firstName} ${middleName} ${lastName} ${suffix || ''}`.replace(/\s+/g, ' ').trim();
 
         const processedDocs = { ...documents };
         
@@ -251,6 +271,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             rentAmount,
             utilityAmount: parseFloat(utilityAmount),
             totalAmount,
+            feeBreakdown: JSON.stringify(feeBreakdown),
             StartDateTime: formatForTable(startDate), 
             DueDateTime: formatForTable(dueDate),    
             status: "Paid", 
@@ -489,22 +510,27 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                     </div>
                 )}
                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:col-span-2">
-                    <div className="flex flex-col gap-1">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 md:col-span-2">
+                  <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-slate-600">First Name</label>
                     <input type="text" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
-                        value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
-                    </div>
-                    <div className="flex flex-col gap-1">
+                      value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                  </div>
+                  <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-slate-600">Middle Name</label>
                     <input type="text" className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
-                        value={formData.middleName} onChange={(e) => setFormData({...formData, middleName: e.target.value})} />
-                    </div>
-                    <div className="flex flex-col gap-1">
+                      value={formData.middleName} onChange={(e) => setFormData({...formData, middleName: e.target.value})} />
+                  </div>
+                  <div className="flex flex-col gap-1">
                     <label className="text-xs font-semibold text-slate-600">Last Name</label>
                     <input type="text" required className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
-                        value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
-                    </div>
+                      value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-slate-600">Suffix</label>
+                    <input type="text" placeholder="Jr, Sr, etc." className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                      value={formData.suffix} onChange={(e) => setFormData({...formData, suffix: e.target.value})} />
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -557,15 +583,47 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             </section>
 
             <section className="pt-4 border-t border-slate-100">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><PhilippinePeso size={16} /> 4. Financial Setup</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><PhilippinePeso size={16} /> 4. Financial Breakdown</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Rent (x{formData.slotNo ? formData.slotNo.split(',').length : 1} Slots)</label>
+                  <label className="text-xs font-semibold text-slate-600">Rental Fee (x{formData.slotNo ? formData.slotNo.split(',').length : 1})</label>
                   <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={rentAmount} /></div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Utility Fee</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={utilityAmount} onChange={(e) => setUtilityAmount(e.target.value)} /></div>
+                  <label className="text-xs font-semibold text-slate-600">Garbage Fee</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.garbageFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, garbageFee: e.target.value})} /></div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-600">Permit Fee</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.permitFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, permitFee: e.target.value})} /></div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-600">Business Taxes</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.businessTaxes} onChange={(e) => setFeeBreakdown({...feeBreakdown, businessTaxes: e.target.value})} /></div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-600">Electricity</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} /></div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-600">Water</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.water} onChange={(e) => setFeeBreakdown({...feeBreakdown, water: e.target.value})} /></div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-600">Others (Amount)</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} /></div>
+                </div>
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs font-semibold text-slate-600">Others (Please specify)</label>
+                  <input type="text" className="p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Specify what the other fee is for..." value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-600">Total Additional Fees</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={utilityAmount} /></div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Total Amount Due</label>
@@ -598,19 +656,40 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                   return docFields.map(({ label, key }) => {
                    const currentFile = documents[key];
                    const isString = typeof currentFile === 'string'; 
+                   const hasFile = !!currentFile; 
 
                    return (
-                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${isString ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
-                      {isString && (
+                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${hasFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
+                      {hasFile && (
                         <div className="absolute top-2 right-2 z-10">
                             <button 
                                 type="button" 
                                 onClick={(e) => {
                                     e.preventDefault(); 
-                                    setPreviewImage(currentFile);
+                                    e.stopPropagation(); 
+                                    
+                                    let fileUrl = "";
+                                    let isPdf = false;
+                                    
+                                    if (isString) {
+                                      fileUrl = currentFile.startsWith('http') || currentFile.startsWith('data:') 
+                                        ? currentFile 
+                                        : `${import.meta.env.VITE_API_URL}/api/stalls/doc/${currentFile}`;
+                                      isPdf = currentFile.toLowerCase().endsWith('.pdf');
+                                    } else {
+                               
+                                      fileUrl = URL.createObjectURL(currentFile);
+                                      isPdf = currentFile.type === 'application/pdf';
+                                    }
+                                      
+                                    if (isPdf) {
+                                        window.open(fileUrl, '_blank', 'noopener,noreferrer');
+                                    } else {
+                                        setPreviewImage(fileUrl);
+                                    }
                                 }} 
                                 className="bg-white text-emerald-600 p-1.5 rounded-full shadow border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all"
-                                title="View Image"
+                                title="View Document"
                             >
                                 <ZoomIn size={16} />
                             </button>
@@ -625,10 +704,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                           onChange={(e) => handleFileChange(e, key)}
                         />
                         <div className="flex items-center gap-2 text-slate-400 text-xs">
-                          <div className={`p-2 rounded-full ${isString ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
-                            {isString ? <Check size={14} /> : <Upload size={14} />}
+                          <div className={`p-2 rounded-full ${hasFile ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
+                            {hasFile ? <Check size={14} /> : <Upload size={14} />}
                           </div>
-                          <span className={isString ? "text-emerald-700 font-bold" : ""}>
+                          <span className={hasFile ? "text-emerald-700 font-bold" : ""}>
                              {getFileStatus(currentFile)}
                           </span>
                         </div>

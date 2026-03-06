@@ -132,8 +132,8 @@ const Parking = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const role = localStorage.getItem("authRole") || "superadmin";
-  const API_URL = `${import.meta.env.VITE_API_URL}/api/parking`;
-  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL}/api/archives`;
+  const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/parking`;
+  const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -595,7 +595,7 @@ const Parking = () => {
       const adminName = localStorage.getItem("authName") || "Parking Admin";
       await submitPageReport("Parking", reportPayload, adminName);
 
-      await fetch(`${import.meta.env.VITE_API_URL}/api/notifications`, {
+      await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -658,32 +658,38 @@ const Parking = () => {
     if (filtered.length === 0) return alert("No records to export.");
 
     const dateStr = new Date().toLocaleDateString();
-    const operator = localStorage.getItem("authName") || "Admin";
+    const timeStr = new Date().toLocaleTimeString();
 
-    // Creating a text-based version of your official branding
+    // 1. SIMULATED HEADER (Mimicking PDF Layout)
     const rows = [
-      ["", "", "", "INTEGRADO TERMINAL DE ZAMBOANGA", "", ""],
-      ["", "", "", "PARKING REPORTS", "", ""],
+      ["INTEGRADO TERMINAL DE ZAMBOANGA"], // Top Branding
+      ["PARKING REPORTS"], // Title
       [], // Spacer
-      [`Date: ${dateStr}`, "", "", `No. of Vehicles: ${filtered.length}`, "", ""],
-      [`Operator: ${operator}`, "", "", `Revenue: ₱${revenue.toFixed(2)}`, "", ""],
-      [`Filter: ${activeType}`, "", "", "", "", ""],
+      [`Date: ${dateStr}`, "", "", "", `No. of Vehicles: ${filtered.length}`],
       [], // Spacer
-      ["Ticket No.", "Plate No.", "Type", "Fee", "Total", "Duration"] // Table Headers
+
+      // 2. TABLE HEADERS (Removed Duration to match PDF)
+      ["Ticket No.", "Plate No.", "Type", "Fee", "Total"]
     ];
 
-    // Map data to match Source 2: Ticket No, Plate No, Type, Fee, Total, Duration
+    // 3. TABLE DATA (Standardized to "Php")
     filtered.forEach((item) => {
       rows.push([
         item.ticketNo || "-",
         item.plateNo || "-",
         item.type || "-",
-        `₱${(item.baseRate || 0).toFixed(2)}`,
-        `₱${(item.finalPrice || 0).toFixed(2)}`,
-        item.duration || "-"
+        `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
       ]);
     });
 
+    // 4. SIMULATED FOOTER
+    rows.push([]); // Spacer
+    rows.push(["--- END OF REPORT ---"]);
+    rows.push([`Generated on: ${dateStr} at ${timeStr}`]);
+    rows.push(["This document is a system-generated export from the Parking Management Portal."]);
+
+    // 5. GENERATION LOGIC
     const csvContent = rows
       .map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))
       .join("\n");
@@ -694,8 +700,9 @@ const Parking = () => {
     link.setAttribute("href", url);
     link.setAttribute("download", `Parking_Report_${new Date().toISOString().split("T")[0]}.csv`);
     link.click();
-  };
 
+    logActivity(role, "EXPORT_EXCEL", `Exported ${filtered.length} parking records in PDF-style format`, "Parking");
+  };
 
   const exportToPDF = () => {
     if (filtered.length === 0) return alert("No records to export.");
@@ -707,7 +714,7 @@ const Parking = () => {
     // 1. HEADER IMAGE
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-    // 2. REPORT TITLE & METADATA (Matching Source 2 & 3)
+    // 2. REPORT TITLE & METADATA
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("PARKING REPORTS", pageWidth / 2, 45, { align: "center" });
@@ -715,25 +722,26 @@ const Parking = () => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-    doc.text(`Duration: ${activeType}`, 15, 61); // Current filter type
-
+    // Metadata on the right
     doc.text(`No. of Vehicles: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
-    doc.text(`Revenue: ₱${revenue.toFixed(2)}`, pageWidth - 15, 61, { align: "right" });
 
-    // 3. DATA TABLE (Matching Source 2)
+    // Fix: Using "Php" and ensuring it fits within the margin by aligning right
+    const revenueText = `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    doc.text(revenueText, pageWidth - 15, 61, { align: "right" });
+
+    // 3. DATA TABLE
     autoTable(doc, {
       startY: 70,
-      margin: { bottom: 35 },
-      head: [["Ticket No.", "Plate No.", "Type", "Fee", "Total", "Duration"]],
+      margin: { left: 15, right: 15, bottom: 35 }, // Ensure table stays within page margins
+      head: [["Ticket No.", "Plate No.", "Type", "Fee", "Total"]], // Removed "Duration"
       body: filtered.map((item) => [
         item.ticketNo || "-",
         item.plateNo || "-",
         item.type || "-",
-        `₱${(item.baseRate || 0).toFixed(2)}`,
-        `₱${(item.finalPrice || 0).toFixed(2)}`,
-        item.duration || "-",
+        `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
+        `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
       ]),
-      headStyles: { fillColor: [220, 38, 38] }, // Red branding to match IBT seal
+      headStyles: { fillColor: [220, 38, 38] }, // Red branding
       styles: { fontSize: 9, halign: 'center' },
       columnStyles: {
         0: { halign: 'left' }, // Ticket No
@@ -1038,7 +1046,7 @@ const Parking = () => {
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-[600px] rounded-3xl shadow-2xl p-8 md:p-10 text-center transition-all duration-300 relative">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 text-center transition-all duration-300 relative">
             <button onClick={() => setShowAddModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">✕</button>
             <h1 className="text-3xl font-bold text-gray-800 mb-8">
               {step === 1 ? "Select Vehicle" : "Enter Details"}
@@ -1142,7 +1150,16 @@ const Parking = () => {
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-            <h3 className="mb-4 text-base font-semibold text-slate-800">View Parking Ticket</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-semibold text-slate-800">View Parking Ticket</h3>
+              <button
+                onClick={() => setViewRow(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
               <Field label="Ticket No" value={viewRow.ticketNo || "N/A"} />
               <Field label="Plate No" value={viewRow.plateNo || "N/A"} />

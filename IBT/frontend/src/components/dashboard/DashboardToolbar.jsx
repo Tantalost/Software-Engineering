@@ -77,10 +77,9 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
             onClick={() => handleViewChange(v)}
             className={`
               flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md capitalize transition-all duration-200
-              ${
-                view === v
-                  ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+              ${view === v
+                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
               }
             `}
           >
@@ -118,11 +117,10 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
           <button
             onClick={() => setShowDownloadMenu(!showDownloadMenu)}
             className={`p-2 rounded-lg transition-all border border-transparent 
-                ${
-                  showDownloadMenu
-                    ? "bg-blue-50 text-blue-600 border-blue-100"
-                    : "text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-100"
-                }`}
+                ${showDownloadMenu
+                ? "bg-blue-50 text-blue-600 border-blue-100"
+                : "text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-100"
+              }`}
             title="Download Options"
           >
             <Download size={18} />
@@ -134,33 +132,28 @@ const DashboardToolbar = ({ onFilterChange, onRefresh, onDownload }) => {
                 className="fixed inset-0 z-30 cursor-default"
                 onClick={() => setShowDownloadMenu(false)}
               ></div>
+
               <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-40 animate-in fade-in slide-in-from-top-2">
-                <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Export As
-                  </span>
-                </div>
+                <button
+                  onClick={() => {
+                    onDownload("excel");
+                    setShowDownloadMenu(false);
+                  }}
+                  className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all text-gray-700"
+                >
+                  <FileText size={16} className="text-emerald-600" />
+                  <span>Export Excel</span>
+                </button>
 
                 <button
                   onClick={() => {
                     onDownload("pdf");
                     setShowDownloadMenu(false);
                   }}
-                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors"
+                  className="w-full flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all text-gray-700"
                 >
-                  <FileText size={16} className="text-red-500" />
-                  <span>PDF Report</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    onDownload("excel");
-                    setShowDownloadMenu(false);
-                  }}
-                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 flex items-center gap-3 transition-colors border-t border-gray-50"
-                >
-                  <Table size={16} className="text-emerald-500" />
-                  <span>Excel Data</span>
+                  <FileText size={16} className="text-emerald-600" />
+                  <span>Export PDF</span>
                 </button>
               </div>
             </>

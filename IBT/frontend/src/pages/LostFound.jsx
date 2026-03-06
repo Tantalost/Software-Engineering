@@ -52,7 +52,7 @@ const LostFound = () => {
     const [selectedIds, setSelectedIds] = useState([]);
 
     const role = localStorage.getItem("authRole") || "superadmin";
-    const API_URL = `${import.meta.env.VITE_API_URL}/api/lostfound`;
+    const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/lostfound`;
 
 
     const [newItem, setNewItem] = useState({
@@ -466,20 +466,25 @@ const LostFound = () => {
 
         const operator = localStorage.getItem("authName") || "Admin";
         const dateStr = new Date().toLocaleDateString();
+        const timeStr = new Date().toLocaleTimeString();
 
-
-        const totalItems = filtered.length;
-        const unclaimed = filtered.filter(i => i.status === "Unclaimed").length;
-        const claimed = filtered.filter(i => i.status === "Claimed").length;
-
+        // 1. SIMULATED HEADER (Matches PDF branding and title)
         const rows = [
-            ["", "", "LOST & FOUND REPORTS", "", ""],
-            [`Date: ${dateStr}`, "", "", `Total Items: ${totalItems}`, ""],
-            [`Operator: ${operator}`, "", "", `Unclaimed: ${unclaimed}`, `Claimed: ${claimed}`],
+            ["INTEGRADO TERMINAL DE ZAMBOANGA"], // Mimics Header.png text
+            ["LOST & FOUND REPORTS"],           // Report Title
             [], // Spacer
+
+            // 2. METADATA (Aligned to simulate left/right PDF positioning)
+            [`Date: ${dateStr}`, "", "", "", `Total Items: ${filtered.length}`],
+            [`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`],
+            [`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`],
+            [], // Spacer
+
+            // 3. TABLE HEADERS
             ["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]
         ];
 
+        // 4. TABLE DATA
         filtered.forEach(item => {
             rows.push([
                 item.trackingNo,
@@ -490,7 +495,7 @@ const LostFound = () => {
                 item.description
             ]);
         });
-
+        // 6. CSV GENERATION LOGIC
         const csvContent = rows
             .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
             .join('\n');
@@ -504,7 +509,7 @@ const LostFound = () => {
         link.click();
         document.body.removeChild(link);
 
-        logActivity(role, "EXPORT_CSV", `Exported ${filtered.length} Lost & Found records to CSV`, "LostFound");
+        logActivity(role, "EXPORT_CSV", `Exported ${filtered.length} Lost & Found records to Excel-converted format`, "LostFound");
     };
 
     const handleExportPDF = () => {
@@ -525,8 +530,6 @@ const LostFound = () => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, 15, 61);
-
         doc.text(`Total Items: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
         doc.text(`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`, pageWidth - 15, 61, { align: "right" });
 
@@ -851,7 +854,16 @@ const LostFound = () => {
             {viewRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
                     <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
-                        <h3 className="mb-4 text-base font-semibold text-slate-800">View Lost/Found Details</h3>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-base font-semibold text-slate-800">View Lost/Found Details</h3>
+                            <button
+                                onClick={() => setViewRow(null)}
+                                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+                                title="Close"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm">
                             <Field label="Tracking No" value={viewRow.trackingNo} />
                             <Field label="Type" value={viewRow.itemType} />
