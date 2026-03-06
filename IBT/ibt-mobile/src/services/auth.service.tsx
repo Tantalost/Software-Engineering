@@ -35,9 +35,20 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to send reset code");
-    return data;
+
+    if (!res.ok) {
+   
+      const errorText = await res.text();
+      
+      console.error("BACKEND CRASH REPORT:", errorText);
+      try {
+        const parsedData = JSON.parse(errorText);
+        throw new Error(parsedData.error || "Failed to send reset code");
+      } catch (e) {
+        throw new Error("Server crashed or endpoint not found. Check console.");
+      }
+    }
+    return await res.json();
   },
 
   resetPassword: async (payload: ResetConfirmPayload) => {

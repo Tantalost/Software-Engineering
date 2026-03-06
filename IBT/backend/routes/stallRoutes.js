@@ -36,10 +36,11 @@ const upload = multer({ storage });
 
 router.get('/pending', getPendingStalls); 
 router.get('/occupied', getOccupiedStalls);
-router.get('/doc/:filename', getSecureDocument);
-router.get('/my-application/:userId', getMyApplication);
+router.get('/doc/:filename', verifyToken, getSecureDocument);
+router.get('/my-application/:userId', verifyToken, getMyApplication);
 
 router.post('/apply', 
+  verifyToken,
   upload.fields([
     { name: 'permit', maxCount: 1 }, 
     { name: 'validId', maxCount: 1 },
