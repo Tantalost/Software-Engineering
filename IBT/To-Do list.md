@@ -35,6 +35,7 @@ UI fix:
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
 - send email in the tenants table if its working or not , needed to be fix
 - add set price for permanent slot.
+- Aloh
 
 
 🟢 **Done**
