@@ -1,6 +1,7 @@
 import express from "express";
 import multer from 'multer';
 import { GridFsStorage } from 'multer-gridfs-storage';
+import { sendTenantEmail } from '../controllers/tenantController.js';
 import "dotenv/config"; 
 import { 
   getTenants, 
@@ -43,6 +44,7 @@ router.get('/', getTenants);
 router.get('/archived', getArchivedTenants);
 router.get('/night-market/default-price', getDefaultNightPrice);
 router.put('/update-night-market-prices', updateAllNightMarketPrices);
+router.post('/send-email', sendTenantEmail);
 
 router.post('/', 
   upload.fields([

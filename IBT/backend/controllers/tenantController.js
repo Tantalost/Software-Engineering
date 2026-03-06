@@ -12,6 +12,29 @@ export const getTenants = async (req, res) => {
   }
 };
 
+// --- SEND CUSTOM EMAIL TO TENANT ---
+export const sendTenantEmail = async (req, res) => {
+  try {
+    const { email, subject, message } = req.body;
+
+    if (!email || !subject || !message) {
+      return res.status(400).json({ error: "Email, subject, and message are required." });
+    }
+
+    // Call your existing sendEmail utility
+    await sendEmail({
+      email: email,
+      subject: subject,
+      message: message
+    });
+
+    res.status(200).json({ success: true, message: "Email sent successfully to tenant." });
+  } catch (error) {
+    console.error("Email sending failed:", error);
+    res.status(500).json({ error: "Failed to send email. Please try again." });
+  }
+};
+
 export const archiveTenant = async (req, res) => {
   try {
     const archived = await Tenant.findByIdAndUpdate(
