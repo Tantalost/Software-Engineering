@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import jsPDF from 'jspdf';
 import autoTable from "jspdf-autotable";
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle } from "lucide-react";
 
 import headerImg from "../assets/Header.png";
@@ -241,6 +243,25 @@ const TenantLease = () => {
         setAlerts(newAlerts);
     }, [records]);
 
+    const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+        if (!imageSrc) return;
+        try {
+            const response = await fetch(imageSrc);
+            if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+
+            const imageId = workbook.addImage({
+                buffer: arrayBuffer,
+                extension: 'png',
+            });
+
+            worksheet.addImage(imageId, range);
+        } catch (error) {
+            console.error("Tenant branding image error:", error);
+        }
+    };
 
     const filtered = records.filter((t) => {
         const name = t.tenantName || t.name || "";
@@ -484,12 +505,12 @@ const TenantLease = () => {
             setShowWaitlistModal(false);
             setShowReviewModal(true);
 
-            setWaitlistData(prev => prev.map(item => 
-                (item.id === applicant.id || item._id === applicant.id) 
-                    ? { ...item, adminViewed: true } 
+            setWaitlistData(prev => prev.map(item =>
+                (item.id === applicant.id || item._id === applicant.id)
+                    ? { ...item, adminViewed: true }
                     : item
             ));
-            
+
         } catch (error) {
             console.error("Error fetching full details:", error);
             setNotificationState({
@@ -820,7 +841,7 @@ const TenantLease = () => {
                 ["Current Status", t.status || "-"]
             ],
             theme: 'striped',
-            headStyles: { fillColor: [220, 38, 38] }, // Using the Red-600 color from your bulk report
+            headStyles: { fillColor: [16, 185, 129] }, // Using the Red-600 color from your bulk report
             styles: { cellPadding: 5, fontSize: 10 },
             columnStyles: {
                 0: { fontStyle: 'bold', width: 50 },
@@ -835,49 +856,72 @@ const TenantLease = () => {
         logActivity(role, "EXPORT_PDF", `Exported individual PDF: ${t.tenantName}`, "Tenants");
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         if (filtered.length === 0) return alert("No records to export.");
 
-        const dateStr = new Date().toLocaleDateString();
-        // Removed operator reference to match the PDF update
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("Tenant Lease Report");
 
-        const rows = [
-            // Simulated Header Space (Matches PDF Title)
-            ["", "", "TENANTS AND LEASE REPORTS"],
-            [],
-            // Alignment: Left-side info and Right-side info on the same row (simulated)
-            [`Date: ${dateStr}`, "", "", "", "", `No. of Payments: ${filtered.length}`],
-            [`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", "", "", ""],
-            [],
-            // Table Headers
-            ["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]
-        ];
+            // 1. BRANDED HEADER (-1/8 height adjustment)
+            worksheet.getRow(1).height = 35;
+            await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:G4');
 
-        filtered.forEach((t) => {
-            rows.push([
-                t.slotNo || "-",
-                t.tenantName || t.name || "-",
-                t.email || "-",
-                t.contactNo || "-",
-                `Php ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            ]);
-        });
+            // 2. Report Title & Metadata
+            worksheet.mergeCells('A6:G6');
+            const titleCell = worksheet.getCell('A6');
+            titleCell.value = 'TENANTS AND LEASE REPORTS';
+            titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
+            titleCell.alignment = { horizontal: 'center' };
 
-        // Create the CSV content
-        const csvContent = rows
-            .map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))
-            .join("\n");
+            worksheet.addRow([]); // Spacer
+            worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
+            worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '']);
+            worksheet.addRow([]); // Spacer
 
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Tenants_Lease_Report_${new Date().toISOString().split("T")[0]}.csv`);
-        link.click();
+            // 3. Styled Table Headers (IBT Red)
+            const headerRow = worksheet.addRow(["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]);
+            headerRow.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            });
 
-        logActivity(role, "EXPORT_EXCEL", `Exported ${filtered.length} Tenant records with PDF-matching format`, "Tenants");
+            // 4. Populate Tenant Data
+            filtered.forEach((t) => {
+                worksheet.addRow([
+                    t.slotNo || "-",
+                    t.tenantName || t.name || "-",
+                    t.email || "-",
+                    t.contactNo || "-",
+                    `Php ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                ]);
+            });
+
+            // 5. BRANDED FOOTER (-1/8 height adjustment)
+            const lastRowNumber = worksheet.lastRow.number + 2;
+            worksheet.getRow(lastRowNumber).height = 52.5;
+            await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:G${lastRowNumber + 3}`);
+
+            // 6. Formatting Column Widths
+            worksheet.columns = [
+                { width: 12 }, { width: 30 }, { width: 30 }, { width: 15 },
+                { width: 15 }, { width: 15 }, { width: 15 }
+            ];
+
+            // 7. Write and Save
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            saveAs(blob, `Tenants_Lease_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+            logActivity(role, "EXPORT_EXCEL", `Exported branded report for ${filtered.length} tenants`, "Tenants");
+
+        } catch (err) {
+            console.error("Tenant Excel Export Error:", err);
+            alert("Failed to export Excel. Check console for details.");
+        }
     };
 
     const handleExportPDF = () => {
@@ -923,7 +967,7 @@ const TenantLease = () => {
                 `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ]),
-            headStyles: { fillColor: [220, 38, 38] },
+            headStyles: { fillColor: [16, 185, 129] },
             styles: { fontSize: 8, halign: 'center' },
             columnStyles: {
                 1: { halign: 'left' },
@@ -952,7 +996,7 @@ const TenantLease = () => {
         ]
         : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"];
 
-        const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
+    const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
     return (
         <Layout title="Tenants/Lease Management">

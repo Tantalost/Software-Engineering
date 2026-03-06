@@ -17,7 +17,8 @@ import { Archive, Trash2, Package, FileText, Calendar, MapPin, Loader2, History,
 import NotificationToast from "../components/common/NotificationToast";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
 
@@ -247,6 +248,23 @@ const LostFound = () => {
         }
     };
 
+    const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+        try {
+            const response = await fetch(imageSrc);
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+
+            const imageId = workbook.addImage({
+                buffer: arrayBuffer,
+                extension: 'png',
+            });
+
+            worksheet.addImage(imageId, range);
+        } catch (error) {
+            console.error("Image branding failed:", error);
+        }
+    };
+
     const filtered = records.filter((item) => {
         const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -447,69 +465,127 @@ const LostFound = () => {
             setIsReporting(false);
         }
     };
-
-    const getExportData = (data) => {
-        return data.map(item => ({
-            "Tracking No": item.trackingNo,
-            "Item Type": item.itemType || "-",
-            "Location": item.location,
-            "DateTime": formatDateTimeForExport(item.dateTime),
-            "Status": item.status,
-        }));
-    };
-
-    const handleExportCSV = () => {
+    // --- EXPORT TO EXCEL (STYLED XLSX) ---
+    const handleExportExcel = async () => {
         if (filtered.length === 0) {
             alert("No records to export.");
             return;
         }
 
-        const operator = localStorage.getItem("authName") || "Admin";
-        const dateStr = new Date().toLocaleDateString();
-        const timeStr = new Date().toLocaleTimeString();
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("Lost and Found Report");
 
-        // 1. SIMULATED HEADER (Matches PDF branding and title)
-        const rows = [
-            ["INTEGRADO TERMINAL DE ZAMBOANGA"], // Mimics Header.png text
-            ["LOST & FOUND REPORTS"],           // Report Title
-            [], // Spacer
+            // 1. ADJUSTED HEADER IMAGE (-1/8 height)
+            worksheet.getRow(1).height = 35;
+            await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:F4');
 
-            // 2. METADATA (Aligned to simulate left/right PDF positioning)
-            [`Date: ${dateStr}`, "", "", "", `Total Items: ${filtered.length}`],
-            [`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`],
-            [`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`],
-            [], // Spacer
+            // 2. Title and Summary Metadata
+            worksheet.mergeCells('A6:F6');
+            const titleCell = worksheet.getCell('A6');
+            titleCell.value = 'LOST & FOUND REPORTS';
+            titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } }; // IBT Red
+            titleCell.alignment = { horizontal: 'center' };
 
-            // 3. TABLE HEADERS
-            ["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]
-        ];
+            worksheet.addRow([]); // Spacer
+            worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', `Total Items: ${filtered.length}`]);
+            worksheet.addRow([`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`]);
+            worksheet.addRow([`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`]);
+            worksheet.addRow([]); // Spacer
 
-        // 4. TABLE DATA
-        filtered.forEach(item => {
-            rows.push([
-                item.trackingNo,
-                item.itemType || "-",
-                item.location,
-                formatDateTimeForExport(item.dateTime),
-                item.status,
-                item.description
-            ]);
-        });
-        // 6. CSV GENERATION LOGIC
-        const csvContent = rows
-            .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
-            .join('\n');
+            // 3. Table Headers
+            const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]);
+            headerRow.eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            });
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `LostFound_Report_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            // 4. Populate Data
+            filtered.forEach(item => {
+                const row = worksheet.addRow([
+                    item.trackingNo,
+                    item.itemType || "-",
+                    item.location,
+                    formatDateTimeForExport(item.dateTime),
+                    item.status,
+                    item.description
+                ]);
 
-        logActivity(role, "EXPORT_CSV", `Exported ${filtered.length} Lost & Found records to Excel-converted format`, "LostFound");
+                // Conditional Status Colors
+                const statusCell = row.getCell(5);
+                if (item.status === 'Claimed') {
+                    statusCell.font = { color: { argb: 'FF16A34A' }, bold: true };
+                } else {
+                    statusCell.font = { color: { argb: 'FFDC2626' }, bold: true };
+                }
+            });
+
+            // 5. ADJUSTED FOOTER IMAGE (-1/8 height)
+            const lastRowNumber = worksheet.lastRow.number + 2;
+            worksheet.getRow(lastRowNumber).height = 52.5;
+            await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:F${lastRowNumber + 3}`);
+
+            // 6. Formatting Column Widths
+            worksheet.columns = [
+                { width: 20 }, { width: 20 }, { width: 30 }, { width: 25 }, { width: 15 }, { width: 45 }
+            ];
+
+            // 7. Generate and Download
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            saveAs(blob, `LostFound_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+            logActivity(role, "EXPORT_EXCEL", `Exported branded report with adjusted image heights`, "LostFound");
+
+        } catch (error) {
+            console.error("Excel Export Error:", error);
+            alert("Failed to generate branded Excel. Please try again.");
+        }
+    };
+
+    // --- EXPORT TO CSV (USING EXCELJS) ---
+    const handleExportCSV = async () => {
+        if (filtered.length === 0) {
+            alert("No records to export.");
+            return;
+        }
+
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("LostFound");
+
+            // Define Columns
+            worksheet.columns = [
+                { header: "Tracking No", key: "trackingNo", width: 20 },
+                { header: "Item Type", key: "itemType", width: 20 },
+                { header: "Location", key: "location", width: 30 },
+                { header: "Date & Time", key: "dateTime", width: 25 },
+                { header: "Status", key: "status", width: 15 },
+                { header: "Description", key: "description", width: 45 }
+            ];
+
+            // Add Data
+            filtered.forEach(item => {
+                worksheet.addRow({
+                    trackingNo: item.trackingNo,
+                    itemType: item.itemType || "-",
+                    location: item.location,
+                    dateTime: formatDateTimeForExport(item.dateTime),
+                    status: item.status,
+                    description: item.description
+                });
+            });
+
+            // Write as CSV
+            const buffer = await workbook.csv.writeBuffer();
+            const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8;' });
+            saveAs(blob, `LostFound_Report_${new Date().toISOString().split('T')[0]}.csv`);
+
+        } catch (error) {
+            console.error("CSV Export Failed:", error);
+            alert("Failed to export CSV file.");
+        }
     };
 
     const handleExportPDF = () => {
@@ -545,7 +621,7 @@ const LostFound = () => {
                 item.status,
                 item.description
             ]),
-            headStyles: { fillColor: [220, 38, 38] },
+            headStyles: { fillColor: [16, 185, 129] },
             styles: { fontSize: 9 },
             didDrawPage: (data) => {
 
@@ -572,10 +648,6 @@ const LostFound = () => {
         ]
         : ["Tracking No", "Item Type", "Location", "Date & Time", "Status"];
 
-
-    const handleExportExcel = () => {
-        handleExportCSV();
-    };
 
     return (
         <Layout title="Lost and Found Records">

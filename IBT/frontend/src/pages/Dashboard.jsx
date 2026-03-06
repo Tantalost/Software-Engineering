@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 import { Settings } from "lucide-react";
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
@@ -63,6 +64,23 @@ const Dashboard = () => {
     setTimeout(() => {
       setToast((prev) => ({ ...prev, show: false }));
     }, 3000);
+  };
+
+  const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+    try {
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+
+      const imageId = workbook.addImage({
+        buffer: arrayBuffer,
+        extension: 'png',
+      });
+
+      worksheet.addImage(imageId, range);
+    } catch (error) {
+      console.error("Dashboard branding image failed:", error);
+    }
   };
 
   const [stats, setStats] = useState([]);
@@ -558,7 +576,7 @@ const Dashboard = () => {
             progressText,
           ];
         }),
-        headStyles: { fillColor: [220, 38, 38] },
+        headStyles: { fillColor: [16, 185, 129] },
         styles: { fontSize: 9 },
         margin: { bottom: 20 },
       });
@@ -576,7 +594,7 @@ const Dashboard = () => {
           d.name,
           `Php ${d.value.toLocaleString()}`,
         ]),
-        headStyles: { fillColor: [220, 38, 38] },
+        headStyles: { fillColor: [16, 185, 129] },
         styles: { fontSize: 9 },
         margin: { bottom: 35 },
       });
@@ -591,25 +609,39 @@ const Dashboard = () => {
     }
   };
 
-  // --- EXPORT TO EXCEL (PDF-STYLE FORMATTING) ---
-  const exportToExcel = () => {
+  // --- EXPORT TO EXCEL (USING EXCELJS) ---
+  // --- BRANDED EXPORT TO EXCEL (USING EXCELJS) ---
+  const exportToExcel = async () => {
     try {
       const payload = getExportPayload();
-      const wb = XLSX.utils.book_new();
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Dashboard Report");
 
-      // 1. Prepare the Header and Metadata
-      const header = [
-        ["CITY OF ZAMBOANGA"],
-        ["INTEGRADO TERMINAL DE ZAMBOANGA"],
-        ["DASHBOARD REPORT"],
-        [`Generated: ${payload.meta.generatedAt}`],
-        [], // Spacer
-      ];
+      // 1. BRANDED HEADER (-1/8 height adjustment)
+      worksheet.getRow(1).height = 35; // Reduced from base points
+      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:D4');
 
-      // 2. Prepare Revenue Summary Table
-      const summaryHeader = [["REVENUE SUMMARY"]];
-      const summaryTableHeaders = [["Module", "Revenue", "Target", "Progress"]];
-      const summaryRows = payload.stats.map((s) => {
+      // 2. Report Title & Metadata (Positioned after header)
+      worksheet.mergeCells('A6:D6');
+      const titleCell = worksheet.getCell('A6');
+      titleCell.value = 'DASHBOARD REPORT';
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
+      titleCell.alignment = { horizontal: 'center' };
+
+      worksheet.getCell('A7').value = `Generated: ${payload.meta.generatedAt}`;
+      worksheet.addRow([]); // Spacer
+
+      // 3. Revenue Summary Section
+      const summaryHeaderRow = worksheet.addRow(['REVENUE SUMMARY']);
+      summaryHeaderRow.font = { bold: true };
+
+      const tableHeader = worksheet.addRow(['Module', 'Revenue', 'Target', 'Progress']);
+      tableHeader.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+      });
+
+      payload.stats.forEach((s) => {
         const moduleKey = s.label.toLowerCase().split(" ")[0];
         const baseMonthlyTarget = targets[moduleKey] || 0;
 
@@ -619,67 +651,51 @@ const Dashboard = () => {
         else if (filterView === "month") targetVal = baseMonthlyTarget;
         else if (filterView === "year") targetVal = baseMonthlyTarget * 12;
 
-        const percentReached = targetVal > 0
-          ? Math.round((s.rawValue / targetVal) * 100)
-          : 0;
+        const percentReached = targetVal > 0 ? Math.round((s.rawValue / targetVal) * 100) : 0;
 
-        return [
+        worksheet.addRow([
           s.label,
           `Php ${Number(s.rawValue).toLocaleString()}`,
           `Php ${Math.round(targetVal).toLocaleString()}`,
           `${percentReached}% of Target`
-        ];
+        ]);
       });
 
-      // 3. Prepare Revenue Breakdown Table
-      const breakdownHeader = [[], ["REVENUE BREAKDOWN"]];
-      const breakdownTableHeaders = [["Module", "Revenue"]];
-      const breakdownRows = payload.donut.map((d) => [
-        d.name,
-        `Php ${d.value.toLocaleString()}`
-      ]);
+      worksheet.addRow([]); // Spacer
 
-      // 4. Prepare Footer (Contact Details)
-      const footer = [
-        [], // Spacer
-        ["MCLL HIGHWAY, DIVISORIA, ZAMBOANGA CITY"],
-        ["TEL NOS: (062) 955-7806 / (062) 991-1630"],
-        ["Email: zamboangacityibt@email.com"],
-        ["Website: www.zamboangacity.gov.ph"]
-      ];
+      // 4. Revenue Breakdown Section
+      const breakdownHeader = worksheet.addRow(['REVENUE BREAKDOWN']);
+      breakdownHeader.font = { bold: true };
 
-      // 5. Combine all sections into one Array of Arrays
-      const finalData = [
-        ...header,
-        ...summaryHeader,
-        ...summaryTableHeaders,
-        ...summaryRows,
-        ...breakdownHeader,
-        ...breakdownTableHeaders,
-        ...breakdownRows,
-        ...footer
-      ];
+      const breakdownSubHeader = worksheet.addRow(['Module', 'Revenue']);
+      breakdownSubHeader.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+      });
 
-      // 6. Create worksheet and set column widths for readability
-      const ws = XLSX.utils.aoa_to_sheet(finalData);
+      payload.donut.forEach((d) => {
+        worksheet.addRow([d.name, `Php ${d.value.toLocaleString()}`]);
+      });
 
-      // Set column widths (wch = width in characters)
-      ws['!cols'] = [
-        { wch: 30 }, // Module Column
-        { wch: 20 }, // Revenue Column
-        { wch: 20 }, // Target Column
-        { wch: 25 }  // Progress Column
-      ];
+      // 5. BRANDED FOOTER (-1/8 height adjustment)
+      const lastRowNumber = worksheet.lastRow.number + 2;
+      worksheet.getRow(lastRowNumber).height = 52.5; // Reduced from base points
+      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:D${lastRowNumber + 3}`);
 
-      XLSX.utils.book_append_sheet(wb, ws, "Dashboard Report");
+      // 6. Column Widths for readability
+      worksheet.getColumn(1).width = 35;
+      worksheet.getColumn(2).width = 25;
+      worksheet.getColumn(3).width = 25;
+      worksheet.getColumn(4).width = 25;
 
-      // Save file
-      XLSX.writeFile(wb, `Dashboard_Report_${filterView}_${Date.now()}.xlsx`);
-      console.log("Excel exported successfully with PDF-like layout!");
+      // 7. Write and Save
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      saveAs(blob, `Dashboard_Branded_Report_${filterView}_${Date.now()}.xlsx`);
 
     } catch (err) {
-      console.error("Excel export failed:", err);
-      alert("Failed to export Excel. Please try again.");
+      console.error("Dashboard ExcelJS export failed:", err);
+      alert("Failed to export branded Excel.");
     }
   };
 

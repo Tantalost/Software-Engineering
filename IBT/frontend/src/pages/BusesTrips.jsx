@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
 import Layout from "../components/layout/Layout";
@@ -31,6 +33,29 @@ import {
   Plus,
   Settings,
 } from "lucide-react";
+
+
+
+const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+  if (!imageSrc) return; // Skip if no image provided
+  try {
+    const response = await fetch(imageSrc);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+
+    const imageId = workbook.addImage({
+      buffer: arrayBuffer,
+      extension: 'png',
+    });
+
+    worksheet.addImage(imageId, range);
+  } catch (error) {
+    // Log the error but don't stop the export
+    console.error("Branding image error:", error);
+  }
+};
 
 
 const ManageCompaniesModal = ({
@@ -87,6 +112,7 @@ const ManageCompaniesModal = ({
       setIsProcessing(false);
     }
   };
+
 
   const handleDeleteCompany = async (id) => {
     if (!window.confirm("Delete this company and all its buses?")) return;
@@ -649,60 +675,82 @@ const BusTrips = () => {
   };
 
   //EXCEL
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filtered.length === 0) return alert("No records to export.");
 
-    const operator = localStorage.getItem("authName") || "Admin";
-    const dateStr = new Date().toLocaleDateString();
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Bus Parking Report");
 
-    // 1. Create the Header Structure (Mirroring the PDF/Official Seal area)
-    const rows = [
-      ["CITY OF ZAMBOANGA"],
-      ["OFICINA DEL ADMINISTRADOR"],
-      ["INTEGRADO TERMINAL DE ZAMBOANGA"],
-      [""], // Spacer
-      ["BUS PARKING REPORTS"],
-      [""], // Spacer
+      // 1. BRANDED HEADER (-1/8 height adjustment)
+      worksheet.getRow(1).height = 35;
+      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:H4');
 
-      // 2. Metadata Row (Mirroring PDF's Date, Operator, Count, and Revenue)
-      [`Date: ${dateStr}`, "", "", "", `No. of Bus: ${filtered.length}`],
-      [`Operator: ${operator}`, "", "", "", `Revenue: Php ${totalRevenue.toFixed(2)}`],
-      [""], // Spacer
+      // 2. Report Title & Metadata
+      worksheet.mergeCells('A6:H6');
+      const titleCell = worksheet.getCell('A6');
+      titleCell.value = 'BUS PARKING REPORTS';
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
+      titleCell.alignment = { horizontal: 'center' };
 
-      // 3. Table Headers
-      ["Plate No.", "Ticket Ref.", "Route", "Price", "Arrival", "Departure", "Company", "Status"]
-    ];
+      worksheet.addRow([]); // Spacer
+      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', `No. of Bus: ${filtered.length}`]);
+      worksheet.addRow([`Operator: ${localStorage.getItem("authName") || "Admin"}`, '', '', '', '', '', '', `Total Revenue: Php ${totalRevenue.toFixed(2)}`]);
+      worksheet.addRow([]); // Spacer
 
-    // 4. Data Rows
-    filtered.forEach((item) => {
-      rows.push([
-        item.templateNo || item.templateno || "-",
-        item.ticketReferenceNo || "-",
-        item.route || "-",
-        `Php ${(item.price || 75).toFixed(2)}`,
-        item.time || "-",
-        item.departureTime || "-",
-        item.company || "-",
-        item.status || "-",
+      // 3. Table Headers with IBT Red Styling
+      const headerRow = worksheet.addRow([
+        "Plate No.", "Ticket Ref.", "Route", "Price", "Arrival", "Departure", "Company", "Status"
       ]);
-    });
 
-    // 5. Footer Information
-    rows.push([""]);
-    rows.push(["MCLL HIGHWAY, DIVISORIA, ZAMBOANGA CITY"]);
-    rows.push(["Email: zamboangacityibt@email.com"]);
-    rows.push(["Ta Date Buen Servicio"]);
+      headerRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
 
-    // Convert to CSV format
-    const csvContent = rows
-      .map((row) => row.map((val) => `"${val}"`).join(","))
-      .join("\n");
+      // 4. Populate Bus Data
+      filtered.forEach((item) => {
+        worksheet.addRow([
+          item.templateNo || item.templateno || "-",
+          item.ticketReferenceNo || "-",
+          item.route || "-",
+          `Php ${(item.price || 75).toFixed(2)}`,
+          item.time || "-",
+          item.departureTime || "-",
+          item.company || "-",
+          item.status || "-",
+        ]);
+      });
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `IBT_Bus_Report_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
+      // 5. BRANDED FOOTER (-1/8 height adjustment)
+      const lastRowNumber = worksheet.lastRow.number + 2;
+      worksheet.getRow(lastRowNumber).height = 52.5;
+      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:H${lastRowNumber + 3}`);
+
+      // 6. Formatting Column Widths
+      worksheet.columns = [
+        { width: 15 }, // Plate
+        { width: 18 }, // Ticket Ref
+        { width: 25 }, // Route
+        { width: 12 }, // Price
+        { width: 12 }, // Arrival
+        { width: 12 }, // Departure
+        { width: 20 }, // Company
+        { width: 15 }  // Status
+      ];
+
+      // 7. Generate and Download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      saveAs(blob, `IBT_Bus_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      logActivity(role, "EXPORT_EXCEL", `Exported branded report for ${filtered.length} bus trips`, "BusTrips");
+
+    } catch (err) {
+      console.error("Bus Trips ExcelJS Export Failed:", err);
+      alert("Failed to export Excel. Please try again.");
+    }
   };
 
   // PDF Export Fix
@@ -749,7 +797,7 @@ const BusTrips = () => {
         item.company || "-",
         item.status || "-",
       ]),
-      headStyles: { fillColor: [220, 38, 38] },
+      headStyles: { fillColor: [16, 185, 129] },
       styles: { fontSize: 9 },
       didDrawPage: (data) => {
         doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);

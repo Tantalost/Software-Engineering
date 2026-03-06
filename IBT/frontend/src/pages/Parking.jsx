@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { Settings } from "lucide-react";
 
 
@@ -70,6 +72,26 @@ const Parking = () => {
       motorcycle: priceSettings.motorcycleRate,
     });
     setShowPriceModal(false);
+  };
+
+  const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+    if (!imageSrc) return;
+    try {
+      const response = await fetch(imageSrc);
+      if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+
+      const imageId = workbook.addImage({
+        buffer: arrayBuffer,
+        extension: 'png',
+      });
+
+      worksheet.addImage(imageId, range);
+    } catch (error) {
+      console.error("Parking branding image failed:", error);
+    }
   };
 
   const handleSaveBasePrices = () => {
@@ -654,54 +676,73 @@ const Parking = () => {
     }));
   };
 
-  const exportToCSV = () => {
+  const handleExportExcel = async () => {
     if (filtered.length === 0) return alert("No records to export.");
 
-    const dateStr = new Date().toLocaleDateString();
-    const timeStr = new Date().toLocaleTimeString();
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Parking Report");
 
-    // 1. SIMULATED HEADER (Mimicking PDF Layout)
-    const rows = [
-      ["INTEGRADO TERMINAL DE ZAMBOANGA"], // Top Branding
-      ["PARKING REPORTS"], // Title
-      [], // Spacer
-      [`Date: ${dateStr}`, "", "", "", `No. of Vehicles: ${filtered.length}`],
-      [], // Spacer
+      // 1. BRANDED HEADER (-1/8 height adjustment)
+      worksheet.getRow(1).height = 35;
+      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:E4');
 
-      // 2. TABLE HEADERS (Removed Duration to match PDF)
-      ["Ticket No.", "Plate No.", "Type", "Fee", "Total"]
-    ];
+      // 2. Report Title & Metadata
+      worksheet.mergeCells('A6:E6');
+      const titleCell = worksheet.getCell('A6');
+      titleCell.value = 'PARKING REPORTS';
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
+      titleCell.alignment = { horizontal: 'center' };
 
-    // 3. TABLE DATA (Standardized to "Php")
-    filtered.forEach((item) => {
-      rows.push([
-        item.ticketNo || "-",
-        item.plateNo || "-",
-        item.type || "-",
-        `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-        `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-      ]);
-    });
+      worksheet.addRow([]); // Spacer
+      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', `No. of Vehicles: ${filtered.length}`]);
+      worksheet.addRow([`Operator: ${localStorage.getItem("authName") || "Admin"}`, '', '', '', `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
+      worksheet.addRow([]); // Spacer
 
-    // 4. SIMULATED FOOTER
-    rows.push([]); // Spacer
-    rows.push(["--- END OF REPORT ---"]);
-    rows.push([`Generated on: ${dateStr} at ${timeStr}`]);
-    rows.push(["This document is a system-generated export from the Parking Management Portal."]);
+      // 3. Styled Table Headers (IBT Red)
+      const headerRow = worksheet.addRow(["Ticket No.", "Plate No.", "Type", "Fee", "Total"]);
+      headerRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
 
-    // 5. GENERATION LOGIC
-    const csvContent = rows
-      .map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+      // 4. Populate Vehicle Data
+      filtered.forEach((item) => {
+        worksheet.addRow([
+          item.ticketNo || "-",
+          item.plateNo || "-",
+          item.type || "-",
+          `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+          `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        ]);
+      });
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Parking_Report_${new Date().toISOString().split("T")[0]}.csv`);
-    link.click();
+      // 5. BRANDED FOOTER (-1/8 height adjustment)
+      const lastRowNumber = worksheet.lastRow.number + 2;
+      worksheet.getRow(lastRowNumber).height = 52.5;
+      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:E${lastRowNumber + 3}`);
 
-    logActivity(role, "EXPORT_EXCEL", `Exported ${filtered.length} parking records in PDF-style format`, "Parking");
+      // 6. Formatting Column Widths
+      worksheet.columns = [
+        { width: 15 }, // Ticket No
+        { width: 15 }, // Plate No
+        { width: 15 }, // Type
+        { width: 15 }, // Fee
+        { width: 20 }  // Total
+      ];
+
+      // 7. Generate and Download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      saveAs(blob, `Parking_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      logActivity(role, "EXPORT_EXCEL", `Exported branded report for ${filtered.length} vehicles`, "Parking");
+
+    } catch (err) {
+      console.error("Parking ExcelJS Export Failed:", err);
+      alert("Failed to export Excel. Please check the console for details.");
+    }
   };
 
   const exportToPDF = () => {
@@ -741,7 +782,7 @@ const Parking = () => {
         `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
         `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
       ]),
-      headStyles: { fillColor: [220, 38, 38] }, // Red branding
+      headStyles: { fillColor: [16, 185, 129] }, // Red branding
       styles: { fontSize: 9, halign: 'center' },
       columnStyles: {
         0: { halign: 'left' }, // Ticket No
@@ -806,7 +847,7 @@ const Parking = () => {
             title='Add New Ticket' >
             + Add New
           </button>
-          <ExportMenu onExportExcel={exportToCSV} onExportPDF={exportToPDF} />
+          <ExportMenu onExportExcel={handleExportExcel} onExportPDF={exportToPDF} />
 
         </div>
       </div>
