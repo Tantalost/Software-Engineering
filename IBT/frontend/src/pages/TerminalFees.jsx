@@ -523,10 +523,10 @@ const TerminalFees = () => {
     }
   };
 
-  const handleOpenAdd = () => {
-    const now = new Date();
+  const handleOpenAdd = async () => {
+    const now = new Date();    
     setNewTicket({
-      ticketNo: "Auto-generated",
+      ticketNo: "Loading...", 
       passengerType: "Regular",
       price: basePrices.regular,
       date: now.toISOString().split("T")[0],
@@ -537,6 +537,21 @@ const TerminalFees = () => {
       }),
     });
     setShowAddModal(true);
+
+    try {
+      const res = await fetch(`${API_URL}/terminal-fees/next-ticket`);
+      if (!res.ok) throw new Error("Failed to fetch next ticket number");
+      
+      const data = await res.json();
+      
+      setNewTicket((prev) => ({
+        ...prev,
+        ticketNo: data.nextTicketNo,
+      }));
+    } catch (error) {
+      console.error("Error getting next ticket:", error);
+      setNewTicket((prev) => ({ ...prev, ticketNo: "Auto-generated" }));
+    }
   };
 
   const handleSaveNew = async () => {

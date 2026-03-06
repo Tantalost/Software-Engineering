@@ -7,15 +7,18 @@ import {
   archiveTerminalFee,
   restoreTerminalFee,
   getArchivedTerminalFees,   
-  updateTerminalFeePrices
+  updateTerminalFeePrices,
+  getNextTicketNumber
 } from "../controllers/terminalFeeController.js";
 
 const router = express.Router();
 
 router.get("/", getTerminalFees);
 router.get("/archived", getArchivedTerminalFees); 
+router.get("/next-ticket", getNextTicketNumber);
 router.post("/", createTerminalFee);
 router.put("/:id", updateTerminalFee);
+
 
 
 router.patch("/:id/archive", archiveTerminalFee);
