@@ -419,6 +419,41 @@ export default function StallsPage() {
     }, 100);
   };
 
+  const submitRenewalPayment = async () => {
+    if (!user || !files.receipt) { return Alert.alert("Missing Receipt", "Please upload the payment receipt."); }
+    if (!paymentData.referenceNo) { return Alert.alert("Missing Details", "Please enter the Reference Number."); }
+    if (!currentApp) return;
+
+    setApplying(true);
+    setTimeout(async () => {
+        try {
+          const formPayload = new FormData();
+          formPayload.append('userId', user.id);
+          formPayload.append('tenantId', currentApp.tenantId || ""); 
+          formPayload.append('targetSlot', currentApp.targetSlot);
+          formPayload.append('paymentReference', paymentData.referenceNo);
+          
+          const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
+          appendFile(formPayload, 'receipt', files.receipt, encReceipt);
+
+          const res = await fetch(`${API_URL}/stalls/pay-renewal`, { 
+            method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+          });
+
+          if (!res.ok) throw new Error("Server payment error");
+          
+          Alert.alert("Success", "Renewal payment submitted for review."); 
+          setPaymentData({ referenceNo: '' });
+          setFiles(prev => ({ ...prev, receipt: null }));
+          fetchData(user.id);
+        } catch (error) { 
+            Alert.alert("Error", "Could not process receipt."); 
+        } finally { 
+            setApplying(false); 
+        }
+    }, 100);
+  };
+
   const submitContract = async () => {
     if (!user || !files.contract) { return Alert.alert("Missing Contract", "Please upload the signed contract PDF."); }
     if (!currentApp) return;
@@ -571,7 +606,20 @@ export default function StallsPage() {
         );
     }
 
-    if (currentApp.status === "TENANT") return <TenantView currentApp={currentApp} />;
+    if (currentApp.status === "TENANT") {
+        return (
+            <TenantView 
+                currentApp={currentApp} 
+                paymentData={paymentData}
+                setPaymentData={setPaymentData}
+                submitRenewal={submitRenewalPayment}
+                applying={applying}
+                files={files}
+                uploadProgress={uploadProgress}
+                onPickFile={pickFile}
+            />
+        );
+    }
 
     if (currentApp.status === "REJECTED") {
         return <RejectedView currentApp={currentApp} />;

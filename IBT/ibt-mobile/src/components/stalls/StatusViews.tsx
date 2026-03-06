@@ -132,13 +132,21 @@ export const RejectedView = ({ currentApp }: { currentApp: any }) => {
 };
 
 
-export const TenantView = ({ currentApp }: { currentApp: any }) => {
+export const TenantView = ({ 
+  currentApp, 
+  paymentData, 
+  setPaymentData, 
+  submitRenewal, 
+  applying, 
+  files, 
+  uploadProgress, 
+  onPickFile 
+}: any) => {
   
   const receiptImageUri = currentApp.receiptUrl 
     ? `${API_URL}/stalls/doc/${currentApp.receiptUrl}` 
     : null;
 
- 
   const dueDate = currentApp.due 
     ? new Date(currentApp.due).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -146,6 +154,8 @@ export const TenantView = ({ currentApp }: { currentApp: any }) => {
         day: 'numeric'
       }) 
     : "Not Set";
+
+  const totalAmount = currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString() : "0.00";
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
@@ -170,13 +180,27 @@ export const TenantView = ({ currentApp }: { currentApp: any }) => {
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
-            <Text variant="titleMedium" style={{ fontWeight: 'medium', color: '#166534' }}>
-              Next Payment Due
-            </Text>
+            <Text variant="titleMedium" style={{ fontWeight: 'medium', color: '#166534' }}>Next Payment Due</Text>
           </View>
-          <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>
-            {dueDate}
+          <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
+          <Text variant="titleMedium" style={{ color: '#166534', fontWeight: 'bold', marginLeft: 34, marginTop: 5 }}>
+            Amount Due: ₱{totalAmount}
           </Text>
+
+          <Divider style={{ marginVertical: 15 }} />
+          
+          <Text variant="titleSmall" style={{ color: '#166534', fontWeight: 'bold', marginBottom: 10 }}>Submit Next Payment</Text>
+          <TextInput 
+            label="OR / Reference No." 
+            value={paymentData.referenceNo} 
+            onChangeText={(t: string) => setPaymentData({...paymentData, referenceNo: t})} 
+            mode="outlined" style={styles.input} activeOutlineColor={colors.success} textColor={colors.black} 
+          />
+          <FileUploadButton label="Receipt Photo" fileKey="receipt" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+          
+          <Button mode="contained" onPress={submitRenewal} loading={applying} style={{ backgroundColor: colors.success, marginTop: 10 }} textColor={colors.white}>
+            Send Payment Receipt
+          </Button>
         </Card.Content>
       </Card>
 

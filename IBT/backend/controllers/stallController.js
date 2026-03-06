@@ -125,22 +125,23 @@ export const getMyApplication = async (req, res) => {
         
         
         tenants.forEach(tenant => {
-           
             const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
             
             if (existingAppIndex >= 0) {
-            
                 combinedApps[existingAppIndex].status = 'TENANT';
                 combinedApps[existingAppIndex].start = tenant.StartDateTime;
                 combinedApps[existingAppIndex].due = tenant.DueDateTime;
+                combinedApps[existingAppIndex].totalAmount = tenant.totalAmount; 
+                combinedApps[existingAppIndex].tenantId = tenant._id;
             } else {
-                
                 combinedApps.push({
                     status: 'TENANT',
                     targetSlot: tenant.slotNo,
                     floor: tenant.tenantType,
                     start: tenant.StartDateTime,
-                    due: tenant.DueDateTime
+                    due: tenant.DueDateTime,
+                    totalAmount: tenant.totalAmount, 
+                    tenantId: tenant._id 
                 });
             }
         });
@@ -237,4 +238,32 @@ export const uploadContract = async (req, res) => {
       } catch (error) {
         res.status(500).json({ message: error.message });
       }
+};
+
+export const submitRenewalPayment = async (req, res) => {
+    try {
+        const { tenantId, paymentReference } = req.body;
+        
+        let receiptUrl = "";
+        if (req.file) { receiptUrl = req.file.filename; } 
+        else if (req.body.receiptUrl) { receiptUrl = req.body.receiptUrl; }
+        
+        if (!receiptUrl) return res.status(400).json({ message: "Receipt file is missing." });
+        if (!tenantId) return res.status(400).json({ message: "Tenant ID is missing." });
+
+        const updatedTenant = await Tenant.findByIdAndUpdate(
+            tenantId,
+            { 
+                status: "Payment Review", 
+                referenceNo: paymentReference,
+                "documents.proofOfReceipt": receiptUrl
+            },
+            { new: true }
+        );
+
+        await createAdminNotification("Renewal Payment Uploaded", `Ref: ${paymentReference}. Verify renewal payment for Slot ${updatedTenant.slotNo}.`);
+        res.json(updatedTenant);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };
