@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-const Counter = require("./Counter.js");
+import Counter from "./Counter.js";
 
 const terminalFeeSchema = new mongoose.Schema({
   ticketNo: {
