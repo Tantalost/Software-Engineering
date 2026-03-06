@@ -13,11 +13,11 @@ import SummaryDonut from "../components/dashboard/SummaryDonut";
 import RecentActivity from "../components/dashboard/RecentActivity";
 import DashboardToolbar from "../components/dashboard/DashboardToolbar";
 import TargetModal from "../components/dashboard/TargetModal";
+import NotificationToast from "../components/common/NotificationToast";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  // RAW DATA
   const [rawData, setRawData] = useState({
     tickets: [],
     bus: [],
@@ -35,15 +35,15 @@ const Dashboard = () => {
     return saved
       ? JSON.parse(saved)
       : {
-        tickets: 5000,
-        bus: 4000,
-        tenants: 10000,
-        parking: 3000,
-      };
+          tickets: 5000,
+          bus: 4000,
+          tenants: 10000,
+          parking: 3000,
+        };
   });
 
   const [toast, setToast] = useState({
-    show: false,
+    isOpen: false,
     message: "",
     type: "success",
   });
@@ -53,7 +53,7 @@ const Dashboard = () => {
     localStorage.setItem("dashboardTargets", JSON.stringify(newTargets));
 
     setToast({
-      show: true,
+      isOpen: true,
       message: "Revenue targets saved successfully",
       type: "success",
     });
@@ -61,7 +61,7 @@ const Dashboard = () => {
     setIsTargetModalOpen(false);
 
     setTimeout(() => {
-      setToast((prev) => ({ ...prev, show: false }));
+      setToast((prev) => ({ ...prev, isOpen: false }));
     }, 3000);
   };
 
@@ -72,7 +72,6 @@ const Dashboard = () => {
   const [totalQuota, setTotalQuota] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Helper: Get Date
   const getItemDate = (item) => {
     if (!item) return null;
     return (
@@ -86,10 +85,9 @@ const Dashboard = () => {
     );
   };
 
-  // UPDATED: Helper to get Value (Added finalPrice)
   const getSmartValue = (item) => {
     if (!item) return 0;
-    // Added 'item.finalPrice' to the start of this list for Parking
+
     const exactMatch =
       item.finalPrice ||
       item.amount ||
@@ -110,7 +108,6 @@ const Dashboard = () => {
 
     if (exactMatch !== undefined && exactMatch !== null) return exactMatch;
 
-    // Try to find any key that looks like money
     const keys = Object.keys(item);
     const moneyKey = keys.find(
       (k) =>
@@ -136,7 +133,6 @@ const Dashboard = () => {
     return `₱${value.toLocaleString()}`;
   };
 
-  // --- EXPORT DATA BUILDER ---
   const getExportPayload = () => {
     return {
       meta: {
@@ -226,13 +222,11 @@ const Dashboard = () => {
     navigate("/reports", { state: { openReportId: reportId } });
   };
 
-  // UPDATED: Helper to Filter for Paid/Active items
   const getPaidItems = (items, category) => {
     if (!items || !items.length) return [];
 
     if (category === "tickets") return items;
 
-    // UPDATED: Added 'departed' to the list of allowed statuses for Parking
     if (category === "parking") {
       return items.filter((i) => {
         const s = (i.status || "").toLowerCase();
@@ -257,14 +251,11 @@ const Dashboard = () => {
   useEffect(() => {
     if (loading) return;
 
-    // --- REVENUE STATS CALCULATION ---
     const generateStat = (label, items, color, moduleKey) => {
-      // 1. Filter by Date
       const dateFiltered = items.filter((i) =>
         isDateInView(getItemDate(i), filterView, filterDate),
       );
 
-      // 2. Filter by Status
       const paidItems = getPaidItems(dateFiltered, moduleKey);
 
       const currentRev = calculateRevenue(paidItems);
@@ -300,7 +291,6 @@ const Dashboard = () => {
       generateStat("Parking Revenue", rawData.parking, "blue", "parking"),
     ]);
 
-    // --- SUMMARY DONUT CALCULATION ---
     const monthlyTotalTarget = Object.values(targets).reduce(
       (a, b) => a + b,
       0,
@@ -357,7 +347,6 @@ const Dashboard = () => {
       },
     ]);
 
-    // --- RECENT ACTIVITY ---
     const filteredReports = rawData.reports.filter((r) =>
       isDateInView(r.createdAt || r.date, filterView, filterDate),
     );
@@ -376,7 +365,6 @@ const Dashboard = () => {
       }));
     setRecentActivity(processedActivity);
 
-    // --- CHART DATA (REVENUE + VOLUME) ---
     const getChartMetrics = (items, moduleKey, dateMatchFn) => {
       const dateMatched = items.filter(dateMatchFn);
       const paidOnly = getPaidItems(dateMatched, moduleKey);
@@ -510,7 +498,6 @@ const Dashboard = () => {
     setFilterView(view);
   };
 
-  // --- EXPORT TO PDF ---
   const exportToPDF = () => {
     try {
       const payload = getExportPayload();
@@ -518,10 +505,8 @@ const Dashboard = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
-      // 1. Add Header Branding
       doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-      // 2. Add Title and Summary Metadata
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text("DASHBOARD REPORT", pageWidth / 2, 45, { align: "center" });
@@ -531,7 +516,6 @@ const Dashboard = () => {
 
       doc.text(`Generated: ${payload.meta.generatedAt}`, 15, 55);
 
-      // 3. Revenue Summary Table
       autoTable(doc, {
         startY: 65,
         head: [["Module", "Revenue", "Target", "Progress"]],
@@ -545,9 +529,8 @@ const Dashboard = () => {
           else if (filterView === "month") targetVal = baseMonthlyTarget;
           else if (filterView === "year") targetVal = baseMonthlyTarget * 12;
 
-          const percentReached = targetVal > 0
-            ? Math.round((s.rawValue / targetVal) * 100)
-            : 0;
+          const percentReached =
+            targetVal > 0 ? Math.round((s.rawValue / targetVal) * 100) : 0;
 
           const progressText = `${percentReached}% of Target`;
 
@@ -563,7 +546,6 @@ const Dashboard = () => {
         margin: { bottom: 20 },
       });
 
-      // 4. Revenue Breakdown Table
       const finalY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
@@ -581,7 +563,6 @@ const Dashboard = () => {
         margin: { bottom: 35 },
       });
 
-      // 5. Add Footer Branding
       doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
 
       doc.save(`Dashboard_Report_${filterView}_${Date.now()}.pdf`);
@@ -591,22 +572,19 @@ const Dashboard = () => {
     }
   };
 
-  // --- EXPORT TO EXCEL (PDF-STYLE FORMATTING) ---
   const exportToExcel = () => {
     try {
       const payload = getExportPayload();
       const wb = XLSX.utils.book_new();
 
-      // 1. Prepare the Header and Metadata
       const header = [
         ["CITY OF ZAMBOANGA"],
         ["INTEGRADO TERMINAL DE ZAMBOANGA"],
         ["DASHBOARD REPORT"],
         [`Generated: ${payload.meta.generatedAt}`],
-        [], // Spacer
+        [],
       ];
 
-      // 2. Prepare Revenue Summary Table
       const summaryHeader = [["REVENUE SUMMARY"]];
       const summaryTableHeaders = [["Module", "Revenue", "Target", "Progress"]];
       const summaryRows = payload.stats.map((s) => {
@@ -619,36 +597,32 @@ const Dashboard = () => {
         else if (filterView === "month") targetVal = baseMonthlyTarget;
         else if (filterView === "year") targetVal = baseMonthlyTarget * 12;
 
-        const percentReached = targetVal > 0
-          ? Math.round((s.rawValue / targetVal) * 100)
-          : 0;
+        const percentReached =
+          targetVal > 0 ? Math.round((s.rawValue / targetVal) * 100) : 0;
 
         return [
           s.label,
           `Php ${Number(s.rawValue).toLocaleString()}`,
           `Php ${Math.round(targetVal).toLocaleString()}`,
-          `${percentReached}% of Target`
+          `${percentReached}% of Target`,
         ];
       });
 
-      // 3. Prepare Revenue Breakdown Table
       const breakdownHeader = [[], ["REVENUE BREAKDOWN"]];
       const breakdownTableHeaders = [["Module", "Revenue"]];
       const breakdownRows = payload.donut.map((d) => [
         d.name,
-        `Php ${d.value.toLocaleString()}`
+        `Php ${d.value.toLocaleString()}`,
       ]);
 
-      // 4. Prepare Footer (Contact Details)
       const footer = [
-        [], // Spacer
+        [],
         ["MCLL HIGHWAY, DIVISORIA, ZAMBOANGA CITY"],
         ["TEL NOS: (062) 955-7806 / (062) 991-1630"],
         ["Email: zamboangacityibt@email.com"],
-        ["Website: www.zamboangacity.gov.ph"]
+        ["Website: www.zamboangacity.gov.ph"],
       ];
 
-      // 5. Combine all sections into one Array of Arrays
       const finalData = [
         ...header,
         ...summaryHeader,
@@ -657,33 +631,23 @@ const Dashboard = () => {
         ...breakdownHeader,
         ...breakdownTableHeaders,
         ...breakdownRows,
-        ...footer
+        ...footer,
       ];
 
-      // 6. Create worksheet and set column widths for readability
       const ws = XLSX.utils.aoa_to_sheet(finalData);
 
-      // Set column widths (wch = width in characters)
-      ws['!cols'] = [
-        { wch: 30 }, // Module Column
-        { wch: 20 }, // Revenue Column
-        { wch: 20 }, // Target Column
-        { wch: 25 }  // Progress Column
-      ];
+      ws["!cols"] = [{ wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 25 }];
 
       XLSX.utils.book_append_sheet(wb, ws, "Dashboard Report");
 
       // Save file
       XLSX.writeFile(wb, `Dashboard_Report_${filterView}_${Date.now()}.xlsx`);
       console.log("Excel exported successfully with PDF-like layout!");
-
     } catch (err) {
       console.error("Excel export failed:", err);
       alert("Failed to export Excel. Please try again.");
     }
   };
-
-
 
   const handleDownload = (format) => {
     if (format === "pdf") exportToPDF();
@@ -693,9 +657,7 @@ const Dashboard = () => {
   return (
     <Layout title="Dashboard">
       <div className="px-4 py-6 lg:px-8 space-y-10 bg-gray-50 min-h-screen">
-        {/* --- FILTERS + TARGETS ALIGNMENT --- */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
-          {/* Left: Filters + Download */}
           <DashboardToolbar
             onRefresh={fetchDashboardData}
             onDownload={handleDownload}
@@ -704,7 +666,6 @@ const Dashboard = () => {
             onSetTargets={() => setIsTargetModalOpen(true)}
           />
 
-          {/* Right: Set Targets Button */}
           <div className="flex justify-end">
             <button
               onClick={() => setIsTargetModalOpen(true)}
@@ -741,25 +702,12 @@ const Dashboard = () => {
         />
       </div>
 
-      {toast.show && (
-        <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-2 duration-300">
-          <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border
-        ${toast.type === "success"
-                ? "bg-white border-green-200 text-green-700"
-                : "bg-white border-red-200 text-red-700"
-              }`}
-          >
-            {/* Icon */}
-            <span className="text-lg">
-              {toast.type === "success" ? "✅" : "⚠️"}
-            </span>
-
-            {/* Message */}
-            <p className="text-sm font-medium">{toast.message}</p>
-          </div>
-        </div>
-      )}
+      <NotificationToast
+        isOpen={toast.isOpen}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast((prev) => ({ ...prev, isOpen: false }))}
+      />
     </Layout>
   );
 };

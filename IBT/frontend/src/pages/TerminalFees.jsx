@@ -150,7 +150,7 @@ const TerminalFees = () => {
       setBasePrices(newPrices);
       setShowPriceModal(false);
       showToastMessage(
-        "Base prices updated successfully! New tickets will use these prices."
+        "Base prices updated successfully! New tickets will use these prices.",
       );
     }
   };
@@ -238,10 +238,10 @@ const TerminalFees = () => {
     paginatedData.length > 0 &&
     paginatedData.every((item) => selectedIds.includes(item._id || item.id));
 
-  const showToastMessage = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 3000);
-  };
+  const showToastMessage = (message, type = "success") => {
+  setToast({ message, type });
+  setTimeout(() => setToast(null), 3000);
+};
 
   const handleSubmitReport = async () => {
     setIsReporting(true);
@@ -292,16 +292,19 @@ const TerminalFees = () => {
 
       const adminName = localStorage.getItem("authName") || "Ticket Admin";
       await submitPageReport("Terminal Fees", reportPayload, adminName);
-      await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Report Submitted: Terminal Fees Reports",
-          message:
-            "A new Terminal Fees report has been generated and the active log has been cleared.",
-          source: "Terminal Fees",
-        }),
-      });
+      await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "Report Submitted: Terminal Fees Reports",
+            message:
+              "A new Terminal Fees report has been generated and the active log has been cleared.",
+            source: "Terminal Fees",
+          }),
+        },
+      );
 
       const deletePromises = filtered.map((item) =>
         fetch(`${API_URL}/terminal-fees/${item._id || item.id}`, {
@@ -558,12 +561,13 @@ const TerminalFees = () => {
         `Created Ticket #${newTicket.ticketNo} - ${newTicket.passengerType}`,
         "TerminalFees",
       );
-      showToastMessage("New ticket added successfully!");
+      showToastMessage("New ticket added successfully!", "success");
       setShowAddModal(false);
     } catch (error) {
       console.error("Error saving ticket:", error);
       showToastMessage(
         "Failed to save ticket. Please check server connection.",
+        "error"
       );
     }
   };
@@ -577,11 +581,13 @@ const TerminalFees = () => {
       const idToArchive = rowToArchive._id || rowToArchive.id;
       if (!idToArchive) throw new Error("System Error: Record ID is missing.");
 
-
-      const archiveRes = await fetch(`${API_URL}/terminal-fees/${idToArchive}/archive`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" }
-      });
+      const archiveRes = await fetch(
+        `${API_URL}/terminal-fees/${idToArchive}/archive`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
 
       if (!archiveRes.ok) throw new Error("Failed to archive");
 
@@ -621,24 +627,11 @@ const TerminalFees = () => {
       [""],
       ["PASSENGER REPORTS"],
       [""],
-      [
-        `Date: ${dateStr}`,
-        "",
-        "",
-        "",
-        `No. of Passengers: ${stats.total}`
-      ],
-      [
-        "",
-        "",
-        "",
-        "",
-        `Revenue: Php ${stats.revenue.toFixed(2)}`
-      ],
+      [`Date: ${dateStr}`, "", "", "", `No. of Passengers: ${stats.total}`],
+      ["", "", "", "", `Revenue: Php ${stats.revenue.toFixed(2)}`],
       [],
       ["Ticket No", "Passenger Type", "Price", "Time", "Date"],
     ];
-
 
     filtered.forEach((item) => {
       rows.push([
@@ -717,7 +710,6 @@ const TerminalFees = () => {
         2: { halign: "right" },
       },
       didDrawPage: (data) => {
-
         doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
       },
     });
@@ -736,20 +728,20 @@ const TerminalFees = () => {
 
   const tableColumns = isSelectionMode
     ? [
-      <div key="header-check" className="flex items-center">
-        <input
-          type="checkbox"
-          checked={isAllSelected}
-          onChange={handleSelectAll}
-          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-        />
-      </div>,
-      "Ticket No",
-      "Passenger Type",
-      "Time",
-      "Date",
-      "Price",
-    ]
+        <div key="header-check" className="flex items-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+        </div>,
+        "Ticket No",
+        "Passenger Type",
+        "Time",
+        "Date",
+        "Price",
+      ]
     : ["Ticket No", "Passenger Type", "Time", "Date", "Price"];
 
   return (
@@ -766,7 +758,6 @@ const TerminalFees = () => {
 
       {/* --- Main container justified to the right --- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
-
         <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
           {role === "superadmin" && (
             <button
@@ -854,10 +845,11 @@ const TerminalFees = () => {
             <button
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
-                  ? "bg-red-500  text-white shadow-md"
-                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                }`}
+              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+                isSelectionMode
+                  ? "bg-red-500 text-white shadow-md"
+                  : "bg-white border-slate-300 text-slate-700 hover:border-emerald-500 hover:text-emerald-600"
+              }`}
             >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
             </button>
@@ -1259,12 +1251,12 @@ const TerminalFees = () => {
                   value={
                     editRow.date
                       ? new Date(editRow.date).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                       : ""
                   }
                   disabled
@@ -1363,7 +1355,14 @@ const TerminalFees = () => {
           </div>
         </div>
       )}
-      <NotificationToast message={toast} />
+      {toast && (
+  <NotificationToast
+    isOpen={!!toast}
+    type={toast.type}
+    message={toast.message}
+    onClose={() => setToast(null)}
+  />
+)}
     </Layout>
   );
 };
