@@ -590,29 +590,15 @@ const TenantLease = () => {
             }
 
             if (newTenant.documents) {
-                if (newTenant.documents.businessPermit instanceof File) {
-                    formData.append('businessPermit', newTenant.documents.businessPermit);
-                }
-                if (newTenant.documents.validID instanceof File) {
-                    formData.append('validID', newTenant.documents.validID);
-                }
-                if (newTenant.documents.contract instanceof File) {
-                    formData.append('contract', newTenant.documents.contract);
-                }
-
-                if (newTenant.documents.barangayClearance instanceof File) {
-                    formData.append('barangayClearance', newTenant.documents.barangayClearance);
-                }
-                if (newTenant.documents.proofOfReceipt instanceof File) {
-                    formData.append('proofOfReceipt', newTenant.documents.proofOfReceipt);
-                }
-
-                if (newTenant.documents.communityTax instanceof File) {
-                    formData.append('communityTax', newTenant.documents.communityTax);
-                }
-                if (newTenant.documents.policeClearance instanceof File) {
-                    formData.append('policeClearance', newTenant.documents.policeClearance);
-                }
+                const docKeys = ['businessPermit', 'validID', 'contract', 'barangayClearance', 'proofOfReceipt', 'communityTax', 'policeClearance'];
+                docKeys.forEach(docKey => {
+                    const docValue = newTenant.documents[docKey];
+                    if (docValue instanceof File) {
+                        formData.append(docKey, docValue); 
+                    } else if (typeof docValue === 'string' && docValue.trim() !== "") {
+                        formData.append(docKey, docValue); 
+                    }
+                });
             }
 
             const response = await fetch(`${API_URL}/tenants`, {
@@ -1227,29 +1213,15 @@ const TenantLease = () => {
                             });
 
                             if (updatedData.documents) {
-                                if (updatedData.documents.businessPermit instanceof File) {
-                                    formData.append('businessPermit', updatedData.documents.businessPermit);
-                                }
-                                if (updatedData.documents.validID instanceof File) {
-                                    formData.append('validID', updatedData.documents.validID);
-                                }
-                                if (updatedData.documents.contract instanceof File) {
-                                    formData.append('contract', updatedData.documents.contract);
-                                }
-
-                                if (updatedData.documents.barangayClearance instanceof File) {
-                                    formData.append('barangayClearance', updatedData.documents.barangayClearance);
-                                }
-                                if (updatedData.documents.proofOfReceipt instanceof File) {
-                                    formData.append('proofOfReceipt', updatedData.documents.proofOfReceipt);
-                                }
-
-                                if (updatedData.documents.communityTax instanceof File) {
-                                    formData.append('communityTax', updatedData.documents.communityTax);
-                                }
-                                if (updatedData.documents.policeClearance instanceof File) {
-                                    formData.append('policeClearance', updatedData.documents.policeClearance);
-                                }
+                                const docKeys = ['businessPermit', 'validID', 'contract', 'barangayClearance', 'proofOfReceipt', 'communityTax', 'policeClearance'];
+                                docKeys.forEach(docKey => {
+                                    const docValue = updatedData.documents[docKey];
+                                    if (docValue instanceof File) {
+                                        formData.append(docKey, docValue);
+                                    } else if (typeof docValue === 'string' && docValue.trim() !== "") {
+                                        formData.append(docKey, docValue); 
+                                    }
+                                });
                             }
 
                             const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
