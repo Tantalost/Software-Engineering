@@ -1016,12 +1016,6 @@ const TenantLease = () => {
                         + Add New
                     </button>
 
-                    {role === "superadmin" && (
-                        <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer" title='Notify All Tenants'>
-                            Broadcast
-                        </button>
-                    )}
-
                     {role === "superadmin" && activeTab === "night" && (
                         <button
                             onClick={() => {
