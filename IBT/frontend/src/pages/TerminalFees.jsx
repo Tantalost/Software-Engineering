@@ -550,6 +550,13 @@ const TerminalFees = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newTicket),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Backend Error Details:", errorData);
+        throw new Error(errorData.message || errorData.error || "Failed to save to database");
+      }
+
       if (!res.ok) throw new Error("Failed to save to database");
       await fetchFees();
       await logActivity(
@@ -855,8 +862,8 @@ const TerminalFees = () => {
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
               className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
-                  ? "bg-red-500  text-white shadow-md"
-                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                ? "bg-red-500  text-white shadow-md"
+                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                 }`}
             >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
