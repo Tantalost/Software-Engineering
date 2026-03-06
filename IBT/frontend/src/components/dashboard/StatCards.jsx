@@ -7,28 +7,28 @@ const StatCards = ({ statsData }) => {
       label: "Tickets",
       value: "0",
       change: "+0%",
-      subtitle: "No Data",
+      subtitle: "Target: 0",
       color: "red",
     },
     {
       label: "Bus",
       value: "0",
       change: "+0%",
-      subtitle: "No Data",
+      subtitle: "Target: 0",
       color: "yellow",
     },
     {
       label: "Tenants/Lease",
       value: "0",
       change: "+0%",
-      subtitle: "No Data",
+      subtitle: "Target: 0",
       color: "green",
     },
     {
       label: "Parking",
       value: "0",
       change: "+0%",
-      subtitle: "No Data",
+      subtitle: "Target: 0",
       color: "blue",
     },
   ];
@@ -37,25 +37,21 @@ const StatCards = ({ statsData }) => {
 
   const colorMap = {
     red: {
-      bgLight: "bg-red-100",
       bgMedium: "bg-red-200",
       bgStrong: "bg-red-300",
       bgCircle: "bg-red-400",
     },
     yellow: {
-      bgLight: "bg-yellow-100",
       bgMedium: "bg-yellow-200",
       bgStrong: "bg-yellow-300",
       bgCircle: "bg-yellow-400",
     },
     green: {
-      bgLight: "bg-green-100",
       bgMedium: "bg-green-200",
       bgStrong: "bg-green-300",
       bgCircle: "bg-green-400",
     },
     blue: {
-      bgLight: "bg-blue-100",
       bgMedium: "bg-blue-200",
       bgStrong: "bg-blue-300",
       bgCircle: "bg-blue-400",
@@ -92,48 +88,45 @@ const StatCards = ({ statsData }) => {
               className={`absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-20 blur-3xl bg-gradient-to-br ${color.bgMedium} ${color.bgStrong} transition-transform duration-500 group-hover:scale-110`}
             ></div>
 
-            {/* Card Content */}
             <div className="relative z-10">
+              {/* Top Section */}
               <div className="flex items-start justify-between mb-4">
-                <div>
+                <div className="w-full">
                   <p className="text-gray-500 text-sm sm:text-base font-medium mb-2">
                     {stat.label}
                   </p>
-                  {/* Value display fixed for up to 10 digits */}
+
+                  {/* Revenue / Value */}
                   <p
-                    className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 truncate w-full"
+                    className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 truncate"
                     style={{ minWidth: "10ch" }}
                   >
                     {stat.value}
                   </p>
+
+                  {/* Target Revenue (supports 10 digits) */}
+                  <p
+                    className="text-gray-400 text-xs sm:text-sm font-medium mb-3 truncate"
+                    style={{ minWidth: "10ch" }}
+                  >
+                    {stat.subtitle}
+                  </p>
+
+                  {/* Percentage Badge */}
+                  <span
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold ${badgeStyle}`}
+                  >
+                    <Icon size={14} />
+                    <span className="tabular-nums leading-none">
+                      {cleanChange}
+                    </span>
+                  </span>
                 </div>
+
+                {/* Small Circle Indicator */}
                 <div
                   className={`w-6 h-6 ${color.bgCircle} rounded-full shadow-lg`}
                 ></div>
-              </div>
-
-              {/* Change badge and subtitle */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                {/* % of Target badge */}
-                <span
-                  className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${badgeStyle}`}
-                  style={{
-                    flex: "0 0 auto", 
-                    maxWidth: "4rem", 
-                    minWidth: "2.5rem", 
-                    textAlign: "center",
-                  }}
-                >
-                  <Icon size={16} />
-                  <span className="uppercase tracking-wide truncate">
-                    {cleanChange}
-                  </span>
-                </span>
-
-                {/* Subtitle / Target Revenue */}
-                <span className="text-gray-400 text-xs sm:text-sm font-medium truncate flex-1 min-w-0">
-                  {stat.subtitle}
-                </span>
               </div>
             </div>
           </div>
