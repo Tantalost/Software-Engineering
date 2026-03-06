@@ -148,7 +148,9 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
       }) 
     : "Not Set";
 
-  const totalAmount = currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString() : "0.00";
+  const rentAmount = currentApp.rentAmount ? Number(currentApp.rentAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
+  const utilityAmount = currentApp.utilityAmount ? Number(currentApp.utilityAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
+  const totalAmount = currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
 
   const handleRenewalSubmit = () => {
       submitRenewal();
@@ -177,12 +179,25 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
-            <Text variant="titleMedium" style={{ fontWeight: 'medium', color: '#166534' }}>Next Payment Due</Text>
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>Next Payment Due</Text>
           </View>
           <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
-          <Text variant="titleMedium" style={{ color: '#166534', fontWeight: 'bold', marginLeft: 34, marginTop: 5 }}>
-            Amount Due: ₱{totalAmount}
-          </Text>
+          
+          <View style={{ marginLeft: 34, marginTop: 10, backgroundColor: '#dcfce7', padding: 12, borderRadius: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+              <Text style={{ color: '#166534' }}>Rent Amount:</Text>
+              <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{rentAmount}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+              <Text style={{ color: '#166534' }}>Additional Fees:</Text>
+              <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{utilityAmount}</Text>
+            </View>
+            <Divider style={{ marginVertical: 8, backgroundColor: '#bbf7d0' }} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ color: '#166534', fontWeight: 'bold' }}>Total Due:</Text>
+              <Text style={{ color: '#166534', fontWeight: 'bold', fontSize: 16 }}>₱{totalAmount}</Text>
+            </View>
+          </View>
 
           <Divider style={{ marginVertical: 15 }} />
           
@@ -198,24 +213,23 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
         </Card.Content>
       </Card>
 
-     
       <Card style={{ marginBottom: 20, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 }}>
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
             <Icon name="receipt" size={24} color="#166534" style={{ marginRight: 10 }} />
-            <Text variant="titleMedium" style={{ fontWeight: 'medium', color: '#166534' }}>
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>
              Payment Record History
             </Text>
           </View>
           
           <View style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
             <Text variant="bodyMedium" style={{ marginBottom: 5, color: '#121213', fontWeight: 'bold'  }}>
-              <Text style={{ fontWeight: 'medium', color: '#121213' }}>Reference No: </Text> 
+              <Text style={{ fontWeight: 'normal', color: '#121213' }}>Reference No: </Text> 
               {currentApp.paymentReference || "N/A"}  
             </Text>
             <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold' }}>
-              <Text style={{ fontWeight: 'medium', color: '#121213' }}>Amount Paid: </Text> 
-              ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString() : "0.00"}
+              <Text style={{ fontWeight: 'normal', color: '#121213' }}>Amount Paid: </Text> 
+              ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00"}
             </Text>
           </View>
          
@@ -241,12 +255,7 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
         </Card.Content>
       </Card>
 
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={paymentModalVisible}
-        onRequestClose={() => setPaymentModalVisible(false)}
-      >
+      <Modal animationType="fade" transparent={true} visible={paymentModalVisible} onRequestClose={() => setPaymentModalVisible(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }}>
           <View style={{ backgroundColor: 'white', padding: 25, borderRadius: 15, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, elevation: 5 }}>
             
