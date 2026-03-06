@@ -28,12 +28,13 @@ Next payment due details (Tenant List Module) 🔴 **To be Fixed**
 - add button for send payment receipt so that if the user is already paid it will shows in the payment record history
 UI fix: 
 - Add tenant Modal - add progress bar for uploading docs
-- can't view uploaded documents after the contract review phase, in the add tenant modal.
+- UI layout in view modal same as the layout in the editTenantLease modal in Financial breakdown section
+- can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
 
 (Lloyd) 🔴 **To be Fixed**
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
 - send email in the tenants table if its working or not , needed to be fix
-
+- add set price for permanent slot.
 
 
 🟢 **Done**
