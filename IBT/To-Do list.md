@@ -21,8 +21,8 @@ Change the toast message, dapat same toast message lahat ng module, reference ny
 Admin Login Page
 - layout revised 🔴 **To be Fixed**
 
-(Steph) 🔴 **To be Fixed**
-Next payment due details (Tenant List Module) 🔴 **To be Fixed**
+(Steph) 🟢 **Done**
+Next payment due details (Tenant List Module) 🟢 **Done**
 - Date 
 - next amount to be paid
 - add button for send payment receipt so that if the user is already paid it will shows in the payment record history
