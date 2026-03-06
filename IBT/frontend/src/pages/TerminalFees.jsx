@@ -524,13 +524,9 @@ const TerminalFees = () => {
   };
 
   const handleOpenAdd = () => {
-    const maxTicket =
-      records.length > 0
-        ? Math.max(...records.map((r) => Number(r.ticketNo) || 0))
-        : 0;
     const now = new Date();
     setNewTicket({
-      ticketNo: maxTicket + 1,
+      ticketNo: "Auto-generated",
       passengerType: "Regular",
       price: basePrices.regular,
       date: now.toISOString().split("T")[0],
@@ -1130,7 +1126,7 @@ const TerminalFees = () => {
                   type="text"
                   value={newTicket.ticketNo}
                   disabled
-                  className="w-full bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg font-medium"
+                  className="w-full bg-slate-100 text-slate-500 italic border border-slate-300 px-3 py-2 rounded-lg font-medium"
                 />
               </div>
               <div>
