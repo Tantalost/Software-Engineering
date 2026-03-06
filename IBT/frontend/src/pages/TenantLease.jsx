@@ -1144,14 +1144,14 @@ const TenantLease = () => {
 
             <TenantEmailModal
                 isOpen={showEmailModal}
-                onClose={() => setShowEmailModal(false)}
+                onClose={() => {
+                    setShowEmailModal(false);
+                    setEmailBody("");
+                }}
                 recipient={messagingRow}
                 body={emailBody}
                 setBody={setEmailBody}
-                onSend={() => {
-                    setNotificationState({ isOpen: true, type: 'error', message: "Please use the automated email feature or implement backend logic.", autoClose: true, duration: 3000 });
-                    setShowEmailModal(false);
-                }}
+                onSend={handleSendEmail}
             />
 
             <ApplicationReviewModal
