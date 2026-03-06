@@ -14,7 +14,7 @@ import {
   updateAllNightMarketPrices,
   sendTenantEmail,
   getDefaultPermanentPrice,
-  updateAllPermanentPrices
+  updateAllPermanentPrices   
 } from "../controllers/tenantController.js";
 
 const router = express.Router();

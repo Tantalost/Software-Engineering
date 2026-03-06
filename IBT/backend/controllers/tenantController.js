@@ -247,6 +247,62 @@ export const updateTenant = async (req, res) => {
   }
 };
 
+// --- DYNAMIC PRICING FOR NIGHT MARKET ---
+
+// Get default night market price from settings
+export const getDefaultNightPrice = async (req, res) => {
+  try {
+    const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150; 
+    res.status(200).json({ defaultPrice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update default price and apply to unpaid/due Night Market tenants
+export const updateAllNightMarketPrices = async (req, res) => {
+  try {
+    const { newPrice } = req.body;
+
+    if (!newPrice || isNaN(newPrice) || newPrice < 0) {
+      return res.status(400).json({ error: "Valid price is required." });
+    }
+
+    const priceValue = parseFloat(newPrice);
+    const priceString = priceValue.toString(); 
+
+    // 1. Update or create the global price setting
+    await Settings.findOneAndUpdate(
+      { key: "defaultNightPrice" },
+      { key: "defaultNightPrice", value: priceValue },
+      { upsert: true, new: true }
+    );
+
+    // 2. Update existing active Night Market tenants who have unpaid "Due" balances
+    const tenantResult = await Tenant.updateMany(
+      { tenantType: "Night Market", status: "Due" },
+      { rentAmount: priceValue }
+    );
+
+    // 3. Update pending applications 
+    const applicationResult = await TenantApplication.updateMany(
+      { 
+        $or: [{ floor: "Night Market" }, { preferredType: "Night Market" }], 
+        status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED'] } 
+      },
+      { paymentAmount: priceString }
+    );
+
+    res.status(200).json({
+      message: `Updated global night market price.`,
+      modifiedCount: tenantResult.modifiedCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // --- DYNAMIC PRICING FOR PERMANENT SLOTS ---
 
 // Get default permanent price from settings
