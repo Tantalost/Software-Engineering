@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import sendEmail from "../utils/sendEmail.js"; 
 
 export const requestPasswordReset = async (req, res) => {
@@ -32,6 +33,7 @@ export const requestPasswordReset = async (req, res) => {
   }
 };
 
+
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -44,25 +46,74 @@ export const resetPassword = async (req, res) => {
     }
 
     if (user.otpExpires < Date.now()) {
-        return res.status(400).json({ error: "Verification code has expired. Please request a new one." });
+        return res.status(400).json({ error: "Verification code has expired." });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedNewPassword = await bcrypt.hash(newPassword, salt);
 
     user.password = hashedNewPassword; 
-    
     user.otp = null;
     user.otpExpires = null;
-    
     await user.save();
 
     res.status(200).json({ message: "Password reset successfully." });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { userId, name, email, contact } = req.body;
+    const user = await User.findById(userId);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (name) user.fullName = name;
+    if (email) user.email = email;
+    if (contact) user.contactNo = contact;
+
+   
+    if (req.file) {
+      user.avatarUrl = req.file.filename; 
+    }
+
+    await user.save();
+
+    res.status(200).json({ 
+      message: "Profile updated successfully", 
+      user: { 
+        id: user._id, 
+        name: user.fullName, 
+        email: user.email, 
+        contact: user.contactNo,
+        avatarUrl: user.avatarUrl 
+      } 
+    });
+  } catch (err) {
+    console.error("Profile Update Error:", err);
+    res.status(500).json({ error: "Server error during profile update" });
+  }
+};
+
+
+export const getAvatar = async (req, res) => {
+    try {
+        const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+            bucketName: 'uploads'
+        });
+
+        const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+        downloadStream.on('data', (chunk) => res.write(chunk));
+        downloadStream.on('error', () => res.status(404).json({ message: "Image not found" }));
+        downloadStream.on('end', () => res.end());
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching image" });
+    }
+};
+
 
 export const register = async (req, res) => {
   try {
@@ -78,20 +129,16 @@ export const register = async (req, res) => {
         email,
         password: hashedPassword,
         fullName,
-        contactNo
+        contactNo,
+        avatarUrl: null
     });
 
     const savedUser = await newUser.save();
-
-    const token = jwt.sign(
-        { id: savedUser._id, email: savedUser.email }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: "7d" } 
-    );
+    const token = jwt.sign({ id: savedUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(201).json({ 
         message: "User created", 
-        token: token, 
+        token, 
         user: { id: savedUser._id, name: savedUser.fullName, email: savedUser.email } 
     });
   } catch (err) {
@@ -99,31 +146,28 @@ export const register = async (req, res) => {
   }
 };
 
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    
-    if (!isMatch) {
-        return res.status(400).json({ error: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-        { id: user._id, email: user.email }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: "7d" } 
-    );
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(200).json({ 
         message: "Login successful", 
-        token: token, 
-        user: { id: user._id, name: user.fullName, email: user.email, contact: user.contactNo } 
+        token, 
+        user: { 
+            id: user._id, 
+            name: user.fullName, 
+            email: user.email, 
+            contact: user.contactNo,
+            avatarUrl: user.avatarUrl
+        } 
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
