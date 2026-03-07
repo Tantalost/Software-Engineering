@@ -343,6 +343,28 @@ export default function StallsPage() {
     }
   };
 
+  const handleApiError = async (res: any) => {
+      if (!res.ok) {
+          const errorText = await res.text();
+          let errorMessage = errorText;
+          
+          try {
+              const parsed = JSON.parse(errorText);
+              errorMessage = parsed.error || parsed.message || errorText;
+          } catch (e) {}
+
+          if (res.status === 401 || res.status === 403 || errorMessage.toLowerCase().includes('token')) {
+              await AsyncStorage.multiRemove(['ibt_user', 'token']);
+              setUser(null);
+              setModalVisible(false);
+              setShowLogin(true); 
+              throw new Error("Session expired. Please log in again.");
+          }
+          
+          throw new Error(errorMessage || "Request failed");
+      }
+  };
+  
   const submitApplication = async () => {
     if (!user) return;
     setApplying(true);
@@ -390,10 +412,7 @@ export default function StallsPage() {
             }
           });
 
-          if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(errorText || "Server rejected application");
-          }
+          await handleApiError(res);
 
           setModalVisible(false); 
           setModalStep('form'); 
@@ -438,7 +457,7 @@ export default function StallsPage() {
             }
           });
 
-          if (!res.ok) throw new Error("Server payment error");
+         await handleApiError(res);
           
           Alert.alert("Sent", "Payment submitted for review."); 
           fetchData(user.id);
@@ -479,7 +498,7 @@ export default function StallsPage() {
             }
           });
 
-          if (!res.ok) throw new Error("Server payment error");
+          await handleApiError(res);
           
           Alert.alert("Success", "Renewal payment submitted for review."); 
           setPaymentData({ referenceNo: '' });
@@ -519,7 +538,7 @@ export default function StallsPage() {
                 }
             });
 
-            if (!res.ok) throw new Error(await res.text());
+            await handleApiError(res);
             
             Alert.alert("Success", "Contract PDF submitted."); 
             fetchData(user.id);
