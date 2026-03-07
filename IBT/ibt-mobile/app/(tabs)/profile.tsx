@@ -83,9 +83,9 @@ export default function ProfileScreen() {
   const openEditModal = () => {
     if (!user) return;
     setEditForm({
-        name: user.name,
-        email: user.email,
-        contact: user.contact,
+        name: user.name || '', 
+        email: user.email || '', 
+        contact: user.contact || '', 
         avatar: user.avatarUrl || null
     });
     setEditModalVisible(true);
@@ -245,21 +245,18 @@ export default function ProfileScreen() {
       
       <Portal>
         <Modal visible={editModalVisible} onDismiss={() => setEditModalVisible(false)} contentContainerStyle={styles.modalContent}>
-            <Text variant="headlineSmall" style={{textAlign:'center', fontWeight:'bold', marginBottom: 20, color: colors.textDark}}>Edit Profile</Text>
+          <Text variant="headlineSmall" style={{textAlign:'center', fontWeight:'bold', marginBottom: 20, color: colors.textDark}}>Edit Profile</Text>
             
-            <View style={{alignItems:'center', marginBottom: 20}}>
-                <TouchableOpacity onPress={pickImage}>
-                    {editForm.avatar ? (
-                         <Avatar.Image size={100} source={{uri: editForm.avatar}} />
-                    ) : (
-                         <Avatar.Text size={100} label={editForm.name.charAt(0)} style={{backgroundColor: colors.primary}} />
-                    )}
-                    <View style={{position:'absolute', bottom:0, right:0, backgroundColor:'white', borderRadius:15, padding:5, elevation:2, borderWidth: 1, borderColor:'#eee'}}>
-                         <Icon name="camera" size={20} color={colors.primary} />
-                    </View>
-                </TouchableOpacity>
-                <Text style={{fontSize: 12, color: 'grey', marginTop: 5}}>Tap to change photo</Text>
-            </View>
+          <View style={styles.profileSection}>
+            {user.avatarUrl ? (
+                <Avatar.Image size={80} source={{uri: user.avatarUrl}} />
+              ) : (
+                <Avatar.Text size={80} label={user.name ? user.name.charAt(0).toUpperCase() : 'U'} style={{backgroundColor: colors.primary}} />
+            )}
+            <Text variant="headlineSmall" style={{marginTop: 15, fontWeight: 'bold', color: colors.black}}>{user.name || 'New Vendor'}</Text>
+            <Text variant="bodyMedium" style={{color: 'grey'}}>{user.email}</Text>
+            <Text variant="bodyMedium" style={{color: 'grey'}}>{user.contact}</Text>
+          </View>
 
             <TextInput label="Username" value={editForm.name} onChangeText={t => setEditForm({...editForm, name: t})} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
             <TextInput label="Email" value={editForm.email} onChangeText={t => setEditForm({...editForm, email: t})} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
