@@ -378,10 +378,16 @@ export default function StallsPage() {
               appendFile(formPayload, 'policeClearance', files.policeClearance, encPolice);
           }
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/apply`, {
             method: 'POST',
             body: formPayload,
-            headers: { 'Accept': 'application/json' }
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            }
           });
 
           if (!res.ok) {
@@ -420,8 +426,16 @@ export default function StallsPage() {
           const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
           appendFile(formPayload, 'receipt', files.receipt, encReceipt);
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/pay`, { 
-            method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+            method: 'POST', 
+            body: formPayload, 
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
           });
 
           if (!res.ok) throw new Error("Server payment error");
@@ -453,8 +467,16 @@ export default function StallsPage() {
           const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
           appendFile(formPayload, 'receipt', files.receipt, encReceipt);
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/pay-renewal`, { 
-            method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+            method: 'POST', 
+            body: formPayload, 
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
           });
 
           if (!res.ok) throw new Error("Server payment error");
@@ -485,8 +507,16 @@ export default function StallsPage() {
             const encContract = await encryptFileBeforeUpload(files.contract!.uri, files.contract!.name || 'contract.pdf');
             appendFile(formPayload, 'contract', files.contract, encContract);
 
+            const rawUser = await AsyncStorage.getItem('ibt_user');
+            const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
             const res = await fetch(`${API_URL}/stalls/upload-contract`, { 
-                method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+                method: 'POST', 
+                body: formPayload, 
+                headers: { 
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             if (!res.ok) throw new Error(await res.text());
