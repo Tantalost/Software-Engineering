@@ -202,11 +202,9 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
           <Divider style={{ marginVertical: 15 }} />
           
           <Button 
-            mode="contained" 
-            icon="upload"
+            mode="contained" icon="upload"
             onPress={() => setPaymentModalVisible(true)} 
-            style={{ backgroundColor: colors.success }} 
-            textColor={colors.white}
+            style={{ backgroundColor: colors.success }} textColor={colors.white}
           >
             Submit Next Payment
           </Button>

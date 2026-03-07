@@ -117,7 +117,17 @@ export const getMyApplication = async (req, res) => {
         const { userId } = req.params;
         
         let applications = await TenantApplication.find({ userId }).lean();
-        const tenants = await Tenant.find({ uid: userId }).lean();
+        
+        const approvedSlots = applications
+            .filter(app => app.status === 'TENANT')
+            .map(app => app.targetSlot);
+
+        const tenants = await Tenant.find({ 
+            $or: [
+                { uid: userId },
+                { slotNo: { $in: approvedSlots } }
+            ]
+        }).lean();
         
         const nightSetting = await Settings.findOne({ key: "defaultNightPrice" });
         const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
@@ -128,10 +138,10 @@ export const getMyApplication = async (req, res) => {
         
         tenants.forEach(tenant => {
             const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
-          
             const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
             const isNightMarket = tenant.tenantType === 'Night Market';
             
+           
             let calcRent = tenant.rentAmount;
             if (!calcRent || calcRent === 0) {
                  calcRent = isNightMarket ? (globalNightPrice * slotCount) : (globalPermPrice * slotCount);
@@ -140,6 +150,7 @@ export const getMyApplication = async (req, res) => {
             const calcUtil = tenant.utilityAmount || 0;
             const calcTotal = (tenant.totalAmount && tenant.totalAmount > 0) ? tenant.totalAmount : (calcRent + calcUtil);
 
+            let calcDue = tenant.DueDateTime;
             if (!calcDue && tenant.StartDateTime) {
                  const d = new Date(tenant.StartDateTime);
                  if (isNightMarket) d.setDate(d.getDate() + 7);
@@ -160,18 +171,12 @@ export const getMyApplication = async (req, res) => {
             if (existingAppIndex >= 0) {
                 combinedApps[existingAppIndex] = { ...combinedApps[existingAppIndex], ...tenantData };
             } else {
-                combinedApps.push({
-                    ...tenantData,
-                    targetSlot: tenant.slotNo,
-                    floor: tenant.tenantType,
-                });
+                combinedApps.push({ ...tenantData, targetSlot: tenant.slotNo, floor: tenant.tenantType });
             }
         });
         
         res.json(combinedApps); 
-      } catch (error) {
-        res.status(500).json({ message: error.message });
-      }
+      } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
 export const submitApplication = async (req, res) => {

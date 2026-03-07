@@ -62,6 +62,7 @@ export default function StallsPage() {
   const [pendingStalls, setPendingStalls] = useState<string[]>([]);
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -135,20 +136,46 @@ export default function StallsPage() {
     }
   };
 
-  const handleLoginSuccess = (userData: UserData) => {
-    setUser(userData);
-    setShowLogin(false);
+  const handleLoginSuccess = async (userData: any) => {
+    try {
+        
+        setTimeout(async () => {
+           
+            const storedUserStr = await AsyncStorage.getItem('ibt_user');
+            const storedToken = await AsyncStorage.getItem('token');
+            
+            let fullUser = userData;
+            
+            if (storedUserStr) {
+                fullUser = JSON.parse(storedUserStr);
+            } else {
+                
+                await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+            }
 
-    const safeName = userData.name || "";
+            if (!storedToken && userData?.token) {
+                await AsyncStorage.setItem('token', userData.token);
+            } else if (!storedToken && fullUser?.token) {
+                await AsyncStorage.setItem('token', fullUser.token);
+            }
 
-    setFormData(prev => ({
-        ...prev,
-        firstName: safeName.split(' ')[0] || '',
-        lastName: safeName.split(' ').slice(1).join(' ') || '',
-        email: userData.email || '',
-        contact: userData.contact || ''
-    }));
-    fetchData(userData.id);
+            setUser(fullUser);
+            setShowLogin(false);
+
+            const safeName = fullUser.name || "";
+            setFormData(prev => ({
+                ...prev,
+                firstName: safeName.split(' ')[0] || '',
+                lastName: safeName.split(' ').slice(1).join(' ') || '',
+                email: fullUser.email || '',
+                contact: fullUser.contact || ''
+            }));
+            
+            fetchData(fullUser.id);
+        }, 150); 
+    } catch (error) {
+        console.error("Error recovering session:", error);
+    }
   };
 
   const fetchData = async (userId: string | undefined, isBackgroundRefresh = false) => {
@@ -214,6 +241,12 @@ export default function StallsPage() {
       setInitialLoading(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    
+    fetchData(user?.id).then(() => setRefreshing(false));
+}, [user, selectedFloor]);
   
   useEffect(() => {
     if (user) fetchData(user.id);
@@ -336,6 +369,28 @@ export default function StallsPage() {
     }
   };
 
+  const handleApiError = async (res: any) => {
+      if (!res.ok) {
+          const errorText = await res.text();
+          let errorMessage = errorText;
+          
+          try {
+              const parsed = JSON.parse(errorText);
+              errorMessage = parsed.error || parsed.message || errorText;
+          } catch (e) {}
+
+          if (res.status === 401 || res.status === 403 || errorMessage.toLowerCase().includes('token')) {
+              await AsyncStorage.multiRemove(['ibt_user', 'token']);
+              setUser(null);
+              setModalVisible(false);
+              setShowLogin(true); 
+              throw new Error("Session expired. Please log in again.");
+          }
+          
+          throw new Error(errorMessage || "Request failed");
+      }
+  };
+  
   const submitApplication = async () => {
     if (!user) return;
     setApplying(true);
@@ -371,16 +426,19 @@ export default function StallsPage() {
               appendFile(formPayload, 'policeClearance', files.policeClearance, encPolice);
           }
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/apply`, {
             method: 'POST',
             body: formPayload,
-            headers: { 'Accept': 'application/json' }
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            }
           });
 
-          if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(errorText || "Server rejected application");
-          }
+          await handleApiError(res);
 
           setModalVisible(false); 
           setModalStep('form'); 
@@ -413,11 +471,19 @@ export default function StallsPage() {
           const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
           appendFile(formPayload, 'receipt', files.receipt, encReceipt);
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/pay`, { 
-            method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+            method: 'POST', 
+            body: formPayload, 
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
           });
 
-          if (!res.ok) throw new Error("Server payment error");
+         await handleApiError(res);
           
           Alert.alert("Sent", "Payment submitted for review."); 
           fetchData(user.id);
@@ -446,11 +512,19 @@ export default function StallsPage() {
           const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
           appendFile(formPayload, 'receipt', files.receipt, encReceipt);
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/pay-renewal`, { 
-            method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+            method: 'POST', 
+            body: formPayload, 
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
           });
 
-          if (!res.ok) throw new Error("Server payment error");
+          await handleApiError(res);
           
           Alert.alert("Success", "Renewal payment submitted for review."); 
           setPaymentData({ referenceNo: '' });
@@ -478,11 +552,19 @@ export default function StallsPage() {
             const encContract = await encryptFileBeforeUpload(files.contract!.uri, files.contract!.name || 'contract.pdf');
             appendFile(formPayload, 'contract', files.contract, encContract);
 
+            const rawUser = await AsyncStorage.getItem('ibt_user');
+            const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
             const res = await fetch(`${API_URL}/stalls/upload-contract`, { 
-                method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+                method: 'POST', 
+                body: formPayload, 
+                headers: { 
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
-            if (!res.ok) throw new Error(await res.text());
+            await handleApiError(res);
             
             Alert.alert("Success", "Contract PDF submitted."); 
             fetchData(user.id);
@@ -531,7 +613,7 @@ export default function StallsPage() {
   const renderContent = () => {
     if (viewIndex === -1) {
         return (
-            <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, , { paddingBottom: 125 }]} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => user && fetchData(user.id)} colors={[colors.primary]} />}>
+           <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: 125 }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
                 <Card style={styles.floorCard} mode="elevated"><Card.Content><Text variant="titleMedium" style={styles.sectionTitle}>Select Location</Text><SegmentedButtons value={selectedFloor} onValueChange={(val) => { setSelectedFloor(val); setSelectedStall(null); }} theme={{colors: {secondaryContainer: colors.black, onSecondaryContainer: colors.white }}} buttons={[{ value: 'Permanent', label: 'Permanent', uncheckedColor: colors.black}, { value: 'Night Market', label: 'Night Market', uncheckedColor: colors.black }]} /></Card.Content></Card>
                 {loading ? <ActivityIndicator animating={true} color={colors.primary} style={{marginTop: 20}} /> : (
                 <View> 
@@ -659,12 +741,41 @@ export default function StallsPage() {
                     <Icon name="plus" size={16} color={viewIndex === -1 ? colors.white : colors.primary} style={{ marginRight: 5 }} />
                     <Text style={{ color: viewIndex === -1 ? colors.white : colors.primary, fontWeight: 'bold' }}>New Slot</Text>
                 </TouchableOpacity>
-                {myApplications.map((app, index) => (
-                    <TouchableOpacity key={index} onPress={() => setViewIndex(index)} style={{ paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: viewIndex === index ? colors.primary : colors.white, borderWidth: 1, borderColor: colors.primary, marginRight: 10, flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name={app.status === 'TENANT' ? "store" : "clock-outline"} size={16} color={viewIndex === index ? colors.white : colors.primary} style={{ marginRight: 5 }} />
-                        <Text style={{ color: viewIndex === index ? colors.white : colors.primary, fontWeight: 'bold' }}>{app.targetSlot}</Text>
-                    </TouchableOpacity>
-                ))}
+                {myApplications.map((app, index) => {
+   
+    if (!app.targetSlot) return null; 
+
+    const isActive = viewIndex === index;
+    const isTenant = app.status === 'TENANT';
+
+    return (
+        <TouchableOpacity 
+            key={index} 
+            onPress={() => setViewIndex(index)} 
+            style={{ 
+                paddingHorizontal: 15, 
+                paddingVertical: 8, 
+                borderRadius: 20, 
+                backgroundColor: isActive ? colors.primary : colors.white, 
+                borderWidth: 1, 
+                borderColor: colors.primary, 
+                marginRight: 10, 
+                flexDirection: 'row', 
+                alignItems: 'center' 
+            }}
+        >
+            <Icon 
+                name={isTenant ? "store" : "clock-outline"} 
+                size={16} 
+                color={isActive ? colors.white : colors.primary} 
+                style={{ marginRight: 5 }} 
+            />
+            <Text style={{ color: isActive ? colors.white : colors.primary, fontWeight: 'bold' }}>
+                {app.targetSlot}
+            </Text>
+        </TouchableOpacity>
+    );
+})}
             </ScrollView>
         </View>
       )}

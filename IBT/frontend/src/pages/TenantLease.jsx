@@ -1304,7 +1304,7 @@ const TenantLease = () => {
                     email: transferApplicant.email,
                     tenantType: transferApplicant.floor || transferApplicant.preferredType || "Permanent",
                     products: transferApplicant.product,
-                    uid: transferApplicant.uid,
+                    uid: transferApplicant.userId,
                     slotNo: transferApplicant.targetSlot || "",
                     referenceNo: transferApplicant.paymentReference || "",
                     documents: {
