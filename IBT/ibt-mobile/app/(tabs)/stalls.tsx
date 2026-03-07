@@ -136,7 +136,13 @@ export default function StallsPage() {
     }
   };
 
-  const handleLoginSuccess = (userData: UserData) => {
+  const handleLoginSuccess = async (userData: UserData) => {
+
+    await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+    if ((userData as any).token) {
+        await AsyncStorage.setItem('token', (userData as any).token);
+    }
+
     setUser(userData);
     setShowLogin(false);
 
