@@ -136,26 +136,46 @@ export default function StallsPage() {
     }
   };
 
-  const handleLoginSuccess = async (userData: UserData) => {
+  const handleLoginSuccess = async (userData: any) => {
+    try {
+        
+        setTimeout(async () => {
+           
+            const storedUserStr = await AsyncStorage.getItem('ibt_user');
+            const storedToken = await AsyncStorage.getItem('token');
+            
+            let fullUser = userData;
+            
+            if (storedUserStr) {
+                fullUser = JSON.parse(storedUserStr);
+            } else {
+                
+                await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+            }
 
-    await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
-    if ((userData as any).token) {
-        await AsyncStorage.setItem('token', (userData as any).token);
+            if (!storedToken && userData?.token) {
+                await AsyncStorage.setItem('token', userData.token);
+            } else if (!storedToken && fullUser?.token) {
+                await AsyncStorage.setItem('token', fullUser.token);
+            }
+
+            setUser(fullUser);
+            setShowLogin(false);
+
+            const safeName = fullUser.name || "";
+            setFormData(prev => ({
+                ...prev,
+                firstName: safeName.split(' ')[0] || '',
+                lastName: safeName.split(' ').slice(1).join(' ') || '',
+                email: fullUser.email || '',
+                contact: fullUser.contact || ''
+            }));
+            
+            fetchData(fullUser.id);
+        }, 150); 
+    } catch (error) {
+        console.error("Error recovering session:", error);
     }
-
-    setUser(userData);
-    setShowLogin(false);
-
-    const safeName = userData.name || "";
-
-    setFormData(prev => ({
-        ...prev,
-        firstName: safeName.split(' ')[0] || '',
-        lastName: safeName.split(' ').slice(1).join(' ') || '',
-        email: userData.email || '',
-        contact: userData.contact || ''
-    }));
-    fetchData(userData.id);
   };
 
   const fetchData = async (userId: string | undefined, isBackgroundRefresh = false) => {
