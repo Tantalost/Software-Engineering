@@ -138,40 +138,26 @@ export default function StallsPage() {
 
   const handleLoginSuccess = async (userData: any) => {
     try {
-
       setTimeout(async () => {
-
-        const storedUserStr = await AsyncStorage.getItem('ibt_user');
-        const storedToken = await AsyncStorage.getItem('token');
-
-        let fullUser = userData;
-
-        if (storedUserStr) {
-          fullUser = JSON.parse(storedUserStr);
-        } else {
-
-          await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
-        }
-
-        if (!storedToken && userData?.token) {
+       
+        await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+        if (userData?.token) {
           await AsyncStorage.setItem('token', userData.token);
-        } else if (!storedToken && fullUser?.token) {
-          await AsyncStorage.setItem('token', fullUser.token);
         }
 
-        setUser(fullUser);
+        setUser(userData);
         setShowLogin(false);
 
-        const safeName = fullUser.name || "";
+        const safeName = userData.name || "";
         setFormData(prev => ({
           ...prev,
           firstName: safeName.split(' ')[0] || '',
           lastName: safeName.split(' ').slice(1).join(' ') || '',
-          email: fullUser.email || '',
-          contact: fullUser.contact || ''
+          email: userData.email || '',
+          contact: userData.contact || ''
         }));
 
-        fetchData(fullUser.id);
+        fetchData(userData.id);
       }, 150);
     } catch (error) {
       console.error("Error recovering session:", error);
@@ -434,8 +420,7 @@ export default function StallsPage() {
           appendFile(formPayload, 'policeClearance', files.policeClearance, encPolice);
         }
 
-        const rawUser = await AsyncStorage.getItem('ibt_user');
-        const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+        const token = await AsyncStorage.getItem('token');
 
         const res = await fetch(`${API_URL}/stalls/apply`, {
           method: 'POST',
@@ -479,8 +464,7 @@ export default function StallsPage() {
         const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
         appendFile(formPayload, 'receipt', files.receipt, encReceipt);
 
-        const rawUser = await AsyncStorage.getItem('ibt_user');
-        const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+        const token = await AsyncStorage.getItem('token');
 
         const res = await fetch(`${API_URL}/stalls/pay`, {
           method: 'POST',
@@ -520,8 +504,7 @@ export default function StallsPage() {
         const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
         appendFile(formPayload, 'receipt', files.receipt, encReceipt);
 
-        const rawUser = await AsyncStorage.getItem('ibt_user');
-        const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+        const token = await AsyncStorage.getItem('token');
 
         const res = await fetch(`${API_URL}/stalls/pay-renewal`, {
           method: 'POST',
@@ -560,8 +543,7 @@ export default function StallsPage() {
         const encContract = await encryptFileBeforeUpload(files.contract!.uri, files.contract!.name || 'contract.pdf');
         appendFile(formPayload, 'contract', files.contract, encContract);
 
-        const rawUser = await AsyncStorage.getItem('ibt_user');
-        const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+        const token = await AsyncStorage.getItem('token');
 
         const res = await fetch(`${API_URL}/stalls/upload-contract`, {
           method: 'POST',

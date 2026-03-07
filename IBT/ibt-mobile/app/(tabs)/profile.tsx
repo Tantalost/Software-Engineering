@@ -46,8 +46,8 @@ export default function ProfileScreen() {
   });
 
   const avatarUri = user?.avatarUrl
-    ? `${API_URL}/files/${user.avatarUrl}?t=${new Date().getTime()}`
-    : null;
+  ? `${API_URL}/auth/avatar/${user.avatarUrl}?t=${new Date().getTime()}`
+  : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -77,8 +77,7 @@ export default function ProfileScreen() {
   const fetchApplications = async (userId: string) => {
     try {
       const timestamp = new Date().getTime();
-      const rawUser = await AsyncStorage.getItem('ibt_user');
-      const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+      const token = await AsyncStorage.getItem('token');
 
       const res = await fetch(`${API_URL}/stalls/my-application/${userId}?_t=${timestamp}`, {
         method: 'GET',
@@ -208,7 +207,7 @@ export default function ProfileScreen() {
         text: "Log Out",
         style: "destructive",
         onPress: async () => {
-          await AsyncStorage.removeItem('ibt_user');
+          await AsyncStorage.multiRemove(['ibt_user', 'token']);
           setUser(null);
           setApplications([]);
           router.replace('/');
@@ -283,8 +282,8 @@ export default function ProfileScreen() {
                   size={100}
                   source={{
                     uri: editForm.avatar.startsWith('file') || editForm.avatar.startsWith('http')
-                      ? editForm.avatar
-                      : `${API_URL}/files/${editForm.avatar}`
+                    ? editForm.avatar
+                    : `${API_URL}/auth/avatar/${editForm.avatar}`
                   }}
                 />
               ) : (
@@ -332,8 +331,8 @@ export default function ProfileScreen() {
                   size={80}
                   source={{
                     uri: user.avatarUrl.startsWith('http')
-                      ? user.avatarUrl
-                      : `${API_URL}/files/${user.avatarUrl}`
+                    ? user.avatarUrl
+                    : `${API_URL}/auth/avatar/${user.avatarUrl}`
                   }}
                   onLoadStart={() => setImageLoading(true)}
                   onLoadEnd={() => setImageLoading(false)}

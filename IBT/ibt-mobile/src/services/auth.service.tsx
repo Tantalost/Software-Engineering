@@ -19,10 +19,17 @@ export const authService = {
   },
 
   register: async (payload: RegisterPayload) => {
+    const backendPayload = {
+      email: payload.email,
+      password: payload.password,
+      fullName: payload.username, 
+      contactNo: payload.contactNo
+    };
+
     const res = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(backendPayload) 
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Registration Failed");
