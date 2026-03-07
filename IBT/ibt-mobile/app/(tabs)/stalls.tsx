@@ -180,7 +180,13 @@ export default function StallsPage() {
       if (userId) {
           const myAppRes = await fetch(`${API_URL}/stalls/my-application/${userId}?_t=${timestamp}`);
           const myAppData = await myAppRes.json();
-          let apps = Array.isArray(myAppData) ? myAppData : (myAppData ? [myAppData] : []);
+          
+          let apps = [];
+          if (Array.isArray(myAppData)) {
+              apps = myAppData;
+          } else if (myAppData && myAppData.targetSlot) {
+              apps = [myAppData];
+          }
 
           apps = apps.filter(app => {
               if (app.status === 'TENANT') {
@@ -200,6 +206,7 @@ export default function StallsPage() {
               }
           }
       }
+
     } catch (error) {
       console.error("Fetch error:", error);
     } finally {

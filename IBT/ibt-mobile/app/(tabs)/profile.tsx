@@ -74,9 +74,17 @@ export default function ProfileScreen() {
       const timestamp = new Date().getTime();
       const res = await fetch(`${API_URL}/stalls/my-application/${userId}?_t=${timestamp}`);
       const data = await res.json();
-      setApplications(Array.isArray(data) ? data : (data ? [data] : []));
+      
+      if (Array.isArray(data)) {
+          setApplications(data);
+      } else if (data && data.targetSlot) {
+          setApplications([data]);
+      } else {
+          setApplications([]); 
+      }
     } catch (error) {
       console.log("Error fetching apps for profile", error);
+      setApplications([]);
     }
   };
 
