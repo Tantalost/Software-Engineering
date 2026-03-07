@@ -4,6 +4,9 @@ import { GridFsStorage } from 'multer-gridfs-storage';
 import path from 'path';
 import dotenv from 'dotenv';
 
+
+import { verifyToken } from '../middleware/authMiddleware.js';
+
 import { 
   getOccupiedStalls, 
   getPendingStalls,
@@ -11,7 +14,8 @@ import {
   submitApplication, 
   submitPayment,
   uploadContract,
-  getSecureDocument 
+  getSecureDocument,
+  submitRenewalPayment 
 } from '../controllers/stallController.js';
 
 dotenv.config();
@@ -32,13 +36,14 @@ const storage = new GridFsStorage({
 
 const upload = multer({ storage });
 
-
 router.get('/pending', getPendingStalls); 
 router.get('/occupied', getOccupiedStalls);
-router.get('/doc/:filename', getSecureDocument);
-router.get('/my-application/:userId', getMyApplication);
+
+router.get('/doc/:filename', verifyToken, getSecureDocument);
+router.get('/my-application/:userId', verifyToken, getMyApplication);
 
 router.post('/apply', 
+  verifyToken,
   upload.fields([
     { name: 'permit', maxCount: 1 }, 
     { name: 'validId', maxCount: 1 },
@@ -49,7 +54,8 @@ router.post('/apply',
   submitApplication
 );
 
-router.post('/pay', upload.single('receipt'), submitPayment);
-router.post('/upload-contract', upload.single('contract'), uploadContract);
+router.post('/pay', verifyToken, upload.single('receipt'), submitPayment);
+router.post('/upload-contract', verifyToken, upload.single('contract'), uploadContract);
+router.post('/pay-renewal', verifyToken, upload.single('receipt'), submitRenewalPayment);
 
 export default router;

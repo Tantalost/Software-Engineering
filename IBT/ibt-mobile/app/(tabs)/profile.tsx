@@ -74,18 +74,26 @@ export default function ProfileScreen() {
       const timestamp = new Date().getTime();
       const res = await fetch(`${API_URL}/stalls/my-application/${userId}?_t=${timestamp}`);
       const data = await res.json();
-      setApplications(Array.isArray(data) ? data : (data ? [data] : []));
+      
+      if (Array.isArray(data)) {
+          setApplications(data);
+      } else if (data && data.targetSlot) {
+          setApplications([data]);
+      } else {
+          setApplications([]); 
+      }
     } catch (error) {
       console.log("Error fetching apps for profile", error);
+      setApplications([]);
     }
   };
 
   const openEditModal = () => {
     if (!user) return;
     setEditForm({
-        name: user.name,
-        email: user.email,
-        contact: user.contact,
+        name: user.name || '',
+        email: user.email || '',
+        contact: user.contact || '',
         avatar: user.avatarUrl || null
     });
     setEditModalVisible(true);
@@ -99,7 +107,6 @@ export default function ProfileScreen() {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'], 
-  
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
@@ -194,17 +201,22 @@ export default function ProfileScreen() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const safeStatus = (status || 'VERIFICATION_PENDING').toUpperCase();
+    switch (safeStatus) {
       case 'TENANT': return colors.success || '#4CAF50';
-      case 'VERIFICATION_PENDING': return colors.warning;
+      case 'VERIFICATION_PENDING': 
+      case 'PENDING': return colors.warning;
       case 'PAYMENT_UNLOCKED': return '#2196F3';
       case 'CONTRACT_PENDING': return '#E65100';
       default: return 'grey';
     }
   };
 
-  const formatStatus = (status: string) => status.replace(/_/g, ' ');
-
+  const formatStatus = (status: string) => {
+    const safeStatus = status || 'VERIFICATION PENDING';
+    return safeStatus.replace(/_/g, ' ');
+  };
+  
   if (loading) {
     return (
       <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>
@@ -252,7 +264,7 @@ export default function ProfileScreen() {
                     {editForm.avatar ? (
                          <Avatar.Image size={100} source={{uri: editForm.avatar}} />
                     ) : (
-                         <Avatar.Text size={100} label={editForm.name.charAt(0)} style={{backgroundColor: colors.primary}} />
+                         <Avatar.Text size={100} label={editForm.name ? editForm.name.charAt(0).toUpperCase() : 'U'} style={{backgroundColor: colors.primary}} />
                     )}
                     <View style={{position:'absolute', bottom:0, right:0, backgroundColor:'white', borderRadius:15, padding:5, elevation:2, borderWidth: 1, borderColor:'#eee'}}>
                          <Icon name="camera" size={20} color={colors.primary} />
@@ -288,9 +300,9 @@ export default function ProfileScreen() {
             {user.avatarUrl ? (
                 <Avatar.Image size={80} source={{uri: user.avatarUrl}} />
             ) : (
-                <Avatar.Text size={80} label={user.name.charAt(0)} style={{backgroundColor: colors.primary}} />
+                <Avatar.Text size={80} label={user.name ? user.name.charAt(0).toUpperCase() : 'U'} style={{backgroundColor: colors.primary}} />
             )}
-            <Text variant="headlineSmall" style={{marginTop: 15, fontWeight: 'bold', color: colors.black}}>{user.name}</Text>
+            <Text variant="headlineSmall" style={{marginTop: 15, fontWeight: 'bold', color: colors.black}}>{user.name || 'New Vendor'}</Text>
             <Text variant="bodyMedium" style={{color: 'grey'}}>{user.email}</Text>
             <Text variant="bodyMedium" style={{color: 'grey'}}>{user.contact}</Text>
         </View>

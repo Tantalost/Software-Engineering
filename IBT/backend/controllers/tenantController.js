@@ -12,6 +12,29 @@ export const getTenants = async (req, res) => {
   }
 };
 
+// --- SEND CUSTOM EMAIL TO TENANT ---
+export const sendTenantEmail = async (req, res) => {
+  try {
+    const { email, subject, message } = req.body;
+
+    if (!email || !subject || !message) {
+      return res.status(400).json({ error: "Email, subject, and message are required." });
+    }
+
+    // Call your existing sendEmail utility
+    await sendEmail({
+      email: email,
+      subject: subject,
+      message: message
+    });
+
+    res.status(200).json({ success: true, message: "Email sent successfully to tenant." });
+  } catch (error) {
+    console.error("Email sending failed:", error);
+    res.status(500).json({ error: "Failed to send email. Please try again." });
+  }
+};
+
 export const archiveTenant = async (req, res) => {
   try {
     const archived = await Tenant.findByIdAndUpdate(
@@ -230,7 +253,7 @@ export const updateTenant = async (req, res) => {
 export const getDefaultNightPrice = async (req, res) => {
   try {
     const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
-    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150;
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150; 
     res.status(200).json({ defaultPrice });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -247,7 +270,7 @@ export const updateAllNightMarketPrices = async (req, res) => {
     }
 
     const priceValue = parseFloat(newPrice);
-    const priceString = priceValue.toString(); // For TenantApplication which uses String
+    const priceString = priceValue.toString(); 
 
     // 1. Update or create the global price setting
     await Settings.findOneAndUpdate(
@@ -256,24 +279,83 @@ export const updateAllNightMarketPrices = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // 2. Update existing active tenants who have unpaid "Due" balances
+    // 2. Update existing active Night Market tenants who have unpaid "Due" balances
     const tenantResult = await Tenant.updateMany(
       { tenantType: "Night Market", status: "Due" },
       { rentAmount: priceValue }
     );
 
-    // 3. Update pending applications that haven't reached the payment review stage yet
-    // Assuming 'floor' is where "Night Market" is stored based on your React transfer logic
+    // 3. Update pending applications 
     const applicationResult = await TenantApplication.updateMany(
       { 
-        floor: "Night Market", 
+        $or: [{ floor: "Night Market" }, { preferredType: "Night Market" }], 
         status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED'] } 
       },
       { paymentAmount: priceString }
     );
 
     res.status(200).json({
-      message: `Updated global price. Modified ${tenantResult.modifiedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
+      message: `Updated global night market price.`,
+      modifiedCount: tenantResult.modifiedCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- DYNAMIC PRICING FOR PERMANENT SLOTS ---
+
+// Get default permanent price from settings
+export const getDefaultPermanentPrice = async (req, res) => {
+  try {
+    const priceSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
+    const defaultPrice = priceSetting ? Number(priceSetting.value) : 6000;
+    res.status(200).json({ defaultPrice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update default price and apply to unpaid/due Permanent tenants
+export const updateAllPermanentPrices = async (req, res) => {
+  try {
+    const { newPrice } = req.body;
+
+    if (!newPrice || isNaN(newPrice) || newPrice < 0) {
+      return res.status(400).json({ error: "Valid price is required." });
+    }
+
+    const priceValue = parseFloat(newPrice);
+    const priceString = priceValue.toString(); 
+
+    // 1. Update or create the global price setting
+    await Settings.findOneAndUpdate(
+      { key: "defaultPermanentPrice" },
+      { key: "defaultPermanentPrice", value: priceValue },
+      { upsert: true, new: true }
+    );
+
+    // 2. Update existing active tenants who have unpaid "Due" balances
+    // Note: Checking for "Permanent" or cases where tenantType might be missing/default
+    const tenantResult = await Tenant.updateMany(
+      { 
+        $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }], 
+        status: "Due" 
+      },
+      { rentAmount: priceValue }
+    );
+
+    // 3. Update pending applications that haven't reached the payment review stage yet
+    const applicationResult = await TenantApplication.updateMany(
+      { 
+        $or: [{ floor: "Permanent" }, { preferredType: "Permanent" }], 
+        status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED'] } 
+      },
+      { paymentAmount: priceString }
+    );
+
+    res.status(200).json({
+      message: `Updated global permanent price. Modified ${tenantResult.modifiedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
       tenantModifiedCount: tenantResult.modifiedCount,
       applicationModifiedCount: applicationResult.modifiedCount
     });

@@ -544,14 +544,10 @@ const TerminalFees = () => {
     }
   };
 
-  const handleOpenAdd = () => {
-    const maxTicket =
-      records.length > 0
-        ? Math.max(...records.map((r) => Number(r.ticketNo) || 0))
-        : 0;
-    const now = new Date();
+  const handleOpenAdd = async () => {
+    const now = new Date();    
     setNewTicket({
-      ticketNo: maxTicket + 1,
+      ticketNo: "Loading...", 
       passengerType: "Regular",
       price: basePrices.regular,
       date: now.toISOString().split("T")[0],
@@ -562,6 +558,21 @@ const TerminalFees = () => {
       }),
     });
     setShowAddModal(true);
+
+    try {
+      const res = await fetch(`${API_URL}/terminal-fees/next-ticket`);
+      if (!res.ok) throw new Error("Failed to fetch next ticket number");
+      
+      const data = await res.json();
+      
+      setNewTicket((prev) => ({
+        ...prev,
+        ticketNo: data.nextTicketNo,
+      }));
+    } catch (error) {
+      console.error("Error getting next ticket:", error);
+      setNewTicket((prev) => ({ ...prev, ticketNo: "Auto-generated" }));
+    }
   };
 
   const handleSaveNew = async () => {
@@ -571,6 +582,13 @@ const TerminalFees = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newTicket),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Backend Error Details:", errorData);
+        throw new Error(errorData.message || errorData.error || "Failed to save to database");
+      }
+
       if (!res.ok) throw new Error("Failed to save to database");
       await fetchFees();
       await logActivity(
@@ -1147,7 +1165,7 @@ const TerminalFees = () => {
                   type="text"
                   value={newTicket.ticketNo}
                   disabled
-                  className="w-full bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg font-medium"
+                  className="w-full bg-slate-100 text-slate-500 italic border border-slate-300 px-3 py-2 rounded-lg font-medium"
                 />
               </div>
               <div>

@@ -56,6 +56,8 @@ const TenantLease = () => {
     const [showSetPriceModal, setShowSetPriceModal] = useState(false);
     const [newNightPrice, setNewNightPrice] = useState("");
     const [isSettingPrice, setIsSettingPrice] = useState(false);
+    const [defaultPermanentPrice, setDefaultPermanentPrice] = useState(6000);
+    const [newPermanentPrice, setNewPermanentPrice] = useState("");
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [showNotify, setShowNotify] = useState(false);
@@ -104,7 +106,6 @@ const TenantLease = () => {
     useEffect(() => {
         const fetchDefaultNightPrice = async () => {
             try {
-                // Note: Make sure this endpoint exists on your backend!
                 const response = await fetch(`${API_URL}/tenants/night-market/default-price`);
                 if (response.ok) {
                     const data = await response.json();
@@ -117,16 +118,36 @@ const TenantLease = () => {
                 if (saved) setDefaultNightPrice(Number(saved));
             }
         };
+
+        const fetchDefaultPermanentPrice = async () => {
+            try {
+                const response = await fetch(`${API_URL}/tenants/permanent/default-price`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setDefaultPermanentPrice(data.defaultPrice);
+                    localStorage.setItem("defaultPermanentPrice", data.defaultPrice.toString());
+                }
+            } catch (error) {
+                console.error("Error fetching default permanent price:", error);
+                const saved = localStorage.getItem("defaultPermanentPrice");
+                if (saved) setDefaultPermanentPrice(Number(saved));
+            }
+        };
+
         fetchDefaultNightPrice();
+        fetchDefaultPermanentPrice();
     }, []);
 
     const handleSetPrice = async () => {
-        if (!newNightPrice || isNaN(newNightPrice)) {
+        const isNightMarket = activeTab === "night";
+        const currentNewPrice = isNightMarket ? newNightPrice : newPermanentPrice;
+
+        if (!currentNewPrice || isNaN(currentNewPrice)) {
             setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid price.", autoClose: true, duration: 3000 });
             return;
         }
 
-        const priceValue = Number(newNightPrice);
+        const priceValue = Number(currentNewPrice);
         if (priceValue <= 0) {
             setNotificationState({ isOpen: true, type: 'error', message: "Price must be greater than 0.", autoClose: true, duration: 3000 });
             return;
@@ -135,8 +156,9 @@ const TenantLease = () => {
         setIsSettingPrice(true);
 
         try {
-            // Note: Ensure you have this PUT route set up in your Node/Express backend!
-            const response = await fetch(`${API_URL}/tenants/update-night-market-prices`, {
+            const endpoint = isNightMarket ? '/tenants/update-night-market-prices' : '/tenants/update-permanent-prices';
+
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ newPrice: priceValue }),
@@ -148,20 +170,29 @@ const TenantLease = () => {
 
             const result = await response.json();
 
-            setDefaultNightPrice(priceValue);
-            localStorage.setItem("defaultNightPrice", priceValue.toString());
+            if (isNightMarket) {
+                setDefaultNightPrice(priceValue);
+                localStorage.setItem("defaultNightPrice", priceValue.toString());
+            } else {
+                setDefaultPermanentPrice(priceValue);
+                localStorage.setItem("defaultPermanentPrice", priceValue.toString());
+            }
 
             await fetchTenants();
 
+            const actionName = isNightMarket ? "SET_NIGHT_MARKET_PRICE" : "SET_PERMANENT_PRICE";
+            const slotName = isNightMarket ? "night market" : "permanent";
+
             await logActivity(
                 role,
-                "SET_NIGHT_MARKET_PRICE",
-                `Set default night market fee to ₱${newNightPrice} (Updated ${result.modifiedCount || 0} tenants)`,
+                actionName,
+                `Set default ${slotName} fee to ₱${priceValue} (Updated ${result.modifiedCount || 0} tenants)`,
                 "Tenants",
             );
 
             setShowSetPriceModal(false);
             setNewNightPrice("");
+            setNewPermanentPrice("");
 
             setNotificationState({
                 isOpen: true,
@@ -611,29 +642,15 @@ const TenantLease = () => {
             }
 
             if (newTenant.documents) {
-                if (newTenant.documents.businessPermit instanceof File) {
-                    formData.append('businessPermit', newTenant.documents.businessPermit);
-                }
-                if (newTenant.documents.validID instanceof File) {
-                    formData.append('validID', newTenant.documents.validID);
-                }
-                if (newTenant.documents.contract instanceof File) {
-                    formData.append('contract', newTenant.documents.contract);
-                }
-
-                if (newTenant.documents.barangayClearance instanceof File) {
-                    formData.append('barangayClearance', newTenant.documents.barangayClearance);
-                }
-                if (newTenant.documents.proofOfReceipt instanceof File) {
-                    formData.append('proofOfReceipt', newTenant.documents.proofOfReceipt);
-                }
-
-                if (newTenant.documents.communityTax instanceof File) {
-                    formData.append('communityTax', newTenant.documents.communityTax);
-                }
-                if (newTenant.documents.policeClearance instanceof File) {
-                    formData.append('policeClearance', newTenant.documents.policeClearance);
-                }
+                const docKeys = ['businessPermit', 'validID', 'contract', 'barangayClearance', 'proofOfReceipt', 'communityTax', 'policeClearance'];
+                docKeys.forEach(docKey => {
+                    const docValue = newTenant.documents[docKey];
+                    if (docValue instanceof File) {
+                        formData.append(docKey, docValue);
+                    } else if (typeof docValue === 'string' && docValue.trim() !== "") {
+                        formData.append(docKey, docValue);
+                    }
+                });
             }
 
             const response = await fetch(`${API_URL}/tenants`, {
@@ -781,6 +798,58 @@ const TenantLease = () => {
                 isOpen: true,
                 type: 'error',
                 message: "Failed to process broadcast.",
+                autoClose: true,
+                duration: 3000
+            });
+        }
+    };
+
+    const handleSendEmail = async (recipient, body) => {
+        if (!recipient?.email) {
+            setNotificationState({ isOpen: true, type: 'error', message: "This tenant does not have an email address on file.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        if (!body.trim()) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Please enter a message body.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/tenants/send-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: recipient.email,
+                    subject: `Update regarding your lease (Slot ${recipient.slotNo || 'N/A'})`,
+                    message: body
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to send email");
+            }
+
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: `Email sent successfully to ${recipient.tenantName || recipient.name}!`,
+                autoClose: true,
+                duration: 3000
+            });
+
+            await logActivity(role, "SEND_EMAIL", `Sent email to ${recipient.tenantName || recipient.name}`, "Tenants");
+
+            setShowEmailModal(false);
+            setEmailBody("");
+
+        } catch (error) {
+            console.error("Email Error:", error);
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: error.message || "Failed to send email. Check backend connection.",
                 autoClose: true,
                 duration: 3000
             });
@@ -1023,19 +1092,17 @@ const TenantLease = () => {
                     </button>
 
                     {role === "superadmin" && (
-                        <button onClick={() => setShowNotify(true)} className="bg-white border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer" title='Notify All Tenants'>
-                            Broadcast
-                        </button>
-                    )}
-
-                    {role === "superadmin" && activeTab === "night" && (
                         <button
                             onClick={() => {
-                                setNewNightPrice(defaultNightPrice.toString());
+                                if (activeTab === "night") {
+                                    setNewNightPrice(defaultNightPrice.toString());
+                                } else {
+                                    setNewPermanentPrice(defaultPermanentPrice.toString());
+                                }
                                 setShowSetPriceModal(true);
                             }}
                             className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-2"
-                            title='Set Night Market Price'
+                            title='Set Default Price'
                         >
                             <Settings size={18} />
                             <span className="hidden sm:inline">Set Price</span>
@@ -1202,14 +1269,14 @@ const TenantLease = () => {
 
             <TenantEmailModal
                 isOpen={showEmailModal}
-                onClose={() => setShowEmailModal(false)}
+                onClose={() => {
+                    setShowEmailModal(false);
+                    setEmailBody("");
+                }}
                 recipient={messagingRow}
                 body={emailBody}
                 setBody={setEmailBody}
-                onSend={() => {
-                    setNotificationState({ isOpen: true, type: 'error', message: "Please use the automated email feature or implement backend logic.", autoClose: true, duration: 3000 });
-                    setShowEmailModal(false);
-                }}
+                onSend={handleSendEmail}
             />
 
             <ApplicationReviewModal
@@ -1230,6 +1297,7 @@ const TenantLease = () => {
                 tenants={records}
                 activeTab={activeTab}
                 defaultNightPrice={defaultNightPrice}
+                defaultPermanentPrice={defaultPermanentPrice}
                 initialData={transferApplicant ? {
                     name: transferApplicant.name,
                     contactNo: transferApplicant.contact,
@@ -1271,29 +1339,15 @@ const TenantLease = () => {
                             });
 
                             if (updatedData.documents) {
-                                if (updatedData.documents.businessPermit instanceof File) {
-                                    formData.append('businessPermit', updatedData.documents.businessPermit);
-                                }
-                                if (updatedData.documents.validID instanceof File) {
-                                    formData.append('validID', updatedData.documents.validID);
-                                }
-                                if (updatedData.documents.contract instanceof File) {
-                                    formData.append('contract', updatedData.documents.contract);
-                                }
-
-                                if (updatedData.documents.barangayClearance instanceof File) {
-                                    formData.append('barangayClearance', updatedData.documents.barangayClearance);
-                                }
-                                if (updatedData.documents.proofOfReceipt instanceof File) {
-                                    formData.append('proofOfReceipt', updatedData.documents.proofOfReceipt);
-                                }
-
-                                if (updatedData.documents.communityTax instanceof File) {
-                                    formData.append('communityTax', updatedData.documents.communityTax);
-                                }
-                                if (updatedData.documents.policeClearance instanceof File) {
-                                    formData.append('policeClearance', updatedData.documents.policeClearance);
-                                }
+                                const docKeys = ['businessPermit', 'validID', 'contract', 'barangayClearance', 'proofOfReceipt', 'communityTax', 'policeClearance'];
+                                docKeys.forEach(docKey => {
+                                    const docValue = updatedData.documents[docKey];
+                                    if (docValue instanceof File) {
+                                        formData.append(docKey, docValue);
+                                    } else if (typeof docValue === 'string' && docValue.trim() !== "") {
+                                        formData.append(docKey, docValue);
+                                    }
+                                });
                             }
 
                             const response = await fetch(`${API_URL}/tenants/${idToUpdate}`, {
@@ -1361,7 +1415,8 @@ const TenantLease = () => {
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
                         <div className="flex items-center justify-between mb-5 border-b pb-3">
                             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <Settings size={20} className="text-emerald-600" /> Night Market Fee Settings
+                                <Settings size={20} className="text-emerald-600" />
+                                {activeTab === "night" ? "Night Market Fee Settings" : "Permanent Slot Fee Settings"}
                             </h3>
                             <button
                                 onClick={() => setShowSetPriceModal(false)}
@@ -1373,13 +1428,13 @@ const TenantLease = () => {
                         </div>
 
                         <p className="text-sm text-slate-600 mb-5">
-                            Set the new standard rent rate for Night Market tenants. Changes take effect upon saving.
+                            Set the new standard rent rate for {activeTab === "night" ? "Night Market" : "Permanent"} tenants. Changes take effect upon saving.
                         </p>
 
                         <div className="space-y-5">
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Global Night Market Fee
+                                    Global {activeTab === "night" ? "Night Market" : "Permanent"} Fee
                                 </label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -1387,10 +1442,14 @@ const TenantLease = () => {
                                     </span>
                                     <input
                                         type="text"
-                                        value={newNightPrice}
+                                        value={activeTab === "night" ? newNightPrice : newPermanentPrice}
                                         onChange={(e) => {
                                             const value = e.target.value.replace(/[^0-9.]/g, "");
-                                            setNewNightPrice(value);
+                                            if (activeTab === "night") {
+                                                setNewNightPrice(value);
+                                            } else {
+                                                setNewPermanentPrice(value);
+                                            }
                                         }}
                                         className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
                                         placeholder="0.00"
@@ -1408,7 +1467,7 @@ const TenantLease = () => {
                             </button>
                             <button
                                 onClick={handleSetPrice}
-                                disabled={isSettingPrice || !newNightPrice}
+                                disabled={isSettingPrice || (activeTab === "night" ? !newNightPrice : !newPermanentPrice)}
                                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                             >
                                 {isSettingPrice ? (
