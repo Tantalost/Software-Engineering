@@ -52,7 +52,12 @@ const Topbar = ({ title, onMenuClick }) => {
 
   const getImageUrl = (uri) => {
     if (!uri) return '';
-    return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
+    
+    const token = localStorage.getItem("token");
+    let url = uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
+    
+    const separator = url.includes('?') ? '&' : '?';
+    return token ? `${url}${separator}token=${token}` : url;
   };
 
   const showToast = (type, message) => {

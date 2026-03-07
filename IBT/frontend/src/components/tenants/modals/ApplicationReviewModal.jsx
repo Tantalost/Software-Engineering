@@ -22,7 +22,11 @@ const ApplicationReviewModal = ({
   const getFileUrl = (pathOrString) => {
     if (!pathOrString || typeof pathOrString !== 'string') return null;
     if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) return pathOrString;
-    return `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/stalls/doc/${pathOrString}`; 
+    
+    const token = localStorage.getItem("token"); 
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
+    
+    return `${baseUrl}/api/stalls/doc/${pathOrString}?token=${token}`; 
   };
 
   const openPdf = (url) => window.open(url, '_blank');
