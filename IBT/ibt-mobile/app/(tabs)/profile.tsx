@@ -193,9 +193,11 @@ export default function ProfileScreen() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const safeStatus = (status || 'VERIFICATION_PENDING').toUpperCase();
+    switch (safeStatus) {
       case 'TENANT': return colors.success || '#4CAF50';
-      case 'VERIFICATION_PENDING': return colors.warning;
+      case 'VERIFICATION_PENDING': 
+      case 'PENDING': return colors.warning;
       case 'PAYMENT_UNLOCKED': return '#2196F3';
       case 'CONTRACT_PENDING': return '#E65100';
       default: return 'grey';
@@ -203,10 +205,10 @@ export default function ProfileScreen() {
   };
 
   const formatStatus = (status: string) => {
-    if (!status) return 'UNKNOWN';
-    return status.replace(/_/g, ' ');
+    const safeStatus = status || 'VERIFICATION PENDING';
+    return safeStatus.replace(/_/g, ' ');
   };
-
+  
   if (loading) {
     return (
       <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>

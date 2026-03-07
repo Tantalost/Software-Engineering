@@ -573,11 +573,13 @@ export default function StallsPage() {
 
     if (!currentApp) return <ActivityIndicator color={colors.primary} style={{marginTop: 50}} />;
     
-    if (currentApp.status === "VERIFICATION_PENDING") return <VerificationPendingView currentApp={currentApp} />;
+    const appStatus = (currentApp.status || "VERIFICATION_PENDING").toUpperCase();
     
-    if (currentApp.status === "CONTRACT_REVIEW") return <ContractReviewView currentApp={currentApp} />;
+    if (appStatus === "VERIFICATION_PENDING" || appStatus === "PENDING") return <VerificationPendingView currentApp={currentApp} />;
+    
+    if (appStatus === "CONTRACT_REVIEW") return <ContractReviewView currentApp={currentApp} />;
 
-    if (currentApp.status === "CONTRACT_PENDING") {
+    if (appStatus === "CONTRACT_PENDING") {
         return (
             <ContractPendingView 
                 currentApp={currentApp} 
@@ -591,9 +593,9 @@ export default function StallsPage() {
         );
     }
     
-    if (currentApp.status === "PAYMENT_REVIEW") return <PaymentReviewView currentApp={currentApp} />;
+    if (appStatus === "PAYMENT_REVIEW") return <PaymentReviewView currentApp={currentApp} />;
 
-    if (currentApp.status === "PAYMENT_UNLOCKED") {
+    if (appStatus === "PAYMENT_UNLOCKED") {
         return (
             <PaymentUnlockedView 
                 currentApp={currentApp} 
@@ -609,7 +611,7 @@ export default function StallsPage() {
         );
     }
 
-    if (currentApp.status === "TENANT") {
+    if (appStatus === "TENANT") {
         return (
             <TenantView 
                 currentApp={currentApp} 
@@ -624,7 +626,7 @@ export default function StallsPage() {
         );
     }
 
-    if (currentApp.status === "REJECTED") {
+    if (appStatus === "REJECTED") {
         return <RejectedView currentApp={currentApp} />;
     }
     

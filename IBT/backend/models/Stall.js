@@ -6,7 +6,7 @@ const StallSchema = new mongoose.Schema({
   floor: String,       
   row: Number,
   col: Number,
-  status: String,      
+  status: { type: String, default: 'VERIFICATION_PENDING' },     
   tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' }
 });
 
