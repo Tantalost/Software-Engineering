@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import sendEmail from "../utils/sendEmail.js"; 
 
 export const requestPasswordReset = async (req, res) => {
   try {
@@ -17,29 +18,11 @@ export const requestPasswordReset = async (req, res) => {
     user.otpExpires = Date.now() + 10 * 60 * 1000; 
     await user.save();
 
-    const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "api-key": process.env.EMAIL_PASS, 
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        sender: { 
-            name: "Stall Application Support", 
-            email: process.env.EMAIL_USER 
-        },
-        to: [{ email: user.email }],
-        subject: "Your Password Reset Code",
-        textContent: `Your verification code is: ${otp}\n\nThis code will expire in 10 minutes.`
-      })
+    await sendEmail({
+      email: user.email,
+      subject: "Stall Application Reset Code",
+      message: `Your verification code is: ${otp}\n\nThis code will expire in 10 minutes.`
     });
-
-    if (!brevoRes.ok) {
-        const errorData = await brevoRes.text();
-        console.error("Brevo API Error:", errorData);
-        throw new Error("Failed to send email via Brevo.");
-    }
 
     res.status(200).json({ message: "Verification code sent to email." });
 
