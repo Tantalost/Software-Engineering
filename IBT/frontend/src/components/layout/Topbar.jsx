@@ -51,14 +51,9 @@ const Topbar = ({ title, onMenuClick }) => {
   const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:10000").replace(/\/api\/?$/, '');
 
   const getImageUrl = (uri) => {
-    if (!uri) return '';
-    
-    const token = localStorage.getItem("token");
-    let url = uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
-    
-    const separator = url.includes('?') ? '&' : '?';
-    return token ? `${url}${separator}token=${token}` : url;
-  };
+  if (!uri) return '';
+  return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
+};
 
   const showToast = (type, message) => {
     setToast({ isOpen: true, type, message });

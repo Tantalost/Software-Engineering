@@ -20,14 +20,11 @@ const ApplicationReviewModal = ({
   const [rejectionReason, setRejectionReason] = useState("");
 
   const getFileUrl = (pathOrString) => {
-    if (!pathOrString || typeof pathOrString !== 'string') return null;
-    if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) return pathOrString;
-    
-    const token = localStorage.getItem("token"); 
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
-    
-    return `${baseUrl}/api/stalls/doc/${pathOrString}?token=${token}`; 
-  };
+  if (!pathOrString || typeof pathOrString !== 'string') return null;
+  if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) return pathOrString;
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
+  return `${baseUrl}/api/stalls/doc/${pathOrString}`; 
+};
 
   const openPdf = (url) => window.open(url, '_blank');
 

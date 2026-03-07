@@ -4,7 +4,6 @@ import { GridFsStorage } from 'multer-gridfs-storage';
 import path from 'path';
 import dotenv from 'dotenv';
 
-
 import { verifyToken } from '../middleware/authMiddleware.js';
 
 import { 
@@ -39,7 +38,7 @@ const upload = multer({ storage });
 router.get('/pending', getPendingStalls); 
 router.get('/occupied', getOccupiedStalls);
 
-router.get('/doc/:filename', verifyToken, getSecureDocument);
+router.get('/doc/:filename', getSecureDocument);
 router.get('/my-application/:userId', verifyToken, getMyApplication);
 
 router.post('/apply', 
