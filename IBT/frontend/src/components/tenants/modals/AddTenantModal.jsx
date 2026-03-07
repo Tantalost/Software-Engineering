@@ -20,6 +20,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     contactNo: "",
     tenantType: "Permanent", 
     _id: "",
+    uid: "",
   });
 
   const [showMapModal, setShowMapModal] = useState(false);
@@ -109,6 +110,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
           contactNo: initialData.contactNo || "",
           tenantType: initialData.tenantType || "Permanent", 
           _id: initialData._id || "",
+          uid: initialData.uid || "",
         });
 
         setProductCategory("food_non_alcoholic");
@@ -137,6 +139,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             contactNo: "",
             tenantType: activeTab === "night" ? "Night Market" : "Permanent", 
             _id: "",
+            uid: "",
         });
         setProductCategory("food_non_alcoholic");
         setOtherProductDetails("");
@@ -171,7 +174,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     const slotCount = formData.slotNo ? formData.slotNo.split(',').length : 1;
 
     if (formData.tenantType === "Permanent") {
-      baseRent = defaultPermanentPrice; // <-- Changed from 6000 to defaultPermanentPrice
+      baseRent = defaultPermanentPrice; 
       if (startDate) {
         const d = new Date(startDate);
         d.setMonth(d.getMonth() + 1); 
