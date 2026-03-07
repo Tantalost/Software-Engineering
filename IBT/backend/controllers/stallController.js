@@ -115,8 +115,19 @@ export const getPendingStalls = async (req, res) => {
 export const getMyApplication = async (req, res) => {
     try {
         const { userId } = req.params;
+        
         let applications = await TenantApplication.find({ userId }).lean();
-        const tenants = await Tenant.find({ uid: userId }).lean();
+        
+        const approvedSlots = applications
+            .filter(app => app.status === 'TENANT')
+            .map(app => app.targetSlot);
+
+        const tenants = await Tenant.find({ 
+            $or: [
+                { uid: userId },
+                { slotNo: { $in: approvedSlots } }
+            ]
+        }).lean();
         
         const nightSetting = await Settings.findOne({ key: "defaultNightPrice" });
         const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
@@ -130,6 +141,7 @@ export const getMyApplication = async (req, res) => {
             const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
             const isNightMarket = tenant.tenantType === 'Night Market';
             
+           
             let calcRent = tenant.rentAmount;
             if (!calcRent || calcRent === 0) {
                  calcRent = isNightMarket ? (globalNightPrice * slotCount) : (globalPermPrice * slotCount);
@@ -151,7 +163,7 @@ export const getMyApplication = async (req, res) => {
                 start: tenant.StartDateTime,
                 due: calcDue,
                 rentAmount: calcRent,
-                utilityAmount: calcUtil, 
+                utilityAmount: calcUtil,
                 totalAmount: calcTotal,
                 tenantId: tenant._id
             };
