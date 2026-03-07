@@ -32,6 +32,7 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<UserData | null>(null);
   const [applications, setApplications] = useState<ApplicationData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
@@ -43,6 +44,10 @@ export default function ProfileScreen() {
     contact: '',
     avatar: null as string | null 
   });
+
+  const avatarUri = user?.avatarUrl 
+    ? `${API_URL}/files/${user.avatarUrl}?t=${new Date().getTime()}` 
+    : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -262,10 +267,17 @@ export default function ProfileScreen() {
             <View style={{alignItems:'center', marginBottom: 20}}>
                 <TouchableOpacity onPress={pickImage}>
                     {editForm.avatar ? (
-                         <Avatar.Image size={100} source={{uri: editForm.avatar}} />
-                    ) : (
-                         <Avatar.Text size={100} label={editForm.name ? editForm.name.charAt(0).toUpperCase() : 'U'} style={{backgroundColor: colors.primary}} />
-                    )}
+        <Avatar.Image 
+            size={100} 
+            source={{ uri: editForm.avatar.startsWith('http') ? editForm.avatar : editForm.avatar }} 
+        />
+    ) : (
+        <Avatar.Text 
+            size={100} 
+            label={editForm.name ? editForm.name.charAt(0).toUpperCase() : 'U'} 
+            style={{ backgroundColor: colors.primary }} 
+        />
+    )}
                     <View style={{position:'absolute', bottom:0, right:0, backgroundColor:'white', borderRadius:15, padding:5, elevation:2, borderWidth: 1, borderColor:'#eee'}}>
                          <Icon name="camera" size={20} color={colors.primary} />
                     </View>
@@ -297,15 +309,35 @@ export default function ProfileScreen() {
       >
 
         <View style={styles.profileSection}>
-            {user.avatarUrl ? (
-                <Avatar.Image size={80} source={{uri: user.avatarUrl}} />
-            ) : (
-                <Avatar.Text size={80} label={user.name ? user.name.charAt(0).toUpperCase() : 'U'} style={{backgroundColor: colors.primary}} />
-            )}
-            <Text variant="headlineSmall" style={{marginTop: 15, fontWeight: 'bold', color: colors.black}}>{user.name || 'New Vendor'}</Text>
-            <Text variant="bodyMedium" style={{color: 'grey'}}>{user.email}</Text>
-            <Text variant="bodyMedium" style={{color: 'grey'}}>{user.contact}</Text>
-        </View>
+    <View style={{ position: 'relative' }}>
+        {user.avatarUrl ? (
+            <>
+                <Avatar.Image 
+                    size={80} 
+                    source={{ uri: `${API_URL}/files/${user.avatarUrl}?t=${new Date().getTime()}` }} 
+                    onLoadStart={() => setImageLoading(true)}
+                    onLoadEnd={() => setImageLoading(false)}
+                />
+                {imageLoading && (
+                    <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 40 }]}>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                )}
+            </>
+        ) : (
+            <Avatar.Text 
+                size={80} 
+                label={user.name ? user.name.charAt(0).toUpperCase() : 'U'} 
+                style={{ backgroundColor: colors.primary }} 
+            />
+        )}
+    </View>
+    <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: colors.black }}>
+        {user.name || 'New Vendor'}
+    </Text>
+    <Text variant="bodyMedium" style={{ color: 'grey' }}>{user.email}</Text>
+    <Text variant="bodyMedium" style={{ color: 'grey' }}>{user.contact}</Text>
+</View>
 
         <Divider style={styles.divider} />
 

@@ -62,6 +62,7 @@ export default function StallsPage() {
   const [pendingStalls, setPendingStalls] = useState<string[]>([]);
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -214,6 +215,12 @@ export default function StallsPage() {
       setInitialLoading(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    
+    fetchData(user?.id).then(() => setRefreshing(false));
+}, [user, selectedFloor]);
   
   useEffect(() => {
     if (user) fetchData(user.id);
@@ -531,7 +538,7 @@ export default function StallsPage() {
   const renderContent = () => {
     if (viewIndex === -1) {
         return (
-            <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, , { paddingBottom: 125 }]} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => user && fetchData(user.id)} colors={[colors.primary]} />}>
+           <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: 125 }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
                 <Card style={styles.floorCard} mode="elevated"><Card.Content><Text variant="titleMedium" style={styles.sectionTitle}>Select Location</Text><SegmentedButtons value={selectedFloor} onValueChange={(val) => { setSelectedFloor(val); setSelectedStall(null); }} theme={{colors: {secondaryContainer: colors.black, onSecondaryContainer: colors.white }}} buttons={[{ value: 'Permanent', label: 'Permanent', uncheckedColor: colors.black}, { value: 'Night Market', label: 'Night Market', uncheckedColor: colors.black }]} /></Card.Content></Card>
                 {loading ? <ActivityIndicator animating={true} color={colors.primary} style={{marginTop: 20}} /> : (
                 <View> 
@@ -659,12 +666,41 @@ export default function StallsPage() {
                     <Icon name="plus" size={16} color={viewIndex === -1 ? colors.white : colors.primary} style={{ marginRight: 5 }} />
                     <Text style={{ color: viewIndex === -1 ? colors.white : colors.primary, fontWeight: 'bold' }}>New Slot</Text>
                 </TouchableOpacity>
-                {myApplications.map((app, index) => (
-                    <TouchableOpacity key={index} onPress={() => setViewIndex(index)} style={{ paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: viewIndex === index ? colors.primary : colors.white, borderWidth: 1, borderColor: colors.primary, marginRight: 10, flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name={app.status === 'TENANT' ? "store" : "clock-outline"} size={16} color={viewIndex === index ? colors.white : colors.primary} style={{ marginRight: 5 }} />
-                        <Text style={{ color: viewIndex === index ? colors.white : colors.primary, fontWeight: 'bold' }}>{app.targetSlot}</Text>
-                    </TouchableOpacity>
-                ))}
+                {myApplications.map((app, index) => {
+   
+    if (!app.targetSlot) return null; 
+
+    const isActive = viewIndex === index;
+    const isTenant = app.status === 'TENANT';
+
+    return (
+        <TouchableOpacity 
+            key={index} 
+            onPress={() => setViewIndex(index)} 
+            style={{ 
+                paddingHorizontal: 15, 
+                paddingVertical: 8, 
+                borderRadius: 20, 
+                backgroundColor: isActive ? colors.primary : colors.white, 
+                borderWidth: 1, 
+                borderColor: colors.primary, 
+                marginRight: 10, 
+                flexDirection: 'row', 
+                alignItems: 'center' 
+            }}
+        >
+            <Icon 
+                name={isTenant ? "store" : "clock-outline"} 
+                size={16} 
+                color={isActive ? colors.white : colors.primary} 
+                style={{ marginRight: 5 }} 
+            />
+            <Text style={{ color: isActive ? colors.white : colors.primary, fontWeight: 'bold' }}>
+                {app.targetSlot}
+            </Text>
+        </TouchableOpacity>
+    );
+})}
             </ScrollView>
         </View>
       )}
