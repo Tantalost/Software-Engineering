@@ -138,11 +138,14 @@ export default function StallsPage() {
   const handleLoginSuccess = (userData: UserData) => {
     setUser(userData);
     setShowLogin(false);
+
+    const safeName = userData.name || "";
+
     setFormData(prev => ({
         ...prev,
-        firstName: userData.name.split(' ')[0] || '',
-        lastName: userData.name.split(' ').slice(1).join(' ') || '',
-        email: userData.email,
+        firstName: safeName.split(' ')[0] || '',
+        lastName: safeName.split(' ').slice(1).join(' ') || '',
+        email: userData.email || '',
         contact: userData.contact || ''
     }));
     fetchData(userData.id);
