@@ -449,6 +449,19 @@ const Topbar = ({ title, onMenuClick }) => {
                   </div>
 
                   <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Subject / Title
+                    </label>
+                    <input
+                      type="text"
+                      value={broadcastData.title}
+                      onChange={(e) => setBroadcastData({...broadcastData, title: e.target.value})}
+                      placeholder="Enter announcement subject..."
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Message</label>
                     <textarea
                       rows="4"
@@ -474,7 +487,7 @@ const Topbar = ({ title, onMenuClick }) => {
                       {editMode && <p className="text-[10px] text-amber-500 mt-1">Uploading new files replaces old ones</p>}
                     </div>
                     
-                    {/* Fixed Preview For NEWLY UPLOADED Files */}
+                  
                     {selectedFiles.length > 0 && (
                       <div className="flex gap-3 mt-4 overflow-x-auto pb-2 custom-scrollbar">
                         {Array.from(selectedFiles).map((file, idx) => {
@@ -501,7 +514,7 @@ const Topbar = ({ title, onMenuClick }) => {
                     )}
                   </div>
 
-                    {/* Fixed Preview For EXISTING Files in EDIT MODE */}
+                  
                     {editMode && existingAttachments.length > 0 && selectedFiles.length === 0 && (
                       <div className="mt-4">
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Attachments</p>
@@ -575,7 +588,7 @@ const Topbar = ({ title, onMenuClick }) => {
                     <p className="text-xs text-gray-400 mb-4">{viewingPost.date}</p>
                     <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{viewingPost.message}</p>
                     
-                    {/* Fixed Preview For Viewing Opened Post in History */}
+                    
                     {viewingPost.attachments?.length > 0 && (
                       <div className="mt-6">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Attachments</h4>
@@ -626,7 +639,7 @@ const Topbar = ({ title, onMenuClick }) => {
                               <h4 className="font-bold text-slate-800 text-sm line-clamp-1">{b.title}</h4>
                               <p className="text-xs text-slate-500 line-clamp-1 mt-1 mb-2">{b.message}</p>
                               
-                              {/* Fixed Preview For History List Images */}
+                           
                               {b.attachments?.length > 0 && (
                                 <div className="flex gap-2">
                                   {b.attachments.map((att, idx) => {
