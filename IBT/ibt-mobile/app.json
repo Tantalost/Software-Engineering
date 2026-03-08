@@ -39,7 +39,16 @@
           "backgroundColor": "#053827"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "useAndroidX": true,
+            "enableJetifier": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
