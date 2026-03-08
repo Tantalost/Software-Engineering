@@ -64,9 +64,10 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             data = await authService.login({ email: form.email, password: form.password });
         }
 
-        if (data.token) await AsyncStorage.setItem('ibt_token', data.token);
+       if (data.token) await AsyncStorage.setItem('token', data.token);
+
+       const userData = { ...data.user, token: data.token };
         
-        const userData = data.user;
         await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
         onLoginSuccess(userData);
 

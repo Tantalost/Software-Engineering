@@ -25,7 +25,8 @@ import {
   FileSpreadsheet,
   FileText,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -238,73 +239,83 @@ const Reports = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
+  const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+    try {
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
 
-  // MAIN EXPORT FUNCTIONS (List)
-  const handleExportExcel = () => {
+      const imageId = workbook.addImage({
+        buffer: arrayBuffer,
+        extension: 'png',
+      });
+
+      worksheet.addImage(imageId, range);
+    } catch (error) {
+      console.error("Reports branding image failed:", error);
+    }
+  };
+
+  // MAIN EXPORT excel FUNCTIONS (List)
+  const handleExportExcel = async () => {
     if (filtered.length === 0) return alert("No records to export.");
 
-    const dateStr = new Date().toLocaleDateString();
-    const timeStr = new Date().toLocaleTimeString();
-    const operator = localStorage.getItem("authName") || "Admin";
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Overall Terminal Report");
 
-    // Helper to extract revenue safely
-    const getRevenue = (item) =>
-      item.data?.statistics?.totalRevenue ||
-      item.data?.statistics?.revenue ||
-      0;
+      // 1. BRANDED HEADER (-1/8 height adjustment)
+      worksheet.getRow(1).height = 35;
+      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:D4');
 
-    const overallTotalRevenue = filtered.reduce(
-      (sum, item) => sum + getRevenue(item),
-      0,
-    );
+      // 2. Metadata Section (Positioned after branding)
+      worksheet.mergeCells('A6:D6');
+      const titleCell = worksheet.getCell('A6');
+      titleCell.value = 'OVERALL TERMINAL REPORTS';
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
+      titleCell.alignment = { horizontal: 'center' };
 
-    // 1. SIMULATED HEADER (Matches PDF branding and title)
-    const rows = [
-      ["INTEGRADO TERMINAL DE ZAMBOANGA"], // Mimics Header image text
-      ["OVERALL TERMINAL REPORTS"],        // Report Title
-      [], // Spacer
+      const getRevenue = (item) => item.data?.statistics?.totalRevenue || item.data?.statistics?.revenue || 0;
+      const overallTotalRevenue = filtered.reduce((sum, item) => sum + getRevenue(item), 0);
 
-      // 2. METADATA (Simulated PDF Alignment)
-      [`Date: ${dateStr}`, "", "", `Overall Total Revenue: Php ${overallTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
-      [], // Spacer
+      worksheet.addRow([]);
+      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', `Overall Total Revenue: Php ${overallTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
+      worksheet.addRow([]);
 
-      // 3. TABLE HEADERS
-      ["Report ID", "Department", "Operator", "Revenue"]
-    ];
+      // 3. Styled Table Headers
+      const headerRow = worksheet.addRow(["Report ID", "Department", "Operator", "Revenue"]);
+      headerRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { horizontal: 'center' };
+      });
 
-    // 4. TABLE DATA (Standardized "Php" formatting)
-    filtered.forEach((item) => {
-      rows.push([
-        item.id ? item.id.substring(0, 8).toUpperCase() : "-",
-        item.type || "-",
-        item.author || "-",
-        `Php ${getRevenue(item).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-      ]);
-    });
+      // 4. Data Population
+      filtered.forEach((item) => {
+        worksheet.addRow([
+          item.id ? item.id.substring(0, 8).toUpperCase() : "-",
+          item.type || "-",
+          item.author || "-",
+          `Php ${getRevenue(item).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        ]);
+      });
 
-    // 6. GENERATION LOGIC WITH UTF-8 BOM
-    const csvContent = rows
-      .map((row) =>
-        row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","),
-      )
-      .join("\n");
+      // 5. BRANDED FOOTER (-1/8 height adjustment)
+      const lastRowNumber = worksheet.lastRow.number + 2;
+      worksheet.getRow(lastRowNumber).height = 52.5;
+      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:D${lastRowNumber + 3}`);
 
-    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `Overall_Terminal_Report_${new Date().toISOString().split("T")[0]}.csv`,
-    );
-    link.click();
+      // 6. Formatting
+      worksheet.columns = [{ width: 20 }, { width: 25 }, { width: 25 }, { width: 25 }];
 
-    logActivity(
-      role,
-      "EXPORT_OVERALL_EXCEL",
-      `Exported Overall Report summary to Excel-converted format`,
-      "Reports",
-    );
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `Overall_Terminal_Report_${new Date().toISOString().split("T")[0]}.xlsx`);
+
+      logActivity(role, "EXPORT_OVERALL_EXCEL", "Exported branded Overall Report", "Reports");
+    } catch (err) {
+      console.error("ExcelJS Overall Export Error:", err);
+      alert("Failed to export branded Excel.");
+    }
   };
 
   const handleExportPDF = () => {
@@ -360,7 +371,7 @@ const Reports = () => {
         item.author || "-",
         `₱${getRevenue(item).toFixed(2)}`,
       ]),
-      headStyles: { fillColor: [220, 38, 38] }, // Zamboanga IBT Red
+      headStyles: { fillColor: [16, 185, 129] }, // Zamboanga IBT Red
       styles: { fontSize: 9, halign: "center" },
       columnStyles: {
         0: { halign: "left" }, // Report ID
@@ -385,32 +396,68 @@ const Reports = () => {
   };
 
   // SINGLE REPORT EXPORT
-  const handleSingleExportExcel = (report) => {
-    const wb = XLSX.utils.book_new();
+  const handleSingleExportExcel = async (report) => {
+    try {
+      const workbook = new ExcelJS.Workbook();
 
-    const summaryData = [
-      ["Report Details"],
-      ["ID", report.id],
-      ["Type", report.type],
-      ["Author", report.author],
-      ["Date", new Date(report.createdAt || report.date).toLocaleDateString()],
-      [],
-      ["Statistics"],
-    ];
+      // --- SHEET 1: Summary & Statistics ---
+      const wsSummary = workbook.addWorksheet("Summary");
 
-    if (report.data?.statistics) {
-      Object.entries(report.data.statistics).forEach(([key, value]) => {
-        summaryData.push([key, value]);
-      });
+      // 1. Add Branded Header (-1/8 height)
+      wsSummary.getRow(1).height = 35;
+      await addImageToWorksheet(workbook, wsSummary, headerImg, 'A1:B4');
+
+      wsSummary.addRow([]); // Spacer
+      wsSummary.addRow(["REPORT DETAILS"]).font = { bold: true, size: 12 };
+      wsSummary.addRow(["ID", report.id]);
+      wsSummary.addRow(["Type", report.type]);
+      wsSummary.addRow(["Author", report.author]);
+      wsSummary.addRow(["Date", new Date(report.createdAt || report.date).toLocaleDateString()]);
+      wsSummary.addRow([]);
+
+      const statsHeader = wsSummary.addRow(["STATISTICS"]);
+      statsHeader.font = { bold: true };
+
+      if (report.data?.statistics) {
+        Object.entries(report.data.statistics).forEach(([key, value]) => {
+          wsSummary.addRow([key.replace(/([A-Z])/g, " $1").trim(), value]);
+        });
+      }
+      const lastRowSummary = wsSummary.lastRow.number + 2;
+      wsSummary.getRow(lastRowSummary).height = 52.5;
+      await addImageToWorksheet(workbook, wsSummary, footerImg, `A${lastRowSummary}:B${lastRowSummary + 3}`);
+
+      wsSummary.getColumn(1).width = 25;
+      wsSummary.getColumn(2).width = 30;
+
+      if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
+        const wsData = workbook.addWorksheet("Data Records");
+        const headers = Object.keys(report.data.data[0]);
+
+        const dataHeaderRow = wsData.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").trim()));
+        dataHeaderRow.eachCell((cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } }; // Emerald Green for Data
+          cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        });
+
+        report.data.data.forEach(row => {
+          wsData.addRow(Object.values(row));
+        });
+
+        wsData.getRow(1).height = 35;
+
+
+        wsData.columns.forEach(col => col.width = 20);
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `${report.type}_Report_${report.id.substring(0, 8)}.xlsx`);
+
+      logActivity(role, "EXPORT_SINGLE_EXCEL", `Exported branded Single Report for ${report.id}`, "Reports");
+    } catch (err) {
+      console.error("Single Export Error:", err);
+      alert("Failed to export individual report.");
     }
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-    if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
-      const wsData = XLSX.utils.json_to_sheet(report.data.data);
-      XLSX.utils.book_append_sheet(wb, wsData, "Data");
-    }
-
-    XLSX.writeFile(wb, `${report.type}_Report_${report.id}.xlsx`);
   };
 
   const handleSingleExportPDF = (report) => {
@@ -444,7 +491,7 @@ const Reports = () => {
         head: [["Metric", "Value"]],
         body: statsData,
         theme: "grid",
-        headStyles: { fillColor: [240, 240, 240], textColor: 50 },
+        headStyles: { fillColor: [16, 185, 129], textColor: 50 },
         styles: { fontSize: 10 },
       });
       currentY = doc.lastAutoTable.finalY + 15;
@@ -728,8 +775,8 @@ const Reports = () => {
               onClick={toggleSelectionMode}
               title={isSelectionMode ? "Cancel Selection" : "Select Records"}
               className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${isSelectionMode
-                  ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
-                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
+                ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
+                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
                 }`}
             >
               {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
@@ -870,7 +917,7 @@ const Reports = () => {
                 </button>
                 <button
                   onClick={() => handleSingleExportPDF(viewRow)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-red-100 transition-colors"
                 >
                   <FileText size={16} />
                   Export PDF
@@ -931,12 +978,12 @@ const Reports = () => {
         <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right-5 fade-in duration-300">
           <div
             className={`min-w-[280px] max-w-sm px-5 py-4 rounded-2xl shadow-2xl border flex items-start gap-3 ${toast.type === "delete"
-                ? "bg-red-50 border-red-200 text-red-700"
-                : toast.type === "archive"
-                  ? "bg-yellow-50 border-yellow-200 text-yellow-700"
-                  : toast.type === "error"
-                    ? "bg-red-50 border-red-200 text-red-700"
-                    : "bg-emerald-50 border-emerald-200 text-emerald-700"
+              ? "bg-red-50 border-red-200 text-red-700"
+              : toast.type === "archive"
+                ? "bg-yellow-50 border-yellow-200 text-yellow-700"
+                : toast.type === "error"
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-700"
               }`}
           >
             <div className="mt-0.5">

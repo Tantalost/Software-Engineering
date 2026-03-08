@@ -17,6 +17,8 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "datepicker": "^0.0.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "firebase": "^12.6.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
@@ -26,8 +28,7 @@
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",
     "recharts": "^3.3.0",
-    "tailwindcss": "^4.1.16",
-    "xlsx": "^0.18.5"
+    "tailwindcss": "^4.1.16"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

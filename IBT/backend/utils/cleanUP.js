@@ -56,3 +56,47 @@ export const startCleanUP = () => {
         }
     });
 };
+
+const ApplicationSchema = new mongoose.Schema({
+    targetSlot: String,
+    userId: mongoose.Schema.Types.ObjectId,
+}, { strict: false });
+
+const Application = mongoose.model('Application', ApplicationSchema, 'applications');
+
+const runCleanup = async () => {
+    try {
+        
+        if (mongoose.connection.readyState === 0) {
+            await mongoose.connect(process.env.MONGODB_URL);
+        }
+        
+        console.log(`[${new Date().toLocaleString()}] Starting database audit...`);
+
+        
+        const result = await Application.deleteMany({
+            $or: [
+                { targetSlot: { $exists: false } },
+                { targetSlot: "" },
+                { userId: { $exists: false } }
+            ]
+        });
+
+        if (result.deletedCount > 0) {
+            console.log(`[CLEANUP] Success: Removed ${result.deletedCount} ghost entries.`);
+        } else {
+            console.log(`[CLEANUP] Database is healthy. No ghost entries found.`);
+        }
+    } catch (error) {
+        console.error("[CLEANUP ERROR]:", error);
+    }
+};
+
+
+cron.schedule('0 0 * * *', () => {
+    runCleanup();
+});
+
+runCleanup();
+
+console.log("Cron Job initialized: Database cleanup scheduled for midnight daily.");

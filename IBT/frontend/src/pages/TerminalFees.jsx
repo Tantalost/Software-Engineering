@@ -15,6 +15,8 @@ import jsPDF from "jspdf";
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
 import autoTable from "jspdf-autotable";
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import Layout from "../components/layout/Layout";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
@@ -46,6 +48,25 @@ const getInitialBasePrices = () => {
     regular: 15.0,
     discounted: 10.0,
   };
+};
+const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+  if (!imageSrc) return;
+  try {
+    const response = await fetch(imageSrc);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+
+    const imageId = workbook.addImage({
+      buffer: arrayBuffer,
+      extension: 'png',
+    });
+
+    worksheet.addImage(imageId, range);
+  } catch (error) {
+    console.error("Terminal Fees branding image failed:", error);
+  }
 };
 
 const TerminalFees = () => {
@@ -526,14 +547,10 @@ const TerminalFees = () => {
     }
   };
 
-  const handleOpenAdd = () => {
-    const maxTicket =
-      records.length > 0
-        ? Math.max(...records.map((r) => Number(r.ticketNo) || 0))
-        : 0;
-    const now = new Date();
+  const handleOpenAdd = async () => {
+    const now = new Date();    
     setNewTicket({
-      ticketNo: maxTicket + 1,
+      ticketNo: "Loading...", 
       passengerType: "Regular",
       price: basePrices.regular,
       date: now.toISOString().split("T")[0],
@@ -544,6 +561,21 @@ const TerminalFees = () => {
       }),
     });
     setShowAddModal(true);
+
+    try {
+      const res = await fetch(`${API_URL}/terminal-fees/next-ticket`);
+      if (!res.ok) throw new Error("Failed to fetch next ticket number");
+      
+      const data = await res.json();
+      
+      setNewTicket((prev) => ({
+        ...prev,
+        ticketNo: data.nextTicketNo,
+      }));
+    } catch (error) {
+      console.error("Error getting next ticket:", error);
+      setNewTicket((prev) => ({ ...prev, ticketNo: "Auto-generated" }));
+    }
   };
 
   const handleSaveNew = async () => {
@@ -553,6 +585,13 @@ const TerminalFees = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newTicket),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Backend Error Details:", errorData);
+        throw new Error(errorData.message || errorData.error || "Failed to save to database");
+      }
+
       if (!res.ok) throw new Error("Failed to save to database");
       await fetchFees();
       await logActivity(
@@ -615,55 +654,69 @@ const TerminalFees = () => {
     }));
   };
 
-  const exportToCSV = () => {
+  const handleExportExcel = async () => {
     if (filtered.length === 0) return alert("No records to export.");
 
-    const dateStr = new Date().toLocaleDateString();
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Terminal Fees Report");
 
-    const rows = [
-      ["CITY OF ZAMBOANGA"],
-      ["OFICINA DEL ADMINISTRADOR"],
-      ["INTEGRADO TERMINAL DE ZAMBOANGA"],
-      [""],
-      ["PASSENGER REPORTS"],
-      [""],
-      [`Date: ${dateStr}`, "", "", "", `No. of Passengers: ${stats.total}`],
-      ["", "", "", "", `Revenue: Php ${stats.revenue.toFixed(2)}`],
-      [],
-      ["Ticket No", "Passenger Type", "Price", "Time", "Date"],
-    ];
+      // 1. BRANDED HEADER (-1/8 height adjustment)
+      worksheet.getRow(1).height = 35;
+      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:E4');
 
-    filtered.forEach((item) => {
-      rows.push([
-        item.ticketNo || "-",
-        item.passengerType || "-",
-        `Php ${(item.price || 0).toFixed(2)}`,
-        item.date ? new Date(item.date).toLocaleDateString() : "-",
-      ]);
-    });
+      // 2. Report Title & Summary Metadata
+      worksheet.mergeCells('A6:E6');
+      const titleCell = worksheet.getCell('A6');
+      titleCell.value = 'PASSENGER REPORTS';
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
+      titleCell.alignment = { horizontal: 'center' };
 
-    const csvContent = rows
-      .map((row) =>
-        row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","),
-      )
-      .join("\n");
+      worksheet.addRow([]); // Spacer
+      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', `Regular: ${stats.regular}`, '', `Total Passengers: ${stats.total}`]);
+      worksheet.addRow([`Operator: ${localStorage.getItem("authName") || "Admin"}`, '', `Student/Senior: ${stats.student + stats.senior}`, '', `Total Revenue: Php ${stats.revenue.toFixed(2)}`]);
+      worksheet.addRow([]); // Spacer
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `Terminal_Fees_Report_${new Date().toISOString().split("T")[0]}.csv`,
-    );
-    link.click();
+      // 3. Styled Table Headers
+      const headerRow = worksheet.addRow(["Ticket No", "Passenger Type", "Time", "Date", "Price"]);
+      headerRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
 
-    logActivity(
-      role,
-      "EXPORT_CSV",
-      `Exported ${filtered.length} Terminal Fees records (Standard Report Format)`,
-      "TerminalFees",
-    );
+      // 4. Populate Data
+      filtered.forEach((item) => {
+        worksheet.addRow([
+          item.ticketNo || "-",
+          item.passengerType || "-",
+          item.time || "-",
+          item.date ? new Date(item.date).toLocaleDateString() : "-",
+          `Php ${(item.price || 0).toFixed(2)}`,
+        ]);
+      });
+
+      // 5. BRANDED FOOTER (-1/8 height adjustment)
+      const lastRowNumber = worksheet.lastRow.number + 2;
+      worksheet.getRow(lastRowNumber).height = 52.5;
+      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:E${lastRowNumber + 3}`);
+
+      // 6. Formatting Column Widths
+      worksheet.columns = [
+        { width: 15 }, { width: 25 }, { width: 15 }, { width: 15 }, { width: 20 }
+      ];
+
+      // 7. Write and Save
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      saveAs(blob, `Terminal_Fees_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      logActivity(role, "EXPORT_EXCEL", `Exported branded report for ${filtered.length} terminal fees`, "TerminalFees");
+
+    } catch (err) {
+      console.error("Terminal Fees ExcelJS Export Failed:", err);
+      alert("Failed to export Excel. Please check the console for details.");
+    }
   };
 
   const exportToPDF = () => {
@@ -702,7 +755,7 @@ const TerminalFees = () => {
         item.time || "-",
         item.date ? new Date(item.date).toLocaleDateString() : "-",
       ]),
-      headStyles: { fillColor: [220, 38, 38] },
+      headStyles: { fillColor: [16, 185, 129] },
       styles: { fontSize: 9, halign: "center" },
       columnStyles: {
         0: { halign: "left" },
@@ -788,7 +841,9 @@ const TerminalFees = () => {
             </button>
           )}
 
-          <ExportMenu onExportExcel={exportToCSV} onExportPDF={exportToPDF} />
+          <ExportMenu
+            onExportExcel={handleExportExcel}
+            onExportPDF={exportToPDF} />
         </div>
       </div>
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -1115,7 +1170,7 @@ const TerminalFees = () => {
                   type="text"
                   value={newTicket.ticketNo}
                   disabled
-                  className="w-full bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg font-medium"
+                  className="w-full bg-slate-100 text-slate-500 italic border border-slate-300 px-3 py-2 rounded-lg font-medium"
                 />
               </div>
               <div>

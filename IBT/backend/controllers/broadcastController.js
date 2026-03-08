@@ -2,8 +2,7 @@ import Broadcast from '../models/Broadcast.js';
 
 export const createBroadcast = async (req, res) => {
   try {
-  
-    const { title, message, scheduledFor } = req.body;
+    const { title, message, scheduledFor, targetGroup } = req.body;
     let attachments = [];
 
     if (req.files && req.files.length > 0) {
@@ -22,8 +21,8 @@ export const createBroadcast = async (req, res) => {
     const newBroadcast = new Broadcast({ 
       title, 
       message, 
+      targetGroup: targetGroup || 'All',
       attachments,
-   
       scheduledFor: scheduledFor ? new Date(scheduledFor) : Date.now()
     });
 
@@ -114,8 +113,8 @@ export const deleteBroadcast = async (req, res) => {
 
 export const updateBroadcast = async (req, res) => {
   try {
-    const { title, message } = req.body;
-    let updateData = { title, message };
+    const { title, message, targetGroup } = req.body;
+    let updateData = { title, message, targetGroup: targetGroup || 'All' };
 
     if (req.files && req.files.length > 0) {
       updateData.attachments = req.files.map(file => {
