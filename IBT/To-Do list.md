@@ -12,9 +12,6 @@ Revisions for web general
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
-Revisions for web general 
-- dashboard export format 🔴 **To be Fixed**
-
 (Alviar)
 NEW TO DO LISTS (Terminal Fee Module)
 Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🔴 **To be Fixed**
@@ -32,8 +29,8 @@ UI fix:
 - can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
 
 (Lloyd) 
-
-
+Notification sa mobile
+Bus trips Calendar cant select future dates
 
 🟢 **Done**
 Revisions for web general 
@@ -142,3 +139,6 @@ Add "X" icon button sa view modal 🟢 **Done**
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 🟢 **Done**
 - send email in the tenants table if its working or not , needed to be fix 🟢 **Done**
 - add set price for permanent slot. 🟢 **Done**
+
+Revisions for web general 
+- dashboard export format 🟢 **Done**
