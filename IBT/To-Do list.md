@@ -17,12 +17,11 @@ Bus Trips
 
 Revisions for web general 
 - dashboard export format 🔴 **To be Fixed**
-- fix dashboard revenue card 🔴 **To be Fixed**
 
 (Jayna)
 NEW TO DO LIST (Report Module)
-View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container.
-Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🔴 **To be Fixed**
+View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
+Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
 
 (Ven)
 NEW TO DO LIST (Parking Module)
@@ -35,18 +34,18 @@ Change the toast message, dapat same toast message lahat ng module, reference ny
 Admin Login Page
 - layout revised 🔴 **To be Fixed**
 
-(Steph)
+(Steph) 🔴 **To be Fixed**
 Next payment due details (Tenant List Module) 🔴 **To be Fixed**
 - Date 
 - next amount to be paid
 - add button for send payment receipt so that if the user is already paid it will shows in the payment record history
-UI fix: 🔴 **To be Fixed**
-- Application red circle where there is a new application should not be shown after the rejection was read.
-- can't view uploaded documents after the contract review phase, in the add tenant modal.
-- The last name is not separated, it joins in the middle name.
-Add suffix (Jr, Sr, etc.)
-Add Products to be sold in the application review
+UI fix: 
 - Add tenant Modal - add progress bar for uploading docs
+- can't view uploaded documents after the contract review phase, in the add tenant modal.
+
+(Lloyd) 🔴 **To be Fixed**
+- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
+- send email in the tenants table if its working or not , needed to be fix
 
 
 
@@ -99,8 +98,8 @@ Manage Employee
 - NAME + role for admin, dynamic and encrypted accounts (Should reflect to the whole system) 🟢 **Done**
 - should be able to edit name and email (Lloyd) 🟢 **Done**
 
-Bugs 
-*Make the design consistent for (set price/ add new/ export) options
+Bugs 🟢 **Done**
+- Make the design consistent for (set price/ add new/ export) options
 
 Fixed
 - Lost&Found - Di nag Sasave if mag add new  🟢 **Done**
@@ -109,6 +108,11 @@ Fixed
 - Terminal fee - Student/senior/PWD save ticket not working / Set price mag save pero di nag rereflect sa table 🟢 **Done**
 - Notification di nag reredirect 🟢 **Done**
 - Tenant/Lease - If mag add ng new tenant di lumalabas sa map 🟢 **Done**
+
+- Application red circle where there is a new application should not be shown after the rejection was read. 🟢 **Done**
+- The last name is not separated, it joins in the middle name.🟢 **Done**
+- Add suffix (Jr, Sr, etc.) 🟢 **Done**
+- Add Products to be sold in the application review 🟢 **Done**
 
 NEW TO DO LIST (Lost and Found Module)
 Archive Button - Adjust the backend for this. dapat hindi sya magiging multo sa mobile kase ang data hindi pa nadelete sa mongo database if irestore mag error. Adjust the query nito. Addition, mag add ng toast message. (LLoyd) 🟢 **Done**
@@ -119,22 +123,32 @@ Delete button - iadjust din yung backend nito since nagiging ghost data sa mobil
 
 
 NEW TO DO LIST (TenantLease Module)
-View modal - kailangan maview ang uploaded documents (Steph) 🔴 **To be Fixed**
-Edit modal - kailangan maview ang uploaded documents (Steph) 🔴 **To be Fixed**
-Download button - dapat same format sa mga ibang pdf exports (Jayna) 🔴 **To be Fixed**
+View modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
+Edit modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
+Download button - dapat same format sa mga ibang pdf exports (Jayna) 🟢 **Done**
 
 NEW TO DO LIST (Report Module)
 View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container.
-Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. (Jayna) 🔴 **To be Fixed**
-Add "X" icon button sa view modal (Ven) 🔴 **To be Fixed**
+Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. (Jayna) 🟢 **Done**
+Add "X" icon button sa view modal (Ven) 🟢 **Done**
 Archive Button - add toast message (Alviar) 🟢 **Done**
 Delete Button - add toast message (Alviar) 🟢 **Done**
 
 NEW TO DO LIST (Parking Module)
-Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. (Ven) 🔴 **To be Fixed**
+Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. (Ven) 🟢 **Done**
 
 NEW TO DO LISTS (Deletion Request Module)
 Add Logs button para malaman mga ginawa ng admin here sa module (Alviar) 🟢 **Done**
 
 NEW TO DO LISTS (Terminal Fee Module)
 Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. (Alviar) 🟢 **Done**
+
+(Jayna)
+NEW TO DO LIST (Report Module)
+View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
+Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
+
+(Ven)
+NEW TO DO LIST (Parking Module)
+Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🟢 **Done**
+Add "X" icon button sa view modal 🟢 **Done**
