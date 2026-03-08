@@ -49,6 +49,8 @@ const ManageCompaniesModal = ({
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusRoute, setNewBusRoute] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [deleteCompanyTarget, setDeleteCompanyTarget] = useState(null);
+  const [deleteBusTarget, setDeleteBusTarget] = useState(null);
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
 
@@ -112,40 +114,100 @@ const ManageCompaniesModal = ({
   }
 };
 
-  const handleDeleteCompany = async (id) => {
-  if (!window.confirm("Delete this company and all its buses?")) return;
+  const confirmDeleteCompany = async () => {
+  if (!deleteCompanyTarget) return;
+
   try {
-    const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    const res = await fetch(`${API_URL}/${deleteCompanyTarget._id}`, {
+      method: "DELETE",
+    });
+
     if (res.ok) {
-      const deletedCompany = companyData.find(c => c._id === id);
       await fetchCompanies();
-      if (selectedCompanyId === id) setSelectedCompanyId(null);
-      
+
       setNotificationState({
         isOpen: true,
-        type: 'success',
-        message: `Company "${deletedCompany?.name}" deleted successfully!`,
+        type: "success",
+        message: `Company "${deleteCompanyTarget.name}" deleted successfully!`,
         autoClose: true,
-        duration: 3000
+        duration: 3000,
+      });
+
+      if (selectedCompanyId === deleteCompanyTarget._id) {
+        setSelectedCompanyId(null);
+      }
+
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to delete company",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+
+  } catch (err) {
+    console.error(err);
+
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Error deleting company",
+      autoClose: true,
+      duration: 3000,
+    });
+
+  } finally {
+    setDeleteCompanyTarget(null);
+  }
+};
+
+const confirmDeleteBus = async () => {
+  if (!deleteBusTarget || !activeCompany) return;
+
+  const updatedBuses = activeCompany.buses.filter(
+    (b) => b.plateNumber !== deleteBusTarget.plateNumber
+  );
+
+  try {
+    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+    });
+
+    if (res.ok) {
+      await fetchCompanies();
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Bus ${deleteBusTarget.plateNumber} removed successfully!`,
+        autoClose: true,
+        duration: 3000,
       });
     } else {
       setNotificationState({
         isOpen: true,
-        type: 'error',
-        message: "Failed to delete company",
+        type: "error",
+        message: "Failed to remove bus",
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     }
   } catch (err) {
     console.error(err);
+
     setNotificationState({
       isOpen: true,
-      type: 'error',
-      message: "Error deleting company",
+      type: "error",
+      message: "Error removing bus",
       autoClose: true,
-      duration: 3000
+      duration: 3000,
     });
+  } finally {
+    setDeleteBusTarget(null);
   }
 };
 
@@ -194,53 +256,6 @@ const ManageCompaniesModal = ({
       isOpen: true,
       type: 'error',
       message: "Error adding bus",
-      autoClose: true,
-      duration: 3000
-    });
-  }
-};
-
-const handleDeleteBus = async (plateNumber) => {
-  if (!activeCompany) return;
-  if (!window.confirm(`Remove bus ${plateNumber}?`)) return;
-
-  const updatedBuses = activeCompany.buses.filter(
-    (b) => b.plateNumber !== plateNumber,
-  );
-
-  try {
-    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
-    });
-
-    if (res.ok) {
-      await fetchCompanies();
-      
-      // ADD THIS TOAST MESSAGE
-      setNotificationState({
-        isOpen: true,
-        type: 'success',
-        message: `Bus ${plateNumber} removed successfully!`,
-        autoClose: true,
-        duration: 3000
-      });
-    } else {
-      setNotificationState({
-        isOpen: true,
-        type: 'error',
-        message: "Failed to remove bus",
-        autoClose: true,
-        duration: 3000
-      });
-    }
-  } catch (err) {
-    console.error(err);
-    setNotificationState({
-      isOpen: true,
-      type: 'error',
-      message: "Error removing bus",
       autoClose: true,
       duration: 3000
     });
@@ -322,7 +337,7 @@ const handleDeleteBus = async (plateNumber) => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteCompany(company._id);
+                      setDeleteCompanyTarget(company);
                     }}
                     className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-opacity"
                   >
@@ -415,7 +430,7 @@ const handleDeleteBus = async (plateNumber) => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button
-                              onClick={() => handleDeleteBus(bus.plateNumber)}
+                              onClick={() => setDeleteBusTarget(bus)}
                               className="text-slate-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition"
                             >
                               <Trash2 size={16} />
@@ -446,6 +461,96 @@ const handleDeleteBus = async (plateNumber) => {
               </p>
             </div>
           )}
+
+          {/* Delete Company Modal */}
+          {deleteCompanyTarget && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+
+      <div className="flex flex-col items-center text-center">
+        <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
+          <Trash2 size={24} />
+        </div>
+
+        <h3 className="text-lg font-semibold text-slate-800">
+          Delete Company
+        </h3>
+
+        <p className="text-sm text-slate-600 mt-2">
+          Are you sure you want to delete
+          <span className="font-semibold"> {deleteCompanyTarget.name}</span>?
+        </p>
+
+        <p className="text-xs text-red-500 mt-1">
+          All buses under this company will also be removed.
+        </p>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => setDeleteCompanyTarget(null)}
+            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={confirmDeleteCompany}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+)}
+
+{deleteBusTarget && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+
+      <div className="flex flex-col items-center text-center">
+        <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
+          <Trash2 size={24} />
+        </div>
+
+        <h3 className="text-lg font-semibold text-slate-800">
+          Remove Bus
+        </h3>
+
+        <p className="text-sm text-slate-600 mt-2">
+          Remove bus
+          <span className="font-semibold">
+            {" "}
+            {deleteBusTarget.plateNumber}
+          </span>
+          ?
+        </p>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => setDeleteBusTarget(null)}
+            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={confirmDeleteBus}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+          >
+            Remove
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+)}
+
         </div>
       </div>
     </div>

@@ -568,7 +568,7 @@ const Dashboard = () => {
       doc.save(`Dashboard_Report_${filterView}_${Date.now()}.pdf`);
     } catch (err) {
       console.error("PDF export failed:", err);
-      alert("Failed to export PDF. Please try again.");
+      showToast("error", "Failed to export PDF. Please try again.");
     }
   };
 
@@ -645,7 +645,7 @@ const Dashboard = () => {
       console.log("Excel exported successfully with PDF-like layout!");
     } catch (err) {
       console.error("Excel export failed:", err);
-      alert("Failed to export Excel. Please try again.");
+      showToast("error", "Failed to export Excel. Please try again.");
     }
   };
 

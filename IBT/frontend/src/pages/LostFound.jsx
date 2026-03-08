@@ -592,7 +592,7 @@ const LostFound = () => {
 
   const handleExportCSV = () => {
     if (filtered.length === 0) {
-      alert("No records to export.");
+      showToast("info", "No records to export.");
       return;
     }
 
@@ -663,7 +663,7 @@ const LostFound = () => {
 
   const handleExportPDF = () => {
     if (filtered.length === 0) {
-      alert("No records to export.");
+      showToast("info", "No records to export.");
       return;
     }
 
