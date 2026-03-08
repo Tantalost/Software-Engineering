@@ -116,13 +116,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         setProductCategory("food_non_alcoholic");
         setOtherProductDetails("");
         setDocuments({
-            businessPermit: initialData.documents?.businessPermit || null, 
-            validID: initialData.documents?.validID || null, 
-            barangayClearance: initialData.documents?.barangayClearance || null, 
-            proofOfReceipt: initialData.documents?.proofOfReceipt || null, 
-            contract: initialData.documents?.contract || null,
-            communityTax: initialData.documents?.communityTax || null, 
-            policeClearance: initialData.documents?.policeClearance || null 
+            businessPermit: null, validID: null, barangayClearance: null, proofOfReceipt: null, contract: null,
+            communityTax: null, policeClearance: null 
         });
         setTempSelectedSlots([]); 
       }
@@ -658,33 +653,21 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                   return docFields.map(({ label, key }) => {
                    const currentFile = documents[key];
                    const isString = typeof currentFile === 'string'; 
-                   const hasFile = !!currentFile; 
 
                    return (
-                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${hasFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
-                      {hasFile && (
+                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${isString ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
+                      {isString && (
                         <div className="absolute top-2 right-2 z-10">
                             <button 
                                 type="button" 
                                 onClick={(e) => {
                                     e.preventDefault(); 
-                                    e.stopPropagation(); 
                                     
-                                    let fileUrl = "";
-                                    let isPdf = false;
-                                    
-                                    if (isString) {
-                                      fileUrl = currentFile.startsWith('http') || currentFile.startsWith('data:') 
-                                        ? currentFile 
-                                        : `${import.meta.env.VITE_API_URL}/api/stalls/doc/${currentFile}`;
-                                      isPdf = currentFile.toLowerCase().endsWith('.pdf');
-                                    } else {
-                               
-                                      fileUrl = URL.createObjectURL(currentFile);
-                                      isPdf = currentFile.type === 'application/pdf';
-                                    }
+                                    const fileUrl = currentFile.startsWith('http') || currentFile.startsWith('data:') 
+                                      ? currentFile 
+                                      : `${import.meta.env.VITE_API_URL}/api/stalls/doc/${currentFile}`;
                                       
-                                    if (isPdf) {
+                                    if (currentFile.toLowerCase().endsWith('.pdf')) {
                                         window.open(fileUrl, '_blank', 'noopener,noreferrer');
                                     } else {
                                         setPreviewImage(fileUrl);
@@ -706,10 +689,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                           onChange={(e) => handleFileChange(e, key)}
                         />
                         <div className="flex items-center gap-2 text-slate-400 text-xs">
-                          <div className={`p-2 rounded-full ${hasFile ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
-                            {hasFile ? <Check size={14} /> : <Upload size={14} />}
+                          <div className={`p-2 rounded-full ${isString ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
+                            {isString ? <Check size={14} /> : <Upload size={14} />}
                           </div>
-                          <span className={hasFile ? "text-emerald-700 font-bold" : ""}>
+                          <span className={isString ? "text-emerald-700 font-bold" : ""}>
                              {getFileStatus(currentFile)}
                           </span>
                         </div>

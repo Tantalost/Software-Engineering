@@ -64,6 +64,7 @@ const ManageCompaniesModal = ({
   companyData,
   fetchCompanies,
   role,
+  setNotificationState,
 }) => {
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
@@ -73,6 +74,8 @@ const ManageCompaniesModal = ({
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusRoute, setNewBusRoute] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [deleteCompanyTarget, setDeleteCompanyTarget] = useState(null);
+  const [deleteBusTarget, setDeleteBusTarget] = useState(null);
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
 
@@ -91,90 +94,199 @@ const ManageCompaniesModal = ({
 
 
   const handleAddCompany = async () => {
-    if (!newCompanyName.trim()) return;
-    setIsProcessing(true);
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newCompanyName }),
+  if (!newCompanyName.trim()) return;
+  setIsProcessing(true);
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCompanyName }),
+    });
+    if (res.ok) {
+      await fetchCompanies();
+      setNewCompanyName("");
+      setIsEditingCompany(false);
+      
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Company "${newCompanyName}" added successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-      if (res.ok) {
-        await fetchCompanies();
-        setNewCompanyName("");
-        setIsEditingCompany(false);
-      } else {
-        alert("Failed to create company");
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsProcessing(false);
+    } else {
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to create company",
+        autoClose: true,
+        duration: 3000
+      });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error creating company",
+      autoClose: true,
+      duration: 3000
+    });
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
+  const confirmDeleteCompany = async () => {
+  if (!deleteCompanyTarget) return;
 
-  const handleDeleteCompany = async (id) => {
-    if (!window.confirm("Delete this company and all its buses?")) return;
-    try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        await fetchCompanies();
-        if (selectedCompanyId === id) setSelectedCompanyId(null);
+  try {
+    const res = await fetch(`${API_URL}/${deleteCompanyTarget._id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      await fetchCompanies();
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Company "${deleteCompanyTarget.name}" deleted successfully!`,
+        autoClose: true,
+        duration: 3000,
+      });
+
+      if (selectedCompanyId === deleteCompanyTarget._id) {
+        setSelectedCompanyId(null);
       }
-    } catch (err) {
-      console.error(err);
+
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to delete company",
+        autoClose: true,
+        duration: 3000,
+      });
     }
-  };
+
+  } catch (err) {
+    console.error(err);
+
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Error deleting company",
+      autoClose: true,
+      duration: 3000,
+    });
+
+  } finally {
+    setDeleteCompanyTarget(null);
+  }
+};
+
+const confirmDeleteBus = async () => {
+  if (!deleteBusTarget || !activeCompany) return;
+
+  const updatedBuses = activeCompany.buses.filter(
+    (b) => b.plateNumber !== deleteBusTarget.plateNumber
+  );
+
+  try {
+    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+    });
+
+    if (res.ok) {
+      await fetchCompanies();
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Bus ${deleteBusTarget.plateNumber} removed successfully!`,
+        autoClose: true,
+        duration: 3000,
+      });
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to remove bus",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+  } catch (err) {
+    console.error(err);
+
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Error removing bus",
+      autoClose: true,
+      duration: 3000,
+    });
+  } finally {
+    setDeleteBusTarget(null);
+  }
+};
 
 
   const handleAddBus = async () => {
-    if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
+  if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
 
-    const updatedBuses = [
-      ...activeCompany.buses,
-      { plateNumber: newBusPlate, route: newBusRoute },
-    ];
+  const updatedBuses = [
+    ...activeCompany.buses,
+    { plateNumber: newBusPlate, route: newBusRoute },
+  ];
 
-    try {
-      const res = await fetch(`${API_URL}/${activeCompany._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+  try {
+    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+    });
+
+    if (res.ok) {
+      await fetchCompanies();
+      
+      // ADD THIS TOAST MESSAGE
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Bus ${newBusPlate} added successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-
-      if (res.ok) {
-        await fetchCompanies();
-        setNewBusPlate("");
-        setNewBusRoute("");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleDeleteBus = async (plateNumber) => {
-    if (!activeCompany) return;
-    if (!window.confirm(`Remove bus ${plateNumber}?`)) return;
-
-    const updatedBuses = activeCompany.buses.filter(
-      (b) => b.plateNumber !== plateNumber,
-    );
-
-    try {
-      const res = await fetch(`${API_URL}/${activeCompany._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
+      
+      setNewBusPlate("");
+      setNewBusRoute("");
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to add bus",
+        autoClose: true,
+        duration: 3000
       });
-
-      if (res.ok) {
-        await fetchCompanies();
-      }
-    } catch (err) {
-      console.error(err);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error adding bus",
+      autoClose: true,
+      duration: 3000
+    });
+  }
+};
+
 
   if (!isOpen) return null;
 
@@ -250,7 +362,7 @@ const ManageCompaniesModal = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteCompany(company._id);
+                      setDeleteCompanyTarget(company);
                     }}
                     className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-opacity"
                   >
@@ -343,7 +455,7 @@ const ManageCompaniesModal = ({
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button
-                              onClick={() => handleDeleteBus(bus.plateNumber)}
+                              onClick={() => setDeleteBusTarget(bus)}
                               className="text-slate-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition"
                             >
                               <Trash2 size={16} />
@@ -374,6 +486,96 @@ const ManageCompaniesModal = ({
               </p>
             </div>
           )}
+
+          {/* Delete Company Modal */}
+          {deleteCompanyTarget && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+
+      <div className="flex flex-col items-center text-center">
+        <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
+          <Trash2 size={24} />
+        </div>
+
+        <h3 className="text-lg font-semibold text-slate-800">
+          Delete Company
+        </h3>
+
+        <p className="text-sm text-slate-600 mt-2">
+          Are you sure you want to delete
+          <span className="font-semibold"> {deleteCompanyTarget.name}</span>?
+        </p>
+
+        <p className="text-xs text-red-500 mt-1">
+          All buses under this company will also be removed.
+        </p>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => setDeleteCompanyTarget(null)}
+            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={confirmDeleteCompany}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+)}
+
+{deleteBusTarget && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+
+      <div className="flex flex-col items-center text-center">
+        <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
+          <Trash2 size={24} />
+        </div>
+
+        <h3 className="text-lg font-semibold text-slate-800">
+          Remove Bus
+        </h3>
+
+        <p className="text-sm text-slate-600 mt-2">
+          Remove bus
+          <span className="font-semibold">
+            {" "}
+            {deleteBusTarget.plateNumber}
+          </span>
+          ?
+        </p>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => setDeleteBusTarget(null)}
+            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={confirmDeleteBus}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+          >
+            Remove
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+)}
+
         </div>
       </div>
     </div>
@@ -463,57 +665,70 @@ const BusTrips = () => {
   const [isSettingPrice, setIsSettingPrice] = useState(false);
 
   const handleSetPrice = async () => {
-    if (!newPrice || isNaN(newPrice)) {
-      alert("Please enter a valid price.");
-      return;
+  if (!newPrice || isNaN(newPrice)) {
+    alert("Please enter a valid price.");
+    return;
+  }
+
+  const priceValue = Number(newPrice);
+  if (priceValue <= 0) {
+    alert("Please enter a valid price greater than 0.");
+    return;
+  }
+
+  setIsSettingPrice(true);
+
+  try {
+    const response = await fetch(`${API_URL}/update-prices/all`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPrice: priceValue }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update prices in database");
     }
 
-    const priceValue = Number(newPrice);
-    if (priceValue <= 0) {
-      alert("Please enter a valid price greater than 0.");
-      return;
-    }
+    const result = await response.json();
 
-    setIsSettingPrice(true);
+    setDefaultPrice(priceValue);
+    localStorage.setItem("defaultBusPrice", priceValue.toString());
 
-    try {
+    await fetchBusTrips();
 
-      const response = await fetch(`${API_URL}/update-prices/all`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPrice: priceValue }),
-      });
+    await logActivity(
+      role,
+      "SET_DEFAULT_PRICE",
+      `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
+      "BusTrips",
+    );
 
-      if (!response.ok) {
-        throw new Error("Failed to update prices in database");
-      }
+    setShowSetPriceModal(false);
+    setNewPrice("");
+    
 
-      const result = await response.json();
+    setNotificationState({
+      isOpen: true,
+      type: 'success',
+      message: `Prices updated to ₱${priceValue}!`,
+      autoClose: true,
+      duration: 3000
+    });
+  } catch (err) {
+    console.error(err);
+    
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Failed to set price: " + err.message,
+      autoClose: true,
+      duration: 3000
+    });
+  } finally {
+    setIsSettingPrice(false);
+  }
+};
 
-
-      setDefaultPrice(priceValue);
-      localStorage.setItem("defaultBusPrice", priceValue.toString());
-
-
-      await fetchBusTrips();
-
-      await logActivity(
-        role,
-        "SET_DEFAULT_PRICE",
-        `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
-        "BusTrips",
-      );
-
-      setShowSetPriceModal(false);
-      setNewPrice("");
-      alert(`Price updated successfully! ${result.modifiedCount || 0} pending trips updated. All new trips will use ₱${newPrice}.`);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to set price: " + err.message);
-    } finally {
-      setIsSettingPrice(false);
-    }
-  };
 
 
   const [newBusData, setNewBusData] = useState({
@@ -645,34 +860,57 @@ const BusTrips = () => {
 
 
   const handleCreateRecord = async (e) => {
-    e.preventDefault();
-    try {
+  e.preventDefault();
+  try {
+    const tripData = {
+      ...newBusData,
+      price: newBusData.price || defaultPrice
+    };
 
-      const tripData = {
-        ...newBusData,
-        price: newBusData.price || defaultPrice
-      };
-
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tripData),
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tripData),
+    });
+    if (response.ok) {
+      const newItem = await response.json();
+      await logActivity(
+        role,
+        "CREATE_TRIP",
+        `Created Trip ${newItem.templateNo} - ${newItem.route}`,
+        "BusTrips",
+      );
+      fetchBusTrips();
+      setShowAddModal(false);
+      
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Bus trip ${newItem.templateNo} created successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-      if (response.ok) {
-        const newItem = await response.json();
-        await logActivity(
-          role,
-          "CREATE_TRIP",
-          `Created Trip ${newItem.templateNo} - ${newItem.route}`,
-          "BusTrips",
-        );
-        fetchBusTrips();
-        setShowAddModal(false);
-      }
-    } catch (error) {
-      console.error("Error creating:", error);
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to create bus trip",
+        autoClose: true,
+        duration: 3000
+      });
     }
-  };
+  } catch (error) {
+    console.error("Error creating:", error);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error creating bus trip",
+      autoClose: true,
+      duration: 3000
+    });
+  }
+};
 
   //EXCEL
   const handleExportExcel = async () => {
@@ -991,33 +1229,54 @@ const BusTrips = () => {
 
   const handleArchive = (row) => setArchiveRow(row);
   const confirmArchive = async () => {
-    if (!archiveRow) return;
-    try {
+  if (!archiveRow) return;
+  try {
+    const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+    });
 
-      const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+    if (archiveRes.ok) {
+      await logActivity(
+        role,
+        "ARCHIVE_TRIP",
+        `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`,
+        "BusTrips",
+      );
+
+      fetchBusTrips();
+      
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Bus ${archiveRow.templateNo} archived successfully!`,
+        autoClose: true,
+        duration: 3000
       });
-
-
-      if (archiveRes.ok) {
-        await logActivity(
-          role,
-          "ARCHIVE_TRIP",
-          `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`,
-          "BusTrips",
-        );
-
-        fetchBusTrips();
-      } else {
-        console.error("Failed to archive bus trip");
-      }
-    } catch (e) {
-      console.error("Error archiving:", e);
-    } finally {
-      setArchiveRow(null);
+    } else {
+      console.error("Failed to archive bus trip");
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to archive bus trip",
+        autoClose: true,
+        duration: 3000
+      });
     }
-  };
+  } catch (e) {
+    console.error("Error archiving:", e);
+    setNotificationState({
+      isOpen: true,
+      type: 'error',
+      message: "Error archiving bus trip",
+      autoClose: true,
+      duration: 3000
+    });
+  } finally {
+    setArchiveRow(null);
+  }
+};
+
 
 
   const tableColumns = isSelectionMode

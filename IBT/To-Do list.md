@@ -1,23 +1,36 @@
 Color Coding
 🔴 **To be Fixed**
-🟡 **In Progress**
+🟡 **In ProgrWWess**
 🟢 **Done**
 
 
-🟡 **In Progress**
+
 Revisions for web general 
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees.
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟢 **Done**
 
 🔴 **To be Fixed**
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
+Bus Trips
+- Add toast message after mag save ng new input Price.
+
 Revisions for web general 
 - dashboard export format 🔴 **To be Fixed**
 
+(Jayna)
+NEW TO DO LIST (Report Module)
+View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
+Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
+
+(Ven)
+NEW TO DO LIST (Parking Module)
+Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🔴 **To be Fixed**
+Add "X" icon button sa view modal 🔴 **To be Fixed**
+
 (Alviar)
 NEW TO DO LISTS (Terminal Fee Module)
-Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🔴 **To be Fixed**
+Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🟢 **Done**
 Admin Login Page
 - layout revised 🔴 **To be Fixed**
 

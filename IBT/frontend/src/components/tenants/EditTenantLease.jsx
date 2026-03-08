@@ -342,25 +342,21 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                      const currentFile = documents[key];
                      const isExistingFile = typeof currentFile === 'string';
-                     const hasFile = !!currentFile; 
 
                      return (
-                      <div key={key} className={`relative border border-dashed rounded-lg p-3 transition-colors group ${hasFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
-                        {hasFile && (
+                      <div key={key} className="relative border border-dashed border-slate-300 rounded-lg p-3 hover:bg-slate-50 transition-colors group">
+                        {isExistingFile && (
                           <button 
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               
-                              const fileUrl = isExistingFile 
-                                ? getFileUrl(currentFile) 
-                                : URL.createObjectURL(currentFile);
-                                
-                              window.open(fileUrl, '_blank', 'noopener,noreferrer');
+                              const secureUrl = getFileUrl(currentFile);
+                              window.open(secureUrl, '_blank', 'noopener,noreferrer');
                             }}
                             className="absolute top-2 right-2 p-1.5 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all z-10"
-                            title={isExistingFile ? "View Current File" : "Preview New File"}
+                            title="View Current File"
                           >
                              <Eye size={16} />
                           </button>
@@ -370,12 +366,12 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                           <span className="block text-xs font-semibold text-slate-600 mb-1">{label}</span>
                           <input type="file" className="hidden" onChange={(e) => handleFileChange(e, key)} />
                           <div className="flex items-center gap-2">
-                              <div className={`p-1.5 rounded-md ${hasFile ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
-                                  {hasFile ? <FileText size={16} /> : <Upload size={16} />}
+                              <div className={`p-1.5 rounded-md ${currentFile ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
+                                  {currentFile ? <FileText size={16} /> : <Upload size={16} />}
                               </div>
                               <div className="flex flex-col overflow-hidden pr-6">
-                                  <span className="text-xs text-slate-700 truncate w-32 font-medium">{hasFile ? (currentFile.name || "File Attached") : "No file uploaded"}</span>
-                                  <span className="text-[10px] text-slate-400">{hasFile ? "Click to replace" : "Click to upload"}</span>
+                                  <span className="text-xs text-slate-700 truncate w-32 font-medium">{currentFile ? (currentFile.name || "File Attached") : "No file uploaded"}</span>
+                                  <span className="text-[10px] text-slate-400">{currentFile ? "Click to replace" : "Click to upload"}</span>
                               </div>
                           </div>
                         </label>

@@ -4,9 +4,21 @@ import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import Textarea from "../components/common/Textarea";
-import { Check, X, Eye, AlertCircle, MessageSquare, Loader2, ListChecks, Trash2, Archive, History } from "lucide-react";
+import {
+  Check,
+  X,
+  Eye,
+  AlertCircle,
+  MessageSquare,
+  Loader2,
+  ListChecks,
+  Trash2,
+  Archive,
+  History,
+} from "lucide-react";
 import { logActivity } from "../utils/logger";
 import LogModal from "../components/common/LogModal";
+import NotificationToast from "../components/common/NotificationToast";
 
 const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
 const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
@@ -16,7 +28,12 @@ const Modal = ({ title, onClose, children }) => (
     <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-slate-800">{title}</h3>
-        <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600 cursor-pointer" /></button>
+        <button onClick={onClose}>
+          <X
+            size={20}
+            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+          />
+        </button>
       </div>
       {children}
     </div>
@@ -35,6 +52,24 @@ const DeletionRequests = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showLogModal, setShowLogModal] = useState(false);
+
+  const [toast, setToast] = useState({
+    isOpen: false,
+    type: "success",
+    message: "",
+  });
+
+  const showToast = (type, message) => {
+    setToast({ isOpen: true, type, message });
+
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, isOpen: false }));
+    }, 3000);
+  };
+
+  const closeToast = () => {
+    setToast((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const role = localStorage.getItem("authRole") || "superadmin";
 
@@ -71,30 +106,37 @@ const DeletionRequests = () => {
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const ids = paginatedData.map(item => item._id || item.id);
-      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+      const ids = paginatedData.map((item) => item._id || item.id);
+      setSelectedIds((prev) => [...new Set([...prev, ...ids])]);
     } else {
-      const pageIds = paginatedData.map(item => item._id || item.id);
-      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+      const pageIds = paginatedData.map((item) => item._id || item.id);
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
     }
   };
 
-  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => selectedIds.includes(item._id || item.id));
+  const isAllSelected =
+    paginatedData.length > 0 &&
+    paginatedData.every((item) => selectedIds.includes(item._id || item.id));
 
   // BULK APPROVE (SOFT DELETE)
   const handleBulkApprove = async () => {
-    if (!window.confirm(`Are you sure you want to approve deletion for ${selectedIds.length} items? \n\nThey will be moved to the Archives before deletion.`)) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to approve deletion for ${selectedIds.length} items? \n\nThey will be moved to the Archives before deletion.`,
+      )
+    )
+      return;
 
     setIsLoading(true);
     try {
       const processPromises = selectedIds.map(async (id) => {
-        const reqItem = requests.find(r => (r._id || r.id) === id);
+        const reqItem = requests.find((r) => (r._id || r.id) === id);
         if (!reqItem) return;
 
         // AUTO-ARCHIVE
@@ -106,8 +148,8 @@ const DeletionRequests = () => {
               type: reqItem.itemType,
               description: reqItem.itemDescription,
               originalData: reqItem.originalData,
-              archivedBy: role
-            })
+              archivedBy: role,
+            }),
           });
         }
 
@@ -117,23 +159,30 @@ const DeletionRequests = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "approve",
-            adminRemarks: "Bulk Approved via Superadmin Console"
-          })
+            adminRemarks: "Bulk Approved via Superadmin Console",
+          }),
         });
       });
 
       await Promise.all(processPromises);
-      await logActivity(role, "BULK_APPROVE_DELETE", `Bulk approved/archived ${selectedIds.length} items`, "DeletionRequests");
+      await logActivity(
+        role,
+        "BULK_APPROVE_DELETE",
+        `Bulk approved/archived ${selectedIds.length} items`,
+        "DeletionRequests",
+      );
 
-      alert(`Successfully archived and deleted ${selectedIds.length} items.`);
+      showToast(
+        "success",
+        `Successfully archived and deleted ${selectedIds.length} items.`,
+      );
 
       setSelectedIds([]);
       setIsSelectionMode(false);
       fetchRequests();
-
     } catch (e) {
       console.error("Bulk action failed", e);
-      alert("Failed to process some records.");
+      showToast("error", "Failed to process some records.");
     } finally {
       setIsLoading(false);
     }
@@ -151,31 +200,38 @@ const DeletionRequests = () => {
             type: approveData.itemType,
             description: approveData.itemDescription,
             originalData: approveData.originalData,
-            archivedBy: role
-          })
+            archivedBy: role,
+          }),
         });
       }
 
-      const res = await fetch(`${API_URL}/deletion-requests/${approveData._id || approveData.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "approve",
-          adminRemarks
-        })
-      });
+      const res = await fetch(
+        `${API_URL}/deletion-requests/${approveData._id || approveData.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "approve",
+            adminRemarks,
+          }),
+        },
+      );
 
       if (!res.ok) throw new Error("Approval failed");
 
-      await logActivity(role, "APPROVE_DELETE", `Approved deletion of ${approveData.itemDescription}`, "DeletionRequests");
+      await logActivity(
+        role,
+        "APPROVE_DELETE",
+        `Approved deletion of ${approveData.itemDescription}`,
+        "DeletionRequests",
+      );
 
       setApproveData(null);
       setAdminRemarks("");
       fetchRequests();
-
     } catch (e) {
       console.error("Approve Error", e);
-      alert("Failed to approve request.");
+      showToast("error", "Failed to approve request.");
     }
   };
 
@@ -183,50 +239,70 @@ const DeletionRequests = () => {
     if (!denyData || !adminRemarks) return;
 
     try {
-      const res = await fetch(`${API_URL}/deletion-requests/${denyData._id || denyData.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "deny",
-          adminRemarks
-        })
-      });
+      const res = await fetch(
+        `${API_URL}/deletion-requests/${denyData._id || denyData.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "deny",
+            adminRemarks,
+          }),
+        },
+      );
 
       if (!res.ok) throw new Error("Denial failed");
 
-      await logActivity(role, "DENY_DELETE", `Denied deletion of ${denyData.itemDescription}`, "DeletionRequests");
+      await logActivity(
+        role,
+        "DENY_DELETE",
+        `Denied deletion of ${denyData.itemDescription}`,
+        "DeletionRequests",
+      );
 
       setDenyData(null);
       setAdminRemarks("");
       fetchRequests();
 
+      showToast("success", "Deletion request denied.");
     } catch (e) {
       console.error("Deny Error", e);
-      alert("Failed to deny request.");
+      showToast("error", "Failed to deny request.");
     }
   };
 
   const columns = isSelectionMode
     ? [
-      <div key="header-check" className="flex items-center">
-        <input
-          type="checkbox"
-          checked={isAllSelected}
-          onChange={handleSelectAll}
-          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-        />
-      </div>,
-      "Item Type", "Description", "Requested By", "Reason", "Date"
-    ]
+        <div key="header-check" className="flex items-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+        </div>,
+        "Item Type",
+        "Description",
+        "Requested By",
+        "Reason",
+        "Date",
+      ]
     : ["Item Type", "Description", "Requested By", "Reason", "Date"];
 
   return (
     <Layout title="Deletion Requests">
       <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-4 rounded-r flex items-start gap-3">
-        <AlertCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={20} />
+        <AlertCircle
+          className="text-amber-600 mt-0.5 flex-shrink-0"
+          size={20}
+        />
         <div>
-          <p className="font-semibold text-amber-800">Admin Approval Required</p>
-          <p className="text-sm text-amber-700">Review pending deletion requests from Ticket Admins.</p>
+          <p className="font-semibold text-amber-800">
+            Admin Approval Required
+          </p>
+          <p className="text-sm text-amber-700">
+            Review pending deletion requests from Ticket Admins.
+          </p>
         </div>
       </div>
 
@@ -255,17 +331,20 @@ const DeletionRequests = () => {
         <button
           onClick={toggleSelectionMode}
           title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-          className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border cursor-pointer'${isSelectionMode
+          className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border cursor-pointer'${
+            isSelectionMode
               ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
               : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
-            }`}
+          }`}
         >
           {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
         </button>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" /></div>
+        <div className="flex justify-center py-10">
+          <Loader2 className="animate-spin text-emerald-500" />
+        </div>
       ) : (
         <Table
           columns={columns}
@@ -276,13 +355,16 @@ const DeletionRequests = () => {
               requestedby: req.requestedBy,
               reason: req.reason || "N/A",
               date: new Date(req.requestDate).toLocaleString(),
-              id: req._id || req.id
+              id: req._id || req.id,
             };
 
             if (isSelectionMode) {
               return {
                 select: (
-                  <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex items-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(req._id || req.id)}
@@ -291,14 +373,16 @@ const DeletionRequests = () => {
                     />
                   </div>
                 ),
-                ...baseData
+                ...baseData,
               };
             }
             return baseData;
           })}
           emptyMessage="No pending deletion requests."
           actions={(row) => {
-            const fullReq = requests.find(r => (r._id === row.id) || (r.id === row.id));
+            const fullReq = requests.find(
+              (r) => r._id === row.id || r.id === row.id,
+            );
             return (
               <div className="flex justify-end space-x-2">
                 <button
@@ -309,7 +393,10 @@ const DeletionRequests = () => {
                   <Eye size={18} />
                 </button>
                 <button
-                  onClick={() => { setApproveData(fullReq); setAdminRemarks(""); }}
+                  onClick={() => {
+                    setApproveData(fullReq);
+                    setAdminRemarks("");
+                  }}
                   className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 cursor-pointer"
                   title="Approve"
                 >
@@ -317,7 +404,10 @@ const DeletionRequests = () => {
                 </button>
 
                 <button
-                  onClick={() => { setDenyData(fullReq); setAdminRemarks(""); }}
+                  onClick={() => {
+                    setDenyData(fullReq);
+                    setAdminRemarks("");
+                  }}
                   className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 cursor-pointer"
                   title="Deny"
                 >
@@ -339,20 +429,34 @@ const DeletionRequests = () => {
       />
 
       {viewData && (
-        <Modal title={`Details: ${viewData.itemType}`} onClose={() => setViewData(null)}>
+        <Modal
+          title={`Details: ${viewData.itemType}`}
+          onClose={() => setViewData(null)}
+        >
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
               <Field label="ID" value={viewData._id || viewData.id} />
               <Field label="Requested By" value={viewData.requestedBy} />
               <div className="col-span-2">
-                <Field label="Date Requested" value={new Date(viewData.requestDate).toLocaleString()} />
+                <Field
+                  label="Date Requested"
+                  value={new Date(viewData.requestDate).toLocaleString()}
+                />
               </div>
               <div className="col-span-2 pt-2 border-t border-slate-100 mt-1">
-                <Field label="Reason for Request" value={viewData.reason || "No reason provided."} />
+                <Field
+                  label="Reason for Request"
+                  value={viewData.reason || "No reason provided."}
+                />
               </div>
             </div>
             <div className="flex justify-end">
-              <button onClick={() => setViewData(null)} className="px-4 py-2 bg-slate-200 rounded-lg cursor-pointer">Close</button>
+              <button
+                onClick={() => setViewData(null)}
+                className="px-4 py-2 bg-slate-200 rounded-lg cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </Modal>
@@ -367,7 +471,9 @@ const DeletionRequests = () => {
           <div className="mb-4 bg-amber-50 p-3 rounded border border-amber-100">
             <div className="flex items-center gap-2 text-amber-800 mb-1">
               <MessageSquare size={14} />
-              <span className="text-xs font-bold uppercase tracking-wide">Requester's Reason</span>
+              <span className="text-xs font-bold uppercase tracking-wide">
+                Requester's Reason
+              </span>
             </div>
             <p className="text-sm text-amber-900 pl-1">
               {approveData.reason || "No reason provided."}
@@ -386,8 +492,19 @@ const DeletionRequests = () => {
             placeholder="Enter remarks to proceed..."
           />
           <div className="mt-4 flex justify-end gap-3">
-            <button onClick={() => setApproveData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg cusor-pointer">Cancel</button>
-            <button onClick={handleApprove} disabled={!adminRemarks} className="px-4 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50 cursor-pointer">Approve & Delete</button>
+            <button
+              onClick={() => setApproveData(null)}
+              className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg cusor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleApprove}
+              disabled={!adminRemarks}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50 cursor-pointer"
+            >
+              Approve & Delete
+            </button>
           </div>
         </Modal>
       )}
@@ -396,7 +513,9 @@ const DeletionRequests = () => {
         <Modal title="Deny Request" onClose={() => setDenyData(null)}>
           <p className="text-sm text-slate-600 mb-4 bg-blue-50 p-3 rounded border border-blue-100">
             Deny deletion of <strong>{denyData.itemDescription}</strong>? <br />
-            <span className="text-xs text-slate-500">The item will remain in the database.</span>
+            <span className="text-xs text-slate-500">
+              The item will remain in the database.
+            </span>
           </p>
           <div className="mb-4 p-3 rounded bg-slate-50 border border-slate-100 text-xs text-slate-500">
             <strong>Requester's Reason:</strong> {denyData.reason || "N/A"}
@@ -409,12 +528,30 @@ const DeletionRequests = () => {
             placeholder="Why are you denying this request?"
           />
           <div className="mt-4 flex justify-end gap-3">
-            <button onClick={() => setDenyData(null)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
-            <button onClick={handleDeny} disabled={!adminRemarks} className="px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50 cursor-pointer">Deny Request</button>
+            <button
+              onClick={() => setDenyData(null)}
+              className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeny}
+              disabled={!adminRemarks}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50 cursor-pointer"
+            >
+              Deny Request
+            </button>
           </div>
         </Modal>
       )}
       <LogModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} />
+
+      <NotificationToast
+        isOpen={toast.isOpen}
+        type={toast.type}
+        message={toast.message}
+        onClose={closeToast}
+      />
     </Layout>
   );
 };
