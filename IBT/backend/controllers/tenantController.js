@@ -247,9 +247,7 @@ export const updateTenant = async (req, res) => {
   }
 };
 
-// --- DYNAMIC PRICING FOR NIGHT MARKET ---
 
-// Get default night market price from settings
 export const getDefaultNightPrice = async (req, res) => {
   try {
     const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
@@ -260,7 +258,7 @@ export const getDefaultNightPrice = async (req, res) => {
   }
 };
 
-// Update default price and apply to unpaid/due Night Market tenants
+
 export const updateAllNightMarketPrices = async (req, res) => {
   try {
     const { newPrice } = req.body;
@@ -272,20 +270,18 @@ export const updateAllNightMarketPrices = async (req, res) => {
     const priceValue = parseFloat(newPrice);
     const priceString = priceValue.toString(); 
 
-    // 1. Update or create the global price setting
+   
     await Settings.findOneAndUpdate(
       { key: "defaultNightPrice" },
       { key: "defaultNightPrice", value: priceValue },
       { upsert: true, new: true }
     );
 
-    // 2. Update existing active Night Market tenants who have unpaid "Due" balances
     const tenantResult = await Tenant.updateMany(
       { tenantType: "Night Market", status: "Due" },
       { rentAmount: priceValue }
     );
 
-    // 3. Update pending applications 
     const applicationResult = await TenantApplication.updateMany(
       { 
         $or: [{ floor: "Night Market" }, { preferredType: "Night Market" }], 
@@ -303,9 +299,7 @@ export const updateAllNightMarketPrices = async (req, res) => {
   }
 };
 
-// --- DYNAMIC PRICING FOR PERMANENT SLOTS ---
 
-// Get default permanent price from settings
 export const getDefaultPermanentPrice = async (req, res) => {
   try {
     const priceSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
@@ -316,7 +310,6 @@ export const getDefaultPermanentPrice = async (req, res) => {
   }
 };
 
-// Update default price and apply to unpaid/due Permanent tenants
 export const updateAllPermanentPrices = async (req, res) => {
   try {
     const { newPrice } = req.body;
@@ -328,15 +321,14 @@ export const updateAllPermanentPrices = async (req, res) => {
     const priceValue = parseFloat(newPrice);
     const priceString = priceValue.toString(); 
 
-    // 1. Update or create the global price setting
+    
     await Settings.findOneAndUpdate(
       { key: "defaultPermanentPrice" },
       { key: "defaultPermanentPrice", value: priceValue },
       { upsert: true, new: true }
     );
 
-    // 2. Update existing active tenants who have unpaid "Due" balances
-    // Note: Checking for "Permanent" or cases where tenantType might be missing/default
+   
     const tenantResult = await Tenant.updateMany(
       { 
         $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }], 
@@ -345,7 +337,7 @@ export const updateAllPermanentPrices = async (req, res) => {
       { rentAmount: priceValue }
     );
 
-    // 3. Update pending applications that haven't reached the payment review stage yet
+   
     const applicationResult = await TenantApplication.updateMany(
       { 
         $or: [{ floor: "Permanent" }, { preferredType: "Permanent" }], 
@@ -360,6 +352,43 @@ export const updateAllPermanentPrices = async (req, res) => {
       applicationModifiedCount: applicationResult.modifiedCount
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const approveRenewalPayment = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+
+    const isNightMarket = tenant.tenantType === 'Night Market';
+    const currentDue = new Date(tenant.DueDateTime || tenant.StartDateTime || Date.now());
+    if (isNightMarket) currentDue.setDate(currentDue.getDate() + 7);
+    else currentDue.setMonth(currentDue.getMonth() + 1);
+
+   
+    const paymentRecord = {
+        referenceNo: tenant.referenceNo || "N/A",
+        amount: tenant.totalAmount || tenant.rentAmount || 0,
+        datePaid: new Date().toISOString()
+    };
+
+    const updatedTenant = await Tenant.findByIdAndUpdate(
+      req.params.id,
+      { 
+          status: "Paid", 
+          DueDateTime: currentDue.toISOString(),
+          referenceNo: "", 
+          "documents.proofOfReceipt": "", 
+          $push: { paymentHistory: paymentRecord } 
+      },
+      { new: true }
+    );
+
+    res.status(200).json(updatedTenant);
+  } catch (error) {
+    console.error("Approve Renewal Error:", error);
     res.status(500).json({ error: error.message });
   }
 };

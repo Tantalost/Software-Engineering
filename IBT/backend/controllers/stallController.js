@@ -165,7 +165,12 @@ export const getMyApplication = async (req, res) => {
                 rentAmount: calcRent,
                 utilityAmount: calcUtil,
                 totalAmount: calcTotal,
-                tenantId: tenant._id
+                tenantId: tenant._id,
+
+                paymentHistory: tenant.paymentHistory || [], 
+                paymentReference: tenant.referenceNo, 
+                paymentAmount: tenant.totalAmount || tenant.rentAmount,
+                receiptUrl: tenant.documents?.proofOfReceipt || ""
             };
 
             if (existingAppIndex >= 0) {

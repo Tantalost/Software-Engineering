@@ -11,28 +11,36 @@ const ApplicationReviewModal = ({
   onUnlockPayment, 
   onProceedToLease,
   onRequestContract,
-  onReject 
+  onReject,
+  onApproveRenewal 
 }) => {
   const [previewImage, setPreviewImage] = useState(null);
-  
-  
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, action: null, title: "", message: "", isReject: false });
   const [rejectionReason, setRejectionReason] = useState("");
 
   const getFileUrl = (pathOrString) => {
-  if (!pathOrString || typeof pathOrString !== 'string') return null;
-  if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) return pathOrString;
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
-  return `${baseUrl}/api/stalls/doc/${pathOrString}`; 
-};
+    if (!pathOrString || typeof pathOrString !== 'string') return null;
+    if (pathOrString.startsWith("data:") || pathOrString.startsWith("http")) return pathOrString;
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
+    return `${baseUrl}/api/stalls/doc/${pathOrString}`; 
+  };
 
   const openPdf = (url) => window.open(url, '_blank');
 
   const safeData = reviewData || {};
   const isPermanent = (safeData.floor === "Permanent" || safeData.tenantType === "Permanent");
+  const isTenantRenewal = !!safeData.tenantName; 
 
- const documents = useMemo(() => {
+  const documents = useMemo(() => {
     if (!reviewData) return []; 
+    
+    // If it's a renewal, only show the receipt
+    if (isTenantRenewal) {
+        return [
+            { label: "Renewal Receipt", url: getFileUrl(reviewData.documents?.proofOfReceipt) }
+        ];
+    }
+
     const showContractSlot = isPermanent || reviewData.contractUrl;
     return [
       { label: "Valid ID", url: getFileUrl(reviewData.validIdUrl) },
@@ -43,32 +51,32 @@ const ApplicationReviewModal = ({
       ...(!isPermanent && reviewData.communityTaxUrl ? [{ label: "Community Tax", url: getFileUrl(reviewData.communityTaxUrl) }] : []),
       ...(!isPermanent && reviewData.policeClearanceUrl ? [{ label: "Police Clearance", url: getFileUrl(reviewData.policeClearanceUrl) }] : [])
     ];
-  }, [reviewData, isPermanent]);
+  }, [reviewData, isPermanent, isTenantRenewal]);
 
   if (!isOpen || !reviewData) return null;
 
-  const displayId = reviewData._id ? String(reviewData._id).slice(-6).toUpperCase() : "---";
+  const displayId = String(reviewData._id || reviewData.id).slice(-6).toUpperCase();
   const status = reviewData.status || "Pending";
   
-  const isPaymentReview = status === "PAYMENT_REVIEW"; 
+  const isPaymentReview = status === "PAYMENT_REVIEW" || status === "Payment Review"; 
   const isContractReview = status === "CONTRACT_REVIEW";
   
-  const showUnlockBtn = status === "VERIFICATION_PENDING";
-  const showRequestContractBtn = isPaymentReview && isPermanent;
-  const showAddTenantBtn = (isPaymentReview && !isPermanent) || isContractReview;
+  const showUnlockBtn = !isTenantRenewal && status === "VERIFICATION_PENDING";
+  const showRequestContractBtn = !isTenantRenewal && isPaymentReview && isPermanent;
+  const showAddTenantBtn = !isTenantRenewal && ((isPaymentReview && !isPermanent) || isContractReview);
+  const showApproveRenewalBtn = isTenantRenewal && isPaymentReview;
 
   const handleDownload = (e, url, label) => {
     e.stopPropagation();
     const link = document.createElement('a');
     link.href = url;
     link.target = "_blank";
-    link.download = `${label.replace(/\s+/g, '_')}_${reviewData.name.replace(/\s+/g, '_')}`;
+    link.download = `${label.replace(/\s+/g, '_')}_${(reviewData.tenantName || reviewData.name).replace(/\s+/g, '_')}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
- 
   const handleActionClick = (actionType) => {
     if (actionType === 'unlock') {
       setConfirmConfig({ isOpen: true, action: 'unlock', title: 'Approve Documents', message: 'Are you sure you want to verify these documents and unlock payment for this applicant?', isReject: false });
@@ -76,6 +84,8 @@ const ApplicationReviewModal = ({
       setConfirmConfig({ isOpen: true, action: 'contract', title: 'Request Contract', message: 'Payment has been verified. Are you sure you want to request the signed contract?', isReject: false });
     } else if (actionType === 'lease') {
       setConfirmConfig({ isOpen: true, action: 'lease', title: 'Approve & Create Lease', message: 'Are you sure you want to finalize this application and create a lease for this tenant?', isReject: false });
+    } else if (actionType === 'renewal') {
+      setConfirmConfig({ isOpen: true, action: 'renewal', title: 'Confirm Renewal Payment', message: 'Are you sure you want to verify this renewal receipt and update the next due date?', isReject: false });
     } else if (actionType === 'reject') {
       setRejectionReason("");
       setConfirmConfig({ isOpen: true, action: 'reject', title: 'Reject Application', message: 'Please provide a reason for rejecting this application. This will be sent to the user via email.', isReject: true });
@@ -83,18 +93,18 @@ const ApplicationReviewModal = ({
   };
 
   const handleConfirmExecute = () => {
-    if (confirmConfig.action === 'unlock') onUnlockPayment(reviewData._id);
-    if (confirmConfig.action === 'contract') onRequestContract(reviewData._id);
-    if (confirmConfig.action === 'lease') onProceedToLease(reviewData._id);
+    if (confirmConfig.action === 'unlock') onUnlockPayment(reviewData._id || reviewData.id);
+    if (confirmConfig.action === 'contract') onRequestContract(reviewData._id || reviewData.id);
+    if (confirmConfig.action === 'lease') onProceedToLease(reviewData._id || reviewData.id);
+    if (confirmConfig.action === 'renewal') onApproveRenewal(reviewData._id || reviewData.id);
     if (confirmConfig.action === 'reject') {
-      if (onReject) onReject(reviewData._id, rejectionReason);
+      if (onReject) onReject(reviewData._id || reviewData.id, rejectionReason);
     }
     setConfirmConfig({ isOpen: false, action: null, title: "", message: "", isReject: false });
   };
 
   return (
     <>
-     
       {confirmConfig.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -128,7 +138,6 @@ const ApplicationReviewModal = ({
         </div>
       )}
 
-    
       {previewImage && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
           <button onClick={() => setPreviewImage(null)} className="absolute top-5 right-5 p-2 bg-white/10 rounded-full text-white hover:bg-white/20 hover:text-red-400 transition-all"><X size={32} /></button>
@@ -142,33 +151,25 @@ const ApplicationReviewModal = ({
             <div className="flex items-center gap-3">
               <button onClick={onBack} className="p-2 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 rounded-full transition-all text-slate-500"><ArrowLeft size={20} /></button>
               <div>
-                <h3 className="text-xl font-bold text-slate-800">Application Review</h3>
+                <h3 className="text-xl font-bold text-slate-800">{isTenantRenewal ? "Renewal Payment Review" : "Application Review"}</h3>
                 <p className="text-sm text-slate-500 font-mono">ID: {displayId}</p>
               </div>
             </div>
-            <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${(status === 'PAYMENT_REVIEW' || status === 'CONTRACT_REVIEW') ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>{status}</div>
+            <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${(isPaymentReview || isContractReview) ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>{status}</div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <section>
-              <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100"><User size={18} className="text-emerald-600" /> Applicant Information</h4>
+              <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100"><User size={18} className="text-emerald-600" /> {isTenantRenewal ? "Tenant" : "Applicant"} Information</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label><p className="font-semibold text-slate-800 text-lg">{reviewData.name || "N/A"}</p></div>
-                <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact</label><p className="font-medium text-slate-800">{reviewData.contact || "N/A"}</p></div>
+                <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label><p className="font-semibold text-slate-800 text-lg">{reviewData.tenantName || reviewData.name || "N/A"}</p></div>
+                <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact</label><p className="font-medium text-slate-800">{reviewData.contactNo || reviewData.contact || "N/A"}</p></div>
                 <div><label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email</label><p className="font-medium text-slate-800">{reviewData.email || "N/A"}</p></div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Products to be Sold</label>
-                  <p className="font-medium text-slate-800 capitalize">
-                    {reviewData.product ? reviewData.product.replace(/_/g, ' ') : "N/A"}
-                  </p>
-                </div>
-
                 <div>
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Target Slot</label>
                   <p className="font-medium text-slate-800 flex items-center gap-2">
-                    {reviewData.targetSlot ? <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-sm font-bold">{reviewData.targetSlot}</span> : "Any"}
-                    <span className="text-slate-500 text-sm">({reviewData.floor || "General"})</span>
+                    {reviewData.targetSlot || reviewData.slotNo ? <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-sm font-bold">{reviewData.targetSlot || reviewData.slotNo}</span> : "Any"}
+                    <span className="text-slate-500 text-sm">({reviewData.floor || reviewData.tenantType || "General"})</span>
                   </p>
                 </div>
               </div>
@@ -212,16 +213,17 @@ const ApplicationReviewModal = ({
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100"><CreditCard size={18} className="text-emerald-600" /> Verification Status</h4>
               <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-center mb-4">
-                  <div><p className="text-xs font-bold text-slate-500 uppercase">Ref No</p><p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || "PENDING"}</p></div>
-                  <div className="text-right"><p className="text-xs font-bold text-slate-500 uppercase">Amount</p><p className="text-xl font-bold text-emerald-600">{reviewData.paymentAmount ? `₱${Number(reviewData.paymentAmount).toLocaleString()}` : "₱0.00"}</p></div>
+                  <div><p className="text-xs font-bold text-slate-500 uppercase">Ref No</p><p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || reviewData.referenceNo || "PENDING"}</p></div>
+                  <div className="text-right"><p className="text-xs font-bold text-slate-500 uppercase">Amount</p><p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString()}</p></div>
                 </div>
                 <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-3 border border-blue-100">
                     <Lock size={18} className="mt-0.5 shrink-0 text-blue-600" />
                     <p className="leading-relaxed">
-                      {showUnlockBtn && "Step 1: Verify documents above, then click 'Unlock Payment'."}
-                      {status === "PAYMENT_UNLOCKED" && "Waiting for applicant to upload receipt..."}
+                      {isTenantRenewal && "Step 1: Verify the renewal receipt, then click 'Confirm Receipt' to update the tenant's due date and history."}
+                      {!isTenantRenewal && showUnlockBtn && "Step 1: Verify documents above, then click 'Unlock Payment'."}
+                      {!isTenantRenewal && status === "PAYMENT_UNLOCKED" && "Waiting for applicant to upload receipt..."}
                       {showRequestContractBtn && "Step 2: Payment Verified. Permanent Slot requires a contract. Click 'Request Contract'."}
-                      {status === "CONTRACT_PENDING" && "Waiting for applicant to upload signed contract..."}
+                      {!isTenantRenewal && status === "CONTRACT_PENDING" && "Waiting for applicant to upload signed contract..."}
                       {showAddTenantBtn && "Final Step: All documents verified. Click 'Approve & Create Lease' to finish."}
                     </p>
                 </div>
@@ -230,14 +232,11 @@ const ApplicationReviewModal = ({
           </div>
 
           <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between gap-3 rounded-b-2xl">
-           
-            {status !== 'REJECTED' ? (
+            {(!isTenantRenewal && status !== 'REJECTED') ? (
               <button onClick={() => handleActionClick('reject')} className="bg-white border border-red-200 text-red-600 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-300 transition-all flex items-center gap-2 active:scale-95">
                 <AlertTriangle size={18} /> Reject
               </button>
-            ) : (
-              <div></div> 
-            )}
+            ) : ( <div></div> )}
 
             <div className="flex gap-3">
               {showUnlockBtn && (
@@ -250,6 +249,11 @@ const ApplicationReviewModal = ({
                     <PenTool size={18} /> Request Contract
                   </button>
               )}
+              {showApproveRenewalBtn && (
+                <button onClick={() => handleActionClick('renewal')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95">
+                  <CheckCircle size={18} /> Confirm Receipt
+                </button>
+              )}
               {showAddTenantBtn && (
                 <button onClick={() => handleActionClick('lease')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95">
                   <CheckCircle size={18} /> Approve & Create Lease
@@ -257,7 +261,6 @@ const ApplicationReviewModal = ({
               )}
             </div>
           </div>
-
         </div>
       </div>
     </>

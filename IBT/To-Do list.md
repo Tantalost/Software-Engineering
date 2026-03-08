@@ -32,8 +32,8 @@ UI fix:
 - can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
 
 (Lloyd) 
+Add notificatiions in mobile module 🔴 **To be Fixed**
 
-test
 
 🟢 **Done**
 Revisions for web general 

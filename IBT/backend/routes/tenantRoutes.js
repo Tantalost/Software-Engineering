@@ -14,7 +14,8 @@ import {
   updateAllNightMarketPrices,
   sendTenantEmail,
   getDefaultPermanentPrice,
-  updateAllPermanentPrices   
+  updateAllPermanentPrices,
+  approveRenewalPayment
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -48,6 +49,7 @@ router.get('/night-market/default-price', getDefaultNightPrice);
 router.put('/update-night-market-prices', updateAllNightMarketPrices);
 router.get('/permanent/default-price', getDefaultPermanentPrice);
 router.put('/update-permanent-prices', updateAllPermanentPrices);
+router.put('/:id/approve-renewal', approveRenewalPayment);
 router.post('/send-email', sendTenantEmail);
 
 router.post('/', 

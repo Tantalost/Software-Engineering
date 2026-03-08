@@ -713,6 +713,21 @@ const TenantLease = () => {
         }
     };
 
+    const handleApproveRenewal = async (id) => {
+        try {
+            const res = await fetch(`${API_URL}/tenants/${id}/approve-renewal`, { method: 'PUT' });
+            if (res.ok) {
+                setNotificationState({ isOpen: true, type: 'success', message: "Renewal payment confirmed! Next due date updated.", autoClose: true, duration: 3000 });
+                setShowReviewModal(false);
+                fetchTenants(); 
+            } else {
+                setNotificationState({ isOpen: true, type: 'error', message: "Failed to approve renewal.", autoClose: true, duration: 3000 });
+            }
+        } catch (err) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Server error approving renewal.", autoClose: true, duration: 3000 });
+        }
+    };
+
     const confirmArchive = async () => {
         if (!archiveRow) return;
         const rowToArchive = archiveRow;
@@ -721,7 +736,6 @@ const TenantLease = () => {
         try {
             const idToArchive = rowToArchive._id || rowToArchive.id;
 
-            // Call the new PATCH archive endpoint
             const res = await fetch(`${API_URL}/tenants/${idToArchive}/archive`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" }
@@ -739,7 +753,7 @@ const TenantLease = () => {
                 duration: 2000
             });
 
-            fetchTenants(); // Refresh the table
+            fetchTenants(); 
         } catch (e) {
             console.error("Failed to archive:", e);
             setNotificationState({
@@ -879,10 +893,10 @@ const TenantLease = () => {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // 1. Add Header (Same as Bulk Export)
+        
         doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-        // 2. Title & Header Info
+       
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
         doc.text("TENANT LEASE SUMMARY", pageWidth / 2, 45, { align: "center" });
@@ -892,7 +906,7 @@ const TenantLease = () => {
         doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 15, 55);
         doc.text(`Operator: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
 
-        // 3. Data Table
+       
         autoTable(doc, {
             startY: 70,
             margin: { left: 15, right: 15 },
@@ -910,14 +924,14 @@ const TenantLease = () => {
                 ["Current Status", t.status || "-"]
             ],
             theme: 'striped',
-            headStyles: { fillColor: [16, 185, 129] }, // Using the Red-600 color from your bulk report
+            headStyles: { fillColor: [16, 185, 129] }, 
             styles: { cellPadding: 5, fontSize: 10 },
             columnStyles: {
                 0: { fontStyle: 'bold', width: 50 },
             }
         });
 
-        // 4. Add Footer (Same as Bulk Export)
+        
         const footerY = pageHeight - 30;
         doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, 30);
 
@@ -932,23 +946,23 @@ const TenantLease = () => {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Tenant Lease Report");
 
-            // 1. BRANDED HEADER (-1/8 height adjustment)
+          
             worksheet.getRow(1).height = 35;
             await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:G4');
 
-            // 2. Report Title & Metadata
+           
             worksheet.mergeCells('A6:G6');
             const titleCell = worksheet.getCell('A6');
             titleCell.value = 'TENANTS AND LEASE REPORTS';
             titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
             titleCell.alignment = { horizontal: 'center' };
 
-            worksheet.addRow([]); // Spacer
+            worksheet.addRow([]); 
             worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
             worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '']);
-            worksheet.addRow([]); // Spacer
+            worksheet.addRow([]); 
 
-            // 3. Styled Table Headers (IBT Red)
+          
             const headerRow = worksheet.addRow(["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]);
             headerRow.eachCell((cell) => {
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
@@ -956,7 +970,7 @@ const TenantLease = () => {
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
             });
 
-            // 4. Populate Tenant Data
+            
             filtered.forEach((t) => {
                 worksheet.addRow([
                     t.slotNo || "-",
@@ -969,18 +983,18 @@ const TenantLease = () => {
                 ]);
             });
 
-            // 5. BRANDED FOOTER (-1/8 height adjustment)
+          
             const lastRowNumber = worksheet.lastRow.number + 2;
             worksheet.getRow(lastRowNumber).height = 52.5;
             await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:G${lastRowNumber + 3}`);
 
-            // 6. Formatting Column Widths
+          
             worksheet.columns = [
                 { width: 12 }, { width: 30 }, { width: 30 }, { width: 15 },
                 { width: 15 }, { width: 15 }, { width: 15 }
             ];
 
-            // 7. Write and Save
+          
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             saveAs(blob, `Tenants_Lease_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -1009,12 +1023,9 @@ const TenantLease = () => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
 
-        // Position Date on the left
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
 
-        // REMOVED: Operator line
-
-        // Update Revenue formatting and alignment to prevent border overflow
+        
         doc.text(`No. of Payments: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
         doc.text(
             `Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -1025,7 +1036,7 @@ const TenantLease = () => {
 
         autoTable(doc, {
             startY: 70,
-            margin: { bottom: 35, left: 15, right: 15 }, // Ensure margins match header alignment
+            margin: { bottom: 35, left: 15, right: 15 }, 
             head: [["Slot No.", "Name", "Email", "Contact No.", "Rent", "Utility", "Total Due"]],
             body: filtered.map((t) => [
                 t.slotNo || "-",
@@ -1221,8 +1232,22 @@ const TenantLease = () => {
                 actions={(row) => {
                     if (isSelectionMode) return null;
                     const fullRecord = records.find(r => r.id === row.id);
+
+                    const isPaymentReview = fullRecord?.status === "Payment Review" || fullRecord?.status === "PAYMENT_REVIEW";
+
                     return (
                         <div className="flex justify-end items-center space-x-2">
+
+                            {isPaymentReview && (
+                                <button
+                                    onClick={() => { setReviewData(fullRecord); setShowReviewModal(true); }}
+                                    className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all cursor-pointer"
+                                    title="Review Renewal Payment"
+                                >
+                                    <ClipboardList size={16} />
+                                </button>
+                            )}
+                            
                             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
                             <button
                                 onClick={() => handleSingleExportPDF(fullRecord)}
@@ -1283,11 +1308,15 @@ const TenantLease = () => {
                 isOpen={showReviewModal}
                 reviewData={reviewData}
                 onClose={() => setShowReviewModal(false)}
-                onBack={() => { setShowReviewModal(false); setShowWaitlistModal(true); }}
+                onBack={() => { 
+                  setShowReviewModal(false); 
+                  if (!reviewData.tenantName) setShowWaitlistModal(true); 
+                }}
                 onUnlockPayment={handleUnlockPayment}
                 onRequestContract={handleRequestContract}
                 onProceedToLease={handleProceedToLease}
                 onReject={handleRejectApplicant}
+                onApproveRenewal={handleApproveRenewal} 
             />
 
             <AddTenantModal
