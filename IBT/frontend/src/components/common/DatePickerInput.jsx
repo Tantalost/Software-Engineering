@@ -25,6 +25,8 @@ const DatePickerInput = ({ label, value, onChange, placeholder = "Select date", 
                 dateFormat="yyyy-MM-dd"
                 placeholderText={placeholder}
                 isClearable
+                maxDate={new Date()}
+                onKeyDown={(e) => e.preventDefault()}
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-colors"
                 wrapperClassName="w-full"
             />
