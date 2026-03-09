@@ -51,6 +51,7 @@ const TenantLease = () => {
     const [records, setRecords] = useState([]);
     const [waitlistData, setWaitlistData] = useState([]);
     const [alerts, setAlerts] = useState([]);
+    const [activeWaitlistTab, setActiveWaitlistTab] = useState("All");
 
     const [defaultNightPrice, setDefaultNightPrice] = useState(150);
     const [showSetPriceModal, setShowSetPriceModal] = useState(false);
@@ -712,6 +713,9 @@ const TenantLease = () => {
             const res = await fetch(`${API_URL}/tenants/${id}/approve-renewal`, { method: 'PUT' });
             if (res.ok) {
                 setNotificationState({ isOpen: true, type: 'success', message: "Renewal payment confirmed! Next due date updated.", autoClose: true, duration: 3000 });
+            
+                await logActivity(role, "APPROVE_RENEWAL", `Approved renewal payment for tenant ID #${id}`, "Tenants");
+            
                 setShowReviewModal(false);
                 fetchTenants(); 
             } else {
@@ -1137,7 +1141,7 @@ const TenantLease = () => {
                     <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
                         <Map size={18} /> <span className="hidden sm:inline">View Map</span>
                     </button>
-                    <button onClick={() => setShowWaitlistModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
+                    <button onClick={() => { setActiveWaitlistTab("All"); setShowWaitlistModal(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
                         <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
                         {actionRequiredCount > 0 && (
                             <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
@@ -1197,10 +1201,10 @@ const TenantLease = () => {
                         <span className="font-semibold">Action Required: You have {renewalsPendingCount} pending lease renewal(s) awaiting payment verification.</span>
                     </div>
                     <button 
-                        onClick={() => setShowWaitlistModal(true)}
+                        onClick={() => { setActiveWaitlistTab("Renewals"); setShowWaitlistModal(true); }}
                         className="px-4 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-bold transition-colors cursor-pointer"
                     >
-                    View Renewals
+                        View Renewals
                     </button>
                 </div>
             )}
@@ -1280,6 +1284,7 @@ const TenantLease = () => {
 
             <WaitlistModal
                 isOpen={showWaitlistModal}
+                initialTab={activeWaitlistTab}
                 onClose={() => setShowWaitlistModal(false)}
                 waitlistData={waitlistData}
                 showForm={showWaitlistForm}

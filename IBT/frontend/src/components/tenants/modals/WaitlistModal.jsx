@@ -10,7 +10,11 @@ const WaitlistModal = ({
   renewalsData = [], 
   onReviewRenewal 
 }) => {
-  const [statusFilter, setStatusFilter] = useState("All"); 
+  const [statusFilter, setStatusFilter] = useState(initialTab);
+
+  React.useEffect(() => {
+    if (isOpen) setStatusFilter(initialTab);
+  }, [isOpen, initialTab]);
   
   const [rejectData, setRejectData] = useState({ isOpen: false, appId: null });
   const [rejectionReason, setRejectionReason] = useState("");
@@ -19,16 +23,19 @@ const WaitlistModal = ({
 
   const isRenewalsTab = statusFilter === "Renewals";
 
-  const filteredData = isRenewalsTab 
-    ? renewalsData 
+const filteredData = isRenewalsTab 
+  ? renewalsData 
+  : statusFilter === "All"
+    ? [...waitlistData, ...renewalsData] 
     : waitlistData.filter((app) => {
-        if (statusFilter === "All") return true;
         if (statusFilter === "Verification Pending") return !app.status || app.status === "VERIFICATION_PENDING";
         if (statusFilter === "Payment Review") return app.status === "PAYMENT_REVIEW" || app.status === "PAYMENT_UNLOCKED";
         if (statusFilter === "Contract Review") return app.status === "CONTRACT_REVIEW" || app.status === "CONTRACT_PENDING";
         if (statusFilter === "Rejected") return app.status === "REJECTED";
         return true;
       });
+
+const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app._id || app.id));
 
   const handleOpenReject = (appId) => {
     setRejectionReason("");
@@ -87,13 +94,11 @@ const WaitlistModal = ({
           </div>
           
           <div className="flex gap-2 mb-4 flex-wrap items-center">
-              <button onClick={() => setStatusFilter("All")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border ${statusFilter === "All" ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white " : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>All ({waitlistData.length})</button>
+              <button onClick={() => setStatusFilter("All")} className={`...`}>All ({waitlistData.length + (renewalsData?.length || 0)})</button>
               <button onClick={() => setStatusFilter("Verification Pending")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Verification Pending" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><Eye size={12}/> Verification Pending</button>
               <button onClick={() => setStatusFilter("Payment Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Payment Review" ? "bg-orange-500 text-white border-orange-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><CreditCard size={12}/> Payment Review</button>
               <button onClick={() => setStatusFilter("Contract Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Contract Review" ? "bg-green-600 text-white border-green-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><FileSignature size={12}/> Contract Review</button>
               <button onClick={() => setStatusFilter("Rejected")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Rejected" ? "bg-red-500 text-white border-red-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><XCircle size={12}/> Rejected</button>
-              
-              <div className="h-6 w-px bg-slate-200 mx-1"></div>
               
               <button onClick={() => setStatusFilter("Renewals")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Renewals" ? "bg-purple-600 text-white border-purple-600 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200"}`}>
                   <ClipboardList size={12}/> Pending Renewals ({renewalsData?.length || 0})
@@ -150,14 +155,14 @@ const WaitlistModal = ({
                               )}
                               
                               <button 
-                                onClick={() => isRenewalsTab ? onReviewRenewal(app) : onApprove(app)} 
+                                onClick={() => isRenewalRecord(app) ? onReviewRenewal(app) : onApprove(app)} 
                                 className={`px-3 py-1.5 rounded-lg text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 ${
-                                  isRenewalsTab ? 'bg-purple-600 hover:bg-purple-700' :
+                                  isRenewalRecord(app) ? 'bg-purple-600 hover:bg-purple-700' :
                                   (app.status === 'PAYMENT_REVIEW' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-600 hover:bg-emerald-700')
                                 }`}
                               >
-                                  {isRenewalsTab ? <><ClipboardList size={14}/> Review Renewal</> : 
-                                   (app.status === 'PAYMENT_REVIEW' ? <><CreditCard size={14}/> Check Payment</> : <><Eye size={14}/> Review Docs</>)}
+                                {isRenewalRecord(app) ? <><ClipboardList size={14}/> Review Renewal</> : 
+                                (app.status === 'PAYMENT_REVIEW' ? <><CreditCard size={14}/> Check Payment</> : <><Eye size={14}/> Review Docs</>)}
                               </button>
                           </div>
                       </td>

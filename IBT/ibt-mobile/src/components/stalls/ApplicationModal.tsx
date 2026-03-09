@@ -83,8 +83,13 @@ export default function ApplicationModal({
                 <FileUploadButton label="Business Permit" fileKey="permit" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
                 <FileUploadButton label="Valid ID" fileKey="validId" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
                 <FileUploadButton label="Brgy Clearance" fileKey="clearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-                <FileUploadButton label="Community Tax Certificate" fileKey="communityTax" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-                <FileUploadButton label="Police Clearance" fileKey="policeClearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                
+                {selectedFloor === 'Night Market' && (
+                  <>
+                    <FileUploadButton label="Community Tax Certificate" fileKey="communityTax" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                    <FileUploadButton label="Police Clearance" fileKey="policeClearance" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                  </>
+                )}
 
                 <View style={styles.billingSummary}>
                     <Text style={[{fontWeight:'bold', color: colors.black }]}>Initial Payment:</Text>

@@ -186,14 +186,6 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>Next Payment Due</Text>
-              {currentApp.tenantDbStatus === 'Payment Review' && ( 
-                <View style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center' }}>
-                  <Icon name="clock-outline" size={14} color="#f97316" style={{ marginRight: 4 }} />
-                  <Text style={{ color: '#f97316', fontSize: 12, fontStyle: 'italic', fontWeight: 'bold' }}>
-                    Renewal Under Review
-                  </Text>
-                </View>
-              )}
           </View>
           <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
           
@@ -240,7 +232,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
           </View>
           
           {currentApp.paymentHistory && currentApp.paymentHistory.length > 0 ? (
-            currentApp.paymentHistory
+              [...currentApp.paymentHistory]
               .sort((a: any, b: any) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime())
               .map((payment: any, index: number) => {
                 const specificReceiptUri = payment.receiptUrl 
@@ -278,33 +270,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             </View>
           )}
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-            {permitUri && (
-              <Button mode="outlined" icon="file-document" onPress={() => Linking.openURL(permitUri)} style={{ flex: 1, marginRight: 5, borderColor: colors.success }} textColor={colors.success}>
-                View Permit
-              </Button>
-            )}
-            {contractUri && (
-              <Button mode="outlined" icon="file-sign" onPress={() => Linking.openURL(contractUri)} style={{ flex: 1, marginLeft: 5, borderColor: colors.success }} textColor={colors.success}>
-                View Contract
-              </Button>
-            )}
-          </View>
-
-         {currentApp.floor === 'Night Market' && (communityTaxUri || policeClearanceUri) && (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-              {communityTaxUri && (
-                <Button mode="outlined" icon="file-document" onPress={() => Linking.openURL(communityTaxUri)} style={{ flex: 1, marginRight: 5, borderColor: colors.success }} textColor={colors.success}>
-                  Community Tax
-                </Button>
-              )}
-              {policeClearanceUri && (
-                <Button mode="outlined" icon="shield-check" onPress={() => Linking.openURL(policeClearanceUri)} style={{ flex: 1, marginLeft: 5, borderColor: colors.success }} textColor={colors.success}>
-                  Police Clearance
-                </Button>
-              )}
-            </View>
-          )}
+          
            
         </Card.Content>
       </Card>
