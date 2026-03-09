@@ -128,8 +128,13 @@ export const createTenant = async (req, res) => {
     const tenantData = {
         ...req.body,
         feeBreakdown: parsedFeeBreakdown,
+        paymentHistory: [{
+            referenceNo: req.body.referenceNo || "Initial Payment",
+            amount: req.body.totalAmount || req.body.rentAmount || 0,
+            datePaid: new Date().toISOString(),
+            receiptUrl: proofOfReceipt || req.body.documents?.proofOfReceipt || ""
+        }],
         documents: {
-           
             ...(req.body.documents || {}),
             businessPermit: businessPermit || req.body.documents?.businessPermit,
             validID: validID || req.body.documents?.validID,
@@ -377,7 +382,8 @@ export const approveRenewalPayment = async (req, res) => {
     const paymentRecord = {
         referenceNo: tenant.referenceNo || "N/A",
         amount: tenant.totalAmount || tenant.rentAmount || 0,
-        datePaid: new Date().toISOString()
+        datePaid: new Date().toISOString(),
+        receiptUrl: tenant.documents?.proofOfReceipt || "" 
     };
 
     const updatedTenant = await Tenant.findByIdAndUpdate(

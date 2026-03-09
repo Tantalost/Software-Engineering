@@ -187,9 +187,9 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>Next Payment Due</Text>
               {currentApp.tenantDbStatus === 'Payment Review' && ( 
-                <View style={{ marginLeft: 34, marginTop: 5, flexDirection: 'row', alignItems: 'center' }}>
-                  <Icon name="clock-outline" size={14} color={colors.warning} style={{ marginRight: 4 }} />
-                  <Text style={{ color: colors.warning, fontSize: 12, fontStyle: 'italic', fontWeight: 'bold' }}>
+                <View style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="clock-outline" size={14} color="#f97316" style={{ marginRight: 4 }} />
+                  <Text style={{ color: '#f97316', fontSize: 12, fontStyle: 'italic', fontWeight: 'bold' }}>
                     Renewal Under Review
                   </Text>
                 </View>
@@ -221,7 +221,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               clearPaymentData(); 
               setPaymentModalVisible(true); 
             }} 
-            style={{ backgroundColor: currentApp.tenantDbStatus === 'Payment Review' ? colors.textMedium : colors.success }} 
+            style={{ backgroundColor: currentApp.tenantDbStatus === 'Payment Review' ? '#f97316' : colors.success }} 
             textColor={colors.white}
             disabled={currentApp.tenantDbStatus === 'Payment Review'} 
           >
@@ -239,16 +239,44 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             </Text>
           </View>
           
-          <View style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
-            <Text variant="bodyMedium" style={{ marginBottom: 5, color: '#121213', fontWeight: 'bold'  }}>
-              <Text style={{ fontWeight: 'normal', color: '#121213' }}>Reference No: </Text> 
-              {currentApp.paymentReference || "N/A"}  
-            </Text>
-            <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold' }}>
-              <Text style={{ fontWeight: 'normal', color: '#121213' }}>Amount Paid: </Text> 
-              ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00"}
-            </Text>
-          </View>
+          {currentApp.paymentHistory && currentApp.paymentHistory.length > 0 ? (
+            currentApp.paymentHistory
+              .sort((a: any, b: any) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime())
+              .map((payment: any, index: number) => {
+                const specificReceiptUri = payment.receiptUrl 
+                  ? `${API_URL}/stalls/doc/${payment.receiptUrl}` 
+                  : receiptImageUri;
+
+                return (
+                  <View key={index} style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
+                    <Text variant="bodySmall" style={{ color: 'grey', marginBottom: 5 }}>
+                      Date: {new Date(payment.datePaid).toLocaleString()}
+                    </Text>
+                    <Text variant="bodyMedium" style={{ marginBottom: 5, color: '#121213', fontWeight: 'bold' }}>
+                      <Text style={{ fontWeight: 'normal', color: '#121213' }}>Reference No: </Text> 
+                      {payment.referenceNo || "N/A"}  
+                    </Text>
+                    <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold', marginBottom: 10 }}>
+                      <Text style={{ fontWeight: 'normal', color: '#121213' }}>Amount Paid: </Text> 
+                      ₱{payment.amount ? Number(payment.amount).toLocaleString(undefined, {minimumFractionDigits: 2}) : (currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00")}
+                    </Text>
+
+                    {specificReceiptUri && (
+                      <Button mode="outlined" icon="receipt" onPress={() => Linking.openURL(specificReceiptUri)} style={{ borderColor: colors.success }} textColor={colors.success}>
+                        View Payment Receipt
+                      </Button>
+                    )}
+                  </View>
+                );
+              })
+          ) : (
+            <View style={{ alignItems: 'center', padding: 20, backgroundColor: '#f1f5f9', borderRadius: 10, marginBottom: 15 }}>
+              <Icon name="file-hidden" size={30} color="#000000" />
+              <Text style={{ color: '#000000', fontStyle: 'italic', marginTop: 10 }}>
+                No payment records found.
+              </Text>
+            </View>
+          )}
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
             {permitUri && (
@@ -263,7 +291,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             )}
           </View>
 
-          {(communityTaxUri || policeClearanceUri) && (
+         {currentApp.floor === 'Night Market' && (communityTaxUri || policeClearanceUri) && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
               {communityTaxUri && (
                 <Button mode="outlined" icon="file-document" onPress={() => Linking.openURL(communityTaxUri)} style={{ flex: 1, marginRight: 5, borderColor: colors.success }} textColor={colors.success}>
@@ -277,26 +305,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               )}
             </View>
           )}
-         
-          {receiptImageUri ? (
-            <View style={{ marginTop: 5 }}>
-              <Text variant="labelLarge" style={{ color: '#166534', marginBottom: 10 }}>
-                <Icon name="image-outline" size={16} /> Attached Document:
-              </Text>
-              <Image 
-                source={{ uri: receiptImageUri }} 
-                style={{ width: '100%', height: 350, borderRadius: 12, backgroundColor: '#e2e8f0' }} 
-                resizeMode="contain" 
-              />
-            </View>
-          ) : (
-            <View style={{ alignItems: 'center', padding: 20, backgroundColor: '#f1f5f9', borderRadius: 10 }}>
-              <Icon name="file-hidden" size={30} color="#000000" />
-              <Text style={{ color: '#000000', fontStyle: 'italic', marginTop: 10 }}>
-                No receipt document available.
-              </Text>
-            </View>
-          )}
+           
         </Card.Content>
       </Card>
 

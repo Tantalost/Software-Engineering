@@ -95,7 +95,13 @@ export default function ProfileScreen() {
         apps = [data];
       }
 
-      const validApps = apps.filter(app => app && app.targetSlot && app.targetSlot.trim() !== "");
+      const validApps = apps.filter(app => 
+        app && 
+        app.targetSlot && 
+        app.targetSlot.trim() !== "" &&
+        app.status !== 'REJECTED' && 
+        app.tenantDbStatus !== 'Inactive' 
+      );
       setApplications(validApps);
 
     } catch (error) {
@@ -389,30 +395,6 @@ export default function ProfileScreen() {
               </Card.Content>
             </Card>
           ))
-        )}
-
-        <Divider style={styles.divider} />
-
-        <Text variant="titleMedium" style={styles.sectionTitle}>Recent Payments</Text>
-        {applications.flatMap(app => app.paymentHistory || []).length === 0 ? (
-          <Text style={styles.emptyText}>No payment records found.</Text>
-        ) : (
-          <Card style={styles.historyCard} mode="elevated">
-            {applications.flatMap(app =>
-              (app.paymentHistory || []).map(pay => ({ ...pay, slot: app.targetSlot }))
-            ).sort((a, b) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime())
-              .map((item, idx) => (
-                <View key={idx}>
-                  <List.Item
-                    title={`₱ ${item.amount ? item.amount.toLocaleString() : '0'}`}
-                    description={`${item.slot} • Ref: ${item.referenceNo}`}
-                    left={props => <List.Icon {...props} icon="cash-check" color={colors.primary} />}
-                    right={() => <Text style={{ fontSize: 11, alignSelf: 'center', color: 'grey' }}>{new Date(item.datePaid).toLocaleDateString()}</Text>}
-                  />
-                  <Divider />
-                </View>
-              ))}
-          </Card>
         )}
 
         <Button
