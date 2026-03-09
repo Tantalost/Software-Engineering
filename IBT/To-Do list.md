@@ -12,22 +12,6 @@ iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, o
 Admin Login Page (Faint IBT coverpage layout)
 - layout revised 🔴 **To be Fixed**
 
-(Steph) 🔴 **To be Fixed**
-Mobile:
-apply an another slot and on review after does not redirect to the specific under review tab slot, it redirect to the 1st tab slot you applied on
-submit payment button desgn - only green border if not tap the button, after it tapped it will turn back to green same adjust also for submit contract button
-when downloading a contract pdf, the users will receive a pdf contract after they the tap button.
-
-can't view the uploaded documents after proceeding in add tenant when the user' slot application was approved
-In submit next payment the data should be emptied in order to upload a new receipt for the next due payment since after the slot was approved, there is a data already in this section, and after that it should shows a tiny under review status in the specific due payment details section.
-
-Web side:
-The view modal can't view the uploaded documents same as the edit modal
-The layout of the financial breakdown should be the same layout in the edit modal
-
-after approving the renewal payment review it will update the reference number and shows in the modal and also it updates the due date in the edit modal.
-62 slots in the stat card instead of 64 slots total
-
 
 (Lloyd) 
 Add notificatiions in mobile module 🔴 **To be Fixed**
@@ -196,3 +180,20 @@ Revisions for web general
 (Ven)
 NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🟢 **Done**
+
+
+(Steph) 🟢 **Done**
+Mobile:
+apply an another slot and on review after does not redirect to the specific under review tab slot, it redirect to the 1st tab slot you applied on
+submit payment button desgn - only green border if not tap the button, after it tapped it will turn back to green same adjust also for submit contract button
+when downloading a contract pdf, the users will receive a pdf contract after they the tap button.
+
+can't view the uploaded documents after proceeding in add tenant when the user' slot application was approved
+In submit next payment the data should be emptied in order to upload a new receipt for the next due payment since after the slot was approved, there is a data already in this section, and after that it should shows a tiny under review status in the specific due payment details section.
+
+Web side:
+The view modal can't view the uploaded documents same as the edit modal
+The layout of the financial breakdown should be the same layout in the edit modal
+
+after approving the renewal payment review it will update the reference number and shows in the modal and also it updates the due date in the edit modal.
+62 slots in the stat card instead of 64 slots total
