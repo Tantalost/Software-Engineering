@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Upload, FileText, PhilippinePeso, Map, Check, ChevronDown, Eye } from "lucide-react";
+import CryptoJS from "crypto-js"; 
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
 const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`; 
 
@@ -64,6 +66,8 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   const [showMapModal, setShowMapModal] = useState(false);
   const [tempSelectedSlots, setTempSelectedSlots] = useState([]);
 
+  const [initialStart] = useState(formatDateTimeForInput(row.StartDateTime || row.leaseStart));
+
   useEffect(() => {
      if(showMapModal) {
         const current = formData.slotno ? formData.slotno.split(', ') : [];
@@ -106,7 +110,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   const [totalAmount, setTotalAmount] = useState(0);
 
   useEffect(() => {
-    if (formData.editStart) {
+    if (formData.editStart && formData.editStart !== initialStart) {
       const d = new Date(formData.editStart);
       if (formData.tenantType === "Permanent") {
          d.setMonth(d.getMonth() + 1); 
@@ -116,7 +120,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
       const newDueDate = formatDateTimeForInput(d);
       setFormData(prev => ({ ...prev, editDue: newDueDate }));
     }
-  }, [formData.editStart, formData.tenantType]);
+  }, [formData.editStart, formData.tenantType, initialStart]);
 
   useEffect(() => {
     const calculatedUtils = (parseFloat(feeBreakdown.garbageFee) || 0) +
@@ -143,7 +147,26 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const encryptFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const base64Data = e.target.result; 
+          const pureBase64 = base64Data.split(',')[1]; 
+          const encrypted = CryptoJS.AES.encrypt(pureBase64, SECRET_KEY).toString();
+          const blob = new Blob([encrypted], { type: 'application/octet-stream' });
+          resolve(blob);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleSubmit = async (e) => { 
     e.preventDefault();
     const finalProduct = productCategory === "other" ? otherProductDetails : productCategory;
 
@@ -155,6 +178,19 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
             hour: 'numeric', minute: '2-digit', hour12: true
         }).replace(',', '');
     };
+
+    
+    const processedDocs = { ...documents };
+    for (const key of Object.keys(processedDocs)) {
+      const file = processedDocs[key];
+     
+      if (file && typeof file !== 'string') {
+        const encryptedBlob = await encryptFile(file);
+        processedDocs[key] = new File([encryptedBlob], file.name, {
+          type: 'application/octet-stream'
+        });
+      }
+    }
 
     const processedData = {
       ...formData,
@@ -168,7 +204,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
       EndDateTime: formatForTable(formData.editDue), 
       products: finalProduct,
       status: status, 
-      documents: documents
+      documents: processedDocs 
     };
     onSave(processedData);
   };

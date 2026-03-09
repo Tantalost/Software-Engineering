@@ -116,8 +116,13 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         setProductCategory("food_non_alcoholic");
         setOtherProductDetails("");
         setDocuments({
-            businessPermit: null, validID: null, barangayClearance: null, proofOfReceipt: null, contract: null,
-            communityTax: null, policeClearance: null 
+            businessPermit: initialData.documents?.businessPermit || null, 
+            validID: initialData.documents?.validID || null, 
+            barangayClearance: initialData.documents?.barangayClearance || null, 
+            proofOfReceipt: initialData.documents?.proofOfReceipt || null, 
+            contract: initialData.documents?.contract || null,
+            communityTax: initialData.documents?.communityTax || null, 
+            policeClearance: initialData.documents?.policeClearance || null 
         });
         setTempSelectedSlots([]); 
       }

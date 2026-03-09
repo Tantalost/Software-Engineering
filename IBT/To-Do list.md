@@ -13,17 +13,30 @@ Admin Login Page (Faint IBT coverpage layout)
 - layout revised 🔴 **To be Fixed**
 
 (Steph) 🔴 **To be Fixed**
-Bus Schedule: Change the order when the bus arrives, it should be Arrived then the status. Status is Arrived and Departed
 Mobile:
-Tenant Application on Payment Submit Web images dissapears, same with contract. Also for Confirmation all images dissapear
-Submitting New payment has the receipt photo already uploaded even without uploading
-Payment Record History doesnt have the date of the payment
+apply an another slot and on review after does not redirect to the specific under review tab slot, it redirect to the 1st tab slot you applied on
+submit payment button desgn - only green border if not tap the button, after it tapped it will turn back to green same adjust also for submit contract button
+when downloading a contract pdf, the users will receive a pdf contract after they the tap button.
+
+can't view the uploaded documents after proceeding in add tenant when the user' slot application was approved
+In submit next payment the data should be emptied in order to upload a new receipt for the next due payment since after the slot was approved, there is a data already in this section, and after that it should shows a tiny under review status in the specific due payment details section.
+
+Web side:
+The view modal can't view the uploaded documents same as the edit modal
+The layout of the financial breakdown should be the same layout in the edit modal
+
+after approving the renewal payment review it will update the reference number and shows in the modal and also it updates the due date in the edit modal.
+62 slots in the stat card instead of 64 slots total
+
 
 (Lloyd) 
 Add notificatiions in mobile module 🔴 **To be Fixed**
 Mobile 
 Dashboard: Change Icon to Logo not Bus
 Lost and Found: Remove Description and swap it with Item Type, Fix the order in descding. If claimed remove it, only unclaimed should be visible
+fix the otp verification for each admin per module (same flow as logging in superadmin part)
+
+
 
 
 

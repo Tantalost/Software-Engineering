@@ -95,15 +95,15 @@ export const createTenant = async (req, res) => {
   try {
     
     const getFile = (fieldName) => {
-        
+       
         if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
             return req.files[fieldName][0].filename;
         }
-       
+      
         if (req.body[fieldName] && typeof req.body[fieldName] === 'string') {
             return req.body[fieldName];
         }
-        return null;
+        return null; 
     };
 
     const businessPermit = getFile('businessPermit');
@@ -361,13 +361,19 @@ export const approveRenewalPayment = async (req, res) => {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
 
-
     const isNightMarket = tenant.tenantType === 'Night Market';
-    const currentDue = new Date(tenant.DueDateTime || tenant.StartDateTime || Date.now());
-    if (isNightMarket) currentDue.setDate(currentDue.getDate() + 7);
-    else currentDue.setMonth(currentDue.getMonth() + 1);
+    
+    const baseDate = tenant.DueDateTime ? new Date(tenant.DueDateTime) : 
+                     (tenant.StartDateTime ? new Date(tenant.StartDateTime) : new Date());
+                     
+    const currentDue = new Date(baseDate);
 
-   
+    if (isNightMarket) {
+        currentDue.setDate(currentDue.getDate() + 7);
+    } else {
+        currentDue.setMonth(currentDue.getMonth() + 1);
+    }
+
     const paymentRecord = {
         referenceNo: tenant.referenceNo || "N/A",
         amount: tenant.totalAmount || tenant.rentAmount || 0,
@@ -379,8 +385,6 @@ export const approveRenewalPayment = async (req, res) => {
       { 
           status: "Paid", 
           DueDateTime: currentDue.toISOString(),
-          referenceNo: "", 
-          "documents.proofOfReceipt": "", 
           $push: { paymentHistory: paymentRecord } 
       },
       { new: true }

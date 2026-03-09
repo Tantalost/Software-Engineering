@@ -62,14 +62,14 @@ const TenantMapModal = ({ isOpen, onClose, activeTab, records, onSelectSlot }) =
   };
 
  
-  const topBlock1 = [32, 31, 30, 29, 28, 27, 26];
-  const topBlock2 = [25, 24, 23, 22, 21, 20, 19, 18];
-  const topBlock3 = [17, 16, 15, 14, 12, 11, 10, 9];
+  const topBlock1 = [32, 31, 30, 29, 28, 27, 26, 25];
+  const topBlock2 = [24, 23, 22, 21, 20, 19, 18, 17];
+  const topBlock3 = [16, 15, 14, 13, 12, 11, 10, 9];
   const topBlock4 = [8, 7, 6, 5, 4, 3, 2, 1];
 
-  const bottomBlock1 = [33, 34, 35, 36, 37, 38, 39];
-  const bottomBlock2 = [40, 41, 42, 43, 44, 45, 46, 47];
-  const bottomBlock3 = [48, 49, 50, 51, 53, 54, 55, 56];
+  const bottomBlock1 = [33, 34, 35, 36, 37, 38, 39, 40];
+  const bottomBlock2 = [41, 42, 43, 44, 45, 46, 47, 48];
+  const bottomBlock3 = [49, 50, 51, 52, 53, 54, 55, 56];
   const bottomBlock4 = [57, 58, 59, 60, 61, 62, 63, 64];
 
   return (

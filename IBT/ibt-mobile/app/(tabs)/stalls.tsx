@@ -294,18 +294,44 @@ export default function StallsPage() {
   };
 
   const generateContractPDF = async () => {
-    try {
-      setApplying(true);
-      const currentName = currentApp?.name || user?.name || "________";
-      const currentSlot = currentApp?.targetSlot || "________";
-      const currentRent = currentBilling.amountLabel;
-      const currentDate = new Date().toLocaleDateString();
+  try {
+    setApplying(true);
+    const currentName = currentApp?.name || user?.name || "________";
+    const currentSlot = currentApp?.targetSlot || "________";
+    const currentRent = currentBilling.amountLabel;
+    const currentDate = new Date().toLocaleDateString();
 
-      const htmlContent = `<html><body><h1>LEASE AGREEMENT</h1><p>Lessee: ${currentName}</p><p>Slot: ${currentSlot}</p><p>Rent: ${currentRent}</p><p>Date: ${currentDate}</p></body></html>`;
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+    const htmlContent = 
+    `<html>
+    <body>
+    <h1>LEASE AGREEMENT</h1>
+    <p>Lessee: ${currentName}</p>
+    <p>Slot: ${currentSlot}</p>
+    <p>Rent: ${currentRent}</p><p>Date: ${currentDate}</p>
+    </body>
+    </html>`;
+    
+    const { uri } = await Print.printToFileAsync({ html: htmlContent });
+
+    if (Platform.OS === "android") {
+      
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (permissions.granted) {
+        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, `Contract_${currentSlot}.pdf`, 'application/pdf');
+        await FileSystem.writeAsStringAsync(newFileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+        Alert.alert("Downloaded", "Contract saved to your device.");
+      }
+    } else {
+      
       await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-    } catch (error) { Alert.alert("Error", "Could not generate PDF"); } finally { setApplying(false); }
-  };
+    }
+  } catch (error) { 
+    Alert.alert("Error", "Could not generate PDF"); 
+  } finally { 
+    setApplying(false); 
+  }
+};
 
   const handleReview = () => {
     if (!formData.firstName || !formData.contact || !selectedStall) {
@@ -438,7 +464,20 @@ export default function StallsPage() {
         Alert.alert("Success", "Application Submitted!");
         await fetchData(user.id);
         setSelectedStall(null);
-        setViewIndex(0);
+
+        const updatedAppsRes = await fetch(`${API_URL}/stalls/my-application/${user.id}?_t=${new Date().getTime()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const updatedApps = await updatedAppsRes.json();
+        const appsArray = Array.isArray(updatedApps) ? updatedApps : [updatedApps];
+
+      const newStallIndex = appsArray.findIndex((app: any) => app.targetSlot === selectedStall);
+      if (newStallIndex !== -1) {
+        setViewIndex(newStallIndex);
+      }
+
+setSelectedStall(null);
+
       } catch (error: any) {
         Alert.alert("Submission Failed", error.message);
       } finally {
@@ -692,15 +731,19 @@ export default function StallsPage() {
 
     if (appStatus === "TENANT") {
       return (
-        <TenantView
-          currentApp={currentApp}
-          paymentData={paymentData}
-          setPaymentData={setPaymentData}
-          submitRenewal={submitRenewalPayment}
-          applying={applying}
-          files={files}
-          uploadProgress={uploadProgress}
+        <TenantView 
+          currentApp={currentApp} 
+          paymentData={paymentData} 
+          setPaymentData={setPaymentData} 
+          submitRenewal={submitRenewalPayment} 
+          applying={applying} 
+          files={files} 
+          uploadProgress={uploadProgress} 
           onPickFile={pickFile}
+          clearPaymentData={() => {
+          setPaymentData({ referenceNo: '' });
+          setFiles(prev => ({ ...prev, receipt: null }));
+          }} 
         />
       );
     }

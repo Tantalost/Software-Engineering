@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Image, Modal } from 'react-native';
+import { ScrollView, View, Image, Modal, Linking} from 'react-native';
 import { Card, Text, Button, Divider, TextInput } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import styles from '@/src/styles/stallsStyle'; 
@@ -48,7 +48,10 @@ export const ContractPendingView = ({ currentApp, generateContractPDF, submitCon
                 <Divider style={{marginBottom: 20}} />
                 <Text style={{textAlign:'center', marginBottom: 15, color: '#444', fontWeight: 'bold', fontSize: 16}}>Step 2: Upload Signed PDF</Text>
                 <FileUploadButton label="Signed PDF" fileKey="contract" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-                <Button mode="contained" onPress={submitContract} loading={applying} style={{backgroundColor: colors.primary, marginTop: 10}} textColor={colors.white}>Submit Contract</Button>
+                <Button mode={applying ? "contained" : "outlined"} onPress={submitContract} loading={applying} style={{marginTop: 10, borderColor: colors.primary, borderWidth: applying ? 0 : 1,backgroundColor: applying ? colors.primary : 'transparent' }} textColor={applying ? colors.white : colors.primary}
+                >
+                  Submit Contract
+                </Button>
             </Card.Content>
         </Card>
     </ScrollView>
@@ -95,8 +98,8 @@ export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, s
             <Text variant="titleMedium" style={styles.sectionHeader}>Verification Details</Text>
             <TextInput label="OR / Reference No." value={paymentData.referenceNo} onChangeText={(t: string) => setPaymentData({...paymentData, referenceNo: t})} mode="outlined" style={styles.input} activeOutlineColor={colors.primary} textColor={colors.black} />
             <FileUploadButton label="Receipt Photo" fileKey="receipt" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
-            <Button mode="contained" onPress={submitPaymentReceipt} loading={applying} style={styles.submitButton} textColor={colors.white}>Submit Payment</Button>
-        </ScrollView>
+            <Button mode={applying ? "contained" : "outlined"} onPress={submitPaymentReceipt} loading={applying} style={[styles.submitButton, { borderColor: colors.primary, borderWidth: applying ? 0 : 1,backgroundColor: applying ? colors.primary : 'transparent' }]} textColor={applying ? colors.white : colors.primary}>Submit Payment</Button>
+         </ScrollView>
     );
 };
 
@@ -132,14 +135,17 @@ export const RejectedView = ({ currentApp }: { currentApp: any }) => {
 };
 
 
-export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRenewal, applying, files, uploadProgress, onPickFile }: any) => {
+export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPaymentData, submitRenewal, applying, files, uploadProgress, onPickFile }: any) => {
   
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
 
-  const receiptImageUri = currentApp.receiptUrl 
-    ? `${API_URL}/stalls/doc/${currentApp.receiptUrl}` 
-    : null;
+  const receiptImageUri = currentApp.receiptUrl ? `${API_URL}/stalls/doc/${currentApp.receiptUrl}` : null;
+  const permitUri = currentApp.permitUrl ? `${API_URL}/stalls/doc/${currentApp.permitUrl}` : null;
+  const contractUri = currentApp.contractUrl ? `${API_URL}/stalls/doc/${currentApp.contractUrl}` : null;
+  const communityTaxUri = currentApp.communityTaxUrl ? `${API_URL}/stalls/doc/${currentApp.communityTaxUrl}` : null;
+  const policeClearanceUri = currentApp.policeClearanceUrl ? `${API_URL}/stalls/doc/${currentApp.policeClearanceUrl}` : null;
 
+  
   const dueDate = currentApp.due 
     ? new Date(currentApp.due).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -180,6 +186,14 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>Next Payment Due</Text>
+              {currentApp.tenantDbStatus === 'Payment Review' && ( 
+                <View style={{ marginLeft: 34, marginTop: 5, flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="clock-outline" size={14} color={colors.warning} style={{ marginRight: 4 }} />
+                  <Text style={{ color: colors.warning, fontSize: 12, fontStyle: 'italic', fontWeight: 'bold' }}>
+                    Renewal Under Review
+                  </Text>
+                </View>
+              )}
           </View>
           <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
           
@@ -203,11 +217,16 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
           
           <Button 
             mode="contained" icon="upload"
-            onPress={() => setPaymentModalVisible(true)} 
-            style={{ backgroundColor: colors.success }} textColor={colors.white}
+            onPress={() => {
+              clearPaymentData(); 
+              setPaymentModalVisible(true); 
+            }} 
+            style={{ backgroundColor: currentApp.tenantDbStatus === 'Payment Review' ? colors.textMedium : colors.success }} 
+            textColor={colors.white}
+            disabled={currentApp.tenantDbStatus === 'Payment Review'} 
           >
-            Submit Next Payment
-          </Button>
+          {currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment'}
+        </Button>
         </Card.Content>
       </Card>
 
@@ -230,6 +249,34 @@ export const TenantView = ({ currentApp, paymentData, setPaymentData, submitRene
               ₱{currentApp.paymentAmount ? Number(currentApp.paymentAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00"}
             </Text>
           </View>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+            {permitUri && (
+              <Button mode="outlined" icon="file-document" onPress={() => Linking.openURL(permitUri)} style={{ flex: 1, marginRight: 5, borderColor: colors.success }} textColor={colors.success}>
+                View Permit
+              </Button>
+            )}
+            {contractUri && (
+              <Button mode="outlined" icon="file-sign" onPress={() => Linking.openURL(contractUri)} style={{ flex: 1, marginLeft: 5, borderColor: colors.success }} textColor={colors.success}>
+                View Contract
+              </Button>
+            )}
+          </View>
+
+          {(communityTaxUri || policeClearanceUri) && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+              {communityTaxUri && (
+                <Button mode="outlined" icon="file-document" onPress={() => Linking.openURL(communityTaxUri)} style={{ flex: 1, marginRight: 5, borderColor: colors.success }} textColor={colors.success}>
+                  Community Tax
+                </Button>
+              )}
+              {policeClearanceUri && (
+                <Button mode="outlined" icon="shield-check" onPress={() => Linking.openURL(policeClearanceUri)} style={{ flex: 1, marginLeft: 5, borderColor: colors.success }} textColor={colors.success}>
+                  Police Clearance
+                </Button>
+              )}
+            </View>
+          )}
          
           {receiptImageUri ? (
             <View style={{ marginTop: 5 }}>

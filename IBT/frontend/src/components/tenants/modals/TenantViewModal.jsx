@@ -121,8 +121,8 @@ const TenantViewModal = ({ viewRow, onClose }) => {
 
   const getFullUrl = (filename) => {
     if (!filename) return null;
-    if (filename.startsWith('http')) return filename;
-    return `${API_URL}/files/${filename}`; 
+    if (filename.startsWith("data:") || filename.startsWith("http")) return filename;
+    return `${API_URL}/stalls/doc/${filename}`; 
   };
 
   const documentList = [
@@ -134,6 +134,17 @@ const TenantViewModal = ({ viewRow, onClose }) => {
     { key: 'communityTax', label: "Community Tax", url: getFullUrl(viewRow.documents?.communityTax || viewRow.communityTaxUrl) },
     { key: 'policeClearance', label: "Police Clearance", url: getFullUrl(viewRow.documents?.policeClearance || viewRow.policeClearanceUrl) }
   ].filter(doc => doc.url);
+
+  const parseFeeBreakdown = (data) => {
+    if (!data) return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" };
+    if (typeof data === 'string') {
+        try { return JSON.parse(data); } 
+        catch (e) { return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" }; }
+    }
+    return data;
+  };
+
+  const feeBreakdown = parseFeeBreakdown(viewRow.feeBreakdown);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -174,12 +185,24 @@ const TenantViewModal = ({ viewRow, onClose }) => {
           <section>
             <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Financial Details
+              Financial Breakdown
             </h4>
-            <div className="grid grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <Field label="Rent Amount" value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString()}` : "₱0.00"} />
-                <Field label="Utility Fee" value={viewRow.utilityAmount ? `₱${Number(viewRow.utilityAmount).toLocaleString()}` : "₱0.00"} />
-                <Field label="Total Due" value={viewRow.totalAmount ? `₱${Number(viewRow.totalAmount).toLocaleString()}` : "₱0.00"} />
+            <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
+              <Field label="Monthly Rent" value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString()}` : "₱0.00"} />
+              <Field label="Garbage Fee" value={`₱${Number(feeBreakdown.garbageFee || 0).toLocaleString()}`} />
+              <Field label="Permit Fee" value={`₱${Number(feeBreakdown.permitFee || 0).toLocaleString()}`} />
+              <Field label="Business Taxes" value={`₱${Number(feeBreakdown.businessTaxes || 0).toLocaleString()}`} />
+              <Field label="Electricity" value={`₱${Number(feeBreakdown.electricity || 0).toLocaleString()}`} />
+              <Field label="Water" value={`₱${Number(feeBreakdown.water || 0).toLocaleString()}`} />
+              <Field label="Others (Amount)" value={`₱${Number(feeBreakdown.otherAmount || 0).toLocaleString()}`} />
+      
+              <div className="md:col-span-2">
+                <Field label="Others (Specify)" value={feeBreakdown.otherSpecify || "N/A"} />
+              </div>
+
+              <div className="md:col-start-3 bg-emerald-50 p-2 rounded border border-emerald-100">
+                <Field label="Total Amount Due" value={viewRow.totalAmount ? `₱${Number(viewRow.totalAmount).toLocaleString()}` : "₱0.00"} />
+              </div>
             </div>
           </section>
 
@@ -197,17 +220,21 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             {documentList.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {documentList.map((doc) => (
-                    <div key={doc.key} className="relative aspect-square bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-emerald-400 transition-all">
-                    
-                      <DecryptedDocument url={doc.url} label={doc.label} />
-                      
-                      <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-100 py-2 px-1 pointer-events-none">
-                          <p className="text-[10px] font-bold text-center text-slate-700 truncate">
-                              {doc.label}
-                          </p>
-                      </div>
+                      <div 
+                          key={doc.key} 
+                          onClick={() => window.open(doc.url, '_blank')}
+                          className="relative aspect-square bg-white rounded-xl border border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:shadow-md hover:border-emerald-400 transition-all group"
+                          title={`Click to View ${doc.label}`}
+                        >
+                        <FileText size={32} className="text-emerald-500 mb-2 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-bold text-center text-slate-700 truncate px-2 w-full">
+                        {doc.label}
+                        </span>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center rounded-xl">
+                      <Eye className="text-slate-700 opacity-0 group-hover:opacity-100 drop-shadow-md transform scale-75 group-hover:scale-100 transition-all" size={24} />
                     </div>
-                  ))}
+                  </div>
+                ))}
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center py-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-slate-400">

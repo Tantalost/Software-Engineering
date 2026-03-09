@@ -327,22 +327,16 @@ const TenantLease = () => {
                 slotLabels.push(`A-${101 + i}`);
             }
         } else {
-
-            const nmNumbers = [
-                32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18,
-                17, 16, 15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
-                33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-                48, 49, 50, 51, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64
-            ];
-            totalSlots = nmNumbers.length;
-            nmNumbers.forEach(num => slotLabels.push(`NM-${num.toString().padStart(2, '0')}`));
+            totalSlots = 64;
+            for (let i = 1; i <= totalSlots; i++) {
+                slotLabels.push(`NM-${i.toString().padStart(2, '0')}`);
+            }
         }
 
         const countedTenantIds = new Set();
 
         slotLabels.forEach(slotLabel => {
             const tenant = records.find(r =>
-
                 (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) &&
                 (activeTab === "permanent" ? (r.tenantType === "Permanent" || !r.tenantType) : r.tenantType === "Night Market")
             );
@@ -1078,6 +1072,8 @@ const TenantLease = () => {
 
     const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
+    const renewalsPendingCount = records.filter(t => t.status === "Payment Review" || t.status === "PAYMENT_REVIEW").length;
+
     return (
         <Layout title="Tenants/Lease Management">
             <div className="mb-6">
@@ -1193,6 +1189,21 @@ const TenantLease = () => {
                     )}
                 </div>
             </div>
+
+            {renewalsPendingCount > 0 && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between animate-in fade-in">
+                    <div className="flex items-center gap-2 text-amber-700">
+                        <ClipboardList size={20} />
+                        <span className="font-semibold">Action Required: You have {renewalsPendingCount} pending lease renewal(s) awaiting payment verification.</span>
+                    </div>
+                    <button 
+                        onClick={() => setActiveStatus("Payment Review")} 
+                        className="px-4 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-bold transition-colors cursor-pointer"
+                    >
+                    View Renewals
+                    </button>
+                </div>
+            )}
 
             <Table
                 columns={tableColumns}

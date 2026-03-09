@@ -159,7 +159,8 @@ export const getMyApplication = async (req, res) => {
             }
             
             const tenantData = {
-                status: 'TENANT',
+                status: 'TENANT', 
+                tenantDbStatus: tenant.status, 
                 start: tenant.StartDateTime,
                 due: calcDue,
                 rentAmount: calcRent,
@@ -170,7 +171,13 @@ export const getMyApplication = async (req, res) => {
                 paymentHistory: tenant.paymentHistory || [], 
                 paymentReference: tenant.referenceNo, 
                 paymentAmount: tenant.totalAmount || tenant.rentAmount,
-                receiptUrl: tenant.documents?.proofOfReceipt || ""
+                receiptUrl: tenant.documents?.proofOfReceipt || "",
+   
+                permitUrl: tenant.documents?.businessPermit || "",
+                validIdUrl: tenant.documents?.validID || "",
+                contractUrl: tenant.documents?.contract || "",
+                communityTaxUrl: tenant.documents?.communityTax || "", 
+                policeClearanceUrl: tenant.documents?.policeClearance || "" 
             };
 
             if (existingAppIndex >= 0) {
