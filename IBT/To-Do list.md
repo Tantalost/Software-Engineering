@@ -23,7 +23,13 @@ fix the otp verification for each admin per module (same flow as logging in supe
 
 
 
-
+To do
+For Admin Specific Accounts
+- Each Table Actions, Logs, and notifications should be filtered. Only specific admins can access and knows sa mga transactions is yung between superadmin and admin per module. 
+- Other admins should not be able to view another admins workflow.
+- If a admin were to click the edit button on the Table Action, there should be a password(same as the login) that will be inputted by that specific admin
+- If a admin will be deleting a specific data that they added, instead of immideate it will be send to the superadmin to view. So that there is verification.
+- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
 
 
 
