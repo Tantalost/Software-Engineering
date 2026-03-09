@@ -640,7 +640,7 @@ const Dashboard = () => {
           `Php ${Number(s.rawValue).toLocaleString()}`,
           `Php ${Math.round(targetVal).toLocaleString()}`,
           `${percentReached}% of Target`,
-        ];
+        ])
       });
 
       worksheet.addRow([]); // Spacer
