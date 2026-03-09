@@ -10,7 +10,7 @@ iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, o
 
 (Alviar)
 Admin Login Page (Faint IBT coverpage layout)
-- layout revised 🔴 **To be Fixed**
+- layout revised 🟢 **Done**
 
 (Steph) 🔴 **To be Fixed**
 Mobile:

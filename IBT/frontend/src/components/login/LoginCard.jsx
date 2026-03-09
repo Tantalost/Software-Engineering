@@ -17,7 +17,7 @@ export default function LoginCard({
   error,
   // Optional customization
   emailLabel = "Email Address",
-  emailPlaceholder = "admin@example.com",
+  emailPlaceholder = "admin@gmail.com",
   emailIcon = "Mail",
   emailDisabled = false,
   passwordLabel = "Password",
@@ -39,14 +39,15 @@ export default function LoginCard({
       >
         <div
           className="
-            relative
-            w-150 
-            bg-white
-            rounded-2xl sm:rounded-3xl 
-            shadow-xl 
-            border border-gray-100
-            px-6 py-8 sm:px-12 sm:py-12 lg:px-16 lg:py-14
-          "
+          relative
+          w-150
+          bg-white/30
+          backdrop-blur-xl
+          rounded-2xl sm:rounded-3xl
+          shadow-2xl shadow-emerald-500/10
+          border border-white/20
+          px-6 py-8 sm:px-12 sm:py-12 lg:px-16 lg:py-14
+          animate-fadeIn"
         >
           <div className="text-center mb-8 lg:mb-10">
             <div
@@ -56,14 +57,12 @@ export default function LoginCard({
                 bg-gradient-to-br from-teal-500 to-emerald-500 
                 rounded-full mb-4 shadow-md text-white overflow-hidden"
             >
-              <div className="flex items-center justify-center">
-                 {icon}
-              </div>
+              <div className="flex items-center justify-center">{icon}</div>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
               {title}
             </h1>
-            <p className="text-gray-500 text-sm sm:text-base lg:text-lg mt-2">
+            <p className="text-white text-sm sm:text-base lg:text-lg mt-2">
               {subtitle}
             </p>
           </div>
@@ -91,7 +90,9 @@ export default function LoginCard({
                 value={password}
                 onChange={setPassword}
                 showPassword={showPasswordToggle ? showPassword : false}
-                setShowPassword={showPasswordToggle ? setShowPassword : () => {}}
+                setShowPassword={
+                  showPasswordToggle ? setShowPassword : () => {}
+                }
                 icon={passwordIcon}
                 placeholder={passwordPlaceholder}
               />
