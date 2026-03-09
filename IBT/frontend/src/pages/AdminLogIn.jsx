@@ -227,7 +227,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       <LoginBackground />
       <form onSubmit={getSubmitHandler()} className="z-10 relative">
         
@@ -242,7 +242,7 @@ export default function AdminLogin() {
             handleSubmit={handleCredentialsSubmit}
             isLoading={isLoading}
             error={error}
-            buttonText="Continue"
+            buttonText="Login"
             footer={
               showResetButton && (
                 <div className="flex justify-center pt-2">
@@ -250,7 +250,7 @@ export default function AdminLogin() {
                     type="button" 
                     onClick={handleForgotPasswordTrigger} 
                     disabled={isLoading} 
-                    className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors"
+                    className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors cursor-pointer"
                   >
                     Forgot Password?
                   </button>
@@ -262,7 +262,7 @@ export default function AdminLogin() {
 
         {step === "2FA_OTP" && (
           <LoginCard 
-            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain cursor-pointer" />}
             title="OTP Verification" 
             subtitle={successMsg || "Enter the OTP sent to your email to complete login"}
             email={email} setEmail={setEmail} emailDisabled={true}
@@ -273,8 +273,8 @@ export default function AdminLogin() {
             buttonText="Verify OTP"
             footer={
               <div className="flex items-center justify-between pt-2">
-                <button type="button" onClick={handleBackToLogin} disabled={isLoading} className="text-sm font-semibold text-slate-400 hover:text-white transition-colors">Back</button>
-                <button type="button" onClick={handleResendOtp} disabled={isLoading} className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors">Resend OTP</button>
+                <button type="button" onClick={handleBackToLogin} disabled={isLoading} className="text-sm font-semibold text-white hover:text-emerald-500 transition-colors cursor-pointer">Back</button>
+                <button type="button" onClick={handleResendOtp} disabled={isLoading} className="text-sm font-semibold text-white hover:text-emerald-500 transition-colors cursor-pointer">Resend OTP</button>
               </div>
             }
           />
@@ -282,7 +282,7 @@ export default function AdminLogin() {
 
         {step === "FORGOT_OTP" && (
           <LoginCard 
-            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain cursor-pointer" />}
             title="Password Reset" 
             subtitle={successMsg || "Enter the 6-digit code sent to your email"}
             email={email} setEmail={setEmail} emailDisabled={true}
@@ -293,8 +293,8 @@ export default function AdminLogin() {
             buttonText="Verify Code"
             footer={
               <div className="flex items-center justify-between pt-2">
-                <button type="button" onClick={handleBackToLogin} disabled={isLoading} className="text-sm font-semibold text-slate-400 hover:text-white transition-colors">Back to Login</button>
-                <button type="button" onClick={handleForgotPasswordTrigger} disabled={isLoading} className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors">Resend Code</button>
+                <button type="button" onClick={handleBackToLogin} disabled={isLoading} className="text-sm font-semibold text-white hover:text-emerald-500 transition-colors cursor-pointer">Back to Login</button>
+                <button type="button" onClick={handleForgotPasswordTrigger} disabled={isLoading} className="text-sm font-semibold text-white hover:text-emerald-500 transition-colors cursor-pointer">Resend Code</button>
               </div>
             }
           />

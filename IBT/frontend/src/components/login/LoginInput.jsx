@@ -23,7 +23,7 @@ export default function LoginInput({
 
   return (
     <div className="w-full">
-      <label className="block text-gray-700 font-medium text-sm mb-2 ml-1">
+      <label className="block text-white font-medium text-sm mb-2 ml-1">
         {label}
       </label>
       <div className="relative group">
