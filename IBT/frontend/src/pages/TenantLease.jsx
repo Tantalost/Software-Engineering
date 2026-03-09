@@ -1197,7 +1197,7 @@ const TenantLease = () => {
                         <span className="font-semibold">Action Required: You have {renewalsPendingCount} pending lease renewal(s) awaiting payment verification.</span>
                     </div>
                     <button 
-                        onClick={() => setActiveStatus("Payment Review")} 
+                        onClick={() => setShowWaitlistModal(true)}
                         className="px-4 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-bold transition-colors cursor-pointer"
                     >
                     View Renewals
@@ -1244,21 +1244,9 @@ const TenantLease = () => {
                     if (isSelectionMode) return null;
                     const fullRecord = records.find(r => r.id === row.id);
 
-                    const isPaymentReview = fullRecord?.status === "Payment Review" || fullRecord?.status === "PAYMENT_REVIEW";
-
                     return (
                         <div className="flex justify-end items-center space-x-2">
 
-                            {isPaymentReview && (
-                                <button
-                                    onClick={() => { setReviewData(fullRecord); setShowReviewModal(true); }}
-                                    className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all cursor-pointer"
-                                    title="Review Renewal Payment"
-                                >
-                                    <ClipboardList size={16} />
-                                </button>
-                            )}
-                            
                             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
                             <button
                                 onClick={() => handleSingleExportPDF(fullRecord)}
@@ -1301,6 +1289,13 @@ const TenantLease = () => {
                 onAdd={handleAddToWaitlist}
                 onApprove={handleStartApproval}
                 onReject={handleRejectApplicant}
+
+                renewalsData={records.filter(t => t.status === "Payment Review" || t.status === "PAYMENT_REVIEW")}
+                onReviewRenewal={(record) => {
+                    setReviewData(record);
+                    setShowWaitlistModal(false);
+                    setShowReviewModal(true);
+                }}
             />
 
             <TenantEmailModal
