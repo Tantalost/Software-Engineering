@@ -36,11 +36,11 @@ const Dashboard = () => {
     return saved
       ? JSON.parse(saved)
       : {
-          tickets: 5000,
-          bus: 4000,
-          tenants: 10000,
-          parking: 3000,
-        };
+        tickets: 5000,
+        bus: 4000,
+        tenants: 10000,
+        parking: 3000,
+      };
   });
 
   const [toast, setToast] = useState({
@@ -640,7 +640,8 @@ const Dashboard = () => {
           `Php ${Number(s.rawValue).toLocaleString()}`,
           `Php ${Math.round(targetVal).toLocaleString()}`,
           `${percentReached}% of Target`,
-        ])
+        ]
+        );
       });
 
       worksheet.addRow([]); // Spacer
