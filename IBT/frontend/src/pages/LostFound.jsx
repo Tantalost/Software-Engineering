@@ -591,7 +591,7 @@ const LostFound = () => {
     }));
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = async () => {
     if (filtered.length === 0) {
       showToast("info", "No records to export.");
       return;
