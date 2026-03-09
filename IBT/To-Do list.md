@@ -8,31 +8,11 @@ Color Coding
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
-Bus Trips
-- Add toast message after mag save ng new input Price. 🔴 **To be Fixed**
-
-Revisions for web general 
-- dashboard export format 🔴 **To be Fixed**
-
-(Jayna)
-
-(Ven)
-NEW TO DO LIST (Parking Module)
-Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🔴 **To be Fixed**
-
 (Alviar)
-Admin Login Page
+Admin Login Page (Faint IBT coverpage layout)
 - layout revised 🔴 **To be Fixed**
 
-(Steph) 🟢 **Done**
-Next payment due details (Tenant List Module) 🟢 **Done**
-- Date 
-- next amount to be paid
-- add button for send payment receipt so that if the user is already paid it will shows in the payment record history
-UI fix: 
-- Add tenant Modal - add progress bar for uploading docs
-- UI layout in view modal same as the layout in the editTenantLease modal in Financial breakdown section
-- can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
+(Steph) 🔴 **To be Fixed**
 Bus Schedule: Change the order when the bus arrives, it should be Arrived then the status. Status is Arrived and Departed
 Mobile:
 Tenant Application on Payment Submit Web images dissapears, same with contract. Also for Confirmation all images dissapear
@@ -44,6 +24,26 @@ Add notificatiions in mobile module 🔴 **To be Fixed**
 Mobile 
 Dashboard: Change Icon to Logo not Bus
 Lost and Found: Remove Description and swap it with Item Type, Fix the order in descding. If claimed remove it, only unclaimed should be visible
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 🟢 **Done**
@@ -164,3 +164,22 @@ NEW TO DO LIST (Report Module)
 View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
 Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
 Add "X" icon button sa view modal 🟢 **Done**
+
+Next payment due details (Tenant List Module) 🟢 **Done**
+- Date 
+- next amount to be paid
+- add button for send payment receipt so that if the user is already paid it will shows in the payment record history
+UI fix: 
+- Add tenant Modal - add progress bar for uploading docs
+- UI layout in view modal same as the layout in the editTenantLease modal in Financial breakdown section
+- can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
+
+Bus Trips
+- Add toast message after mag save ng new input Price. 🟢 **Done**
+
+Revisions for web general 
+- dashboard export format 🟢 **Done**
+
+(Ven)
+NEW TO DO LIST (Parking Module)
+Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🟢 **Done**
