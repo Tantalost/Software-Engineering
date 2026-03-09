@@ -11,7 +11,7 @@ iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, o
 (Alviar)
 Admin Login Page (Faint IBT coverpage layout)
 - layout revised 🟢 **Done**
-- fix date filter dapat di maka select ng future date
+- fix date filter dapat di maka select ng future date 🟢 **Done**
 
 (Lloyd) 
 Add notificatiions in mobile module 🔴 **To be Fixed**

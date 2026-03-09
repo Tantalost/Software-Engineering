@@ -65,6 +65,8 @@ const BusParkingFilters = ({
             dateFormat="yyyy-MM-dd"
             placeholderText="Select date"
             isClearable
+            maxDate={new Date()}
+            onKeyDown={(e) => e.preventDefault()}
             className="outline-none text-gray-700 text-sm w-full cursor-pointer hover:text-emerald-600 focus:text-emerald-600 transition-colors bg-transparent border-none"
             wrapperClassName="w-full"
           />

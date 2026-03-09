@@ -1076,27 +1076,6 @@ const LostFound = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Description
-                  </label>
-                  <div className="relative">
-                    <FileText
-                      size={16}
-                      className="absolute left-3 top-3 text-slate-400"
-                    />
-                    <textarea
-                      value={newItem.description}
-                      onChange={(e) =>
-                        setNewItem({ ...newItem, description: e.target.value })
-                      }
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                      placeholder="Detailed description of the item..."
-                      required
-                    />
-                  </div>
-                </div>
-
                 <input type="hidden" name="status" value={newItem.status} />
               </div>
               <div className="flex gap-3 mt-6">

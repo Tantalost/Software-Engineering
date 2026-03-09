@@ -38,12 +38,17 @@ const EditLostFound = ({ row, onClose, onSave }) => {
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Input label="Tracking No" value={form.trackingNo} onChange={(e) => set("trackingNo", e.target.value)} />
+          <Input
+            label="Tracking No"
+            value={form.trackingNo}
+            onChange={(e) => set("trackingNo", e.target.value)}
+          />
 
-          <Input label="DateTime" value={form.dateTime} onChange={(e) => set("dateTime", e.target.value)} />
-          <div className="md:col-span-2">
-            <Input label="Description" value={form.description} onChange={(e) => set("description", e.target.value)} />
-          </div>
+          <Input
+            label="DateTime"
+            value={form.dateTime}
+            onChange={(e) => set("dateTime", e.target.value)}
+          />
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
