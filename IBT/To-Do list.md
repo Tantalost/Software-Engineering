@@ -4,33 +4,24 @@ Color Coding
 🟢 **Done**
 
 
-
-Revisions for web general 
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟢 **Done**
-
 🔴 **To be Fixed**
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
 Bus Trips
-- Add toast message after mag save ng new input Price.
+- Add toast message after mag save ng new input Price. 🔴 **To be Fixed**
 
 Revisions for web general 
 - dashboard export format 🔴 **To be Fixed**
 
 (Jayna)
-NEW TO DO LIST (Report Module)
-View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
-Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
 
 (Ven)
 NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🔴 **To be Fixed**
-Add "X" icon button sa view modal 🔴 **To be Fixed**
+Add "X" icon button sa view modal 🟢 **Done**
 
 (Alviar)
-NEW TO DO LISTS (Terminal Fee Module)
-Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🟢 **Done**
 Admin Login Page
 - layout revised 🔴 **To be Fixed**
 
@@ -43,10 +34,15 @@ UI fix:
 - Add tenant Modal - add progress bar for uploading docs
 - UI layout in view modal same as the layout in the editTenantLease modal in Financial breakdown section
 - can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
+Bus Schedule: Change the order when the bus arrives, it should be Arrived then the status. Status is Arrived and Departed
+Tenant Fix pls
+
 
 (Lloyd) 
 Add notificatiions in mobile module 🔴 **To be Fixed**
-test
+Mobile 
+Dashboard: Change Icon to Logo not Bus
+Lost and Found: Remove Description and swap it with Item Type, Fix the order in descding. If claimed remove it, only unclaimed should be visible
 
 
 🟢 **Done**
@@ -156,3 +152,13 @@ Add "X" icon button sa view modal 🟢 **Done**
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 🟢 **Done**
 - send email in the tenants table if its working or not , needed to be fix 🟢 **Done**
 - add set price for permanent slot. 🟢 **Done**
+
+NEW TO DO LISTS (Terminal Fee Module)
+Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🟢 **Done**
+
+Revisions for web general 
+- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟢 **Done**
+
+NEW TO DO LIST (Report Module)
+View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
+Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
