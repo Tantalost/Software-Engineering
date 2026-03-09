@@ -1,4 +1,3 @@
-import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useState, useEffect } from 'react';
 import { 
   ScrollView, 
@@ -129,7 +128,11 @@ export default function Dashboard() {
               <Card.Content>
                 <View style={styles.postHeader}>
                   <View style={styles.avatarBorder}>
-                    <Avatar.Icon size={28} icon="bus" style={styles.postAvatar} color="#1B5E20" />
+                    <Avatar.Image
+                      size={32}
+                      source={require('../../assets/images/ibt SC.png')}
+                      style={styles.postAvatar}
+                    />
                   </View>
                   <View>
                     <Text style={styles.sourceText}>{item.source}</Text>

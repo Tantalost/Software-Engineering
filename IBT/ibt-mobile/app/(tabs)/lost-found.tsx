@@ -65,27 +65,30 @@ export default function LostFoundPage() {
 
 
   const filteredItems = useMemo(() => {
-    let data = lostItems;
-
+    // Start from unclaimed, non-archived items only
+    let data = lostItems.filter(
+      (item) => item.status === 'Unclaimed' && !item.isArchived
+    );
 
     if (activeItemId) {
-      return data.filter(item => item._id === activeItemId);
+      return data.filter((item) => item._id === activeItemId);
     }
-
 
     if (searchQuery.trim()) {
       const searchLower = searchQuery.toLowerCase();
       data = data.filter((item) =>
         item.trackingNo.toLowerCase().includes(searchLower) ||
-        item.description.toLowerCase().includes(searchLower) ||
-        item.location.toLowerCase().includes(searchLower)
+        item.location.toLowerCase().includes(searchLower) ||
+        item.itemType?.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower)
       );
     }
 
-    return data;
-
-  },
-   [lostItems, searchQuery, activeItemId]);
+    // Sort newest first by dateTime (descending)
+    return [...data].sort(
+      (a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
+    );
+  }, [lostItems, searchQuery, activeItemId]);
 
   if (loading) {
     return (

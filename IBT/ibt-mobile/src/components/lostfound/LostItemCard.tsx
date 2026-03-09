@@ -43,9 +43,12 @@ export default function LostItemCard({ item }: Props) {
 
         <View style={styles.divider} />
 
-        <Text variant="bodyMedium" style={styles.description} numberOfLines={2}>
-          {item.description}
-        </Text>
+        <View style={styles.detailRow}>
+          <Icon name="tag-outline" size={16} color="#555" style={{ marginRight: 6 }} />
+          <Text variant="bodyMedium" style={styles.description} numberOfLines={2}>
+            {item.itemType || 'Item'}
+          </Text>
+        </View>
 
         <View style={styles.locationContainer}>
           <View style={styles.locationIconBg}>
@@ -117,10 +120,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
     marginBottom: 12,
   },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   description: {
     color: '#444',
     lineHeight: 22,
-    marginBottom: 16,
+    marginBottom: 0,
     fontSize: 15,
   },
   locationContainer: {
