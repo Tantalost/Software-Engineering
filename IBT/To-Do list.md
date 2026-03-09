@@ -36,7 +36,8 @@ UI fix:
 Bus Schedule: Change the order when the bus arrives, it should be Arrived then the status. Status is Arrived and Departed
 Mobile:
 Tenant Application on Payment Submit Web images dissapears, same with contract. Also for Confirmation all images dissapear
-
+Submitting New payment has the receipt photo already uploaded even without uploading
+Payment Record History doesnt have the date of the payment
 
 (Lloyd) 
 Add notificatiions in mobile module 🔴 **To be Fixed**
