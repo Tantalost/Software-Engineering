@@ -19,7 +19,6 @@ Revisions for web general
 (Ven)
 NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🔴 **To be Fixed**
-Add "X" icon button sa view modal 🟢 **Done**
 
 (Alviar)
 Admin Login Page
@@ -35,7 +34,8 @@ UI fix:
 - UI layout in view modal same as the layout in the editTenantLease modal in Financial breakdown section
 - can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
 Bus Schedule: Change the order when the bus arrives, it should be Arrived then the status. Status is Arrived and Departed
-Tenant Fix pls
+Mobile:
+Tenant Application on Payment Submit Web images dissapears, same with contract. Also for Confirmation all images dissapear
 
 
 (Lloyd) 
@@ -162,3 +162,4 @@ Revisions for web general
 NEW TO DO LIST (Report Module)
 View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
 Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
+Add "X" icon button sa view modal 🟢 **Done**
