@@ -250,7 +250,7 @@ export default function AdminLogin() {
                     type="button" 
                     onClick={handleForgotPasswordTrigger} 
                     disabled={isLoading} 
-                    className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors cursor-pointer"
+                    className="text-sm font-semibold text-white-500 hover:text-white-400 transition-colors cursor-pointer"
                   >
                     Forgot Password?
                   </button>
