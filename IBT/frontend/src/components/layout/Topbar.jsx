@@ -55,9 +55,18 @@ const Topbar = ({ title, onMenuClick }) => {
     return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
   };
 
-  const showToast = (type, message) => {
-    setToast({ isOpen: true, type, message });
-    setTimeout(() => setToast({ isOpen: false, type: 'success', message: '' }), 3000);
+  const handleMarkAsRead = async (notifId) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
+      await fetch(`${baseUrl}/api/notifications/${notifId}/read`, {
+        method: 'PUT'
+      });
+      // Update local state
+      setNotifications(prev => prev.map(n => n.id === notifId || n._id === notifId ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
   const fetchNotifications = async () => {
@@ -232,17 +241,17 @@ const Topbar = ({ title, onMenuClick }) => {
     const title = (notif.title || "").toLowerCase();
 
     if (source.includes("terminal") || title.includes("terminal")) {
-      route = "/api/terminal-fees";
+      route = "/terminal-fees";
     } else if (source.includes("bus") || title.includes("bus")) {
-      route = "/api/bus-trips";
+      route = "/bus-trips";
     } else if (source.includes("lost") || title.includes("lost")) {
-      route = "/api/lost-found";
+      route = "/lost-found";
     } else if (source.includes("parking") || title.includes("parking")) {
-      route = "/api/parking";
+      route = "/parking";
     } else if (source.includes("tenant") || title.includes("tenant")) {
-      route = "/api/tenants";
+      route = "/tenants";
     } else if (title.includes("deletion request")) {
-      route = "/api/deletion-requests";
+      route = "/deletion-requests";
     }
     navigate(route);
   };
