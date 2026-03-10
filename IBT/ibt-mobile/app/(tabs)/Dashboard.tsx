@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ScrollView, 
   StyleSheet,  
@@ -6,7 +6,8 @@ import {
   Image,
   ActivityIndicator,
   Dimensions,
-  TouchableOpacity 
+  TouchableOpacity,
+  RefreshControl 
 } from 'react-native';
 
 import { Avatar, Card, Text, Searchbar } from 'react-native-paper';
@@ -53,39 +54,45 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); 
 
- 
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewerImages, setViewerImages] = useState<{uri: string}[]>([]);
 
-  useEffect(() => {
-    const fetchBroadcasts = async () => {
-      try {
-        const cleanUrl = API_URL.replace(/\/$/, '');
-        const response = await fetch(`${cleanUrl}/broadcasts`);
-        
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          const data = await response.json();
-          setNewsItems(data);
-        } else {
-          const errorText = await response.text();
-          console.error("CRITICAL: Backend returned HTML instead of JSON. Here is the response:", errorText.substring(0, 150));
-          setNewsItems([]); 
-        }
-      } catch (error) {
-        console.error("Network error fetching broadcasts:", error);
-      } finally {
-        setLoading(false);
+  
+  const fetchBroadcasts = async () => {
+    try {
+      const cleanUrl = API_URL.replace(/\/$/, '');
+      const response = await fetch(`${cleanUrl}/broadcasts`);
+      
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
+        setNewsItems(data);
+      } else {
+        const errorText = await response.text();
+        console.error("CRITICAL: Backend returned HTML instead of JSON. Here is the response:", errorText.substring(0, 150));
+        setNewsItems([]); 
       }
-    };
+    } catch (error) {
+      console.error("Network error fetching broadcasts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchBroadcasts();
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchBroadcasts();
+    setRefreshing(false);
+  }, []);
+
   const openImageViewer = (attachments: Attachment[], tappedMediaUri: string) => {
-   
     const imagesOnly = attachments.filter(a => a.type === 'image');
     
     const formattedImages = imagesOnly.map(img => ({
@@ -107,7 +114,6 @@ export default function Dashboard() {
 
         <Searchbar
           placeholder="Search announcements..."
-          
           style={styles.searchBar} 
           inputStyle={styles.searchInput} 
           value={searchQuery} 
@@ -115,10 +121,21 @@ export default function Dashboard() {
           iconColor="#1B5E20"
           cursorColor={'#0000008e'}
         />
- 
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+       
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={['#1B5E20']} 
+            tintColor="#1B5E20" 
+          />
+        }
+      >
         
         {loading ? (
            <ActivityIndicator size="large" color="#1B5E20" style={{ marginTop: 50 }} />
@@ -197,6 +214,7 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
+  
   container: { flex: 1, backgroundColor: '#F9F9F9' },
   scrollContent: { padding: 20, paddingBottom: 100 },
   feedTitle: { fontSize: 28, fontWeight: '900', color: '#000', marginBottom: 20, marginTop: 10 },
@@ -260,6 +278,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   }
-
-  
 });
