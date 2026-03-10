@@ -11,13 +11,6 @@ import {
 
 const router = express.Router();
 
-
-router.get('/', getBroadcasts);
-
-router.get('/admin', getAdminBroadcasts);
-router.put('/:id', uploadMiddleware, updateBroadcast);
-router.delete('/:id', deleteBroadcast);
-
 const uploadMiddleware = (req, res, next) => {
   const uploadFiles = upload.array('files', 5);
   uploadFiles(req, res, (err) => {
@@ -32,6 +25,12 @@ const uploadMiddleware = (req, res, next) => {
     next();
   });
 };
+
+router.get('/', getBroadcasts);
+
+router.get('/admin', getAdminBroadcasts);
+router.put('/:id', uploadMiddleware, updateBroadcast);
+router.delete('/:id', deleteBroadcast);
 
 router.post('/', uploadMiddleware, createBroadcast);
 

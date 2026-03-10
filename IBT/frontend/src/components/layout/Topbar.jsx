@@ -34,6 +34,10 @@ const Topbar = ({ title, onMenuClick }) => {
   const [postToDelete, setPostToDelete] = useState(null);
   const [toast, setToast] = useState({ isOpen: false, type: 'success', message: '' });
 
+  const showToast = (type, message) => {
+    setToast({ isOpen: true, type, message });
+  };
+
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
