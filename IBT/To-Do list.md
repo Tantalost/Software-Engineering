@@ -8,46 +8,27 @@ Color Coding
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
-(Lloyd) 
-Mobile:
-- Add Push Notificatiions in mobile module 🔴 **To be Fixed**
-- put every 10th of the month for tenant night market
+Revisions for web general 
+- dashboard export format 🔴 **To be Fixed**
 
-Web:
-- Clicking the Notifcation should be redirect to that specific page
+(Alviar)
+NEW TO DO LISTS (Terminal Fee Module)
+Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🔴 **To be Fixed**
+Admin Login Page
+- layout revised 🔴 **To be Fixed**
 
-Login OTP
-- TOKEN
+(Steph) 🔴 **To be Fixed**
+Next payment due details (Tenant List Module) 🔴 **To be Fixed**
+- Date 
+- next amount to be paid
+- add button for send payment receipt so that if the user is already paid it will shows in the payment record history
+UI fix: 
+- Add tenant Modal - add progress bar for uploading docs
+- can't view uploaded documents after the contract review phase, in the add tenant modal.
 
-Manage Employee
-- Hide Super Admin
-
-Reports
-- Date fix date
-
-
-
-(Steph)
-Mobile:
--InnerHTML layout for Download Contract PDF part
--Change Email message layout after the slot was approved
-- Move the edit icon to the profile picture part.
-- Add setting modal and place it in the upper right wherein the edit icon placed before. The following details inside the settings are:
-1. Deactivate Account need confirmation by inputting the current password to deactivate the account
-2. Change password (Need the current password to change new password and it requires OTP in order to reset the password) 
-3. Add Reactivate Feature if the account is deactivated.
-
-(Justin)
-Toast:
-Bus Admin
-- Confirm Departure- Fix the Toast instead of console
-- Bulk Delete - Make it toast fix it so its the same for all
-Terminal Admin:
-- Bulk Delete - Make it toast fix it so its the same for all
-Parking Admin:
-- Bulk Delete - Make it toast fix it so its the same for all
-Deletion Request
-- After Deleting Add Toast
+(Lloyd) 🔴 **To be Fixed**
+- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
+- send email in the tenants table if its working or not , needed to be fix
 
 
 
@@ -155,80 +136,42 @@ NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🟢 **Done**
 Add "X" icon button sa view modal 🟢 **Done**
 
-- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 🟢 **Done**
-- send email in the tenants table if its working or not , needed to be fix 🟢 **Done**
-- add set price for permanent slot. 🟢 **Done**
+SUPER ADMIN
 
-NEW TO DO LISTS (Terminal Fee Module)
-Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🟢 **Done**
+*Dashboard
+Set Target revenue - Not working and di nagsasave ang na set na target
+Notification - Hindi nag reredirect if pindutin ang mga notification
 
-Revisions for web general 
-- Add ng price setting sa Buses, Tickets, and Parking for future if tumaas ang fees. 🟢 **Done**
+*Buses
+view and Edit button - ilagay ulit
 
-NEW TO DO LIST (Report Module)
-View button - dapat scrollable horizontally para di magoverlap ang ibang details sa container. 🟢 **Done**
-Export buttons - adjust the format dapat same pdf format sa lahat ng modules and adjust dapat din yung format excel. 🟢 **Done**
-Add "X" icon button sa view modal 🟢 **Done**
+*Terminal fee
+StatCard (Senior/PWD/Student) - 2x ang add if mag add fee ng senior
 
-Next payment due details (Tenant List Module) 🟢 **Done**
-- Date 
-- next amount to be paid
-- add button for send payment receipt so that if the user is already paid it will shows in the payment record history
-UI fix: 
-- Add tenant Modal - add progress bar for uploading docs
-- UI layout in view modal same as the layout in the editTenantLease modal in Financial breakdown section
-- can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
+*Parking
+Edit button - di nag rereflect sa stat card(Total revenue) pag inedit
 
-Bus Trips
-- Add toast message after mag save ng new input Price. 🟢 **Done**
+*Lost&Found
+Date&Time - Empty ang Data
+Add new - Di maka add 
 
-Revisions for web general 
-- dashboard export format 🟢 **Done**
-
-(Ven)
-NEW TO DO LIST (Parking Module)
-Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🟢 **Done**
+*Manage Employees - 
+sa edit button, dapat may button if magchange role ang admin
 
 
-(Steph) 🟢 **Done**
-Mobile:
-apply an another slot and on review after does not redirect to the specific under review tab slot, it redirect to the 1st tab slot you applied on
-submit payment button desgn - only green border if not tap the button, after it tapped it will turn back to green same adjust also for submit contract button
-when downloading a contract pdf, the users will receive a pdf contract after they the tap button.
+Admins
+- delete icons dapat consistent ang design
+- Remove all Broadcast modal 
+- Archive - Dapat own Data lang ang makita
+- Activity Logs - Ang mga activity na dapat ishow is based sa mga own role lang
+- If mag edit ng Data magrequest muna ng password before ma edit, before mag save changes dapat mag enter ng password.
 
-can't view the uploaded documents after proceeding in add tenant when the user' slot application was approved
-In submit next payment the data should be emptied in order to upload a new receipt for the next due payment since after the slot was approved, there is a data already in this section, and after that it should shows a tiny under review status in the specific due payment details section.
+*Terminal Admin
+StatCard (Senior/PWD/Student) - 2x ang add if mag add fee ng seniors/student
 
-Web side:
-The view modal can't view the uploaded documents same as the edit modal
-The layout of the financial breakdown should be the same layout in the edit modal
+*Lost&Found Admin
+Date&Time - Empty ang Data
+Add new - Di maka add 
 
-after approving the renewal payment review it will update the reference number and shows in the modal and also it updates the due date in the edit modal.
-62 slots in the stat card instead of 64 slots total
-
-Lloyd
-Mobile 
-Dashboard: Change Icon to Logo not Bus 🟢 **Done**
-Lost and Found: Remove Description and swap it with Item Type, Fix the order in descding. If claimed remove it, only unclaimed should be visible 🟢 **Done**
-
-For each admin role
-- Each Table Actions, Logs, and notifications should be filtered. Only specific admins can access and knows sa mga transactions is yung between superadmin and admin per module. 🟢 **Done**
-- Other admins should not be able to view another admins workflow. 🟢 **Done**
-- If a admin were to click the edit button on the Table Action, there should be a password(same as the login) that will be inputted by that specific admin 🟢 **Di ginawa**
-- If a admin will be deleting a specific data that they added, instead of immideate it will be send to the superadmin to view. So that there is verification. 🟢 **Done**
-
-Bus Admin 🟢 **Done**
-- When he will be doing the multiple delete, it should not immediate delete but it will go to the deletion request instead so that the super admin can check.
-- Logs should display only bus changes not other pages
-
-Deletion Request 🟢 **Done**
-- Fix after the superadmin confirms the deleteion request the data that is requested for deletion is still in the admins table.
-
-fix the otp verification for each admin per module (same flow as logging in superadmin part) 🟢 **Done**
-
-(Alviar)
-Admin Login Page (Faint IBT coverpage layout)
-- layout revised 🟢 **Done**
-- fix date filter dapat di maka select ng future date 🟢 **Done**
-
-- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin 🟢 **Done**
+*Buses admin
+view and Edit button - ilagay ulit

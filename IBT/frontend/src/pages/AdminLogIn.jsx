@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import LOGO from "../assets/LOGO.png"; 
+import LOGO from "../assets/LOGO.png";
 import LoginBackground from "../components/login/LoginBackground";
 import LoginCard from "../components/login/LoginCard";
 
@@ -22,16 +22,16 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  
+
   // Multi-step navigation state
   const [step, setStep] = useState("LOGIN"); // 'LOGIN', '2FA_OTP', 'FORGOT_OTP', 'RESET_PASSWORD'
   const [showResetButton, setShowResetButton] = useState(false);
-  
+
   // OTP and Reset States
   const [otp, setOtp] = useState("");
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function AdminLogin() {
   const handleCredentialsSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!email || !password) return setError("Please enter your email and password.");
-    
+
     setError("");
     setSuccessMsg("");
     setIsLoading(true);
@@ -82,7 +82,7 @@ export default function AdminLogin() {
     e.preventDefault();
     const cleanedOtp = String(otp || "").trim();
     if (!cleanedOtp) return setError("Please enter the OTP.");
-    
+
     setError("");
     setIsLoading(true);
 
@@ -131,7 +131,7 @@ export default function AdminLogin() {
       const data = await res.json();
 
       if (!res.ok) return setError(data.message || "Failed to trigger reset.");
-      
+
       setSuccessMsg("Reset code sent to your email.");
       setStep("FORGOT_OTP");
       setOtp("");
@@ -147,7 +147,7 @@ export default function AdminLogin() {
     e.preventDefault();
     const cleanedOtp = String(otp || "").trim();
     if (!cleanedOtp) return setError("Please enter the reset code.");
-    
+
     setError("");
     setSuccessMsg("");
     setIsLoading(true);
@@ -177,7 +177,7 @@ export default function AdminLogin() {
   const handleNewPasswordSubmit = async (e) => {
     e.preventDefault();
     if (!newPassword) return setError("Please enter a new password.");
-    
+
     setError("");
     setIsLoading(true);
 
@@ -227,12 +227,18 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+      <button
+        onClick={() => navigate("/")}
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-white/70 hover:text-white bg-white/10 px-4 py-2 rounded-lg backdrop-blur-md border border-white/20 transition-all"
+      >
+        ← Back to Home
+      </button>
       <LoginBackground />
       <form onSubmit={getSubmitHandler()} className="z-10 relative">
-        
+
         {step === "LOGIN" && (
-          <LoginCard 
+          <LoginCard
             icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
             title="Admin Portal"
             subtitle={successMsg || "Sign in to access your dashboard"}
@@ -246,11 +252,11 @@ export default function AdminLogin() {
             footer={
               showResetButton && (
                 <div className="flex justify-center pt-2">
-                  <button 
-                    type="button" 
-                    onClick={handleForgotPasswordTrigger} 
-                    disabled={isLoading} 
-                    className="text-sm font-semibold text-white hover:text-white transition-colors cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={handleForgotPasswordTrigger}
+                    disabled={isLoading}
+                    className="text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors"
                   >
                     Forgot Password?
                   </button>
@@ -261,14 +267,14 @@ export default function AdminLogin() {
         )}
 
         {step === "2FA_OTP" && (
-          <LoginCard 
-            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain cursor-pointer" />}
-            title="OTP Verification" 
+          <LoginCard
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
+            title="OTP Verification"
             subtitle={successMsg || "Enter the OTP sent to your email to complete login"}
             email={email} setEmail={setEmail} emailDisabled={true}
             password={otp} setPassword={setOtp} passwordType="text"
             passwordLabel="One-time password (OTP)" passwordPlaceholder="Enter 6-digit code" passwordIcon="Key"
-            showPassword={false} setShowPassword={() => {}} showPasswordToggle={false}
+            showPassword={false} setShowPassword={() => { }} showPasswordToggle={false}
             handleSubmit={handle2FAOtpSubmit} isLoading={isLoading} error={error}
             buttonText="Verify OTP"
             footer={
@@ -281,14 +287,14 @@ export default function AdminLogin() {
         )}
 
         {step === "FORGOT_OTP" && (
-          <LoginCard 
-            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain cursor-pointer" />}
-            title="Password Reset" 
+          <LoginCard
+            icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
+            title="Password Reset"
             subtitle={successMsg || "Enter the 6-digit code sent to your email"}
             email={email} setEmail={setEmail} emailDisabled={true}
             password={otp} setPassword={setOtp} passwordType="text"
             passwordLabel="Reset Code (OTP)" passwordPlaceholder="Enter 6-digit code" passwordIcon="Key"
-            showPassword={false} setShowPassword={() => {}} showPasswordToggle={false}
+            showPassword={false} setShowPassword={() => { }} showPasswordToggle={false}
             handleSubmit={handleResetOtpSubmit} isLoading={isLoading} error={error}
             buttonText="Verify Code"
             footer={
@@ -301,9 +307,9 @@ export default function AdminLogin() {
         )}
 
         {step === "RESET_PASSWORD" && (
-          <LoginCard 
+          <LoginCard
             icon={<img src={LOGO} alt="Logo" className="w-full h-full object-contain" />}
-            title="Create New Password" 
+            title="Create New Password"
             subtitle={successMsg || "Your OTP was verified. Please enter a new password."}
             email={email} setEmail={setEmail} emailDisabled={true}
             password={newPassword} setPassword={setNewPassword}

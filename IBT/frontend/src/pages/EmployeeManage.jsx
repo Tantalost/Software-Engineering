@@ -1,15 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/layout/Layout";
 import DeleteModal from "../components/common/DeleteModal";
-import {
-  CheckCircle,
-  XCircle,
-  X,
-  UserX,
-  ShieldCheck,
-  Send,
-} from "lucide-react";
-import NotificationToast from "../components/common/NotificationToast";
+import { CheckCircle, XCircle, X, UserX, ShieldCheck, Send, Eye, EyeOff } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
 
@@ -617,25 +609,35 @@ export default function EmployeeManage() {
   );
 }
 
-const Field = ({
-  label,
-  value,
-  onChange,
-  type = "text",
-  disabled = false,
-  placeholder = "",
-}) => (
-  <div>
-    <label className="mb-1 block text-xs font-medium text-slate-600">
-      {label}
-    </label>
-    <input
-      disabled={disabled}
-      value={value}
-      onChange={onChange}
-      type={type}
-      placeholder={placeholder}
-      className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-emerald-500 transition-colors ${disabled ? "opacity-70" : ""}`}
-    />
-  </div>
-);
+const Field = ({ label, value, onChange, type = "text", disabled = false, placeholder = "" }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    
+    const isPassword = type === "password";
+    const inputType = isPassword ? (isVisible ? "text" : "password") : type;
+
+    return (
+        <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+            <div className="relative">
+                <input 
+                    disabled={disabled} 
+                    value={value} 
+                    onChange={onChange} 
+                    type={inputType} 
+                    placeholder={placeholder} 
+                    className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-10 text-sm text-slate-700 shadow-sm outline-none focus:border-emerald-500 transition-colors ${disabled ? "opacity-70" : ""}`} 
+                />
+                
+                {isPassword && (
+                    <button
+                        type="button"
+                        onClick={() => setIsVisible(!isVisible)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                    >
+                        {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
