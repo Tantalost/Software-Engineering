@@ -62,18 +62,6 @@ const DataRenderer = ({ reportPayload }) => {
     );
   };
 
-  const formatReportDate = (dateStr) => {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
   const renderDataTable = () => {
     if (!Array.isArray(data) || data.length === 0) {
       return (
@@ -137,6 +125,18 @@ const DataRenderer = ({ reportPayload }) => {
     </div>
   );
 };
+
+  const formatReportDate = (dateStr) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
 const Reports = () => {
   const location = useLocation();
