@@ -30,7 +30,7 @@ import BroadcastModal from "../components/tenants/modals/BroadcastModal";
 import ArchiveConfirmModal from "../components/tenants/modals/ArchiveConfirmModal";
 import SubmitReportModal from "../components/tenants/modals/SubmitReportModal";
 
-import { generateRentStatementPDF } from "../utils/tenantUtils";
+import { generateRentStatementPDF, calculateDueAmount } from "../utils/tenantUtils";
 import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
 import { submitPageReport } from "../utils/reportService.js";
@@ -371,7 +371,7 @@ const TenantLease = () => {
                 "Due Date": formatDate(t.DueDateTime || t.EndDateTime),
                 "Rent": t.rentAmount || 0,
                 "Utility": t.utilityAmount || 0,
-                "Total Due": t.totalAmount || 0
+                "Total Due": calculateDueAmount(t)
             }));
 
             const reportPayload = {
@@ -879,7 +879,7 @@ const TenantLease = () => {
             "Due Date": formatDate(t.DueDateTime || t.EndDateTime),
             "Rent Amount": t.rentAmount ? `₱${t.rentAmount}` : "0",
             "Utility Amount": t.utilityAmount ? `₱${t.utilityAmount}` : "0",
-            "Total Due": t.totalAmount ? `₱${t.totalAmount}` : "0",
+            "Total Due": `₱${calculateDueAmount(t)}`,
             "Status": t.status,
         }));
     };
@@ -1015,7 +1015,7 @@ const TenantLease = () => {
                     `Php ${(Number(feeBreakdown.water || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${(Number(feeBreakdown.otherAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `Php ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                    `Php ${calculateDueAmount(t).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                 ]);
             });
 
@@ -1275,7 +1275,7 @@ const TenantLease = () => {
                         duedate: formatDate(t.DueDateTime || t.EndDateTime),
                         rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
                         util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
-                        totaldue: t.totalAmount ? `₱${t.totalAmount.toLocaleString()}` : (t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-"),
+                        totaldue: `₱${calculateDueAmount(t).toLocaleString()}`,
                         status: t.status,
                     };
 
@@ -1452,6 +1452,10 @@ const TenantLease = () => {
                                 throw new Error(errorData.error || "Update failed");
                             }
                             setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
+                            // if status went to overdue, inform the user that an email will be sent
+                            if (editRow?.status !== 'Overdue' && updatedData.status === 'Overdue') {
+                                setNotificationState({ isOpen: true, type: 'info', message: "Tenant marked Overdue; notification email is being sent.", autoClose: true, duration: 4000 });
+                            }
                             await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
                             fetchTenants();
                             setEditRow(null);

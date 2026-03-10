@@ -14,6 +14,20 @@ export const calculateGridPosition = (slotName) => {
   return { row, col };
 };
 
+// compute due amount given a tenant object
+export const calculateDueAmount = (tenant) => {
+  const rent = parseFloat(tenant.rentAmount) || 0;
+  const util = parseFloat(tenant.utilityAmount) || 0;
+  let total = rent + util;
+  if (tenant.status === 'Overdue') {
+    const interest25 = rent * 0.25;
+    const dueBalance = rent + interest25; // rent + 25% interest
+    const interest2 = dueBalance * 0.02; // 2% of due balance
+    total = dueBalance + interest2 + util; // apply utilities on top
+  }
+  return total;
+};
+
 export const generateRentStatementPDF = (mockTenant) => {
   const doc = new jsPDF();
   const themeColor = [16, 185, 129]; 
@@ -28,7 +42,9 @@ export const generateRentStatementPDF = (mockTenant) => {
   doc.text(`Bill To: ${mockTenant.tenantName || mockTenant.name}`, 14, 50); doc.text(`Slot: ${mockTenant.slotNo}`, 14, 56);
   const dateObj = new Date(); doc.text(`Date: ${dateObj.toLocaleDateString()}`, 140, 50);
   
-  const rent = mockTenant.rentAmount || 0; const util = mockTenant.utilityAmount || 0; const total = rent + util;
+  const rent = mockTenant.rentAmount || 0;
+  const util = mockTenant.utilityAmount || 0;
+  const total = calculateDueAmount(mockTenant);
   
   autoTable(doc, {
     startY: 70,

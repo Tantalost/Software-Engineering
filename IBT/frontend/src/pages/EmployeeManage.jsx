@@ -26,16 +26,22 @@ export default function EmployeeManage() {
   const [admins, setAdmins] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({
+    firstName: "",
+    lastName: "",
+    middleName: "",
+    suffix: "",
     email: "",
     password: "",
     role: "parking",
-    name: "",
   });
 
   // Edit State
   const [editTarget, setEditTarget] = useState(null);
   const [editForm, setEditForm] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
+    middleName: "",
+    suffix: "",
     email: "",
     password: "",
     otp: "",
@@ -124,7 +130,7 @@ export default function EmployeeManage() {
   // --- Actions ---
 
   const addAdmin = async () => {
-    if (!createForm.email || !createForm.password || !createForm.name.trim()) {
+    if (!createForm.firstName.trim() || !createForm.lastName.trim() || !createForm.email || !createForm.password) {
       showToast("error", "Please fill in all required fields.");
       return;
     }
@@ -135,7 +141,10 @@ export default function EmployeeManage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: createForm.name.trim(),
+          firstName: createForm.firstName.trim(),
+          lastName: createForm.lastName.trim(),
+          middleName: createForm.middleName.trim() || undefined,
+          suffix: createForm.suffix.trim() || undefined,
           email: createForm.email.trim(),
           role: createForm.role,
           password: createForm.password,
@@ -153,7 +162,7 @@ export default function EmployeeManage() {
         },
       ]);
       setShowCreate(false);
-      setCreateForm({ email: "", password: "", role: "parking", name: "" });
+      setCreateForm({ firstName: "", lastName: "", middleName: "", suffix: "", email: "", password: "", role: "parking" });
       showToast("success", "Admin created successfully.");
     } catch (error) {
       showToast("error", error.message);
@@ -225,7 +234,10 @@ export default function EmployeeManage() {
 
       // Base payload (Name/Email always updateable)
       const payload = {
-        name: editForm.name,
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        middleName: editForm.middleName,
+        suffix: editForm.suffix,
         email: editForm.email,
       };
 
@@ -249,7 +261,7 @@ export default function EmployeeManage() {
       );
       setAdmins(next);
       setEditTarget(null);
-      setEditForm({ name: "", email: "", password: "", otp: "" });
+      setEditForm({ firstName: "", lastName: "", middleName: "", suffix: "", email: "", password: "", otp: "" });
       setOtpSent(false);
 
       showToast("success", "Admin details updated successfully.");
@@ -280,7 +292,10 @@ export default function EmployeeManage() {
   const openEditModal = (admin) => {
     setEditTarget(admin);
     setEditForm({
-      name: admin.name || "",
+      firstName: admin.firstName || "",
+      lastName: admin.lastName || "",
+      middleName: admin.middleName || "",
+      suffix: admin.suffix || "",
       email: admin.email || "",
       password: "",
       otp: "",
@@ -376,10 +391,31 @@ export default function EmployeeManage() {
                 </h3>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <Field
-                    label="Name *"
-                    value={createForm.name}
+                    label="First Name *"
+                    value={createForm.firstName}
                     onChange={(e) =>
-                      setCreateForm({ ...createForm, name: e.target.value })
+                      setCreateForm({ ...createForm, firstName: e.target.value })
+                    }
+                  />
+                  <Field
+                    label="Last Name *"
+                    value={createForm.lastName}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, lastName: e.target.value })
+                    }
+                  />
+                  <Field
+                    label="Middle Name"
+                    value={createForm.middleName}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, middleName: e.target.value })
+                    }
+                  />
+                  <Field
+                    label="Suffix"
+                    value={createForm.suffix}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, suffix: e.target.value })
                     }
                   />
                   <Field
@@ -443,10 +479,31 @@ export default function EmployeeManage() {
                 </h3>
                 <div className="space-y-4">
                   <Field
-                    label="Name"
-                    value={editForm.name}
+                    label="First Name"
+                    value={editForm.firstName}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, name: e.target.value })
+                      setEditForm({ ...editForm, firstName: e.target.value })
+                    }
+                  />
+                  <Field
+                    label="Last Name"
+                    value={editForm.lastName}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, lastName: e.target.value })
+                    }
+                  />
+                  <Field
+                    label="Middle Name"
+                    value={editForm.middleName}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, middleName: e.target.value })
+                    }
+                  />
+                  <Field
+                    label="Suffix"
+                    value={editForm.suffix}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, suffix: e.target.value })
                     }
                   />
                   <Field

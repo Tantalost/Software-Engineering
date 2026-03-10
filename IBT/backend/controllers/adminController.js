@@ -6,7 +6,11 @@ import sendEmail from "../utils/sendEmail.js";
 
 const sanitizeAdmin = (admin) => ({
   id: admin._id,
-  name: admin.name,
+  firstName: admin.firstName,
+  lastName: admin.lastName,
+  middleName: admin.middleName,
+  suffix: admin.suffix,
+  name: `${admin.firstName} ${admin.middleName ? admin.middleName + ' ' : ''}${admin.lastName}${admin.suffix ? ' ' + admin.suffix : ''}`.trim(),
   email: admin.email,
   role: admin.role,
   createdAt: admin.createdAt,
@@ -17,14 +21,14 @@ const sanitizeAdmin = (admin) => ({
 
 export const createAdmin = async (req, res) => {
   try {
-    const { name, email, role, password } = req.body;
-    if (!name || !email || !role || !password) return res.status(400).json({ message: "All fields are required." });
+    const { firstName, lastName, middleName, suffix, email, role, password } = req.body;
+    if (!firstName || !lastName || !email || !role || !password) return res.status(400).json({ message: "All required fields are required." });
 
     const existing = await Admin.findOne({ $or: [{ email: email.toLowerCase() }, { role }] });
     if (existing) return res.status(409).json({ message: "Admin with this email or role already exists." });
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const admin = await Admin.create({ name, email: email.toLowerCase(), role, passwordHash });
+    const admin = await Admin.create({ firstName, lastName, middleName, suffix, email: email.toLowerCase(), role, passwordHash });
 
     return res.status(201).json({ message: "Created successfully.", admin: sanitizeAdmin(admin) });
   } catch (error) {
@@ -73,7 +77,7 @@ export const sendOtp = async (req, res) => {
     await sendEmail({
       email: superAdminEmail, 
       subject: "Admin Account Update Authorization",
-      message: `Authorization Required:\n\nYou are attempting to update the password for admin: ${targetAdmin.name} (${targetAdmin.email}).\n\nYour Verification OTP is: ${otpCode}\n\nIf you did not request this, please secure your account immediately.`
+      message: `Authorization Required:\n\nYou are attempting to update the password for admin: ${targetAdmin.firstName} ${targetAdmin.middleName ? targetAdmin.middleName + ' ' : ''}${targetAdmin.lastName}${targetAdmin.suffix ? ' ' + targetAdmin.suffix : ''} (${targetAdmin.email}).\n\nYour Verification OTP is: ${otpCode}\n\nIf you did not request this, please secure your account immediately.`
     });
 
     return res.json({ message: `OTP sent to Super Admin (${superAdminEmail}).` });
@@ -86,12 +90,15 @@ export const sendOtp = async (req, res) => {
 export const updateAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password, otp } = req.body;
+    const { firstName, lastName, middleName, suffix, email, password, otp } = req.body;
 
     const admin = await Admin.findById(id);
     if (!admin) return res.status(404).json({ message: "Admin not found." });
 
-    if (name) admin.name = name;
+    if (firstName) admin.firstName = firstName;
+    if (lastName) admin.lastName = lastName;
+    if (middleName !== undefined) admin.middleName = middleName;
+    if (suffix !== undefined) admin.suffix = suffix;
     if (email) admin.email = email.toLowerCase();
 
     if (password) {
