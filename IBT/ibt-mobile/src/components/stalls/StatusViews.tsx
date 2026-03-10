@@ -251,48 +251,69 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             </Text>
           </View>
           
-          {currentApp.paymentHistory && currentApp.paymentHistory.length > 0 ? (
-              [...currentApp.paymentHistory]
-              .sort((a: any, b: any) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime())
-              .map((payment: any, index: number) => {
+           {currentApp.paymentHistory && currentApp.paymentHistory.length > 0 ? (
+            [...currentApp.paymentHistory]
+            .sort((a: any, b: any) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime())
+            .map((payment: any, index: number) => {
 
-                const rawReceipt = payment.receiptUrl || payment.receipt || currentApp.receiptUrl || "";
-                const isValidReceipt = rawReceipt && rawReceipt.trim() !== "" && rawReceipt !== "undefined" && rawReceipt !== "null";
-                
-                const specificReceiptUri = isValidReceipt 
-                  ? (rawReceipt.startsWith('http') ? rawReceipt : `${API_URL}/stalls/doc/${rawReceipt}`)
-                  : null;
+            const rawReceipt = payment.receiptUrl || payment.receipt || "";
+            const isValidReceipt = rawReceipt && rawReceipt.trim() !== "" && rawReceipt !== "undefined" && rawReceipt !== "null";
+      
+            const specificReceiptUri = isValidReceipt 
+            ? (rawReceipt.startsWith('http') ? rawReceipt : `${API_URL}/stalls/doc/${rawReceipt}`)
+            : null;
 
-                return (
-                  <View key={index} style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
-                    <Text variant="bodySmall" style={{ color: 'grey', marginBottom: 5 }}>
-                      Date: {new Date(payment.datePaid).toLocaleString()}
-                    </Text>
-                    <Text variant="bodyMedium" style={{ marginBottom: 5, color: '#121213', fontWeight: 'bold' }}>
-                      <Text style={{ fontWeight: 'normal', color: '#121213' }}>Reference No: </Text> 
-                      {payment.referenceNo || "N/A"}  
-                    </Text>
-                    <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold', marginBottom: 10 }}>
-                      <Text style={{ fontWeight: 'normal', color: '#121213' }}>Amount Paid: </Text> 
-                      ₱{payment.amount ? Number(payment.amount).toLocaleString(undefined, {minimumFractionDigits: 2}) : (currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00")}
-                    </Text>
-
-                    {specificReceiptUri && (
-                      <Button mode="outlined" icon="receipt" onPress={() => Linking.openURL(specificReceiptUri)} style={{ borderColor: colors.success }} textColor={colors.success}>
-                        View Payment Receipt
-                      </Button>
-                    )}
-                  </View>
-                );
-              })
-          ) : (
-            <View style={{ alignItems: 'center', padding: 20, backgroundColor: '#f1f5f9', borderRadius: 10, marginBottom: 15 }}>
-              <Icon name="file-hidden" size={30} color="#000000" />
-              <Text style={{ color: '#000000', fontStyle: 'italic', marginTop: 10 }}>
-                No payment records found.
+            return (
+              <View key={index} style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Icon name="calendar-check" size={18} color={colors.success} style={{ marginRight: 5 }} />
+              <Text variant="bodySmall" style={{ color: 'grey', fontWeight: 'bold' }}>
+                Paid on: {new Date(payment.datePaid).toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+                })}
               </Text>
             </View>
+
+            <Text variant="bodyMedium" style={{ marginBottom: 5, color: '#121213', fontWeight: 'bold' }}>
+              <Text style={{ fontWeight: 'normal', color: '#121213' }}>Reference No: </Text> 
+              {payment.referenceNo || "N/A"}  
+            </Text>
+
+            <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold', marginBottom: 10 }}>
+            <Text style={{ fontWeight: 'normal', color: '#121213' }}>Amount Paid: </Text> 
+              ₱{payment.amount ? Number(payment.amount).toLocaleString(undefined, {minimumFractionDigits: 2}) : (currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00")}
+            </Text>
+
+            {specificReceiptUri ? (
+              <Button 
+              mode="contained-tonal" 
+              icon="file-eye" 
+              onPress={() => Linking.openURL(specificReceiptUri)} 
+              style={{ marginTop: 5, backgroundColor: '#f0fdf4' }} 
+              textColor={colors.success}
+            >
+              View Receipt
+            </Button>
+            ) : (
+            <Text style={{ color: '#ef4444', fontStyle: 'italic', fontSize: 12 }}>
+              Receipt image not found
+            </Text>
           )}
+        </View>
+      );
+    })
+) : (
+  <View style={{ alignItems: 'center', padding: 20, backgroundColor: '#f1f5f9', borderRadius: 10, marginBottom: 15 }}>
+    <Icon name="file-hidden" size={30} color="#000000" />
+    <Text style={{ color: '#000000', fontStyle: 'italic', marginTop: 10 }}>
+      No payment records found.
+    </Text>
+  </View>
+)}
            
         </Card.Content>
       </Card>
@@ -311,13 +332,13 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             </Text>
 
             <TextInput 
-                label="OR / Reference No." 
-                value={paymentData.referenceNo} 
-                onChangeText={(t: string) => setPaymentData({...paymentData, referenceNo: t})} 
-                mode="outlined" 
-                style={[styles.input, { marginBottom: 15 }]} 
-                activeOutlineColor={colors.success} 
-                textColor={colors.black} 
+              label="OR / Reference No." 
+              value={paymentData?.referenceNo || ''} 
+              onChangeText={(t: string) => setPaymentData({...paymentData, referenceNo: t})} 
+              mode="outlined" 
+              style={[styles.input, { marginBottom: 15 }]} 
+              activeOutlineColor={colors.success} 
+              textColor={colors.black} 
             />
             
             <FileUploadButton label="Receipt Photo" fileKey="receipt" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
