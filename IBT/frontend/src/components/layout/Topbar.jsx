@@ -219,7 +219,7 @@ const Topbar = ({ title, onMenuClick }) => {
       const data = await res.json();
 
       if (res.ok) {
-        showToast("success", editMode ? "Broadcast updated successfully!" : (postTiming === "schedule" ? "Broadcast scheduled!" : "Broadcast sent!"));
+        showToast("success", editMode ? "Post Announcement updated successfully!" : (postTiming === "schedule" ? "Broadcast scheduled!" : "Broadcast sent!"));
         setShowBroadcastModal(false);
         resetForm();
       } else {

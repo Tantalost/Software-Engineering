@@ -374,61 +374,61 @@ const modalBilling = useMemo(() => {
             <tr>
               <td class="header-logo"><img src="${logoUrl}" style="width: 70px;" /></td>
               <td class="header-text">
-                <p>Republica de Filipinas [cite: 5]</p>
-                <p>Ciudad de Zamboanga [cite: 5]</p>
-                <h2>OFICINA DEL ADMINISTRADOR [cite: 6]</h2>
-                <h3>INTEGRADO TERMINAL DE ZAMBOANGA [cite: 7]</h3>
+                <p>Republica de Filipinas</p>
+                <p>Ciudad de Zamboanga </p>
+                <h2>OFICINA DEL ADMINISTRADOR </h2>
+                <h3>INTEGRADO TERMINAL DE ZAMBOANGA ]</h3>
               </td>
               <td class="header-logo"><img src="${logoUrl}" style="width: 70px; opacity: 0;" /></td> </tr>
           </table>
 
           <div class="summary-box">
-            <div class="summary-row"><span class="label">Lessee Name:</span> ${currentName} [cite: 8]</div>
-            <div class="summary-row"><span class="label">Assigned Slot:</span> ${currentSlot} [cite: 9]</div>
-            <div class="summary-row"><span class="label">Monthly Rental:</span> ${currentRent} [cite: 10]</div>
-            <div class="summary-row"><span class="label">Effectivity Date:</span> ${currentDate} [cite: 11]</div>
+            <div class="summary-row"><span class="label">Lessee Name:</span> ${currentName} </div>
+            <div class="summary-row"><span class="label">Assigned Slot:</span> ${currentSlot} </div>
+            <div class="summary-row"><span class="label">Monthly Rental:</span> ${currentRent} </div>
+            <div class="summary-row"><span class="label">Effectivity Date:</span> ${currentDate} </div>
           </div>
 
-          <div class="main-title">IBT-ZC Contractual Concessionaires Operations & Management Policy [cite: 12]</div>
+          <div class="main-title">IBT-ZC Contractual Concessionaires Operations & Management Policy</div>
 
           <div class="section">
-            <span class="section-title">1. Lease Terms and Duration [cite: 13]</span>
+            <span class="section-title">1. Lease Terms and Duration</span>
             <div class="policy-content">
-              Lease agreements are valid for a maximum of two (2) years, renewable for another period not exceeding two years[cite: 14]. Rental fees are recommended on a per-square-meter basis as approved by the Sangguniang Panlungsod[cite: 15].
+              Lease agreements are valid for a maximum of two (2) years, renewable for another period not exceeding two years. Rental fees are recommended on a per-square-meter basis as approved by the Sangguniang Panlungsod.
             </div>
           </div>
 
           <div class="section">
-            <span class="section-title">2. Payment and Financial Obligations [cite: 17]</span>
+            <span class="section-title">2. Payment and Financial Obligations</span>
             <div class="policy-content">
-              Rent must be paid within the first five (5) calendar days of each month[cite: 18]. A 25% surcharge applies for payments made after the 5th[cite: 19]. Failure to pay for two (2) consecutive months is grounds for contract termination[cite: 21].
+              Rent must be paid within the first five (5) calendar days of each month. A 25% surcharge applies for payments made after the 5th. Failure to pay for two (2) consecutive months is grounds for contract termination.
             </div>
           </div>
 
           <div class="section">
-            <span class="section-title">3. Strict Prohibitions [cite: 22]</span>
+            <span class="section-title">3. Strict Prohibitions</span>
             <div class="policy-content">
-              <div class="list-item"><span class="bullet">•</span><span>Unauthorized changes to structures or signs without official consent[cite: 25, 26].</span></div>
-              <div class="list-item"><span class="bullet">•</span><span>Subleasing or assigning the lease to another party without written permission[cite: 27].</span></div>
-              <div class="list-item"><span class="bullet">•</span><span>Using the space for residential purposes/sleeping or creating noise disturbances (videoke)[cite: 36, 37].</span></div>
-              <div class="list-item"><span class="bullet">•</span><span>Illegal acts, gambling, or storing hazardous materials[cite: 38].</span></div>
+              <div class="list-item"><span class="bullet">•</span><span>Unauthorized changes to structures or signs without official consent.</span></div>
+              <div class="list-item"><span class="bullet">•</span><span>Subleasing or assigning the lease to another party without written permission.</span></div>
+              <div class="list-item"><span class="bullet">•</span><span>Using the space for residential purposes/sleeping or creating noise disturbances (videoke).</span></div>
+              <div class="list-item"><span class="bullet">•</span><span>Illegal acts, gambling, or storing hazardous materials.</span></div>
             </div>
           </div>
 
           <div class="section">
-            <span class="section-title">4. Maintenance and Termination [cite: 41, 44]</span>
+            <span class="section-title">4. Maintenance and Termination </span>
             <div class="policy-content">
-              Tenants are responsible for waste segregation[cite: 42]. The City can terminate the contract for ordinance violations or failure to pay for two months[cite: 45]. Criminal penalties for serious violations include fines up to ₱5,000[cite: 48].
+              Tenants are responsible for waste segregation. The City can terminate the contract for ordinance violations or failure to pay for two months. Criminal penalties for serious violations include fines up to ₱5,000.
             </div>
           </div>
 
           <div class="agreement-text">
-            The Lessee hereby agrees to the terms and conditions set forth by the Lessor regarding the use and maintenance of the assigned slot[cite: 49]. This agreement is legally binding once signed[cite: 50].
+            The Lessee hereby agrees to the terms and conditions set forth by the Lessor regarding the use and maintenance of the assigned slot. This agreement is legally binding once signed.
           </div>
 
           <table class="footer-table">
             <tr>
-              <td class="sig-box">
+            <td class="sig-box">
                 <div class="sig-line">${currentName}</div>
                 <div>Lessee's Signature Over Printed Name </div>
               </td>
