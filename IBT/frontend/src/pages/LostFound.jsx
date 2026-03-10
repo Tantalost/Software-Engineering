@@ -784,10 +784,10 @@ const LostFound = () => {
         "Tracking No",
         "Item Type",
         "Location",
-        "Date & Time",
+        "Date Time",
         "Status",
       ]
-    : ["Tracking No", "Item Type", "Location", "Date & Time", "Status"];
+    : ["Tracking No", "Item Type", "Location", "Date Time", "Status"];
 
 
   return (
@@ -901,7 +901,7 @@ const LostFound = () => {
                 trackingno: item.trackingNo,
                 itemtype: item.itemType,
                 location: item.location,
-                datetime: formatDateTime(item.dateTime),
+                datetime: formatDateTime(item.dateTime || item.createdAt),
                 description: item.description,
                 status: item.status,
               };

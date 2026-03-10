@@ -30,6 +30,28 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
     }
   };
 
+  const currentRole = localStorage.getItem("authRole") || "superadmin";
+  const displayedLogs = logs.filter((log) => {
+    if (currentRole === "superadmin") return true;
+    if (currentRole === "bus") {
+      return log.user === "bus" && (log.module === "BusTrips" || log.source === "BusTrips");
+    }
+    if (currentRole === "ticket") {
+      return log.user === "ticket" && (log.module === "TerminalFees" || log.source === "TerminalFees");
+    }
+    if (currentRole === "tenant") {
+      return log.user === "tenant" && (log.module === "Tenants" || log.source === "Tenants"); 
+    }
+    if (currentRole === "parking") {
+      return log.user === "parking" && (log.module === "Parking" || log.source === "Parking");
+    }
+    if (currentRole === "lostandfound") {
+      return log.user === "lostandfound" && (log.module === "LostAndFound" || log.source === "LostAndFound");
+    }
+    
+    return false;
+  });
+
   if (!isOpen) return null;
 
   return (
@@ -43,10 +65,10 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Added a simple counter here */}
-            {logs.length > 0 && (
+            {/* Update the counter to use displayedLogs */}
+            {displayedLogs.length > 0 && (
                 <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
-                    {logs.length} Records
+                    {displayedLogs.length} Records
                 </span>
             )}
             
@@ -75,8 +97,9 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
                        </div>
                     </td>
                  </tr>
-              ) : logs.length > 0 ? (
-                logs.map((log) => (
+              ) : displayedLogs.length > 0 ? (
+                // 3. Map over displayedLogs instead of logs
+                displayedLogs.map((log) => (
                   <tr key={log._id || log.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap text-xs">
                       {new Date(log.createdAt || log.timestamp).toLocaleString(undefined, {
@@ -101,7 +124,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
                 <tr>
                   <td colSpan="4" className="px-4 py-12 text-center text-slate-400 italic">
                     <History size={32} className="mx-auto mb-2 opacity-20" />
-                    No activity recorded yet.
+                    No activity recorded for your account level.
                   </td>
                 </tr>
               )}
