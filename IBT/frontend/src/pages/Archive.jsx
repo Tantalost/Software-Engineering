@@ -20,7 +20,10 @@ const Archive = () => {
       case "bus": return ["Bus Trip"];
       case "ticket": return ["Terminal Fee"];
       case "parking": return ["Parking Ticket"];
-      case "tenant": return ["Tenant"];
+      case "tenant": 
+      case "tenant admin": 
+      case "tenantadmin": 
+        return ["Tenant"];
       case "lostandfound": return ["Lost & Found"];
       default: return ["All"];
     }
@@ -33,7 +36,10 @@ const Archive = () => {
       case "bus": return "Bus Trip";
       case "ticket": return "Terminal Fee";
       case "parking": return "Parking Ticket";
-      case "tenant": return "Tenant";
+      case "tenant": 
+      case "tenant admin": 
+      case "tenantadmin": 
+        return "Tenant";
       case "lostandfound": return "Lost & Found";
       default: return "All";
     }
@@ -158,7 +164,9 @@ const Archive = () => {
       if (role === "bus" && item.type !== "Bus Trip") return false;
       if (role === "ticket" && item.type !== "Terminal Fee") return false;
       if (role === "parking" && item.type !== "Parking Ticket") return false;
-      if (role === "tenant" && item.type !== "Tenant") return false;
+      
+      if ((role === "tenant" || role === "tenant admin" || role === "tenantadmin") && item.type !== "Tenant") return false;
+      
       if (role === "lostandfound" && item.type !== "Lost & Found") return false;
 
       const matchesTab = activeTab === "All" || item.type === activeTab;
