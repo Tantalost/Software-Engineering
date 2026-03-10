@@ -200,6 +200,11 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
       utilityAmount: parseFloat(formData.utilityFee),
       totalAmount: totalAmount,
       feeBreakdown: JSON.stringify(feeBreakdown),
+     
+      paymentHistory: Array.isArray(formData.paymentHistory) 
+        ? JSON.stringify(formData.paymentHistory) 
+        : formData.paymentHistory,
+
       StartDateTime: formatForTable(formData.editStart),
       DueDateTime: formatForTable(formData.editDue), 
       EndDateTime: formatForTable(formData.editDue), 

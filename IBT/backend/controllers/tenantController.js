@@ -214,6 +214,23 @@ export const updateTenant = async (req, res) => {
         }
     }
 
+    if (updateData.paymentHistory) {
+        if (typeof updateData.paymentHistory === 'string') {
+            if (updateData.paymentHistory.includes('[object Object]')) {
+               
+                delete updateData.paymentHistory;
+            } else {
+               
+                try {
+                    updateData.paymentHistory = JSON.parse(updateData.paymentHistory);
+                } catch (e) {
+                    console.error("Error parsing paymentHistory:", e);
+                    delete updateData.paymentHistory; 
+                }
+            }
+        }
+    }
+
     const getFile = (fieldName) => {
         if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
             return req.files[fieldName][0].filename;
