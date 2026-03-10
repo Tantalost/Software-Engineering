@@ -1,6 +1,6 @@
 import React from "react";
 import StatCard from "../tenants/StatCard";
-import { Bus, CheckCircle, Clock, TrendingUp, PhilippinePesoIcon } from "lucide-react";
+import { Bus, CheckCircle, Clock, TrendingUp, PhilippinePeso } from "lucide-react";
 
 const StatCardGroupBus = ({ totalTrips, paidTrips, pendingTrips, totalRevenue }) => {
   return (
@@ -29,8 +29,8 @@ const StatCardGroupBus = ({ totalTrips, paidTrips, pendingTrips, totalRevenue })
 
       <StatCard
         title="Total Revenue"
-        /* Updated to use PhilippinePesoIcon and consistent orange color */
-        icon={PhilippinePesoIcon}
+        /* Updated to use PhilippinePeso and consistent orange color */
+        icon={PhilippinePeso}
         value={totalRevenue.toFixed(2)}
         color="orange"
       />

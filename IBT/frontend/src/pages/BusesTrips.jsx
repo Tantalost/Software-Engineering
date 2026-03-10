@@ -50,7 +50,17 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
       extension: "png",
     });
 
-    worksheet.addImage(imageId, range);
+    // Parse range string like "A1:H4" to coordinates
+    const [start, end] = range.split(':');
+    const startCol = start.charCodeAt(0) - 65; // A=0, B=1, etc.
+    const startRow = parseInt(start.slice(1)) - 1; // 1-based to 0-based
+    const endCol = end.charCodeAt(0) - 65;
+    const endRow = parseInt(end.slice(1)) - 1;
+
+    worksheet.addImage(imageId, {
+      tl: { col: startCol, row: startRow },
+      br: { col: endCol, row: endRow }
+    });
   } catch (error) {
     // Log the error but don't stop the export
     console.error("Branding image error:", error);
@@ -1514,7 +1524,7 @@ const BusTrips = () => {
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
-            {isSelectionMode && selectedIds.length > 0 && (
+            {isSelectionMode && selectedIds.length > 0 && role === "bus" && (
               <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                 <span className="text-xs font-semibold text-slate-600 px-2">
                   {selectedIds.length} Selected
@@ -1587,12 +1597,14 @@ const BusTrips = () => {
                 <span className="hidden sm:inline">Logs</span>
               </button>
 
-              <button
-                onClick={toggleSelectionMode}
-                className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 cursor-pointer rounded-xl transition-all border ${isSelectionMode ? "bg-red-500 text-white" : "bg-white border-slate-200 text-slate-500"}`}
-              >
-                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-              </button>
+              {role === "bus" && (
+                <button
+                  onClick={toggleSelectionMode}
+                  className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 cursor-pointer rounded-xl transition-all border ${isSelectionMode ? "bg-red-500 text-white" : "bg-white border-slate-200 text-slate-500"}`}
+                >
+                  {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+                </button>
+              )}
             </div>
           </div>
         </div>
