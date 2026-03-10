@@ -26,7 +26,6 @@ Mobile:
 2. Change password (Need the current password to change new password and it requires OTP in order to reset the password) 
 3. Add Reactivate Feature if the account is deactivated.
 
-test
 To do
 For Admin Specific Accounts
 - Each Table Actions, Logs, and notifications should be filtered. Only specific admins can access and knows sa mga transactions is yung between superadmin and admin per module. 
