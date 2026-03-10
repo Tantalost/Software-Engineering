@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
-  if (!imageSrc) return; // Skip if no image provided
+  if (!imageSrc) return; 
   try {
     const response = await fetch(imageSrc);
     if (!response.ok)
@@ -1132,97 +1132,101 @@ const BusTrips = () => {
   };
 
   const handleBulkDelete = async () => {
-    // 1. Customize the confirmation message based on role
-    const confirmMsg =
-      role === "bus"
-        ? `Request deletion for ${selectedIds.length} records?`
-        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+  if (selectedIds.length === 0) {
+    setNotificationState({
+      isOpen: true,
+      type: "warning",
+      message: "Please select at least one record.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
 
-    if (!window.confirm(confirmMsg)) return;
+  setIsLoading(true);
 
-    setIsLoading(true);
+  const GLOBAL_API_URL = `${
+    import.meta.env.VITE_API_URL || "http://localhost:10000"
+  }/api`;
 
-    // We need the base API URL without '/bustrips' for the deletion-requests endpoint
-    const GLOBAL_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
+  try {
+    if (role === "bus") {
+      // BUS ADMIN → Send deletion requests
+      const requestPromises = selectedIds.map(async (id) => {
+        const item = records.find((r) => r.id === id);
+        if (!item) return;
 
-    try {
-      if (role === "bus") {
-        // --- BUS ADMIN: Send Deletion Requests ---
-        const requestPromises = selectedIds.map(async (id) => {
-          const item = records.find((r) => r.id === id);
-          if (!item) return;
-
-          return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              itemType: "Bus Trip",
-              itemDescription: `Plate No: ${item.templateNo || item.templateno} - ${item.company}`,
-              requestedBy: localStorage.getItem("authName") || "Bus Admin",
-              originalData: item,
-              reason: "Bulk deletion request",
-            }),
-          });
+        return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemType: "Bus Trip",
+            itemDescription: `Plate No: ${
+              item.templateNo || item.templateno
+            } - ${item.company}`,
+            requestedBy: localStorage.getItem("authName") || "Bus Admin",
+            originalData: item,
+            reason: "Bulk deletion request",
+          }),
         });
+      });
 
-        await Promise.all(requestPromises);
+      await Promise.all(requestPromises);
 
-        await logActivity(
-          role,
-          "REQUEST_BULK_DELETE",
-          `Requested deletion for ${selectedIds.length} bus trips`,
-          "BusTrips",
-        );
+      await logActivity(
+        role,
+        "REQUEST_BULK_DELETE",
+        `Requested deletion for ${selectedIds.length} bus trips`,
+        "BusTrips",
+      );
 
-        setNotificationState({
-          isOpen: true,
-          type: "success",
-          message: `Sent deletion requests for ${selectedIds.length} records.`,
-          autoClose: true,
-          duration: 3000,
-        });
-      } else {
-        // --- SUPERADMIN: Immediate Deletion ---
-        await Promise.all(
-          selectedIds.map((id) =>
-            fetch(`${API_URL}/${id}`, { method: "DELETE" }),
-          ),
-        );
-
-        await logActivity(
-          role,
-          "BULK_DELETE",
-          `Deleted ${selectedIds.length} items`,
-          "BusTrips",
-        );
-
-        await fetchBusTrips();
-
-        setNotificationState({
-          isOpen: true,
-          type: "success",
-          message: `Successfully deleted ${selectedIds.length} records!`,
-          autoClose: true,
-          duration: 3000,
-        });
-      }
-
-      // Clear selections after either action is complete
-      setSelectedIds([]);
-      setIsSelectionMode(false);
-    } catch (e) {
-      console.error("Bulk action failed", e);
       setNotificationState({
         isOpen: true,
-        type: "error",
-        message: "Failed to process some records.",
+        type: "success",
+        message: `Sent deletion requests for ${selectedIds.length} records.`,
         autoClose: true,
         duration: 3000,
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      // SUPERADMIN → Immediate deletion
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`${API_URL}/${id}`, { method: "DELETE" }),
+        ),
+      );
+
+      await logActivity(
+        role,
+        "BULK_DELETE",
+        `Deleted ${selectedIds.length} items`,
+        "BusTrips",
+      );
+
+      await fetchBusTrips();
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Successfully deleted ${selectedIds.length} records!`,
+        autoClose: true,
+        duration: 3000,
+      });
     }
-  };
+
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+  } catch (e) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Failed to process some records.",
+      autoClose: true,
+      duration: 3000,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleSubmitReport = async () => {
     setIsReporting(true);
@@ -1272,43 +1276,81 @@ const BusTrips = () => {
   };
 
   const confirmLogout = async () => {
-    if (!logoutRow || !ticketRefInput) return;
+  if (!logoutRow || !ticketRefInput) {
+    setNotificationState({
+      isOpen: true,
+      type: "warning",
+      message: "Please enter the ticket reference number.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
 
-    const isDuplicate = records.some(
-      (record) =>
-        record.ticketReferenceNo &&
-        record.ticketReferenceNo.toString().trim() ===
-          ticketRefInput.toString().trim(),
-    );
+  const isDuplicate = records.some(
+    (record) =>
+      record.ticketReferenceNo &&
+      record.ticketReferenceNo.toString().trim() ===
+        ticketRefInput.toString().trim(),
+  );
 
-    if (isDuplicate) {
-      alert(
-        `Error: Ticket Reference Number "${ticketRefInput}" already exists. Please use a unique number.`,
-      );
-      return;
-    }
+  if (isDuplicate) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: `Ticket Reference No. "${ticketRefInput}" already exists.`,
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
 
-    try {
-      const response = await fetch(`${API_URL}/${logoutRow.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticketReferenceNo: ticketRefInput,
-          status: "Paid",
-          departureTime: new Date().toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+  try {
+    const response = await fetch(`${API_URL}/${logoutRow.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticketReferenceNo: ticketRefInput,
+        status: "Paid",
+        departureTime: new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
         }),
+      }),
+    });
+
+    if (response.ok) {
+      await fetchBusTrips();
+
+      setLogoutRow(null);
+      setTicketRefInput("");
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: "Bus departure confirmed successfully.",
+        autoClose: true,
+        duration: 3000,
       });
-      if (response.ok) {
-        fetchBusTrips();
-        setLogoutRow(null);
-      }
-    } catch (error) {
-      console.error(error);
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to confirm departure.",
+        autoClose: true,
+        duration: 3000,
+      });
     }
-  };
+  } catch (error) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Error confirming departure.",
+      autoClose: true,
+      duration: 3000,
+    });
+  }
+};
 
   const handleMarkArrived = async (row) => {
     try {
@@ -2190,6 +2232,17 @@ const BusTrips = () => {
           </div>
         </div>
       )}
+
+      <NotificationToast
+  isOpen={notificationState.isOpen}
+  type={notificationState.type}
+  message={notificationState.message}
+  autoClose={notificationState.autoClose}
+  duration={notificationState.duration}
+  onClose={() =>
+    setNotificationState((prev) => ({ ...prev, isOpen: false }))
+  }
+/>
     </Layout>
   );
 };
