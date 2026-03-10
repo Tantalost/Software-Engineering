@@ -1215,7 +1215,7 @@ const TenantLease = () => {
                     const baseData = {
                         id: t.id,
                         slotno: t.slotNo,
-                        refno: t.referenceNo || t.referenceno,
+                        refno: t.referenceNo || t.referenceno || (t.paymentHistory && t.paymentHistory.length > 0 ? t.paymentHistory[t.paymentHistory.length - 1].referenceNo : "-"),
                         name: t.tenantName || t.name,
                         email: t.email,
                         contactno: t.contactNo,

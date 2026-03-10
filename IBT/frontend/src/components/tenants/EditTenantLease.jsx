@@ -55,6 +55,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
 
   const [formData, setFormData] = useState({
     ...row,
+    referenceNo: row.referenceNo || row.referenceno || (row.paymentHistory && row.paymentHistory.length > 0 ? row.paymentHistory[row.paymentHistory.length - 1].referenceNo : ""),
     rentAmount: row.rentAmount || 0,
     utilityFee: row.utilityFee || row.utilityAmount || 0,
     editStart: formatDateTimeForInput(row.StartDateTime || row.leaseStart),
