@@ -48,9 +48,6 @@ import {
   RejectedView
 } from '@/src/components/stalls/StatusViews';
 
-const [dynamicPermanentPrice, setDynamicPermanentPrice] = useState(6000);
-const [dynamicNightPrice, setDynamicNightPrice] = useState(150);
-
 const SECRET_KEY = process.env.EXPO_PUBLIC_ENCRYPTION_KEY || " ";
 
 export default function StallsPage() {
@@ -89,6 +86,9 @@ export default function StallsPage() {
     otherProduct: '',
   });
 
+  const [dynamicPermanentPrice, setDynamicPermanentPrice] = useState(6000);
+  const [dynamicNightPrice, setDynamicNightPrice] = useState(150);
+  
   const [paymentData, setPaymentData] = useState({
     referenceNo: ''
   });
@@ -101,24 +101,26 @@ export default function StallsPage() {
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
 
   const currentBilling = useMemo(() => {
-    const floorType = currentApp ? currentApp.floor : selectedFloor;
-    const isNightMarket = floorType === 'Night Market';
-  
+  const floorType = currentApp ? currentApp.floor : selectedFloor;
+  const isNightMarket = floorType === 'Night Market';
+
+  return {
+    ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
+   
+    amountLabel: `₱${(isNightMarket ? dynamicNightPrice : dynamicPermanentPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+    rawAmount: isNightMarket ? dynamicNightPrice : dynamicPermanentPrice
+  };
+}, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice]);
+
+const modalBilling = useMemo(() => {
+    const isNightMarket = selectedFloor === 'Night Market';
     return {
       ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
-      amountLabel: `₱${isNightMarket ? dynamicNightPrice : dynamicPermanentPrice}`,
+     
+      amountLabel: `₱${(isNightMarket ? dynamicNightPrice : dynamicPermanentPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
       rawAmount: isNightMarket ? dynamicNightPrice : dynamicPermanentPrice
     };
-  }, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice]);
-
-  const modalBilling = useMemo(() => {
-      const isNightMarket = selectedFloor === 'Night Market';
-      return {
-        ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
-        amountLabel: `₱${isNightMarket ? dynamicNightPrice : dynamicPermanentPrice}`,
-        rawAmount: isNightMarket ? dynamicNightPrice : dynamicPermanentPrice
-      };
-  }, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice]);
+}, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice]);
 
   const handlePhoneChange = (text: string) => {
     let cleaned = text.replace(/[^0-9]/g, '');
@@ -492,8 +494,10 @@ export default function StallsPage() {
         setModalVisible(false);
         setModalStep('form');
         Alert.alert("Success", "Application Submitted!");
+        
         await fetchData(user.id);
         setSelectedStall(null);
+        setViewIndex(-1);
 
         const updatedAppsRes = await fetch(`${API_URL}/stalls/my-application/${user.id}?_t=${new Date().getTime()}`, {
         headers: { 'Authorization': `Bearer ${token}` }

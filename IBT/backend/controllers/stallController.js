@@ -123,19 +123,25 @@ export const getMyApplication = async (req, res) => {
             .map(app => app.targetSlot);
 
         const tenants = await Tenant.find({ 
+            isArchived: { $ne: true },
             $or: [
                 { uid: userId },
                 { slotNo: { $in: approvedSlots } }
             ]
         }).lean();
+
+        let combinedApps = applications.filter(app => {
+            if (app.status === 'TENANT') {
+                return tenants.some(t => t.slotNo && t.slotNo.includes(app.targetSlot));
+            }
+            return true;
+        });
         
         const nightSetting = await Settings.findOne({ key: "defaultNightPrice" });
         const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
         const globalNightPrice = nightSetting ? Number(nightSetting.value) : 150;
         const globalPermPrice = permSetting ? Number(permSetting.value) : 6000;
-        
-        let combinedApps = [...applications];
-        
+                
         tenants.forEach(tenant => {
             const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
             const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;

@@ -235,9 +235,13 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               [...currentApp.paymentHistory]
               .sort((a: any, b: any) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime())
               .map((payment: any, index: number) => {
-                const specificReceiptUri = payment.receiptUrl 
-                  ? `${API_URL}/stalls/doc/${payment.receiptUrl}` 
-                  : receiptImageUri;
+
+                const rawReceipt = payment.receiptUrl || receiptImageUri || "";
+                const isValidReceipt = rawReceipt && rawReceipt.trim() !== "" && rawReceipt !== "undefined" && rawReceipt !== "null";
+
+                const specificReceiptUri = isValidReceipt 
+                ? (rawReceipt.startsWith('http') ? rawReceipt : `${API_URL}/stalls/doc/${rawReceipt}`)
+                : null;
 
                 return (
                   <View key={index} style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
@@ -270,8 +274,6 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             </View>
           )}
 
-          
-           
         </Card.Content>
       </Card>
 
