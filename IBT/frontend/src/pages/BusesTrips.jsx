@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
 import Layout from "../components/layout/Layout";
@@ -35,20 +35,19 @@ import {
   Settings,
 } from "lucide-react";
 
-
-
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
-  if (!imageSrc) return; // Skip if no image provided
+  if (!imageSrc) return; 
   try {
     const response = await fetch(imageSrc);
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+    if (!response.ok)
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
 
     const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
 
     const imageId = workbook.addImage({
       buffer: arrayBuffer,
-      extension: 'png',
+      extension: "png",
     });
 
     worksheet.addImage(imageId, range);
@@ -57,7 +56,6 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
     console.error("Branding image error:", error);
   }
 };
-
 
 const ManageCompaniesModal = ({
   isOpen,
@@ -71,7 +69,6 @@ const ManageCompaniesModal = ({
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState("");
 
-
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusRoute, setNewBusRoute] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -79,7 +76,6 @@ const ManageCompaniesModal = ({
   const [deleteBusTarget, setDeleteBusTarget] = useState(null);
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
-
 
   useEffect(() => {
     if (!isOpen) {
@@ -92,7 +88,6 @@ const ManageCompaniesModal = ({
   }, [isOpen]);
 
   const activeCompany = companyData.find((c) => c._id === selectedCompanyId);
-
 
   const handleAddCompany = async () => {
     if (!newCompanyName.trim()) return;
@@ -108,32 +103,30 @@ const ManageCompaniesModal = ({
         setNewCompanyName("");
         setIsEditingCompany(false);
 
-
         setNotificationState({
           isOpen: true,
-          type: 'success',
+          type: "success",
           message: `Company "${newCompanyName}" added successfully!`,
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       } else {
-
         setNotificationState({
           isOpen: true,
-          type: 'error',
+          type: "error",
           message: "Failed to create company",
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       }
     } catch (err) {
       console.error(err);
       setNotificationState({
         isOpen: true,
-        type: 'error',
+        type: "error",
         message: "Error creating company",
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     } finally {
       setIsProcessing(false);
@@ -162,7 +155,6 @@ const ManageCompaniesModal = ({
         if (selectedCompanyId === deleteCompanyTarget._id) {
           setSelectedCompanyId(null);
         }
-
       } else {
         setNotificationState({
           isOpen: true,
@@ -172,7 +164,6 @@ const ManageCompaniesModal = ({
           duration: 3000,
         });
       }
-
     } catch (err) {
       console.error(err);
 
@@ -183,7 +174,6 @@ const ManageCompaniesModal = ({
         autoClose: true,
         duration: 3000,
       });
-
     } finally {
       setDeleteCompanyTarget(null);
     }
@@ -193,7 +183,7 @@ const ManageCompaniesModal = ({
     if (!deleteBusTarget || !activeCompany) return;
 
     const updatedBuses = activeCompany.buses.filter(
-      (b) => b.plateNumber !== deleteBusTarget.plateNumber
+      (b) => b.plateNumber !== deleteBusTarget.plateNumber,
     );
 
     try {
@@ -237,7 +227,6 @@ const ManageCompaniesModal = ({
     }
   };
 
-
   const handleAddBus = async () => {
     if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
 
@@ -259,10 +248,10 @@ const ManageCompaniesModal = ({
         // ADD THIS TOAST MESSAGE
         setNotificationState({
           isOpen: true,
-          type: 'success',
+          type: "success",
           message: `Bus ${newBusPlate} added successfully!`,
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
 
         setNewBusPlate("");
@@ -270,31 +259,29 @@ const ManageCompaniesModal = ({
       } else {
         setNotificationState({
           isOpen: true,
-          type: 'error',
+          type: "error",
           message: "Failed to add bus",
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       }
     } catch (err) {
       console.error(err);
       setNotificationState({
         isOpen: true,
-        type: 'error',
+        type: "error",
         message: "Error adding bus",
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     }
   };
-
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-4xl h-[600px] flex rounded-2xl bg-white shadow-2xl overflow-hidden">
-
         <div className="w-1/3 bg-slate-50 border-r border-slate-200 flex flex-col">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
             <h3 className="font-bold text-slate-700">Companies</h3>
@@ -339,10 +326,11 @@ const ManageCompaniesModal = ({
               <div
                 key={company._id}
                 onClick={() => setSelectedCompanyId(company._id)}
-                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${selectedCompanyId === company._id
-                  ? "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500"
-                  : "bg-white border-slate-200 hover:border-emerald-300"
-                  }`}
+                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                  selectedCompanyId === company._id
+                    ? "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500"
+                    : "bg-white border-slate-200 hover:border-emerald-300"
+                }`}
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -374,7 +362,6 @@ const ManageCompaniesModal = ({
             ))}
           </div>
         </div>
-
 
         <div className="w-2/3 flex flex-col bg-white">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center">
@@ -428,7 +415,6 @@ const ManageCompaniesModal = ({
                   </button>
                 </div>
               </div>
-
 
               <div className="flex-1 overflow-y-auto p-4">
                 {activeCompany.buses && activeCompany.buses.length > 0 ? (
@@ -492,7 +478,6 @@ const ManageCompaniesModal = ({
           {deleteCompanyTarget && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-
                 <div className="flex flex-col items-center text-center">
                   <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
                     <Trash2 size={24} />
@@ -504,7 +489,11 @@ const ManageCompaniesModal = ({
 
                   <p className="text-sm text-slate-600 mt-2">
                     Are you sure you want to delete
-                    <span className="font-semibold"> {deleteCompanyTarget.name}</span>?
+                    <span className="font-semibold">
+                      {" "}
+                      {deleteCompanyTarget.name}
+                    </span>
+                    ?
                   </p>
 
                   <p className="text-xs text-red-500 mt-1">
@@ -526,9 +515,7 @@ const ManageCompaniesModal = ({
                       Delete
                     </button>
                   </div>
-
                 </div>
-
               </div>
             </div>
           )}
@@ -536,7 +523,6 @@ const ManageCompaniesModal = ({
           {deleteBusTarget && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-
                 <div className="flex flex-col items-center text-center">
                   <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
                     <Trash2 size={24} />
@@ -570,22 +556,17 @@ const ManageCompaniesModal = ({
                       Remove
                     </button>
                   </div>
-
                 </div>
-
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>
   );
 };
 
-
 const BusTrips = () => {
-
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -593,13 +574,10 @@ const BusTrips = () => {
   const [selectedCompany, setSelectedCompany] = useState("");
   const [companyData, setCompanyData] = useState([]);
 
-
-
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showManageCompaniesModal, setShowManageCompaniesModal] =
     useState(false);
-
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -613,7 +591,6 @@ const BusTrips = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
 
-
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -625,21 +602,30 @@ const BusTrips = () => {
 
   const [notificationState, setNotificationState] = useState({
     isOpen: false,
-    type: '',
-    message: '',
+    type: "",
+    message: "",
     autoClose: true,
-    duration: 3000
+    duration: 3000,
   });
 
   useEffect(() => {
     if (notificationState.isOpen && notificationState.autoClose) {
       const timer = setTimeout(() => {
-        setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
+        setNotificationState({
+          isOpen: false,
+          type: "",
+          message: "",
+          autoClose: true,
+          duration: 3000,
+        });
       }, notificationState.duration);
       return () => clearTimeout(timer);
     }
-  }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
-
+  }, [
+    notificationState.isOpen,
+    notificationState.autoClose,
+    notificationState.duration,
+  ]);
 
   useEffect(() => {
     const fetchDefaultPrice = async () => {
@@ -659,9 +645,7 @@ const BusTrips = () => {
       }
     };
     fetchDefaultPrice();
-
   }, []);
-
 
   const [showSetPriceModal, setShowSetPriceModal] = useState(false);
   const [newPrice, setNewPrice] = useState("");
@@ -709,30 +693,27 @@ const BusTrips = () => {
       setShowSetPriceModal(false);
       setNewPrice("");
 
-
       setNotificationState({
         isOpen: true,
-        type: 'success',
+        type: "success",
         message: `Prices updated to ₱${priceValue}!`,
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     } catch (err) {
       console.error(err);
 
       setNotificationState({
         isOpen: true,
-        type: 'error',
+        type: "error",
         message: "Failed to set price: " + err.message,
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     } finally {
       setIsSettingPrice(false);
     }
   };
-
-
 
   const [newBusData, setNewBusData] = useState({
     templateNo: "",
@@ -743,7 +724,6 @@ const BusTrips = () => {
     status: "Pending",
     price: 75,
   });
-
 
   const fetchBusTrips = async () => {
     setIsLoading(true);
@@ -780,7 +760,6 @@ const BusTrips = () => {
     fetchCompanies();
   }, []);
 
-
   const availableCompanies = companyData.map((c) => c.name);
 
   const filtered = records.filter((bus) => {
@@ -793,7 +772,7 @@ const BusTrips = () => {
     const matchesDate =
       !selectedDate ||
       new Date(bus.date).toDateString() ===
-      new Date(selectedDate).toDateString();
+        new Date(selectedDate).toDateString();
     return matchesSearch && matchesCompany && matchesDate;
   });
 
@@ -810,7 +789,6 @@ const BusTrips = () => {
   }, [filtered, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
 
   const handleAddClick = () => {
     setNewBusData({
@@ -829,7 +807,6 @@ const BusTrips = () => {
     setShowAddModal(true);
   };
 
-
   const handleAddFormCompanyChange = (e) => {
     const selectedCompName = e.target.value;
     setNewBusData((prev) => ({
@@ -840,15 +817,12 @@ const BusTrips = () => {
     }));
   };
 
-
   const handleAddFormPlateChange = (e) => {
     const plate = e.target.value;
-
 
     const selectedCompObj = companyData.find(
       (c) => c.name === newBusData.company,
     );
-
 
     const selectedBus = selectedCompObj?.buses.find(
       (b) => b.plateNumber === plate,
@@ -861,13 +835,12 @@ const BusTrips = () => {
     }));
   };
 
-
   const handleCreateRecord = async (e) => {
     e.preventDefault();
     try {
       const tripData = {
         ...newBusData,
-        price: newBusData.price || defaultPrice
+        price: newBusData.price || defaultPrice,
       };
 
       const response = await fetch(API_URL, {
@@ -886,31 +859,30 @@ const BusTrips = () => {
         fetchBusTrips();
         setShowAddModal(false);
 
-
         setNotificationState({
           isOpen: true,
-          type: 'success',
+          type: "success",
           message: `Bus trip ${newItem.templateNo} created successfully!`,
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       } else {
         setNotificationState({
           isOpen: true,
-          type: 'error',
+          type: "error",
           message: "Failed to create bus trip",
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       }
     } catch (error) {
       console.error("Error creating:", error);
       setNotificationState({
         isOpen: true,
-        type: 'error',
+        type: "error",
         message: "Error creating bus trip",
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     }
   };
@@ -929,7 +901,7 @@ const BusTrips = () => {
           role,
           "UPDATE_TRIP",
           `Updated Bus Trip: ${editRow.templateNo}`,
-          "BusTrips"
+          "BusTrips",
         );
         fetchBusTrips();
         setEditRow(null);
@@ -972,29 +944,58 @@ const BusTrips = () => {
 
       // 1. BRANDED HEADER (-1/8 height adjustment)
       worksheet.getRow(1).height = 35;
-      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:H4');
+      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:H4");
 
       // 2. Report Title & Metadata
-      worksheet.mergeCells('A6:H6');
-      const titleCell = worksheet.getCell('A6');
-      titleCell.value = 'BUS PARKING REPORTS';
-      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
-      titleCell.alignment = { horizontal: 'center' };
+      worksheet.mergeCells("A6:H6");
+      const titleCell = worksheet.getCell("A6");
+      titleCell.value = "BUS PARKING REPORTS";
+      titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
+      titleCell.alignment = { horizontal: "center" };
 
       worksheet.addRow([]); // Spacer
-      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', `No. of Bus: ${filtered.length}`]);
-      worksheet.addRow([`Operator: ${localStorage.getItem("authName") || "Admin"}`, '', '', '', '', '', '', `Total Revenue: Php ${totalRevenue.toFixed(2)}`]);
+      worksheet.addRow([
+        `Date: ${new Date().toLocaleDateString()}`,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        `No. of Bus: ${filtered.length}`,
+      ]);
+      worksheet.addRow([
+        `Operator: ${localStorage.getItem("authName") || "Admin"}`,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        `Total Revenue: Php ${totalRevenue.toFixed(2)}`,
+      ]);
       worksheet.addRow([]); // Spacer
 
       // 3. Table Headers with IBT Red Styling
       const headerRow = worksheet.addRow([
-        "Plate No.", "Ticket Ref.", "Route", "Price", "Arrival", "Departure", "Company", "Status"
+        "Plate No.",
+        "Ticket Ref.",
+        "Route",
+        "Price",
+        "Arrival",
+        "Departure",
+        "Company",
+        "Status",
       ]);
 
       headerRow.eachCell((cell) => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
-        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF10B981" },
+        };
+        cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
       // 4. Populate Bus Data
@@ -1014,7 +1015,12 @@ const BusTrips = () => {
       // 5. BRANDED FOOTER (-1/8 height adjustment)
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
-      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:H${lastRowNumber + 3}`);
+      await addImageToWorksheet(
+        workbook,
+        worksheet,
+        footerImg,
+        `A${lastRowNumber}:H${lastRowNumber + 3}`,
+      );
 
       // 6. Formatting Column Widths
       worksheet.columns = [
@@ -1025,16 +1031,25 @@ const BusTrips = () => {
         { width: 12 }, // Arrival
         { width: 12 }, // Departure
         { width: 20 }, // Company
-        { width: 15 }  // Status
+        { width: 15 }, // Status
       ];
 
       // 7. Generate and Download
       const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      saveAs(blob, `IBT_Bus_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(
+        blob,
+        `IBT_Bus_Report_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
 
-      logActivity(role, "EXPORT_EXCEL", `Exported branded report for ${filtered.length} bus trips`, "BusTrips");
-
+      logActivity(
+        role,
+        "EXPORT_EXCEL",
+        `Exported branded report for ${filtered.length} bus trips`,
+        "BusTrips",
+      );
     } catch (err) {
       console.error("Bus Trips ExcelJS Export Failed:", err);
       alert("Failed to export Excel. Please try again.");
@@ -1062,19 +1077,38 @@ const BusTrips = () => {
 
     // Left-aligned header info
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
-    doc.text(`Operator: ${localStorage.getItem("authName") || "Admin"}`, margin, 61);
+    doc.text(
+      `Operator: ${localStorage.getItem("authName") || "Admin"}`,
+      margin,
+      61,
+    );
 
     // Fixed right-alignment: Uses pageWidth - margin to stay within table bounds
-    doc.text(`No. of Bus: ${filtered.length}`, pageWidth - margin, 55, { align: "right" });
-    doc.text(`Revenue: Php ${totalRevenue.toFixed(2)}`, pageWidth - margin, 61, { align: "right" });
+    doc.text(`No. of Bus: ${filtered.length}`, pageWidth - margin, 55, {
+      align: "right",
+    });
+    doc.text(
+      `Revenue: Php ${totalRevenue.toFixed(2)}`,
+      pageWidth - margin,
+      61,
+      { align: "right" },
+    );
 
     autoTable(doc, {
       startY: 70,
       margin: { left: margin, right: margin, bottom: 35 }, // Explicitly set horizontal margins
-      head: [[
-        "Plate No.", "Ticket Ref.", "Route", "Price",
-        "Arrival", "Departure", "Company", "Status"
-      ]],
+      head: [
+        [
+          "Plate No.",
+          "Ticket Ref.",
+          "Route",
+          "Price",
+          "Arrival",
+          "Departure",
+          "Company",
+          "Status",
+        ],
+      ],
       body: filtered.map((item) => [
         item.templateNo || "-",
         item.ticketReferenceNo || "-",
@@ -1092,104 +1126,107 @@ const BusTrips = () => {
       },
     });
 
-    doc.save(`IBT_Bus_Parking_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    doc.save(
+      `IBT_Bus_Parking_Report_${new Date().toISOString().slice(0, 10)}.pdf`,
+    );
   };
-
 
   const handleBulkDelete = async () => {
-    // 1. Customize the confirmation message based on role
-    const confirmMsg =
-      role === "bus"
-        ? `Request deletion for ${selectedIds.length} records?`
-        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+  if (selectedIds.length === 0) {
+    setNotificationState({
+      isOpen: true,
+      type: "warning",
+      message: "Please select at least one record.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
 
-    if (!window.confirm(confirmMsg)) return;
-    
-    setIsLoading(true);
-    
-    // We need the base API URL without '/bustrips' for the deletion-requests endpoint
-    const GLOBAL_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
+  setIsLoading(true);
 
-    try {
-      if (role === "bus") {
-        // --- BUS ADMIN: Send Deletion Requests ---
-        const requestPromises = selectedIds.map(async (id) => {
-          const item = records.find((r) => r.id === id);
-          if (!item) return;
+  const GLOBAL_API_URL = `${
+    import.meta.env.VITE_API_URL || "http://localhost:10000"
+  }/api`;
 
-          return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              itemType: "Bus Trip",
-              itemDescription: `Plate No: ${item.templateNo || item.templateno} - ${item.company}`,
-              requestedBy: localStorage.getItem("authName") || "Bus Admin",
-              originalData: item,
-              reason: "Bulk deletion request",
-            }),
-          });
+  try {
+    if (role === "bus") {
+      // BUS ADMIN → Send deletion requests
+      const requestPromises = selectedIds.map(async (id) => {
+        const item = records.find((r) => r.id === id);
+        if (!item) return;
+
+        return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemType: "Bus Trip",
+            itemDescription: `Plate No: ${
+              item.templateNo || item.templateno
+            } - ${item.company}`,
+            requestedBy: localStorage.getItem("authName") || "Bus Admin",
+            originalData: item,
+            reason: "Bulk deletion request",
+          }),
         });
+      });
 
-        await Promise.all(requestPromises);
-        
-        await logActivity(
-          role,
-          "REQUEST_BULK_DELETE",
-          `Requested deletion for ${selectedIds.length} bus trips`,
-          "BusTrips",
-        );
+      await Promise.all(requestPromises);
 
-        setNotificationState({
-          isOpen: true,
-          type: 'success',
-          message: `Sent deletion requests for ${selectedIds.length} records.`,
-          autoClose: true,
-          duration: 3000
-        });
+      await logActivity(
+        role,
+        "REQUEST_BULK_DELETE",
+        `Requested deletion for ${selectedIds.length} bus trips`,
+        "BusTrips",
+      );
 
-      } else {
-        // --- SUPERADMIN: Immediate Deletion ---
-        await Promise.all(
-          selectedIds.map((id) =>
-            fetch(`${API_URL}/${id}`, { method: "DELETE" }),
-          ),
-        );
-        
-        await logActivity(
-          role,
-          "BULK_DELETE",
-          `Deleted ${selectedIds.length} items`,
-          "BusTrips",
-        );
-        
-        await fetchBusTrips();
-
-        setNotificationState({
-          isOpen: true,
-          type: 'success',
-          message: `Successfully deleted ${selectedIds.length} records!`,
-          autoClose: true,
-          duration: 3000
-        });
-      }
-
-      // Clear selections after either action is complete
-      setSelectedIds([]);
-      setIsSelectionMode(false);
-      
-    } catch (e) {
-      console.error("Bulk action failed", e);
       setNotificationState({
         isOpen: true,
-        type: 'error',
-        message: "Failed to process some records.",
+        type: "success",
+        message: `Sent deletion requests for ${selectedIds.length} records.`,
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      // SUPERADMIN → Immediate deletion
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`${API_URL}/${id}`, { method: "DELETE" }),
+        ),
+      );
+
+      await logActivity(
+        role,
+        "BULK_DELETE",
+        `Deleted ${selectedIds.length} items`,
+        "BusTrips",
+      );
+
+      await fetchBusTrips();
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Successfully deleted ${selectedIds.length} records!`,
+        autoClose: true,
+        duration: 3000,
+      });
     }
-  };
+
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+  } catch (e) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Failed to process some records.",
+      autoClose: true,
+      duration: 3000,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleSubmitReport = async () => {
     setIsReporting(true);
@@ -1238,46 +1275,82 @@ const BusTrips = () => {
     setTicketRefInput("");
   };
 
-
   const confirmLogout = async () => {
-    if (!logoutRow || !ticketRefInput) return;
+  if (!logoutRow || !ticketRefInput) {
+    setNotificationState({
+      isOpen: true,
+      type: "warning",
+      message: "Please enter the ticket reference number.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
 
-
-    const isDuplicate = records.some(
-      (record) =>
-        record.ticketReferenceNo &&
-        record.ticketReferenceNo.toString().trim() ===
+  const isDuplicate = records.some(
+    (record) =>
+      record.ticketReferenceNo &&
+      record.ticketReferenceNo.toString().trim() ===
         ticketRefInput.toString().trim(),
-    );
+  );
 
-    if (isDuplicate) {
-      alert(
-        `Error: Ticket Reference Number "${ticketRefInput}" already exists. Please use a unique number.`,
-      );
-      return;
-    }
+  if (isDuplicate) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: `Ticket Reference No. "${ticketRefInput}" already exists.`,
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
 
-    try {
-      const response = await fetch(`${API_URL}/${logoutRow.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticketReferenceNo: ticketRefInput,
-          status: "Paid",
-          departureTime: new Date().toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+  try {
+    const response = await fetch(`${API_URL}/${logoutRow.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticketReferenceNo: ticketRefInput,
+        status: "Paid",
+        departureTime: new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
         }),
+      }),
+    });
+
+    if (response.ok) {
+      await fetchBusTrips();
+
+      setLogoutRow(null);
+      setTicketRefInput("");
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: "Bus departure confirmed successfully.",
+        autoClose: true,
+        duration: 3000,
       });
-      if (response.ok) {
-        fetchBusTrips();
-        setLogoutRow(null);
-      }
-    } catch (error) {
-      console.error(error);
+    } else {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to confirm departure.",
+        autoClose: true,
+        duration: 3000,
+      });
     }
-  };
+  } catch (error) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Error confirming departure.",
+      autoClose: true,
+      duration: 3000,
+    });
+  }
+};
 
   const handleMarkArrived = async (row) => {
     try {
@@ -1290,10 +1363,10 @@ const BusTrips = () => {
         fetchBusTrips();
         setNotificationState({
           isOpen: true,
-          type: 'success',
+          type: "success",
           message: `Bus ${row.plateno} marked as Arrived!`,
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       }
     } catch (error) {
@@ -1304,7 +1377,9 @@ const BusTrips = () => {
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
-      const response = await fetch(`${API_URL}/${deleteRow.id}`, { method: "DELETE" });
+      const response = await fetch(`${API_URL}/${deleteRow.id}`, {
+        method: "DELETE",
+      });
 
       if (!response.ok) throw new Error("Failed to delete");
 
@@ -1313,19 +1388,19 @@ const BusTrips = () => {
 
       setNotificationState({
         isOpen: true,
-        type: 'success',
+        type: "success",
         message: "Record successfully deleted!",
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     } catch (error) {
       console.error(error);
       setNotificationState({
         isOpen: true,
-        type: 'error',
+        type: "error",
         message: "Failed to delete record.",
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     }
   };
@@ -1351,75 +1426,72 @@ const BusTrips = () => {
 
         setNotificationState({
           isOpen: true,
-          type: 'success',
+          type: "success",
           message: `Bus ${archiveRow.templateNo} archived successfully!`,
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       } else {
         console.error("Failed to archive bus trip");
         setNotificationState({
           isOpen: true,
-          type: 'error',
+          type: "error",
           message: "Failed to archive bus trip",
           autoClose: true,
-          duration: 3000
+          duration: 3000,
         });
       }
     } catch (e) {
       console.error("Error archiving:", e);
       setNotificationState({
         isOpen: true,
-        type: 'error',
+        type: "error",
         message: "Error archiving bus trip",
         autoClose: true,
-        duration: 3000
+        duration: 3000,
       });
     } finally {
       setArchiveRow(null);
     }
   };
 
-
-
   const tableColumns = isSelectionMode
     ? [
-      <div key="header-check" className="flex items-center">
-        <input
-          type="checkbox"
-          checked={
-            selectedIds.length === paginatedData.length &&
-            paginatedData.length > 0
-          }
-          onChange={handleSelectAll}
-          className="h-4 w-4 rounded border-slate-300"
-        />
-      </div>,
-      "Plate No",
-      "Ticket Ref",
-      "Route",
-      "Price",
-      "Time",
-      "Departure",
-      "Date",
-      "Company",
-      "Status",
-    ]
+        <div key="header-check" className="flex items-center">
+          <input
+            type="checkbox"
+            checked={
+              selectedIds.length === paginatedData.length &&
+              paginatedData.length > 0
+            }
+            onChange={handleSelectAll}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+        </div>,
+        "Plate No",
+        "Ticket Ref",
+        "Route",
+        "Price",
+        "Time",
+        "Departure",
+        "Date",
+        "Company",
+        "Status",
+      ]
     : [
-      "Plate No",
-      "Ticket Ref",
-      "Route",
-      "Price",
-      "Time",
-      "Departure",
-      "Date",
-      "Company",
-      "Status",
-    ];
+        "Plate No",
+        "Ticket Ref",
+        "Route",
+        "Price",
+        "Time",
+        "Departure",
+        "Date",
+        "Company",
+        "Status",
+      ];
 
   return (
     <Layout title="Bus Trips Management">
-
       <div className="mb-6">
         <StatCardGroupBus
           totalTrips={totalTrips}
@@ -1431,7 +1503,6 @@ const BusTrips = () => {
 
       <div className="px-4 lg:px-8">
         <div className="flex flex-col gap-4 w-full">
-
           <BusTripFilters
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -1442,9 +1513,7 @@ const BusTrips = () => {
             uniqueCompanies={availableCompanies}
           />
 
-
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
-
             {isSelectionMode && selectedIds.length > 0 && (
               <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                 <span className="text-xs font-semibold text-slate-600 px-2">
@@ -1452,7 +1521,9 @@ const BusTrips = () => {
                 </span>
                 <button
                   onClick={handleBulkDelete}
-                  title={role === "bus" ? "Request Deletion" : "Delete Selected"}
+                  title={
+                    role === "bus" ? "Request Deletion" : "Delete Selected"
+                  }
                   className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 shadow-sm border"
                 >
                   <Trash2 size={20} />
@@ -1463,7 +1534,6 @@ const BusTrips = () => {
             <div
               className={`flex flex-wrap items-center justify-end gap-3 ${isSelectionMode ? "ml-auto" : "w-full"}`}
             >
-
               {role === "bus" && (
                 <button
                   onClick={() => setShowSubmitModal(true)}
@@ -1573,7 +1643,6 @@ const BusTrips = () => {
 
               return (
                 <div className="flex justify-end items-center space-x-2">
-
                   {/* Reusable Table Actions (View & Edit) */}
                   <TableActions
                     onView={() => setViewRow(selectedRecord)}
@@ -1647,11 +1716,11 @@ const BusTrips = () => {
       {showSetPriceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
-
             {/* Header Structure matching TerminalFees.jsx */}
             <div className="flex items-center justify-between mb-5 border-b pb-3">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <Settings size={20} className="text-emerald-600" /> Bus Fee Settings
+                <Settings size={20} className="text-emerald-600" /> Bus Fee
+                Settings
               </h3>
               <button
                 onClick={() => setShowSetPriceModal(false)}
@@ -1663,7 +1732,8 @@ const BusTrips = () => {
             </div>
 
             <p className="text-sm text-slate-600 mb-5">
-              Set the new standard bus parking rate. Changes take effect upon saving.
+              Set the new standard bus parking rate. Changes take effect upon
+              saving.
             </p>
 
             {/* Input Field matching TerminalFees.jsx logic */}
@@ -1996,22 +2066,41 @@ const BusTrips = () => {
         isOpen={notificationState.isOpen}
         type={notificationState.type}
         message={notificationState.message}
-        onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
+        onClose={() =>
+          setNotificationState({
+            isOpen: false,
+            type: "",
+            message: "",
+            autoClose: true,
+            duration: 3000,
+          })
+        }
       />
       {/* View Modal */}
       {viewRow && (
         <ViewModal
           title="View Bus Trip Details"
           fields={[
-            { label: "Plate No.", value: viewRow.templateNo || viewRow.templateno || "-" },
+            {
+              label: "Plate No.",
+              value: viewRow.templateNo || viewRow.templateno || "-",
+            },
             { label: "Company", value: viewRow.company || "-" },
             { label: "Route", value: viewRow.route || "-" },
             { label: "Status", value: viewRow.status || "-" },
             { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
             { label: "Arrival Time", value: viewRow.time || "-" },
             { label: "Departure Time", value: viewRow.departureTime || "-" },
-            { label: "Ticket Reference", value: viewRow.ticketReferenceNo || "-" },
-            { label: "Date", value: viewRow.date ? new Date(viewRow.date).toLocaleDateString() : "-" },
+            {
+              label: "Ticket Reference",
+              value: viewRow.ticketReferenceNo || "-",
+            },
+            {
+              label: "Date",
+              value: viewRow.date
+                ? new Date(viewRow.date).toLocaleDateString()
+                : "-",
+            },
           ]}
           onClose={() => setViewRow(null)}
         />
@@ -2037,54 +2126,83 @@ const BusTrips = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Plate Number</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                      Plate Number
+                    </label>
                     <input
                       type="text"
                       value={editRow.templateNo || editRow.templateno || ""}
-                      onChange={(e) => setEditRow({ ...editRow, templateNo: e.target.value })}
+                      onChange={(e) =>
+                        setEditRow({ ...editRow, templateNo: e.target.value })
+                      }
                       className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Company</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                      Company
+                    </label>
                     <select
                       value={editRow.company || ""}
-                      onChange={(e) => setEditRow({ ...editRow, company: e.target.value })}
+                      onChange={(e) =>
+                        setEditRow({ ...editRow, company: e.target.value })
+                      }
                       className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                     >
                       <option value="">Select Company</option>
                       {companyData.map((c) => (
-                        <option key={c._id} value={c.name}>{c.name}</option>
+                        <option key={c._id} value={c.name}>
+                          {c.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Route</label>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                    Route
+                  </label>
                   <input
                     type="text"
                     value={editRow.route || ""}
-                    onChange={(e) => setEditRow({ ...editRow, route: e.target.value })}
+                    onChange={(e) =>
+                      setEditRow({ ...editRow, route: e.target.value })
+                    }
                     className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Price (₱)</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                      Price (₱)
+                    </label>
+
                     <input
-                      type="number"
-                      value={editRow.price || 0}
-                      onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={editRow.price || ""}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "");
+                        setEditRow({
+                          ...editRow,
+                          price: value === "" ? "" : Number(value),
+                        });
+                      }}
                       className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Status</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                      Status
+                    </label>
                     <select
                       value={editRow.status || ""}
-                      onChange={(e) => setEditRow({ ...editRow, status: e.target.value })}
+                      onChange={(e) =>
+                        setEditRow({ ...editRow, status: e.target.value })
+                      }
                       className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                     >
                       <option value="Pending">Pending</option>
@@ -2114,6 +2232,17 @@ const BusTrips = () => {
           </div>
         </div>
       )}
+
+      <NotificationToast
+  isOpen={notificationState.isOpen}
+  type={notificationState.type}
+  message={notificationState.message}
+  autoClose={notificationState.autoClose}
+  duration={notificationState.duration}
+  onClose={() =>
+    setNotificationState((prev) => ({ ...prev, isOpen: false }))
+  }
+/>
     </Layout>
   );
 };

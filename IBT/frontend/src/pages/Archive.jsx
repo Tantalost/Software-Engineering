@@ -20,7 +20,12 @@ const Archive = () => {
       case "bus": return ["Bus Trip"];
       case "ticket": return ["Terminal Fee"];
       case "parking": return ["Parking Ticket"];
-      case "tenant": return ["Tenant"];
+      // backend uses "lease" to represent tenant admin users
+      case "tenant":
+      case "tenant admin":
+      case "tenantadmin":
+      case "lease":
+        return ["Tenant"];
       case "lostandfound": return ["Lost & Found"];
       default: return ["All"];
     }
@@ -33,7 +38,11 @@ const Archive = () => {
       case "bus": return "Bus Trip";
       case "ticket": return "Terminal Fee";
       case "parking": return "Parking Ticket";
-      case "tenant": return "Tenant";
+      case "tenant":
+      case "tenant admin":
+      case "tenantadmin":
+      case "lease":
+        return "Tenant";
       case "lostandfound": return "Lost & Found";
       default: return "All";
     }
@@ -155,14 +164,14 @@ const Archive = () => {
 
   const filteredItems = useMemo(() => {
     return allArchivedItems.filter((item) => {
-      // Role-Based Strict Filtering
       if (role === "bus" && item.type !== "Bus Trip") return false;
       if (role === "ticket" && item.type !== "Terminal Fee") return false;
       if (role === "parking" && item.type !== "Parking Ticket") return false;
-      if (role === "tenant" && item.type !== "Tenant") return false;
+      
+      if ((role === "tenant" || role === "tenant admin" || role === "tenantadmin" || role === "lease") && item.type !== "Tenant") return false;
+      
       if (role === "lostandfound" && item.type !== "Lost & Found") return false;
 
-      // Existing Tab, Search, and Date Filtering
       const matchesTab = activeTab === "All" || item.type === activeTab;
       const matchesSearch = (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -189,14 +198,13 @@ const Archive = () => {
       const id = restoreRow._id || restoreRow.id;
 
       if (restoreRow.isSoftDeleted) {
-        // New Soft-Delete Pattern
         const moduleMap = {
           "Bus Trip": "bustrips",
           "Terminal Fee": "terminal-fees",
           "Parking Ticket": "parking",
           "Lost & Found": "lostfound",
           "Report": "reports",
-          "Tenant": "tenants" // (Make sure Tenant is in this list too!)
+          "Tenant": "tenants" 
         };
         const endpoint = moduleMap[restoreRow.type];
         res = await fetch(`${API_URL}/${endpoint}/${id}/restore`, {

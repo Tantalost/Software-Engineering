@@ -202,6 +202,9 @@ IBT Management
 
 export const updateTenant = async (req, res) => {
   try {
+    // fetch previous record so we can compare status later
+    const oldTenant = await Tenant.findById(req.params.id);
+
     const updateData = { ...req.body };
 
     if (updateData.feeBreakdown) {
@@ -211,6 +214,23 @@ export const updateTenant = async (req, res) => {
                 : updateData.feeBreakdown;
         } catch (e) {
             console.error("Error parsing feeBreakdown:", e);
+        }
+    }
+
+    if (updateData.paymentHistory) {
+        if (typeof updateData.paymentHistory === 'string') {
+            if (updateData.paymentHistory.includes('[object Object]')) {
+               
+                delete updateData.paymentHistory;
+            } else {
+               
+                try {
+                    updateData.paymentHistory = JSON.parse(updateData.paymentHistory);
+                } catch (e) {
+                    console.error("Error parsing paymentHistory:", e);
+                    delete updateData.paymentHistory; 
+                }
+            }
         }
     }
 
@@ -245,6 +265,22 @@ export const updateTenant = async (req, res) => {
     );
 
     if (!updatedTenant) return res.status(404).json({ error: "Tenant not found" });
+
+    // if status just became overdue, send notification email
+    if (oldTenant && oldTenant.status !== 'Overdue' && updatedTenant.status === 'Overdue' && updatedTenant.email) {
+      try {
+        const rent = updatedTenant.rentAmount || 0;
+        const subject = "Your lease is now overdue";
+        const message = `Dear ${updatedTenant.tenantName || updatedTenant.name},\n\n` +
+          `Our records indicate that your lease payment for slot ${updatedTenant.slotNo} is now overdue. ` +
+          `Please remit payment as soon as possible to avoid further penalties.\n\n` +
+          `Thank you.\nIBT Management`;
+        await sendEmail({ email: updatedTenant.email, subject, message });
+      } catch (emailErr) {
+        console.error("Overdue email failed:", emailErr.message);
+      }
+    }
+
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Update Tenant Error:", error);

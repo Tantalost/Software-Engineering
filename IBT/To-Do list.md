@@ -14,8 +14,17 @@ Mobile:
 - put every 10th of the month for tenant night market
 
 Web:
-- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
 - Clicking the Notifcation should be redirect to that specific page
+
+Login OTP
+- TOKEN
+
+Manage Employee
+- Hide Super Admin
+
+Reports
+- Date fix date
+
 
 
 (Steph)
@@ -221,3 +230,5 @@ fix the otp verification for each admin per module (same flow as logging in supe
 Admin Login Page (Faint IBT coverpage layout)
 - layout revised 🟢 **Done**
 - fix date filter dapat di maka select ng future date 🟢 **Done**
+
+- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin 🟢 **Done**

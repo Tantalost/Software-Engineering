@@ -274,9 +274,18 @@ const Dashboard = () => {
         isDateInView(getItemDate(i), filterView, filterDate),
       );
 
-      const paidItems = getPaidItems(dateFiltered, moduleKey);
-
-      const currentRev = calculateRevenue(paidItems);
+      let currentRev;
+      if (moduleKey === "tenants") {
+        // For tenants, sum rentAmount + utilityAmount for all tenants, like in TenantLease
+        currentRev = dateFiltered.reduce((sum, tenant) => {
+          const rent = parseFloat(tenant.rentAmount) || 0;
+          const util = parseFloat(tenant.utilityAmount) || 0;
+          return sum + rent + util;
+        }, 0);
+      } else {
+        const paidItems = getPaidItems(dateFiltered, moduleKey);
+        currentRev = calculateRevenue(paidItems);
+      }
 
       const baseMonthlyTarget = targets[moduleKey] || 0;
       let targetRev = 0;
@@ -339,12 +348,16 @@ const Dashboard = () => {
       ),
       "parking",
     );
-    const filteredTenants = getPaidItems(
-      rawData.tenants.filter((i) =>
-        isDateInView(getItemDate(i), filterView, filterDate),
-      ),
-      "tenants",
+    const filteredTenants = rawData.tenants.filter((i) =>
+      isDateInView(getItemDate(i), filterView, filterDate),
     );
+
+    // For tenants revenue, sum rent + utility for all tenants, not just paid
+    const tenantsRevenue = filteredTenants.reduce((sum, tenant) => {
+      const rent = parseFloat(tenant.rentAmount) || 0;
+      const util = parseFloat(tenant.utilityAmount) || 0;
+      return sum + rent + util;
+    }, 0);
 
     setDonutData([
       {
@@ -355,7 +368,7 @@ const Dashboard = () => {
       { name: "Bus", value: calculateRevenue(filteredBus), color: "#EAB308" },
       {
         name: "Tenants",
-        value: calculateRevenue(filteredTenants),
+        value: tenantsRevenue,
         color: "#22C55E",
       },
       {

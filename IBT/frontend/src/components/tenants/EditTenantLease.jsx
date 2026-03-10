@@ -109,6 +109,10 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
 
   const [status, setStatus] = useState(row.status || "Paid");
   const [totalAmount, setTotalAmount] = useState(0);
+  const [interest25, setInterest25] = useState(0);
+  const [dueBalance, setDueBalance] = useState(0);
+  const [interest2, setInterest2] = useState(0);
+  const [overallDue, setOverallDue] = useState(0);
 
   useEffect(() => {
     if (formData.editStart && formData.editStart !== initialStart) {
@@ -132,10 +136,28 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                   (parseFloat(feeBreakdown.otherAmount) || 0);
 
     const rent = parseFloat(formData.rentAmount) || 0;
-    
+    let total = rent + calculatedUtils;
+
+    if (status === "Overdue") {
+      const i25 = rent * 0.25;
+      const db = rent + i25;
+      const i2 = db * 0.02;
+      const overall = db + i2;
+      setInterest25(i25);
+      setDueBalance(db);
+      setInterest2(i2);
+      setOverallDue(overall + calculatedUtils); // include utils if any
+      total = overall + calculatedUtils;
+    } else {
+      setInterest25(0);
+      setDueBalance(0);
+      setInterest2(0);
+      setOverallDue(0);
+    }
+
     setFormData(prev => ({ ...prev, utilityFee: calculatedUtils })); 
-    setTotalAmount(rent + calculatedUtils);
-  }, [formData.rentAmount, feeBreakdown]);
+    setTotalAmount(total);
+  }, [formData.rentAmount, feeBreakdown, status]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -200,6 +222,11 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
       utilityAmount: parseFloat(formData.utilityFee),
       totalAmount: totalAmount,
       feeBreakdown: JSON.stringify(feeBreakdown),
+     
+      paymentHistory: Array.isArray(formData.paymentHistory) 
+        ? JSON.stringify(formData.paymentHistory) 
+        : formData.paymentHistory,
+
       StartDateTime: formatForTable(formData.editStart),
       DueDateTime: formatForTable(formData.editDue), 
       EndDateTime: formatForTable(formData.editDue), 
@@ -305,6 +332,14 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                             className="pl-8 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold px-3 py-2 text-sm outline-none w-full"
                         />
                     </div>
+                    {status === "Overdue" && (
+                      <div className="mt-2 text-xs text-red-700">
+                        <p>25% interest on rent: ₱{interest25.toFixed(2)}</p>
+                        <p>Total due balance (rent+25%): ₱{dueBalance.toFixed(2)}</p>
+                        <p>2% interest on balance: ₱{interest2.toFixed(2)}</p>
+                        <p className="font-semibold">Overall due (incl. utilities): ₱{overallDue.toFixed(2)}</p>
+                      </div>
+                    )}
                 </div>
              </div>
           </div>

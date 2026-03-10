@@ -39,8 +39,8 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
     if (currentRole === "ticket") {
       return log.user === "ticket" && (log.module === "TerminalFees" || log.source === "TerminalFees");
     }
-    if (currentRole === "tenant") {
-      return log.user === "tenant" && (log.module === "Tenants" || log.source === "Tenants"); 
+    if (currentRole === "lease") {
+      return log.user === "lease" && (log.module === "Tenants" || log.source === "Tenants" || log.module === "Tenant" || log.source === "Tenant" || log.module === "Archive" || log.source === "Archive");
     }
     if (currentRole === "parking") {
       return log.user === "parking" && (log.module === "Parking" || log.source === "Parking");
