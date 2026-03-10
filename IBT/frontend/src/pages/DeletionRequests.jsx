@@ -333,7 +333,7 @@ const DeletionRequests = () => {
             Admin Approval Required
           </p>
           <p className="text-sm text-amber-700">
-            Review pending deletion requests from Ticket Admins.
+            Review pending deletion requests from Admins.
           </p>
         </div>
       </div>

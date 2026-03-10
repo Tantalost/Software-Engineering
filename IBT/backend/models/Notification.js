@@ -17,8 +17,6 @@ const notificationSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
-  // Unified role targeting: 
-  // "superadmin" = Web Admin, "tenant" = Mobile App, "all" = both
   targetRole: { 
     type: String, 
     enum: ["all", "superadmin", "tenant"], 
