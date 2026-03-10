@@ -11,6 +11,7 @@ iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, o
 (Lloyd) 
 Mobile:
 - Add Push Notificatiions in mobile module 🔴 **To be Fixed**
+- put every 10th of the month for tenant night market
 
 Web:
 - Clicking the Notifcation should be redirect to that specific page
