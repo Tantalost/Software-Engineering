@@ -5,7 +5,8 @@ import {
   createBroadcast, 
   getBroadcasts, 
   getAdminBroadcasts,
-  deleteBroadcast    
+  deleteBroadcast,
+  updateBroadcast    
 } from '../controllers/broadcastController.js';
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 router.get('/', getBroadcasts);
 
 router.get('/admin', getAdminBroadcasts);
+router.put('/:id', uploadMiddleware, updateBroadcast);
 router.delete('/:id', deleteBroadcast);
 
 const uploadMiddleware = (req, res, next) => {
