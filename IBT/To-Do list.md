@@ -11,6 +11,7 @@ iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, o
 (Lloyd) 
 Mobile:
 - Add Push Notificatiions in mobile module 🔴 **To be Fixed**
+- put every 10th of the month for tenant night market
 
 Web:
 - The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
