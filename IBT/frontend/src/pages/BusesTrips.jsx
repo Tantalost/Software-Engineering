@@ -1452,6 +1452,7 @@ const BusTrips = () => {
                 </span>
                 <button
                   onClick={handleBulkDelete}
+                  title={role === "bus" ? "Request Deletion" : "Delete Selected"}
                   className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 shadow-sm border"
                 >
                   <Trash2 size={20} />
