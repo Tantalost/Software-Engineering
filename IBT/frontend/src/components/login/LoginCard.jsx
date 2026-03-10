@@ -15,53 +15,63 @@ export default function LoginCard({
   handleSubmit,
   isLoading,
   error,
-  // Optional customization
+
   emailLabel = "Email Address",
   emailPlaceholder = "admin@gmail.com",
   emailIcon = "Mail",
   emailDisabled = false,
+
   passwordLabel = "Password",
   passwordPlaceholder = "Enter your password",
   passwordIcon = "Lock",
   passwordType = "password",
   showPasswordToggle = true,
+
   buttonText = "Sign In",
   footer = null,
 }) {
   return (
-    <div className="flex justify-center items-center w-full p-4 sm:p-6">
+    <div className="flex justify-center items-center w-full px-4 sm:px-6">
       <div
         className="
-          relative 
-          w-full 
-          max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl
-          transition-all duration-300 ease-in-out"
+          relative
+          w-full
+          sm:w-[600px]
+          transition-all duration-300 ease-in-out
+        "
       >
         <div
           className="
-          relative
-          w-150
-          bg-white/30
-          backdrop-blur-xl
-          rounded-2xl sm:rounded-3xl
-          shadow-2xl shadow-emerald-500/10
-          border border-white/20
-          px-6 py-8 sm:px-12 sm:py-12 lg:px-16 lg:py-14
-          animate-fadeIn"
+            relative
+            w-full
+            sm:w-[600px]
+            bg-white/30
+            backdrop-blur-xl
+            rounded-2xl sm:rounded-3xl
+            shadow-2xl shadow-emerald-500/10
+            border border-white/20
+            px-6 py-8
+            sm:px-12 sm:py-12
+            lg:px-16 lg:py-14
+            animate-fadeIn
+          "
         >
           <div className="text-center mb-8 lg:mb-10">
             <div
               className="
-                inline-flex items-center justify-center 
-                w-16 h-16 sm:w-20 sm:h-20 
-                bg-gradient-to-br from-teal-500 to-emerald-500 
-                rounded-full mb-4 shadow-md text-white overflow-hidden"
+                inline-flex items-center justify-center
+                w-16 h-16 sm:w-20 sm:h-20
+                bg-gradient-to-br from-teal-500 to-emerald-500
+                rounded-full mb-4 shadow-md text-white overflow-hidden
+              "
             >
               <div className="flex items-center justify-center">{icon}</div>
             </div>
+
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
               {title}
             </h1>
+
             <p className="text-white text-sm sm:text-base lg:text-lg mt-2">
               {subtitle}
             </p>
@@ -84,6 +94,7 @@ export default function LoginCard({
                 placeholder={emailPlaceholder}
                 disabled={emailDisabled}
               />
+
               <LoginInput
                 type={passwordType}
                 label={passwordLabel}
@@ -96,6 +107,7 @@ export default function LoginCard({
                 icon={passwordIcon}
                 placeholder={passwordPlaceholder}
               />
+
               <div className="pt-2 lg:pt-4">
                 <LoginButton
                   handleSubmit={handleSubmit}
@@ -103,6 +115,7 @@ export default function LoginCard({
                   text={buttonText}
                 />
               </div>
+
               {footer}
             </div>
           </div>
