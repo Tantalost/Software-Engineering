@@ -168,7 +168,7 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
                 <Field label="Slot Number" value={viewRow.slotNo} />
-                <Field label="Reference No" value={viewRow.referenceNo || viewRow.referenceno} />
+                <Field label="Reference No" value={viewRow.referenceNo || viewRow.referenceno || (viewRow.paymentHistory && viewRow.paymentHistory.length > 0 ? viewRow.paymentHistory[viewRow.paymentHistory.length - 1].referenceNo : "-")} />
                 <Field label="Tenant Name" value={viewRow.tenantName || viewRow.name} />
                 <Field label="Lease Type" value={viewRow.tenantType || viewRow.floor || "Permanent"} />
                 <Field label="Contact No" value={viewRow.contactNo || viewRow.contact} />

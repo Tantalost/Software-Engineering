@@ -401,6 +401,38 @@ export const approveRenewalPayment = async (req, res) => {
       { new: true }
     );
 
+    if (updatedTenant.email) {
+      const subject = "Payment Approved - IBT Stalls Renewal";
+      const message = `
+
+
+      Dear ${updatedTenant.tenantName},
+
+Your renewal payment of ₱${paymentRecord.amount} has been successfully verified and approved.
+
+DETAILS:
+--------------------------------
+Stall Number: ${updatedTenant.slotNo}
+Reference No: ${paymentRecord.referenceNo}
+Next Due Date: ${new Date(updatedTenant.DueDateTime).toLocaleDateString()}
+
+Thank you for your continued tenancy!
+
+Best regards,
+IBT Management
+      `;
+
+      try {
+          await sendEmail({
+              email: updatedTenant.email,
+              subject: subject,
+              message: message
+          });
+      } catch (emailError) {
+          console.error("Renewal approval email failed to send:", emailError.message);
+      }
+    }
+
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Approve Renewal Error:", error);
