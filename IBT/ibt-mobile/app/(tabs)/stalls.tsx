@@ -727,55 +727,70 @@ setSelectedStall(null);
 
     const appStatus = (currentApp.status || "VERIFICATION_PENDING").toUpperCase();
 
-    if (appStatus === "VERIFICATION_PENDING" || appStatus === "PENDING") 
-    return <VerificationPendingView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
+     if (appStatus === "VERIFICATION_PENDING" || appStatus === "PENDING") return <VerificationPendingView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
 
-if (appStatus === "CONTRACT_REVIEW") 
-    return <ContractReviewView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
+    if (appStatus === "CONTRACT_REVIEW") return <ContractReviewView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
 
-if (appStatus === "CONTRACT_PENDING") {
-    return (
+    if (appStatus === "CONTRACT_PENDING") {
+      return (
         <ContractPendingView
-            currentApp={currentApp}
-            generateContractPDF={generateContractPDF}
-            submitContract={submitContract}
-            applying={applying}
-            files={files}
-            uploadProgress={uploadProgress}
-            onPickFile={pickFile}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+          currentApp={currentApp}
+          generateContractPDF={generateContractPDF}
+          submitContract={submitContract}
+          applying={applying}
+          files={files}
+          uploadProgress={uploadProgress}
+          onPickFile={pickFile}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
-    );
-}
+      );
+    }
 
-if (appStatus === "PAYMENT_REVIEW") 
-    return <PaymentReviewView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
+    if (appStatus === "PAYMENT_REVIEW") return <PaymentReviewView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
 
-if (appStatus === "PAYMENT_UNLOCKED") {
-    return (
+    if (appStatus === "PAYMENT_UNLOCKED") {
+      return (
         <PaymentUnlockedView
-          
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+          currentApp={currentApp}
+          currentBilling={currentBilling}
+          paymentData={paymentData}
+          setPaymentData={setPaymentData}
+          submitPaymentReceipt={submitPaymentReceipt}
+          applying={applying}
+          files={files}
+          uploadProgress={uploadProgress}
+          onPickFile={pickFile}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
-    );
-}
+      );
+    }
 
-if (appStatus === "TENANT") {
-    return (
+    if (appStatus === "TENANT") {
+      return (
         <TenantView 
-          
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+          currentApp={currentApp} 
+          paymentData={paymentData} 
+          setPaymentData={setPaymentData} 
+          submitRenewal={submitRenewalPayment} 
+          applying={applying} 
+          files={files} 
+          uploadProgress={uploadProgress} 
+          onPickFile={pickFile}
+          clearPaymentData={() => {
+            setPaymentData({ referenceNo: '' });
+            setFiles(prev => ({ ...prev, receipt: null }));
+          }} 
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
-    );
-}
+      );
+    }
 
-if (appStatus === "REJECTED") {
-    return <RejectedView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
-}
-
+    if (appStatus === "REJECTED") {
+      return <RejectedView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
+    }
     return null;
   };
 

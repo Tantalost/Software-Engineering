@@ -391,7 +391,12 @@ export const approveRenewalPayment = async (req, res) => {
       { 
           status: "Paid", 
           DueDateTime: currentDue.toISOString(),
-          $push: { paymentHistory: paymentRecord } 
+          $push: { paymentHistory: paymentRecord },
+         
+          $unset: { 
+              referenceNo: "",
+              "documents.proofOfReceipt": "" 
+          }
       },
       { new: true }
     );
