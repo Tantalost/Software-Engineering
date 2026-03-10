@@ -36,7 +36,13 @@ const TenantSchema = new mongoose.Schema({
   StartDateTime: Date,
   DueDateTime: Date,
   status: { type: String, default: "Paid" }, 
-  
+
+  paymentHistory: [{
+    referenceNo: String,
+    amount: Number,
+    datePaid: Date,
+    receiptUrl: String
+  }],
   
   documents: {
     businessPermit: String,
