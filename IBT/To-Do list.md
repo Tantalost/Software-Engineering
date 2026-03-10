@@ -12,25 +12,29 @@ Revisions for web general
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
+Revisions for web general 
+- dashboard export format 🔴 **To be Fixed**
+
 (Alviar)
 NEW TO DO LISTS (Terminal Fee Module)
 Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🔴 **To be Fixed**
 Admin Login Page
 - layout revised 🔴 **To be Fixed**
 
-(Steph) 🟢 **Done**
-Next payment due details (Tenant List Module) 🟢 **Done**
+(Steph) 🔴 **To be Fixed**
+Next payment due details (Tenant List Module) 🔴 **To be Fixed**
 - Date 
 - next amount to be paid
 - add button for send payment receipt so that if the user is already paid it will shows in the payment record history
 UI fix: 
 - Add tenant Modal - add progress bar for uploading docs
-- UI layout in view modal same as the layout in the editTenantLease modal in Financial breakdown section
-- can't view uploaded documents after the contract review phase, in the add tenant modal. 🟢 **Done**
+- can't view uploaded documents after the contract review phase, in the add tenant modal.
 
-(Lloyd) 
-Notification sa mobile
-Bus trips Calendar cant select future dates
+(Lloyd) 🔴 **To be Fixed**
+- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
+- send email in the tenants table if its working or not , needed to be fix
+
+
 
 🟢 **Done**
 Revisions for web general 
@@ -136,9 +140,42 @@ NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🟢 **Done**
 Add "X" icon button sa view modal 🟢 **Done**
 
-- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 🟢 **Done**
-- send email in the tenants table if its working or not , needed to be fix 🟢 **Done**
-- add set price for permanent slot. 🟢 **Done**
+SUPER ADMIN
 
-Revisions for web general 
-- dashboard export format 🟢 **Done**
+*Dashboard
+Set Target revenue - Not working and di nagsasave ang na set na target
+Notification - Hindi nag reredirect if pindutin ang mga notification
+
+*Buses
+view and Edit button - ilagay ulit
+
+*Terminal fee
+StatCard (Senior/PWD/Student) - 2x ang add if mag add fee ng senior
+
+*Parking
+Edit button - di nag rereflect sa stat card(Total revenue) pag inedit
+
+*Lost&Found
+Date&Time - Empty ang Data
+Add new - Di maka add 
+
+*Manage Employees - 
+sa edit button, dapat may button if magchange role ang admin
+
+
+Admins
+- delete icons dapat consistent ang design
+- Remove all Broadcast modal 
+- Archive - Dapat own Data lang ang makita
+- Activity Logs - Ang mga activity na dapat ishow is based sa mga own role lang
+- If mag edit ng Data magrequest muna ng password before ma edit, before mag save changes dapat mag enter ng password.
+
+*Terminal Admin
+StatCard (Senior/PWD/Student) - 2x ang add if mag add fee ng seniors/student
+
+*Lost&Found Admin
+Date&Time - Empty ang Data
+Add new - Di maka add 
+
+*Buses admin
+view and Edit button - ilagay ulit
