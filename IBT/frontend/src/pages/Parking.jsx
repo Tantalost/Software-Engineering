@@ -382,13 +382,6 @@ const Parking = () => {
 
   // BULK DELETE
   const handleBulkDelete = async () => {
-    const confirmMsg =
-      role === "parking"
-        ? `Request deletion for ${selectedIds.length} records?`
-        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
-
-    if (!window.confirm(confirmMsg)) return;
-
     setIsLoading(true);
     try {
       if (role === "parking") {

@@ -1,7 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/layout/Layout";
 import DeleteModal from "../components/common/DeleteModal";
-import { CheckCircle, XCircle, X, UserX, ShieldCheck, Send, Eye, EyeOff } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  X,
+  UserX,
+  ShieldCheck,
+  Send,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import NotificationToast from "../components/common/NotificationToast";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
 
@@ -46,6 +56,8 @@ export default function EmployeeManage() {
     isOpen: false,
     type: "success",
     message: "",
+    autoClose: true,
+    duration: 3000,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -69,7 +81,12 @@ export default function EmployeeManage() {
       try {
         const res = await fetch(`${API_BASE_URL}/api/admins`);
         if (!res.ok) throw new Error("Failed to load admins");
-        const data = await res.json();
+        let data = {};
+        try {
+          data = await res.json();
+        } catch {
+          data = {};
+        }
         setAdmins(
           data.map((a) => ({
             ...a,
@@ -122,7 +139,12 @@ export default function EmployeeManage() {
   // --- Actions ---
 
   const addAdmin = async () => {
-    if (!createForm.firstName.trim() || !createForm.lastName.trim() || !createForm.email || !createForm.password) {
+    if (
+      !createForm.firstName.trim() ||
+      !createForm.lastName.trim() ||
+      !createForm.email ||
+      !createForm.password
+    ) {
       showToast("error", "Please fill in all required fields.");
       return;
     }
@@ -143,7 +165,12 @@ export default function EmployeeManage() {
         }),
       });
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
       if (!res.ok) throw new Error(data.message || "Failed to create admin.");
 
       setAdmins((prev) => [
@@ -154,7 +181,15 @@ export default function EmployeeManage() {
         },
       ]);
       setShowCreate(false);
-      setCreateForm({ firstName: "", lastName: "", middleName: "", suffix: "", email: "", password: "", role: "parking" });
+      setCreateForm({
+        firstName: "",
+        lastName: "",
+        middleName: "",
+        suffix: "",
+        email: "",
+        password: "",
+        role: "parking",
+      });
       showToast("success", "Admin created successfully.");
     } catch (error) {
       showToast("error", error.message);
@@ -193,7 +228,12 @@ export default function EmployeeManage() {
         );
       }
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
       if (!res.ok) throw new Error(data.message || "Failed to send OTP.");
 
       setOtpSent(true);
@@ -245,7 +285,12 @@ export default function EmployeeManage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
       if (!res.ok) throw new Error(data.message || "Failed to update admin.");
 
       const next = admins.map((a) =>
@@ -253,7 +298,15 @@ export default function EmployeeManage() {
       );
       setAdmins(next);
       setEditTarget(null);
-      setEditForm({ firstName: "", lastName: "", middleName: "", suffix: "", email: "", password: "", otp: "" });
+      setEditForm({
+        firstName: "",
+        lastName: "",
+        middleName: "",
+        suffix: "",
+        email: "",
+        password: "",
+        otp: "",
+      });
       setOtpSent(false);
 
       showToast("success", "Admin details updated successfully.");
@@ -342,7 +395,7 @@ export default function EmployeeManage() {
                   ) : (
                     admins.map((a) => (
                       <tr
-                        key={a.id}
+                        key={a.id || a._id}
                         className="border-b border-gray-100 hover:bg-gray-50 transition-all"
                       >
                         <td className="px-6 py-3 font-medium">{a.name}</td>
@@ -386,7 +439,10 @@ export default function EmployeeManage() {
                     label="First Name *"
                     value={createForm.firstName}
                     onChange={(e) =>
-                      setCreateForm({ ...createForm, firstName: e.target.value })
+                      setCreateForm({
+                        ...createForm,
+                        firstName: e.target.value,
+                      })
                     }
                   />
                   <Field
@@ -400,7 +456,10 @@ export default function EmployeeManage() {
                     label="Middle Name"
                     value={createForm.middleName}
                     onChange={(e) =>
-                      setCreateForm({ ...createForm, middleName: e.target.value })
+                      setCreateForm({
+                        ...createForm,
+                        middleName: e.target.value,
+                      })
                     }
                   />
                   <Field
@@ -609,35 +668,44 @@ export default function EmployeeManage() {
   );
 }
 
-const Field = ({ label, value, onChange, type = "text", disabled = false, placeholder = "" }) => {
-    const [isVisible, setIsVisible] = useState(false);
-    
-    const isPassword = type === "password";
-    const inputType = isPassword ? (isVisible ? "text" : "password") : type;
+const Field = ({
+  label,
+  value,
+  onChange,
+  type = "text",
+  disabled = false,
+  placeholder = "",
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
 
-    return (
-        <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
-            <div className="relative">
-                <input 
-                    disabled={disabled} 
-                    value={value} 
-                    onChange={onChange} 
-                    type={inputType} 
-                    placeholder={placeholder} 
-                    className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-10 text-sm text-slate-700 shadow-sm outline-none focus:border-emerald-500 transition-colors ${disabled ? "opacity-70" : ""}`} 
-                />
-                
-                {isPassword && (
-                    <button
-                        type="button"
-                        onClick={() => setIsVisible(!isVisible)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
-                    >
-                        {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                )}
-            </div>
-        </div>
-    );
+  const isPassword = type === "password";
+  const inputType = isPassword ? (isVisible ? "text" : "password") : type;
+
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-slate-600">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          disabled={disabled}
+          value={value}
+          onChange={onChange}
+          type={inputType}
+          placeholder={placeholder}
+          className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-10 text-sm text-slate-700 shadow-sm outline-none focus:border-emerald-500 transition-colors ${disabled ? "opacity-70" : ""}`}
+        />
+
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setIsVisible(!isVisible)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+          >
+            {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 };

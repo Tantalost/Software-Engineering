@@ -346,13 +346,6 @@ const TerminalFees = () => {
   };
 
   const handleBulkDelete = async () => {
-    const confirmMsg =
-      role === "ticket"
-        ? `Request deletion for ${selectedIds.length} records?`
-        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
-
-    if (!window.confirm(confirmMsg)) return;
-
     setIsLoading(true);
     try {
       if (role === "ticket") {
