@@ -17,7 +17,15 @@ Admin Login Page (Faint IBT coverpage layout)
 Add notificatiions in mobile module 🔴 **To be Fixed**
 fix the otp verification for each admin per module (same flow as logging in superadmin part)
 
+Mobile:
+-InnerHTML layout for Download Contract PDF part
+-Change Email message layout after the slot was approved
+- Move the edit icon to the profile picture part.
 
+- Add setting modal and place it in the upper right wherein the edit icon placed before. The following details inside the settings are:
+1. Deactivate Account need confirmation by inputting the current password to deactivate the account
+2. Change password (Need the current password to change new password and it requires OTP in order to reset the password) 
+3. Add Reactivate Feature if the account is deactivated.
 
 
 To do

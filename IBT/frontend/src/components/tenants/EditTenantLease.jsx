@@ -340,16 +340,19 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                 <label className="text-sm font-medium text-slate-700">Status</label>
                 <div className="relative">
                     <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        className={`appearance-none rounded-lg border px-3 py-2 text-sm outline-none w-full font-bold cursor-pointer transition-colors
-                            ${status === 'Paid' 
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 focus:border-emerald-500' 
-                                : 'bg-red-50 border-red-200 text-red-700 focus:border-red-500'
-                            }`}
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      className={`appearance-none rounded-lg border px-3 py-2 text-sm outline-none w-full font-bold cursor-pointer transition-colors
+                      ${status === 'Paid' 
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700 focus:border-emerald-500' 
+                      : status === 'Payment Review' || status === 'PAYMENT_REVIEW'
+                      ? 'bg-orange-50 border-orange-200 text-orange-700 focus:border-orange-500'
+                      : 'bg-red-50 border-red-200 text-red-700 focus:border-red-500'
+                      }`}
                     >
-                        <option value="Paid">Paid</option>
-                        <option value="Overdue">Overdue</option>
+                      <option value="Paid">Paid</option>
+                      <option value="Payment Review">Payment Review</option>
+                      <option value="Overdue">Overdue</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
                        <ChevronDown size={14} />

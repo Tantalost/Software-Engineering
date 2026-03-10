@@ -48,6 +48,9 @@ import {
   RejectedView
 } from '@/src/components/stalls/StatusViews';
 
+const [dynamicPermanentPrice, setDynamicPermanentPrice] = useState(6000);
+const [dynamicNightPrice, setDynamicNightPrice] = useState(150);
+
 const SECRET_KEY = process.env.EXPO_PUBLIC_ENCRYPTION_KEY || " ";
 
 export default function StallsPage() {
@@ -99,12 +102,23 @@ export default function StallsPage() {
 
   const currentBilling = useMemo(() => {
     const floorType = currentApp ? currentApp.floor : selectedFloor;
-    return floorType === 'Night Market' ? BILLING_CONFIG.NightMarket : BILLING_CONFIG.Permanent;
-  }, [selectedFloor, currentApp]);
+    const isNightMarket = floorType === 'Night Market';
+  
+    return {
+      ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
+      amountLabel: `₱${isNightMarket ? dynamicNightPrice : dynamicPermanentPrice}`,
+      rawAmount: isNightMarket ? dynamicNightPrice : dynamicPermanentPrice
+    };
+  }, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice]);
 
   const modalBilling = useMemo(() => {
-    return selectedFloor === 'Night Market' ? BILLING_CONFIG.NightMarket : BILLING_CONFIG.Permanent;
-  }, [selectedFloor]);
+      const isNightMarket = selectedFloor === 'Night Market';
+      return {
+        ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
+        amountLabel: `₱${isNightMarket ? dynamicNightPrice : dynamicPermanentPrice}`,
+        rawAmount: isNightMarket ? dynamicNightPrice : dynamicPermanentPrice
+      };
+  }, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice]);
 
   const handlePhoneChange = (text: string) => {
     let cleaned = text.replace(/[^0-9]/g, '');
@@ -169,6 +183,22 @@ export default function StallsPage() {
 
     try {
       const timestamp = new Date().getTime();
+
+      try {
+        const permRes = await fetch(`${API_URL}/tenants/permanent/default-price`);
+        if (permRes.ok) {
+          const permData = await permRes.json();
+          setDynamicPermanentPrice(permData.defaultPrice);
+        }
+  
+        const nightRes = await fetch(`${API_URL}/tenants/night-market/default-price`);
+        if (nightRes.ok) {
+          const nightData = await nightRes.json();
+          setDynamicNightPrice(nightData.defaultPrice);
+        }
+      } catch (e) {
+        console.log("Error fetching default prices", e);
+      }
 
       const stallsRes = await fetch(`${API_URL}/stalls/occupied?floor=${selectedFloor}&_t=${timestamp}`);
       const occupiedData = await stallsRes.json();
