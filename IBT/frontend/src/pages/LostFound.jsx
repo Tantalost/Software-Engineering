@@ -82,7 +82,6 @@ const LostFound = () => {
   const [newItem, setNewItem] = useState({
     trackingNo: "",
     itemType: "",
-    description: "",
     location: "",
     dateTime: "",
     status: "Unclaimed",
@@ -169,7 +168,6 @@ const LostFound = () => {
     setNewItem({
       trackingNo: autoTracking,
       itemType: "",
-      description: "",
       location: "",
       dateTime: formattedNow,
       status: "Unclaimed",
@@ -356,7 +354,6 @@ const LostFound = () => {
 
   const filtered = records.filter((item) => {
     const matchesSearch =
-      item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.itemType &&
         item.itemType.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -619,7 +616,7 @@ const LostFound = () => {
             worksheet.addRow([]); // Spacer
 
             // 3. Table Headers
-            const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]);
+            const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date Time", "Status"]);
             headerRow.eachCell((cell) => {
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
                 cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
@@ -634,7 +631,6 @@ const LostFound = () => {
                     item.location,
                     formatDateTimeForExport(item.dateTime),
                     item.status,
-                    item.description
                 ]);
 
                 // Conditional Status Colors
@@ -687,7 +683,6 @@ const LostFound = () => {
                 { header: "Location", key: "location", width: 30 },
                 { header: "Date & Time", key: "dateTime", width: 25 },
                 { header: "Status", key: "status", width: 15 },
-                { header: "Description", key: "description", width: 45 }
             ];
 
             // Add Data
@@ -698,7 +693,6 @@ const LostFound = () => {
                     location: item.location,
                     dateTime: formatDateTimeForExport(item.dateTime),
                     status: item.status,
-                    description: item.description
                 });
             });
 
@@ -744,14 +738,13 @@ const LostFound = () => {
         autoTable(doc, {
             startY: 70,
             margin: { bottom: 35 },
-            head: [["Tracking No", "Item Type", "Location", "Date & Time", "Status", "Description"]],
+            head: [["Tracking No", "Item Type", "Location", "Date Time", "Status"]],
             body: filtered.map(item => [
                 item.trackingNo,
                 item.itemType || "-",
                 item.location,
                 formatDateTimeForExport(item.dateTime),
                 item.status,
-                item.description
             ]),
             headStyles: { fillColor: [16, 185, 129] },
             styles: { fontSize: 9 },
@@ -902,7 +895,6 @@ const LostFound = () => {
                 itemtype: item.itemType,
                 location: item.location,
                 datetime: formatDateTime(item.dateTime || item.createdAt),
-                description: item.description,
                 status: item.status,
               };
 
