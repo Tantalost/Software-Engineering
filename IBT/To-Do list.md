@@ -8,14 +8,12 @@ Color Coding
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
-(Alviar)
-Admin Login Page (Faint IBT coverpage layout)
-- layout revised 🟢 **Done**
-- fix date filter dapat di maka select ng future date 🟢 **Done**
-
 (Lloyd) 
-Add notificatiions in mobile module 🔴 **To be Fixed**
+Mobile:
+- Add Push Notificatiions in mobile module 🔴 **To be Fixed**
+- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
 
+(Steph)
 Mobile:
 -InnerHTML layout for Download Contract PDF part
 -Change Email message layout after the slot was approved
@@ -25,11 +23,7 @@ Mobile:
 2. Change password (Need the current password to change new password and it requires OTP in order to reset the password) 
 3. Add Reactivate Feature if the account is deactivated.
 
-To do
-- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
-
-
-Justin
+(Justin)
 Toast:
 Bus Admin
 - Confirm Departure- Fix the Toast instead of console
@@ -217,3 +211,8 @@ Deletion Request 🟢 **Done**
 - Fix after the superadmin confirms the deleteion request the data that is requested for deletion is still in the admins table.
 
 fix the otp verification for each admin per module (same flow as logging in superadmin part) 🟢 **Done**
+
+(Alviar)
+Admin Login Page (Faint IBT coverpage layout)
+- layout revised 🟢 **Done**
+- fix date filter dapat di maka select ng future date 🟢 **Done**
