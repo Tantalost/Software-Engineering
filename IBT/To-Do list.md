@@ -46,10 +46,15 @@ Deletion Request
 Toast:
 Bus Admin
 - Confirm Departure- Fix the Toast instead of console
-- Bulk Delete - Make it toast
+- Bulk Delete - Make it toast fix it so its the same for all
 
 Terminal Admin:
-- Bulk Delete - Make it toast
+- Bulk Delete - Make it toast fix it so its the same for all
+
+Parking Admin:
+- Bulk Delete - Make it toast fix it so its the same for all
+
+
 
 Deletion Request
 - After Deleting Add Toast
