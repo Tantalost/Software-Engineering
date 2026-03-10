@@ -48,6 +48,9 @@ Bus Admin
 - Confirm Departure- Fix the Toast instead of console
 - Bulk Delete - Make it toast
 
+Terminal Admin:
+- Bulk Delete - Make it toast
+
 Deletion Request
 - After Deleting Add Toast
 
