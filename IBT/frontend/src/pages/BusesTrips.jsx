@@ -1097,38 +1097,92 @@ const BusTrips = () => {
 
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.length} records?`)) return;
+    // 1. Customize the confirmation message based on role
+    const confirmMsg =
+      role === "bus"
+        ? `Request deletion for ${selectedIds.length} records?`
+        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+
+    if (!window.confirm(confirmMsg)) return;
+    
     setIsLoading(true);
+    
+    // We need the base API URL without '/bustrips' for the deletion-requests endpoint
+    const GLOBAL_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
+
     try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          fetch(`${API_URL}/${id}`, { method: "DELETE" }),
-        ),
-      );
-      await logActivity(
-        role,
-        "BULK_DELETE",
-        `Deleted ${selectedIds.length} items`,
-        "BusTrips",
-      );
-      await fetchBusTrips();
+      if (role === "bus") {
+        // --- BUS ADMIN: Send Deletion Requests ---
+        const requestPromises = selectedIds.map(async (id) => {
+          const item = records.find((r) => r.id === id);
+          if (!item) return;
 
-      setNotificationState({
-        isOpen: true,
-        type: 'success',
-        message: `Successfully deleted ${selectedIds.length} records!`,
-        autoClose: true,
-        duration: 3000
-      });
+          return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              itemType: "Bus Trip",
+              itemDescription: `Plate No: ${item.templateNo || item.templateno} - ${item.company}`,
+              requestedBy: localStorage.getItem("authName") || "Bus Admin",
+              originalData: item,
+              reason: "Bulk deletion request",
+            }),
+          });
+        });
 
+        await Promise.all(requestPromises);
+        
+        await logActivity(
+          role,
+          "REQUEST_BULK_DELETE",
+          `Requested deletion for ${selectedIds.length} bus trips`,
+          "BusTrips",
+        );
+
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Sent deletion requests for ${selectedIds.length} records.`,
+          autoClose: true,
+          duration: 3000
+        });
+
+      } else {
+        // --- SUPERADMIN: Immediate Deletion ---
+        await Promise.all(
+          selectedIds.map((id) =>
+            fetch(`${API_URL}/${id}`, { method: "DELETE" }),
+          ),
+        );
+        
+        await logActivity(
+          role,
+          "BULK_DELETE",
+          `Deleted ${selectedIds.length} items`,
+          "BusTrips",
+        );
+        
+        await fetchBusTrips();
+
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Successfully deleted ${selectedIds.length} records!`,
+          autoClose: true,
+          duration: 3000
+        });
+      }
+
+      // Clear selections after either action is complete
       setSelectedIds([]);
       setIsSelectionMode(false);
+      
     } catch (e) {
-      console.error(e);
+      console.error("Bulk action failed", e);
       setNotificationState({
         isOpen: true,
         type: 'error',
-        message: "Failed to delete some records.",
+        message: "Failed to process some records.",
         autoClose: true,
         duration: 3000
       });
@@ -1136,7 +1190,6 @@ const BusTrips = () => {
       setIsLoading(false);
     }
   };
-
 
   const handleSubmitReport = async () => {
     setIsReporting(true);
