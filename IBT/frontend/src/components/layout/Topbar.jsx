@@ -1,20 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
-import { 
-  Menu, Bell, ChevronDown, X, AlertTriangle, Megaphone, Upload, 
-  Eye, Edit, Trash2, ZoomIn, ZoomOut 
-} from "lucide-react"; 
+import {
+  Menu, Bell, ChevronDown, X, AlertTriangle, Megaphone, Upload,
+  Eye, Edit, Trash2, ZoomIn, ZoomOut
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import NotificationToast from "../common/NotificationToast"; 
+import NotificationToast from "../common/NotificationToast";
 
 const Topbar = ({ title, onMenuClick }) => {
   const navigate = useNavigate();
-  
+
   const [showBell, setShowBell] = useState(false);
   const [showUser, setShowUser] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
-  const [broadcastTab, setBroadcastTab] = useState("create"); 
+  const [broadcastTab, setBroadcastTab] = useState("create");
   const [adminBroadcasts, setAdminBroadcasts] = useState([]);
   const [isLoadingBroadcasts, setIsLoadingBroadcasts] = useState(false);
 
@@ -28,10 +28,10 @@ const Topbar = ({ title, onMenuClick }) => {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
   const [existingAttachments, setExistingAttachments] = useState([]);
-  const [viewingPost, setViewingPost] = useState(null); 
-  const [fullscreenImage, setFullscreenImage] = useState(null); 
+  const [viewingPost, setViewingPost] = useState(null);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [postToDelete, setPostToDelete] = useState(null); 
+  const [postToDelete, setPostToDelete] = useState(null);
   const [toast, setToast] = useState({ isOpen: false, type: 'success', message: '' });
 
   const [notifications, setNotifications] = useState([]);
@@ -40,9 +40,9 @@ const Topbar = ({ title, onMenuClick }) => {
   const role = (typeof window !== "undefined" && localStorage.getItem("authRole")) || "superadmin";
   const userLabel = role === "parking" ? "Parking Admin" :
     role === "lostfound" ? "Lostfound Admin" :
-    role === "bus" ? "Bus Admin" :
-    role === "ticket" ? "Ticket Admin" :
-    role === "lease" ? "Lease Admin" : "Super Admin";
+      role === "bus" ? "Bus Admin" :
+        role === "ticket" ? "Ticket Admin" :
+          role === "lease" ? "Lease Admin" : "Super Admin";
 
   const userLetter = role === "superadmin" ? "SA" : "A";
   const bellRef = useRef(null);
@@ -51,9 +51,9 @@ const Topbar = ({ title, onMenuClick }) => {
   const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:10000").replace(/\/api\/?$/, '');
 
   const getImageUrl = (uri) => {
-  if (!uri) return '';
-  return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
-};
+    if (!uri) return '';
+    return uri.startsWith('http') ? uri : `${BASE_URL}${uri}`;
+  };
 
   const showToast = (type, message) => {
     setToast({ isOpen: true, type, message });
@@ -107,14 +107,14 @@ const Topbar = ({ title, onMenuClick }) => {
       console.error("Error deleting:", error);
       showToast('error', 'An error occurred while deleting.');
     } finally {
-      setPostToDelete(null); 
+      setPostToDelete(null);
     }
   };
 
   const handleEditClick = (post) => {
     setEditMode(true);
     setEditId(post.id);
-    setBroadcastData({ title: post.title, message: post.message }) ;
+    setBroadcastData({ title: post.title, message: post.message });
     setExistingAttachments(post.attachments || []);
     setBroadcastTab("create");
   };
@@ -134,15 +134,15 @@ const Topbar = ({ title, onMenuClick }) => {
     const today = new Date();
     // If we are past the 5th, assume the reminder is for next month
     if (today.getDate() > 5) {
-        today.setMonth(today.getMonth() + 1);
+      today.setMonth(today.getMonth() + 1);
     }
     const monthName = today.toLocaleString('default', { month: 'long' });
     const year = today.getFullYear();
 
     setBroadcastData({
-        title: `Rent Due Reminder: ${monthName} ${year}`,
-        message: `Dear Permanent Tenants,\n\nPlease be reminded that your rent for ${monthName} ${year} is due between the 1st and the 5th of the month.\n\nKindly settle your accounts on or before ${monthName} 5th to avoid any late penalties.\n\nThank you,\nIBT Management`,
-        targetGroup: "Permanent"
+      title: `Rent Due Reminder: ${monthName} ${year}`,
+      message: `Dear Permanent Tenants,\n\nPlease be reminded that your rent for ${monthName} ${year} is due between the 1st and the 5th of the month.\n\nKindly settle your accounts on or before ${monthName} 5th to avoid any late penalties.\n\nThank you,\nIBT Management`,
+      targetGroup: "Permanent"
     });
   };
 
@@ -155,7 +155,7 @@ const Topbar = ({ title, onMenuClick }) => {
   useEffect(() => {
     if (broadcastTab === "manage" && showBroadcastModal) {
       fetchAdminBroadcasts();
-      setViewingPost(null); 
+      setViewingPost(null);
     }
   }, [broadcastTab, showBroadcastModal]);
 
@@ -177,7 +177,7 @@ const Topbar = ({ title, onMenuClick }) => {
     formData.append('title', broadcastData.title);
     formData.append('message', broadcastData.message);
     formData.append('targetGroup', broadcastData.targetGroup);
-    
+
     if (postTiming === "schedule" && !editMode) {
       if (!scheduledDate || !scheduledTime) {
         return showToast("error", "Please select a date and time to schedule.");
@@ -188,23 +188,23 @@ const Topbar = ({ title, onMenuClick }) => {
 
     if (selectedFiles.length > 0) {
       Array.from(selectedFiles).forEach((file) => {
-        formData.append('files', file); 
+        formData.append('files', file);
       });
     }
 
     setIsSubmitting(true);
     try {
-      const url = editMode 
-        ? `${BASE_URL}/api/broadcasts/${editId}` 
+      const url = editMode
+        ? `${BASE_URL}/api/broadcasts/${editId}`
         : `${BASE_URL}/api/broadcasts`;
-      
+
       const res = await fetch(url, {
         method: editMode ? 'PUT' : 'POST',
-        body: formData 
+        body: formData
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
         showToast("success", editMode ? "Broadcast updated successfully!" : (postTiming === "schedule" ? "Broadcast scheduled!" : "Broadcast sent!"));
         setShowBroadcastModal(false);
@@ -220,29 +220,34 @@ const Topbar = ({ title, onMenuClick }) => {
     }
   };
 
-  const handleMarkAsRead = async (notifId) => {
-    const targetNotif = notifications.find(n => (n.id === notifId || n._id === notifId));
-    if (!targetNotif || targetNotif.read) return;
-
-    setNotifications(prev => 
-      prev.map(n => (n.id === notifId || n._id === notifId) ? { ...n, read: true } : n)
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
-
-    try {
-      const res = await fetch(`${BASE_URL}/api/notifications/${notifId}/read`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!res.ok) {
-        console.warn("Failed to update read status on the server.");
-      }
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
+  const handleNotificationClick = async (notif) => {
+    // 1. Mark as read in the background if it's unread
+    const notifId = notif.id || notif._id;
+    if (!notif.read) {
+      await handleMarkAsRead(notifId);
     }
+    setShowBell(false);
+
+    let route = "/notifications";
+    const source = (notif.source || "").toLowerCase();
+    const title = (notif.title || "").toLowerCase();
+
+    if (source.includes("terminal") || title.includes("terminal")) {
+      route = "/terminal-fees";
+    } else if (source.includes("bus") || title.includes("bus")) {
+      route = "/bus-trips";
+    } else if (source.includes("lost") || title.includes("lost")) {
+      route = "/lost-found";
+    } else if (source.includes("parking") || title.includes("parking")) {
+      route = "/parking";
+    } else if (source.includes("tenant") || title.includes("tenant")) {
+      route = "/tenants";
+    } else if (title.includes("deletion request")) {
+      route = "/deletion-requests";
+    }
+
+    // Navigate to the matched page
+    navigate(route);
   };
 
   const handleLogout = () => {
@@ -254,11 +259,11 @@ const Topbar = ({ title, onMenuClick }) => {
 
   return (
     <>
-      <NotificationToast 
-        isOpen={toast.isOpen} 
-        type={toast.type} 
-        message={toast.message} 
-        onClose={() => setToast({ ...toast, isOpen: false })} 
+      <NotificationToast
+        isOpen={toast.isOpen}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ ...toast, isOpen: false })}
       />
 
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
@@ -293,38 +298,41 @@ const Topbar = ({ title, onMenuClick }) => {
                   )}
                 </button>
 
-               {showBell && (
+                {showBell && (
                   <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
                     <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                       <h3 className="text-sm font-semibold text-gray-700">Notifications</h3>
                     </div>
-      
+
                     <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-sm text-gray-500">
                           No new notifications.
                         </div>
                       ) : (
-                            notifications.map((notif, index) => (
-                              <div 
-                                key={notif.id || index} 
-                                className={`p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors ${!notif.read ? 'bg-emerald-50/30' : ''}`}
-                              >
-                                {notif.title && <p className="text-sm font-semibold text-gray-800 mb-1">{notif.title}</p>}
-                                <p className="text-xs text-gray-600 line-clamp-2">{notif.message}</p>
-                              </div>
-                            ))
-                          )}
+                        notifications.map((notif, index) => (
+                          <div
+                            key={notif.id || index}
+                            // --- ADD THIS ONCLICK HANDLER ---
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors ${!notif.read ? 'bg-emerald-50/30' : ''}`}
+                          >
+                            {notif.title && <p className="text-sm font-semibold text-gray-800 mb-1">{notif.title}</p>}
+                            <p className="text-xs text-gray-600 line-clamp-2">{notif.message}</p>
+                          </div>
+                        ))
+                      )}
                     </div>
 
-                    <button 
+                    <button
                       onClick={() => {
                         setShowBell(false);
                         navigate("/notifications");
                       }}
                       className="w-full p-3 text-center text-sm text-emerald-600 font-semibold hover:bg-gray-50 transition-colors border-t border-gray-100 cursor-pointer"
-                      >
-                        View All Notifications
+                    >
+                      View All Notifications
                     </button>
                   </div>
                 )}
@@ -341,9 +349,9 @@ const Topbar = ({ title, onMenuClick }) => {
                   <span className="text-sm font-medium text-gray-700">{userLabel}</span>
                   <ChevronDown size={18} className="text-gray-500" />
                 </button>
-                 {showUser && (
+                {showUser && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
-                     <button
+                    <button
                       onClick={() => {
                         setShowUser(false);
                         navigate("/notifications");
@@ -353,7 +361,7 @@ const Topbar = ({ title, onMenuClick }) => {
                       Notifications
                     </button>
 
-                     <button
+                    <button
                       onClick={() => {
                         setShowUser(false);
                         navigate("/archive");
@@ -387,21 +395,21 @@ const Topbar = ({ title, onMenuClick }) => {
       {showBroadcastModal && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            
+
             <div className="p-6 pb-4 flex justify-between items-start border-b border-gray-100">
               <div>
                 <h2 className="text-2xl font-bold text-slate-800">
                   {editMode ? "Edit Post" : "New Post Announcement"}
                 </h2>
-                
+
                 <div className="flex space-x-4 mt-4 border-b border-gray-200">
-                  <button 
+                  <button
                     onClick={() => { setBroadcastTab("create"); resetForm(); }}
                     className={`pb-2 text-sm font-semibold transition-colors ${broadcastTab === "create" ? "text-emerald-600 border-b-2 border-emerald-600" : "text-slate-400 hover:text-slate-600"}`}
                   >
                     {editMode ? "Editing Post" : "New Post Announcement"}
                   </button>
-                  <button 
+                  <button
                     onClick={() => { setBroadcastTab("manage"); setEditMode(false); }}
                     className={`pb-2 text-sm font-semibold transition-colors ${broadcastTab === "manage" ? "text-emerald-600 border-b-2 border-emerald-600" : "text-slate-400 hover:text-slate-600"}`}
                   >
@@ -409,7 +417,7 @@ const Topbar = ({ title, onMenuClick }) => {
                   </button>
                 </div>
               </div>
-              
+
               <button
                 onClick={() => { setShowBroadcastModal(false); resetForm(); }}
                 className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors cursor-pointer"
@@ -422,30 +430,30 @@ const Topbar = ({ title, onMenuClick }) => {
               <>
                 <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
                   <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      <div>
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Target Audience</label>
-                          <div className="flex gap-2 overflow-x-auto pb-1">
-                              {['All', 'Permanent', 'Night Market'].map(group => (
-                                  <button
-                                      key={group}
-                                      onClick={() => setBroadcastData({...broadcastData, targetGroup: group})}
-                                      className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap ${broadcastData.targetGroup === group ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                                  >
-                                      {group}
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
-
-                      <div>
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Templates</label>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Target Audience</label>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {['All', 'Permanent', 'Night Market'].map(group => (
                           <button
-                              onClick={applyRentReminderTemplate}
-                              className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 font-medium transition-colors cursor-pointer"
+                            key={group}
+                            onClick={() => setBroadcastData({ ...broadcastData, targetGroup: group })}
+                            className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap ${broadcastData.targetGroup === group ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                           >
-                               Permanent Rent Due (1st-5th)
+                            {group}
                           </button>
+                        ))}
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Templates</label>
+                      <button
+                        onClick={applyRentReminderTemplate}
+                        className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 font-medium transition-colors cursor-pointer"
+                      >
+                        Permanent Rent Due (1st-5th)
+                      </button>
+                    </div>
                   </div>
 
                   <div>
@@ -455,7 +463,7 @@ const Topbar = ({ title, onMenuClick }) => {
                     <input
                       type="text"
                       value={broadcastData.title}
-                      onChange={(e) => setBroadcastData({...broadcastData, title: e.target.value})}
+                      onChange={(e) => setBroadcastData({ ...broadcastData, title: e.target.value })}
                       placeholder="Enter announcement subject..."
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                     />
@@ -466,7 +474,7 @@ const Topbar = ({ title, onMenuClick }) => {
                     <textarea
                       rows="4"
                       value={broadcastData.message}
-                      onChange={(e) => setBroadcastData({...broadcastData, message: e.target.value})}
+                      onChange={(e) => setBroadcastData({ ...broadcastData, message: e.target.value })}
                       placeholder="Write your message here..."
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none"
                     />
@@ -486,44 +494,45 @@ const Topbar = ({ title, onMenuClick }) => {
                       <p className="text-sm font-semibold text-slate-700">Click or drag to upload</p>
                       {editMode && <p className="text-[10px] text-amber-500 mt-1">Uploading new files replaces old ones</p>}
                     </div>
-                    
-                  
+
+
                     {selectedFiles.length > 0 && (
                       <div className="flex gap-3 mt-4 overflow-x-auto pb-2 custom-scrollbar">
                         {Array.from(selectedFiles).map((file, idx) => {
                           const isImage = file.type.startsWith('image/');
                           return (
-                          <div 
-                            key={idx} 
-                            className={`relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm ${isImage ? 'cursor-pointer group' : ''}`}
-                            onClick={() => isImage && setFullscreenImage(URL.createObjectURL(file))}
-                          >
-                            {isImage ? (
-                              <>
-                                <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
-                                  <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={20} />
-                                </div>
-                              </>
-                            ) : (
-                              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-slate-500 font-bold">VIDEO</div>
-                            )}
-                          </div>
-                        )})}
+                            <div
+                              key={idx}
+                              className={`relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm ${isImage ? 'cursor-pointer group' : ''}`}
+                              onClick={() => isImage && setFullscreenImage(URL.createObjectURL(file))}
+                            >
+                              {isImage ? (
+                                <>
+                                  <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
+                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={20} />
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-slate-500 font-bold">VIDEO</div>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
 
-                  
-                    {editMode && existingAttachments.length > 0 && selectedFiles.length === 0 && (
-                      <div className="mt-4">
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Attachments</p>
-                        <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-                          {existingAttachments.map((att, idx) => {
-                            const isImage = att.type?.toLowerCase() === 'image';
-                            return (
-                            <div 
-                              key={idx} 
+
+                  {editMode && existingAttachments.length > 0 && selectedFiles.length === 0 && (
+                    <div className="mt-4">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Attachments</p>
+                      <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                        {existingAttachments.map((att, idx) => {
+                          const isImage = att.type?.toLowerCase() === 'image';
+                          return (
+                            <div
+                              key={idx}
                               className={`relative min-w-[70px] h-[70px] rounded-lg overflow-hidden border border-gray-200 shadow-sm ${isImage ? 'cursor-pointer group' : ''}`}
                               onClick={() => isImage && setFullscreenImage(getImageUrl(att.uri))}
                             >
@@ -538,10 +547,11 @@ const Topbar = ({ title, onMenuClick }) => {
                                 <div className="w-full h-full bg-slate-800 flex items-center justify-center text-[10px] text-white font-bold">VIDEO</div>
                               )}
                             </div>
-                          )})}
-                        </div>
+                          )
+                        })}
                       </div>
-                    )}
+                    </div>
+                  )}
 
                   {!editMode && (
                     <div>
@@ -578,7 +588,7 @@ const Topbar = ({ title, onMenuClick }) => {
 
             {broadcastTab === "manage" && (
               <div className="p-0 overflow-hidden flex flex-col flex-1 bg-slate-50">
-               
+
                 {viewingPost ? (
                   <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
                     <button onClick={() => setViewingPost(null)} className="text-emerald-600 text-sm font-bold flex items-center mb-4 hover:underline">
@@ -587,8 +597,8 @@ const Topbar = ({ title, onMenuClick }) => {
                     <h3 className="text-xl font-bold text-gray-800">{viewingPost.title}</h3>
                     <p className="text-xs text-gray-400 mb-4">{viewingPost.date}</p>
                     <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{viewingPost.message}</p>
-                    
-                    
+
+
                     {viewingPost.attachments?.length > 0 && (
                       <div className="mt-6">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Attachments</h4>
@@ -596,28 +606,29 @@ const Topbar = ({ title, onMenuClick }) => {
                           {viewingPost.attachments.map((att, idx) => {
                             const isImage = att.type?.toLowerCase() === 'image';
                             return (
-                            <div key={idx} className={`relative h-32 rounded-xl overflow-hidden border border-gray-200 ${isImage ? 'group cursor-pointer' : ''}`}
-                                 onClick={() => isImage && setFullscreenImage(getImageUrl(att.uri))}>
-                              {isImage ? (
-                                <>
-                                  <img src={getImageUrl(att.uri)} alt="attachment" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
-                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100" />
+                              <div key={idx} className={`relative h-32 rounded-xl overflow-hidden border border-gray-200 ${isImage ? 'group cursor-pointer' : ''}`}
+                                onClick={() => isImage && setFullscreenImage(getImageUrl(att.uri))}>
+                                {isImage ? (
+                                  <>
+                                    <img src={getImageUrl(att.uri)} alt="attachment" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
+                                      <ZoomIn className="text-white opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="w-full h-full bg-slate-800 flex flex-col items-center justify-center text-white p-2 text-center">
+                                    <span className="text-xs font-bold">VIDEO FILE</span>
                                   </div>
-                                </>
-                              ) : (
-                                <div className="w-full h-full bg-slate-800 flex flex-col items-center justify-center text-white p-2 text-center">
-                                  <span className="text-xs font-bold">VIDEO FILE</span>
-                                </div>
-                              )}
-                            </div>
-                          )})}
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
-                 
+
                   <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                     {isLoadingBroadcasts ? (
                       <div className="text-center py-10 text-slate-500 text-sm font-medium">Loading broadcasts...</div>
@@ -638,37 +649,38 @@ const Topbar = ({ title, onMenuClick }) => {
                               </div>
                               <h4 className="font-bold text-slate-800 text-sm line-clamp-1">{b.title}</h4>
                               <p className="text-xs text-slate-500 line-clamp-1 mt-1 mb-2">{b.message}</p>
-                              
-                           
+
+
                               {b.attachments?.length > 0 && (
                                 <div className="flex gap-2">
                                   {b.attachments.map((att, idx) => {
                                     const isImage = att.type?.toLowerCase() === 'image';
                                     return (
-                                    <div 
-                                      key={idx} 
-                                      className={`w-8 h-8 rounded border border-gray-200 overflow-hidden relative ${isImage ? 'cursor-pointer group' : ''}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation(); 
-                                        if (isImage) setFullscreenImage(getImageUrl(att.uri));
-                                      }}
-                                    >
-                                      {isImage ? (
-                                        <>
-                                          <img src={getImageUrl(att.uri)} className="w-full h-full object-cover" alt="thumb" />
-                                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
-                                            <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={10} />
-                                          </div>
-                                        </>
-                                      ) : (
-                                        <div className="w-full h-full bg-slate-800 flex items-center justify-center"><span className="text-[7px] font-bold text-white">VID</span></div>
-                                      )}
-                                    </div>
-                                  )})}
+                                      <div
+                                        key={idx}
+                                        className={`w-8 h-8 rounded border border-gray-200 overflow-hidden relative ${isImage ? 'cursor-pointer group' : ''}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (isImage) setFullscreenImage(getImageUrl(att.uri));
+                                        }}
+                                      >
+                                        {isImage ? (
+                                          <>
+                                            <img src={getImageUrl(att.uri)} className="w-full h-full object-cover" alt="thumb" />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
+                                              <ZoomIn className="text-white opacity-0 group-hover:opacity-100" size={10} />
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <div className="w-full h-full bg-slate-800 flex items-center justify-center"><span className="text-[7px] font-bold text-white">VID</span></div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
                                 </div>
                               )}
                             </div>
-                            
+
                             <div className="flex items-center space-x-1">
                               <button onClick={() => setViewingPost(b)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="View Details">
                                 <Eye size={18} />
@@ -701,9 +713,9 @@ const Topbar = ({ title, onMenuClick }) => {
             <button onClick={() => { setFullscreenImage(null); setZoomLevel(1); }} className="p-3 bg-red-500/80 hover:bg-red-500 rounded-full cursor-pointer"><X className="text-white" size={24} /></button>
           </div>
           <div className="overflow-auto w-full h-full flex items-center justify-center custom-scrollbar">
-            <img 
-              src={fullscreenImage} 
-              alt="fullscreen" 
+            <img
+              src={fullscreenImage}
+              alt="fullscreen"
               className="max-w-none transition-transform duration-200 ease-out"
               style={{ transform: `scale(${zoomLevel})` }}
             />
@@ -734,7 +746,7 @@ const Topbar = ({ title, onMenuClick }) => {
           </div>
         </div>
       )}
-     
+
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/40 z-[60]">
           <div className="bg-white rounded-2xl shadow-xl w-80 p-6 relative">

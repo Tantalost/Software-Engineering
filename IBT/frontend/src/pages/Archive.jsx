@@ -189,14 +189,13 @@ const Archive = () => {
       const id = restoreRow._id || restoreRow.id;
 
       if (restoreRow.isSoftDeleted) {
-        // New Soft-Delete Pattern
         const moduleMap = {
           "Bus Trip": "bustrips",
           "Terminal Fee": "terminal-fees",
           "Parking Ticket": "parking",
           "Lost & Found": "lostfound",
           "Report": "reports",
-          "Tenant": "tenants" // (Make sure Tenant is in this list too!)
+          "Tenant": "tenants" 
         };
         const endpoint = moduleMap[restoreRow.type];
         res = await fetch(`${API_URL}/${endpoint}/${id}/restore`, {

@@ -1371,7 +1371,7 @@ const TerminalFees = () => {
           </div>
         </div>
       )}
-      // Delete confirmation for ticket role (request deletion)
+      
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
