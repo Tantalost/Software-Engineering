@@ -128,7 +128,7 @@ const DeletionRequests = () => {
   const handleBulkApprove = async () => {
     if (
       !window.confirm(
-        `Are you sure you want to approve deletion for ${selectedIds.length} items? \n\nThey will be moved to the Archives before deletion.`,
+        `Are you sure you want to approve deletion for ${selectedIds.length} items? \n\nThey will be moved to the Archives and permanently deleted from their main tables.`,
       )
     )
       return;
@@ -139,8 +139,8 @@ const DeletionRequests = () => {
         const reqItem = requests.find((r) => (r._id || r.id) === id);
         if (!reqItem) return;
 
-        // AUTO-ARCHIVE
         if (reqItem.originalData) {
+          // 1. AUTO-ARCHIVE
           await fetch(ARCHIVE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -151,9 +151,23 @@ const DeletionRequests = () => {
               archivedBy: role,
             }),
           });
+
+          // 2. DELETE ORIGINAL RECORD
+          const originalId = reqItem.originalData._id || reqItem.originalData.id;
+          let deleteEndpoint = "";
+          
+          if (reqItem.itemType === "Terminal Fee") {
+            deleteEndpoint = `${API_URL}/terminal-fees/${originalId}`;
+          } else if (reqItem.itemType === "Bus Trip") {
+            deleteEndpoint = `${API_URL}/bustrips/${originalId}`;
+          }
+
+          if (deleteEndpoint) {
+            await fetch(deleteEndpoint, { method: "DELETE" });
+          }
         }
 
-        // APPROVE DELETION
+        // 3. APPROVE DELETION REQUEST
         await fetch(`${API_URL}/deletion-requests/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -165,6 +179,7 @@ const DeletionRequests = () => {
       });
 
       await Promise.all(processPromises);
+      
       await logActivity(
         role,
         "BULK_APPROVE_DELETE",
@@ -193,6 +208,7 @@ const DeletionRequests = () => {
 
     try {
       if (approveData.originalData) {
+        // 1. Send to Archives
         await fetch(ARCHIVE_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -203,8 +219,23 @@ const DeletionRequests = () => {
             archivedBy: role,
           }),
         });
+
+        // 2. DELETE FROM ORIGINAL TABLE
+        const originalId = approveData.originalData._id || approveData.originalData.id;
+        let deleteEndpoint = "";
+        
+        if (approveData.itemType === "Terminal Fee") {
+          deleteEndpoint = `${API_URL}/terminal-fees/${originalId}`;
+        } else if (approveData.itemType === "Bus Trip") {
+          deleteEndpoint = `${API_URL}/bustrips/${originalId}`;
+        }
+
+        if (deleteEndpoint) {
+          await fetch(deleteEndpoint, { method: "DELETE" });
+        }
       }
 
+      // 3. Mark the request as Approved in the DeletionRequests collection
       const res = await fetch(
         `${API_URL}/deletion-requests/${approveData._id || approveData.id}`,
         {
@@ -229,6 +260,7 @@ const DeletionRequests = () => {
       setApproveData(null);
       setAdminRemarks("");
       fetchRequests();
+      showToast("success", "Item deleted and archived successfully.");
     } catch (e) {
       console.error("Approve Error", e);
       showToast("error", "Failed to approve request.");
