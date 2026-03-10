@@ -6,7 +6,6 @@ const EditLostFound = ({ row, onClose, onSave }) => {
   const [form, setForm] = useState({
     id: row.id,
     trackingNo: row.trackingno,
-    description: row.description,
     location: row.location,
     dateTime: row.datetime,
     status: row.status,
@@ -52,7 +51,7 @@ const EditLostFound = ({ row, onClose, onSave }) => {
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Cancel</button>
-          <button onClick={() => onSave({ id: form.id, trackingNo: form.trackingNo, description: form.description, dateTime: form.dateTime, status: form.status })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
+          <button onClick={() => onSave({ id: form.id, trackingNo: form.trackingNo, dateTime: form.dateTime, status: form.status })} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white shadow hover:bg-blue-700">Save</button>
         </div>
       </div>
     </div>
