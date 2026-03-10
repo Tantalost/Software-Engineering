@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, FileText, Eye, Loader2 } from "lucide-react";
+import { calculateDueAmount } from "../../../utils/tenantUtils.js";
 import CryptoJS from "crypto-js";
 import Field from "../../common/Field"; 
 
@@ -201,7 +202,14 @@ const TenantViewModal = ({ viewRow, onClose }) => {
               </div>
 
               <div className="md:col-start-3 bg-emerald-50 p-2 rounded border border-emerald-100">
-                <Field label="Total Amount Due" value={viewRow.totalAmount ? `₱${Number(viewRow.totalAmount).toLocaleString()}` : "₱0.00"} />
+                <Field label="Total Amount Due" value={`₱${calculateDueAmount(viewRow).toLocaleString()}`} />
+                {viewRow.status === "Overdue" && (
+                  <>
+                    <Field label="25% Interest (rent)" value={`₱${((viewRow.rentAmount || 0) * 0.25).toFixed(2)}`} />
+                    <Field label="Balance (rent + 25%)" value={`₱${((viewRow.rentAmount || 0) * 1.25).toFixed(2)}`} />
+                    <Field label="2% Interest on Balance" value={`₱${(((viewRow.rentAmount || 0) * 1.25) * 0.02).toFixed(2)}`} />
+                  </>
+                )}
               </div>
             </div>
           </section>
