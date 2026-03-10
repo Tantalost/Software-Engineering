@@ -3,26 +3,48 @@ import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import Pagination from "../components/common/Pagination";
 import FilterBar from "../components/common/Filterbar";
-import Field from "../components/common/Field"; 
+import Field from "../components/common/Field";
 import { Eye, RotateCcw, Trash2, CalendarDays, Loader2, X, ListChecks } from "lucide-react";
-import { logActivity } from "../utils/logger"; 
+import { logActivity } from "../utils/logger";
 import NotificationToast from "../components/common/NotificationToast";
 
-const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`; 
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
 
 const Archive = () => {
-  const role = localStorage.getItem("authRole");
+  const role = localStorage.getItem("authRole") || "superadmin";
+
+  // 1. Determine which tabs are visible based on role
   const availableTabs = useMemo(() => {
-    if (role === "ticket") {
-      return ["Terminal Fee"];
+    switch (role) {
+      case "superadmin": return ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
+      case "bus": return ["Bus Trip"];
+      case "ticket": return ["Terminal Fee"];
+      case "parking": return ["Parking Ticket"];
+      case "tenant": return ["Tenant"];
+      case "lostandfound": return ["Lost & Found"];
+      default: return ["All"];
     }
-    return ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
   }, [role]);
+
+  // Determine the default starting tab based on role
+  const getDefaultTab = () => {
+    switch (role) {
+      case "superadmin": return "All";
+      case "bus": return "Bus Trip";
+      case "ticket": return "Terminal Fee";
+      case "parking": return "Parking Ticket";
+      case "tenant": return "Tenant";
+      case "lostandfound": return "Lost & Found";
+      default: return "All";
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [timeRange, setTimeRange] = useState("All Time");
-  const [activeTab, setActiveTab] = useState(role === "ticket" ? "Terminal Fee" : "All");
+
+  // 2. Set the default active tab
+  const [activeTab, setActiveTab] = useState(getDefaultTab());
   const [viewRow, setViewRow] = useState(null);
   const [restoreRow, setRestoreRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,23 +53,23 @@ const Archive = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  
+
 
   const [notificationState, setNotificationState] = useState({
-      isOpen: false,
-      type: '',
-      message: '',
-      autoClose: true,
-      duration: 3000
+    isOpen: false,
+    type: '',
+    message: '',
+    autoClose: true,
+    duration: 3000
   });
 
   useEffect(() => {
-      if (notificationState.isOpen && notificationState.autoClose) {
-          const timer = setTimeout(() => {
-              setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
-          }, notificationState.duration);
-          return () => clearTimeout(timer);
-      }
+    if (notificationState.isOpen && notificationState.autoClose) {
+      const timer = setTimeout(() => {
+        setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 });
+      }, notificationState.duration);
+      return () => clearTimeout(timer);
+    }
   }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
   // FETCH: Bridging Legacy and New Soft-Delete Data
   const fetchArchives = async () => {
@@ -73,18 +95,18 @@ const Archive = () => {
             const res = await fetch(`${API_URL}${mod.url}`);
             if (!res.ok) return [];
             const data = await res.json();
-            
+
             // Map new data to fit the Archive table structure
             return data.map(item => ({
               _id: item._id,
               id: item._id,
               type: mod.type,
-              description: mod.type === "Bus Trip" ? `Trip: ${item.templateNo}` : 
-                           mod.type === "Terminal Fee" ? `Ticket #${item.ticketNo}` :
-                           mod.type === "Parking Ticket" ? `Plate #${item.plateNo}` :
-                           mod.type === "Lost & Found" ? `Item: ${item.description}` :
-                           mod.type === "Tenant" ? `Tenant: ${item.tenantName || item.name}` : 
-                           `${mod.type} Report`,
+              description: mod.type === "Bus Trip" ? `Trip: ${item.templateNo}` :
+                mod.type === "Terminal Fee" ? `Ticket #${item.ticketNo}` :
+                  mod.type === "Parking Ticket" ? `Plate #${item.plateNo}` :
+                    mod.type === "Lost & Found" ? `Item: ${item.description}` :
+                      mod.type === "Tenant" ? `Tenant: ${item.tenantName || item.name}` :
+                        `${mod.type} Report`,
               dateArchived: item.updatedAt,
               isSoftDeleted: true, // Flag for routing Restore/Delete
               originalData: item
@@ -133,12 +155,21 @@ const Archive = () => {
 
   const filteredItems = useMemo(() => {
     return allArchivedItems.filter((item) => {
+      // Role-Based Strict Filtering
+      if (role === "bus" && item.type !== "Bus Trip") return false;
       if (role === "ticket" && item.type !== "Terminal Fee") return false;
+      if (role === "parking" && item.type !== "Parking Ticket") return false;
+      if (role === "tenant" && item.type !== "Tenant") return false;
+      if (role === "lostandfound" && item.type !== "Lost & Found") return false;
+
+      // Existing Tab, Search, and Date Filtering
       const matchesTab = activeTab === "All" || item.type === activeTab;
       const matchesSearch = (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-      let matchesDate = selectedDate 
-        ? new Date(item.dateArchived).toDateString() === new Date(selectedDate).toDateString() 
+
+      let matchesDate = selectedDate
+        ? new Date(item.dateArchived).toDateString() === new Date(selectedDate).toDateString()
         : checkTimeRange(item.dateArchived);
+
       return matchesTab && matchesSearch && matchesDate;
     });
   }, [allArchivedItems, activeTab, searchQuery, selectedDate, timeRange, role]);
@@ -168,9 +199,9 @@ const Archive = () => {
           "Tenant": "tenants" // (Make sure Tenant is in this list too!)
         };
         const endpoint = moduleMap[restoreRow.type];
-        res = await fetch(`${API_URL}/${endpoint}/${id}/restore`, { 
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" }
+        res = await fetch(`${API_URL}/${endpoint}/${id}/restore`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" }
         });
       } else {
         // Legacy Pattern
@@ -179,28 +210,28 @@ const Archive = () => {
 
       if (!res.ok) throw new Error("Restore failed");
       await logActivity(role, "RESTORE_ITEM", `Restored ${restoreRow.description}`, "Archive");
-      
+
       setRestoreRow(null);
-      fetchArchives(); 
+      fetchArchives();
 
       // NEW: Trigger Success Toast!
       setNotificationState({
-          isOpen: true,
-          type: 'success',
-          message: "Item restored successfully!",
-          autoClose: true,
-          duration: 3000
+        isOpen: true,
+        type: 'success',
+        message: "Item restored successfully!",
+        autoClose: true,
+        duration: 3000
       });
 
     } catch (e) {
       console.error("Restore Error", e);
       // NEW: Trigger Error Toast (Replaces the old alert)
       setNotificationState({
-          isOpen: true,
-          type: 'error',
-          message: "Failed to restore item.",
-          autoClose: true,
-          duration: 3000
+        isOpen: true,
+        type: 'error',
+        message: "Failed to restore item.",
+        autoClose: true,
+        duration: 3000
       });
     }
   };
@@ -228,14 +259,14 @@ const Archive = () => {
     }
   };
 
-  const tableColumns = isSelectionMode 
-  ? [
+  const tableColumns = isSelectionMode
+    ? [
       <div key="header-check" className="flex items-center">
-          <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+        <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
       </div>,
       "Type", "Description", "Date Archived"
     ]
-  : ["Type", "Description", "Date Archived"];
+    : ["Type", "Description", "Date Archived"];
 
   return (
     <Layout title="Archive Management">
@@ -258,12 +289,12 @@ const Archive = () => {
           ))}
         </div>
         <div className="flex items-center gap-2">
-           {isSelectionMode && selectedIds.length > 0 && (
-                <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                  <span className="text-xs font-semibold text-slate-600 px-2">{selectedIds.length} Selected</span>
-                  <button onClick={handleBulkDelete} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer"><Trash2 className="h-5 w-5" /></button>
-                </div>
-            )}
+          {isSelectionMode && selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+              <span className="text-xs font-semibold text-slate-600 px-2">{selectedIds.length} Selected</span>
+              <button onClick={handleBulkDelete} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer"><Trash2 className="h-5 w-5" /></button>
+            </div>
+          )}
           <button onClick={() => { if (isSelectionMode) setSelectedIds([]); setIsSelectionMode(!isSelectionMode); }} className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode ? "bg-red-500 text-white shadow-md border-red-600" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`}>
             {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
           </button>
@@ -274,24 +305,24 @@ const Archive = () => {
         <div className="flex justify-center py-10"><Loader2 className="animate-spin text-emerald-500" /></div>
       ) : (
         <Table
-            columns={tableColumns}
-            data={paginatedData.map((item) => {
-                const id = item._id || item.id;
-                const rowData = { ...item, id: id, datearchived: item.dateArchived ? new Date(item.dateArchived).toLocaleString() : "N/A" };
-                if (isSelectionMode) {
-                  return { select: (<div className="flex items-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(id)} onChange={() => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /></div>), ...rowData };
-                }
-                return rowData;
-            })}
-            actions={(row) => {
-             const fullItem = allArchivedItems.find(i => (i._id === row.id) || (i.id === row.id));
-             return (
-                <div className="flex justify-end items-center space-x-2">
-                    <button onClick={() => setViewRow(fullItem)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"><Eye size={16} /></button>
-                    <button onClick={() => setRestoreRow(fullItem)} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all cursor-pointer"><RotateCcw size={16} /></button>
-                </div>
-             );
-            }}
+          columns={tableColumns}
+          data={paginatedData.map((item) => {
+            const id = item._id || item.id;
+            const rowData = { ...item, id: id, datearchived: item.dateArchived ? new Date(item.dateArchived).toLocaleString() : "N/A" };
+            if (isSelectionMode) {
+              return { select: (<div className="flex items-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(id)} onChange={() => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" /></div>), ...rowData };
+            }
+            return rowData;
+          })}
+          actions={(row) => {
+            const fullItem = allArchivedItems.find(i => (i._id === row.id) || (i.id === row.id));
+            return (
+              <div className="flex justify-end items-center space-x-2">
+                <button onClick={() => setViewRow(fullItem)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"><Eye size={16} /></button>
+                <button onClick={() => setRestoreRow(fullItem)} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all cursor-pointer"><RotateCcw size={16} /></button>
+              </div>
+            );
+          }}
         />
       )}
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} totalItems={filteredItems.length} onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }} />
@@ -299,7 +330,7 @@ const Archive = () => {
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
-            <div className="flex justify-between items-center mb-4"><h3 className="text-base font-semibold text-slate-800">View Archived Item</h3><button onClick={() => setViewRow(null)} className="text-slate-500 hover:text-slate-700 cursor-pointer"><X size={20}/></button></div>
+            <div className="flex justify-between items-center mb-4"><h3 className="text-base font-semibold text-slate-800">View Archived Item</h3><button onClick={() => setViewRow(null)} className="text-slate-500 hover:text-slate-700 cursor-pointer"><X size={20} /></button></div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 text-sm"><Field label="Archive ID" value={viewRow._id || viewRow.id} /><Field label="Item Type" value={viewRow.type} /><Field label="Description" value={viewRow.description} /><Field label="Date Archived" value={new Date(viewRow.dateArchived).toLocaleString()} /></div>
             <div className="mt-4 flex justify-end"><button onClick={() => setViewRow(null)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 cursor-pointer">Close</button></div>
           </div>
@@ -319,12 +350,12 @@ const Archive = () => {
           </div>
         </div>
       )}
-      
+
       <NotificationToast
-          isOpen={notificationState.isOpen}
-          type={notificationState.type}
-          message={notificationState.message}
-          onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
+        isOpen={notificationState.isOpen}
+        type={notificationState.type}
+        message={notificationState.message}
+        onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
       />
     </Layout>
   );

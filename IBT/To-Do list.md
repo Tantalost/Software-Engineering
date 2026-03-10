@@ -8,15 +8,16 @@ Color Coding
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
-(Alviar)
-Admin Login Page (Faint IBT coverpage layout)
-- layout revised 🟢 **Done**
-- fix date filter dapat di maka select ng future date 🟢 **Done**
-
 (Lloyd) 
-Add notificatiions in mobile module 🔴 **To be Fixed**
-fix the otp verification for each admin per module (same flow as logging in superadmin part)
+Mobile:
+- Add Push Notificatiions in mobile module 🔴 **To be Fixed**
 
+Web:
+- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
+- Clicking the Notifcation should be redirect to that specific page
+
+
+(Steph)
 Mobile:
 -InnerHTML layout for Download Contract PDF part
 -Change Email message layout after the slot was approved
@@ -26,36 +27,15 @@ Mobile:
 2. Change password (Need the current password to change new password and it requires OTP in order to reset the password) 
 3. Add Reactivate Feature if the account is deactivated.
 
-To do
-For each admin role
-- Each Table Actions, Logs, and notifications should be filtered. Only specific admins can access and knows sa mga transactions is yung between superadmin and admin per module. 
-- Other admins should not be able to view another admins workflow.
-- If a admin were to click the edit button on the Table Action, there should be a password(same as the login) that will be inputted by that specific admin
-- If a admin will be deleting a specific data that they added, instead of immideate it will be send to the superadmin to view. So that there is verification.
-- The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
-
-Bus Admin
-- When he will be doing the multiple delete, it should not immediate delete but it will go to the deletion request instead so that the super admin can check.
-- Logs should display only bus changes not other pages
-
-Deletion Request
-- Fix after the superadmin confirms the deleteion request the data that is requested for deletion is still in the admins table.
-
-
-
+(Justin)
 Toast:
 Bus Admin
 - Confirm Departure- Fix the Toast instead of console
 - Bulk Delete - Make it toast fix it so its the same for all
-
 Terminal Admin:
 - Bulk Delete - Make it toast fix it so its the same for all
-
 Parking Admin:
 - Bulk Delete - Make it toast fix it so its the same for all
-
-
-
 Deletion Request
 - After Deleting Add Toast
 
@@ -220,3 +200,23 @@ Lloyd
 Mobile 
 Dashboard: Change Icon to Logo not Bus 🟢 **Done**
 Lost and Found: Remove Description and swap it with Item Type, Fix the order in descding. If claimed remove it, only unclaimed should be visible 🟢 **Done**
+
+For each admin role
+- Each Table Actions, Logs, and notifications should be filtered. Only specific admins can access and knows sa mga transactions is yung between superadmin and admin per module. 🟢 **Done**
+- Other admins should not be able to view another admins workflow. 🟢 **Done**
+- If a admin were to click the edit button on the Table Action, there should be a password(same as the login) that will be inputted by that specific admin 🟢 **Di ginawa**
+- If a admin will be deleting a specific data that they added, instead of immideate it will be send to the superadmin to view. So that there is verification. 🟢 **Done**
+
+Bus Admin 🟢 **Done**
+- When he will be doing the multiple delete, it should not immediate delete but it will go to the deletion request instead so that the super admin can check.
+- Logs should display only bus changes not other pages
+
+Deletion Request 🟢 **Done**
+- Fix after the superadmin confirms the deleteion request the data that is requested for deletion is still in the admins table.
+
+fix the otp verification for each admin per module (same flow as logging in superadmin part) 🟢 **Done**
+
+(Alviar)
+Admin Login Page (Faint IBT coverpage layout)
+- layout revised 🟢 **Done**
+- fix date filter dapat di maka select ng future date 🟢 **Done**
