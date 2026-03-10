@@ -62,6 +62,18 @@ const DataRenderer = ({ reportPayload }) => {
     );
   };
 
+  const formatReportDate = (dateStr) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const renderDataTable = () => {
     if (!Array.isArray(data) || data.length === 0) {
       return (
@@ -412,7 +424,7 @@ const Reports = () => {
       wsSummary.addRow(["ID", report.id]);
       wsSummary.addRow(["Type", report.type]);
       wsSummary.addRow(["Author", report.author]);
-      wsSummary.addRow(["Date", new Date(report.createdAt || report.date).toLocaleDateString()]);
+      wsSummary.addRow(["Date", formatReportDate(report.createdAt || report.date)]);
       wsSummary.addRow([]);
 
       const statsHeader = wsSummary.addRow(["STATISTICS"]);
@@ -471,7 +483,7 @@ const Reports = () => {
     doc.text(`Type: ${report.type}`, 14, 36);
     doc.text(`Author: ${report.author}`, 14, 42);
     doc.text(
-      `Date: ${new Date(report.createdAt || report.date).toLocaleDateString()}`,
+      `Date: ${formatReportDate(report.createdAt || report.date)}`,
       14,
       48,
     );
@@ -801,9 +813,7 @@ const Reports = () => {
                 : "ERR",
               type: report.type,
               author: report.author,
-              date: new Date(
-                report.createdAt || report.date,
-              ).toLocaleDateString(),
+              date: formatReportDate(report.createdAt || report.date),
             };
 
             if (isSelectionMode) {
@@ -897,9 +907,7 @@ const Reports = () => {
                 <Field label="Submitted By" value={viewRow.author} />
                 <Field
                   label="Submission Date"
-                  value={new Date(
-                    viewRow.createdAt || viewRow.date,
-                  ).toLocaleDateString()}
+                  value={formatReportDate(viewRow.createdAt || viewRow.date)}
                 />
               </div>
               <hr className="border-slate-100 mb-6" />
