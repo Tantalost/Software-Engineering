@@ -325,46 +325,142 @@ const modalBilling = useMemo(() => {
     } catch (err) { console.log("Error picking file: ", err); }
   };
 
-  const generateContractPDF = async () => {
-  try {
-    setApplying(true);
-    const currentName = currentApp?.name || user?.name || "________";
-    const currentSlot = currentApp?.targetSlot || "________";
-    const currentRent = currentBilling.amountLabel;
-    const currentDate = new Date().toLocaleDateString();
-
-    const htmlContent = 
-    `<html>
-    <body>
-    <h1>LEASE AGREEMENT</h1>
-    <p>Lessee: ${currentName}</p>
-    <p>Slot: ${currentSlot}</p>
-    <p>Rent: ${currentRent}</p><p>Date: ${currentDate}</p>
-    </body>
-    </html>`;
-    
-    const { uri } = await Print.printToFileAsync({ html: htmlContent });
-
-    if (Platform.OS === "android") {
+ const generateContractPDF = async () => {
+    try {
+      setApplying(true);
+      const currentName = currentApp?.name || user?.name || "____________________";
+      const currentSlot = currentApp?.targetSlot || "________";
+      const currentRent = currentBilling.amountLabel;
+      const currentDate = new Date().toLocaleDateString();
       
-      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-      if (permissions.granted) {
-        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-        const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, `Contract_${currentSlot}.pdf`, 'application/pdf');
-        await FileSystem.writeAsStringAsync(newFileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-        Alert.alert("Downloaded", "Contract saved to your device.");
+      // Use the official City Seal if you have a public URL, otherwise this placeholder works
+      const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Seal_of_Zamboanga_City.png/1200px-Seal_of_Zamboanga_City.png";
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            @page { margin: 0.5in; }
+            body { font-family: 'Times New Roman', serif; color: #000; line-height: 1.3; font-size: 12px; }
+            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .header-logo { width: 80px; text-align: center; }
+            .header-text { text-align: center; text-transform: uppercase; }
+            .header-text h3 { margin: 0; font-size: 14px; font-weight: normal; }
+            .header-text h2 { margin: 2px 0; font-size: 16px; font-weight: bold; }
+            .header-text p { margin: 0; font-size: 11px; }
+
+            .summary-box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; width: fit-content; min-width: 250px; }
+            .summary-row { margin-bottom: 3px; }
+            .label { font-weight: bold; width: 110px; display: inline-block; }
+
+            .main-title { text-align: center; font-weight: bold; text-decoration: underline; margin-bottom: 15px; font-size: 14px; }
+            
+            .section { margin-bottom: 10px; }
+            .section-title { font-weight: bold; text-transform: uppercase; margin-bottom: 4px; display: block; }
+            .policy-content { text-align: justify; margin-left: 15px; }
+            .list-item { margin-bottom: 4px; display: flex; }
+            .bullet { width: 15px; flex-shrink: 0; }
+
+            .agreement-text { margin-top: 20px; font-style: italic; text-align: center; }
+            
+            .footer-table { width: 100%; margin-top: 50px; }
+            .sig-box { width: 50%; text-align: center; vertical-align: bottom; }
+            .sig-line { border-top: 1px solid #000; width: 80%; margin: 0 auto; padding-top: 5px; font-weight: bold; text-transform: uppercase; }
+          </style>
+        </head>
+        <body>
+          <table class="header-table">
+            <tr>
+              <td class="header-logo"><img src="${logoUrl}" style="width: 70px;" /></td>
+              <td class="header-text">
+                <p>Republica de Filipinas [cite: 5]</p>
+                <p>Ciudad de Zamboanga [cite: 5]</p>
+                <h2>OFICINA DEL ADMINISTRADOR [cite: 6]</h2>
+                <h3>INTEGRADO TERMINAL DE ZAMBOANGA [cite: 7]</h3>
+              </td>
+              <td class="header-logo"><img src="${logoUrl}" style="width: 70px; opacity: 0;" /></td> </tr>
+          </table>
+
+          <div class="summary-box">
+            <div class="summary-row"><span class="label">Lessee Name:</span> ${currentName} [cite: 8]</div>
+            <div class="summary-row"><span class="label">Assigned Slot:</span> ${currentSlot} [cite: 9]</div>
+            <div class="summary-row"><span class="label">Monthly Rental:</span> ${currentRent} [cite: 10]</div>
+            <div class="summary-row"><span class="label">Effectivity Date:</span> ${currentDate} [cite: 11]</div>
+          </div>
+
+          <div class="main-title">IBT-ZC Contractual Concessionaires Operations & Management Policy [cite: 12]</div>
+
+          <div class="section">
+            <span class="section-title">1. Lease Terms and Duration [cite: 13]</span>
+            <div class="policy-content">
+              Lease agreements are valid for a maximum of two (2) years, renewable for another period not exceeding two years[cite: 14]. Rental fees are recommended on a per-square-meter basis as approved by the Sangguniang Panlungsod[cite: 15].
+            </div>
+          </div>
+
+          <div class="section">
+            <span class="section-title">2. Payment and Financial Obligations [cite: 17]</span>
+            <div class="policy-content">
+              Rent must be paid within the first five (5) calendar days of each month[cite: 18]. A 25% surcharge applies for payments made after the 5th[cite: 19]. Failure to pay for two (2) consecutive months is grounds for contract termination[cite: 21].
+            </div>
+          </div>
+
+          <div class="section">
+            <span class="section-title">3. Strict Prohibitions [cite: 22]</span>
+            <div class="policy-content">
+              <div class="list-item"><span class="bullet">•</span><span>Unauthorized changes to structures or signs without official consent[cite: 25, 26].</span></div>
+              <div class="list-item"><span class="bullet">•</span><span>Subleasing or assigning the lease to another party without written permission[cite: 27].</span></div>
+              <div class="list-item"><span class="bullet">•</span><span>Using the space for residential purposes/sleeping or creating noise disturbances (videoke)[cite: 36, 37].</span></div>
+              <div class="list-item"><span class="bullet">•</span><span>Illegal acts, gambling, or storing hazardous materials[cite: 38].</span></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <span class="section-title">4. Maintenance and Termination [cite: 41, 44]</span>
+            <div class="policy-content">
+              Tenants are responsible for waste segregation[cite: 42]. The City can terminate the contract for ordinance violations or failure to pay for two months[cite: 45]. Criminal penalties for serious violations include fines up to ₱5,000[cite: 48].
+            </div>
+          </div>
+
+          <div class="agreement-text">
+            The Lessee hereby agrees to the terms and conditions set forth by the Lessor regarding the use and maintenance of the assigned slot[cite: 49]. This agreement is legally binding once signed[cite: 50].
+          </div>
+
+          <table class="footer-table">
+            <tr>
+              <td class="sig-box">
+                <div class="sig-line">${currentName}</div>
+                <div>Lessee's Signature Over Printed Name </div>
+              </td>
+              <td class="sig-box">
+                <div class="sig-line">City Administrator</div>
+                <div>Lessor's Authorized Representative</div>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>`;
+      
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+
+      if (Platform.OS === "android") {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (permissions.granted) {
+          const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+          const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, `Contract_${currentSlot}.pdf`, 'application/pdf');
+          await FileSystem.writeAsStringAsync(newFileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+          Alert.alert("Downloaded", "Contract saved to your device.");
+        }
+      } else {
+        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
       }
-    } else {
-      
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    } catch (error) { 
+      Alert.alert("Error", "Could not generate PDF"); 
+    } finally { 
+      setApplying(false); 
     }
-  } catch (error) { 
-    Alert.alert("Error", "Could not generate PDF"); 
-  } finally { 
-    setApplying(false); 
-  }
-};
-
+  };
+  
   const handleReview = () => {
     if (!formData.firstName || !formData.contact || !selectedStall) {
       return Alert.alert("Incomplete", "Please fill in Name, Contact & Select a Stall.");

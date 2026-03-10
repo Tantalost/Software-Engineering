@@ -288,8 +288,12 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               clearPaymentData(); 
               setPaymentModalVisible(true); 
             }} 
-            style={{ backgroundColor: currentApp.tenantDbStatus === 'Payment Review' ? '#f97316' : colors.success }} 
-            textColor={colors.white}
+            style={{ backgroundColor: currentApp.tenantDbStatus === 'Payment Review' ? '#ffbf49' : colors.success }} 
+            labelStyle={{ 
+            color: colors.white, 
+            fontWeight: 'bold',
+            fontSize: 16 
+            }} 
             disabled={currentApp.tenantDbStatus === 'Payment Review'} 
           >
           {currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment'}
