@@ -172,6 +172,7 @@ export const getMyApplication = async (req, res) => {
                 rentAmount: calcRent,
                 utilityAmount: calcUtil,
                 totalAmount: calcTotal,
+                feeBreakdown: tenant.feeBreakdown,
                 tenantId: tenant._id,
 
                 paymentHistory: tenant.paymentHistory || [], 
