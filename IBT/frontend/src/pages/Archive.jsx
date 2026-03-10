@@ -155,14 +155,12 @@ const Archive = () => {
 
   const filteredItems = useMemo(() => {
     return allArchivedItems.filter((item) => {
-      // Role-Based Strict Filtering
       if (role === "bus" && item.type !== "Bus Trip") return false;
       if (role === "ticket" && item.type !== "Terminal Fee") return false;
       if (role === "parking" && item.type !== "Parking Ticket") return false;
       if (role === "tenant" && item.type !== "Tenant") return false;
       if (role === "lostandfound" && item.type !== "Lost & Found") return false;
 
-      // Existing Tab, Search, and Date Filtering
       const matchesTab = activeTab === "All" || item.type === activeTab;
       const matchesSearch = (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
