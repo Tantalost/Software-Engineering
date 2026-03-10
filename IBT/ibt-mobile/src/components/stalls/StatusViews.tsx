@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { ScrollView, View, Image, Modal, Linking} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Modal, Linking, RefreshControl } from 'react-native';
 import { Card, Text, Button, Divider, TextInput } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import styles from '@/src/styles/stallsStyle'; 
 import { colors } from '@/src/themes/stallsColors'; 
-import { ApplicationData} from '@/src/types/StallTypes';
+
 import FileUploadButton from '@/src/components/FileUploadButton';
 import API_URL from '@/src/config';
 
-export const VerificationPendingView = ({ currentApp }: { currentApp: ApplicationData }) => (
-    <View style={styles.centerContent}>
+export const VerificationPendingView = ({ currentApp, refreshing, onRefresh }: any) => (
+    <ScrollView 
+        contentContainerStyle={styles.centerContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+    >
         <Icon name="timer-sand" size={80} color={colors.warning} style={{ marginBottom: 10, marginTop: 50 }} />
         <Text variant="headlineMedium" style={styles.statusTitle}>Under Review</Text>
         <Card style={styles.statusCard} mode="elevated">
@@ -20,11 +23,14 @@ export const VerificationPendingView = ({ currentApp }: { currentApp: Applicatio
                 <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>"Our Admin is currently reviewing your submitted documents. Please check back later."</Text>
             </Card.Content>
         </Card>
-    </View>
+    </ScrollView>
 );
 
-export const ContractReviewView = ({ currentApp }: { currentApp: ApplicationData }) => (
-    <View style={styles.centerContent}>
+export const ContractReviewView = ({ currentApp, refreshing, onRefresh }: any) => (
+    <ScrollView 
+        contentContainerStyle={styles.centerContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+    >
         <Icon name="timer-sand" size={80} color={colors.warning} style={{marginBottom:10, marginTop:50}} />
         <Text variant="headlineMedium" style={styles.statusTitle}>Verifying Contract</Text>
         <Card style={styles.statusCard} mode="elevated">
@@ -34,11 +40,14 @@ export const ContractReviewView = ({ currentApp }: { currentApp: ApplicationData
                 <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>"We are currently reviewing your signed contract. Please wait for the final approval."</Text>
             </Card.Content>
         </Card>
-    </View>
+    </ScrollView>
 );
 
-export const ContractPendingView = ({ currentApp, generateContractPDF, submitContract, applying, files, uploadProgress, onPickFile }: any) => (
-    <ScrollView contentContainerStyle={{padding: 20, alignItems:'center'}}>
+export const ContractPendingView = ({ currentApp, generateContractPDF, submitContract, applying, files, uploadProgress, onPickFile, refreshing, onRefresh }: any) => (
+    <ScrollView 
+        contentContainerStyle={{padding: 20, alignItems:'center'}}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+    >
         <Icon name="pen" size={64} color={colors.primary} />
         <Text variant="headlineSmall" style={{color: colors.primary, fontWeight: 'bold', marginTop: 10, textAlign: 'center'}}>Contract Signing</Text>
         <Card style={[styles.statusCard, {marginTop: 20, width: '100%'}]}>
@@ -57,8 +66,11 @@ export const ContractPendingView = ({ currentApp, generateContractPDF, submitCon
     </ScrollView>
 );
 
-export const PaymentReviewView = ({ currentApp }: { currentApp: ApplicationData }) => (
-    <View style={styles.centerContent}>
+export const PaymentReviewView = ({ currentApp, refreshing, onRefresh }: any) => (
+    <ScrollView 
+        contentContainerStyle={styles.centerContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+    >
         <Icon name="timer-sand" size={80} color={colors.warning} style={{ marginBottom: 10, marginTop: 50 }} />
         <Text variant="headlineMedium" style={styles.statusTitle}>Verifying Payment</Text>
         <Card style={styles.statusCard} mode="elevated">
@@ -68,17 +80,20 @@ export const PaymentReviewView = ({ currentApp }: { currentApp: ApplicationData 
                 <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>"The Treasurer is verifying your receipt. This may take a moment."</Text>
             </Card.Content>
         </Card>
-    </View>
+    </ScrollView>
 );
 
-export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, setPaymentData, submitPaymentReceipt, applying, files, uploadProgress, onPickFile }: any) => {
+export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, setPaymentData, submitPaymentReceipt, applying, files, uploadProgress, onPickFile, refreshing, onRefresh }: any) => {
     const PAYMENT_INFO = {
         billerName: "MUNICIPAL TREASURER",
         project: "MARKET STALL RENTALS"
     };
 
     return (
-        <ScrollView contentContainerStyle={{padding: 20, paddingBottom: 100}}>
+        <ScrollView 
+            contentContainerStyle={{padding: 20, paddingBottom: 100}}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        >
             <View style={{alignItems:'center', marginBottom: 20}}>
                 <Icon name="file-document-outline" size={50} color={colors.primary} />
                 <Text variant="headlineSmall" style={styles.pageTitle}>STALL ORDER OF PAYMENT</Text>
@@ -104,9 +119,12 @@ export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, s
 };
 
 
-export const RejectedView = ({ currentApp }: { currentApp: any }) => {
+export const RejectedView = ({ currentApp, refreshing, onRefresh }: any) => {
   return (
-    <View style={{ flex: 1, padding: 20, alignItems: 'center', paddingTop: 80 }}> 
+    <ScrollView 
+        contentContainerStyle={{ flexGrow: 1, padding: 20, alignItems: 'center', paddingTop: 80 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#ef4444"]} />}
+    > 
        
       <Icon name="close-circle-outline" size={80} color="#ef4444" />
       <Text variant="headlineSmall" style={{ marginTop: 20, fontWeight: 'bold', color: '#ef4444' }}>
@@ -130,22 +148,21 @@ export const RejectedView = ({ currentApp }: { currentApp: any }) => {
       <Text style={{ marginTop: 30, textAlign: 'center', color: 'gray' }}>
         You may select a different slot or switch tabs to submit a new application with corrected documents.
       </Text>
-    </View>
+    </ScrollView>
   );
 };
 
 
-export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPaymentData, submitRenewal, applying, files, uploadProgress, onPickFile }: any) => {
+export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPaymentData, submitRenewal, applying, files, uploadProgress, onPickFile, refreshing, onRefresh }: any) => {
   
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
 
-  const receiptImageUri = currentApp.receiptUrl ? `${API_URL}/stalls/doc/${currentApp.receiptUrl}` : null;
-  const permitUri = currentApp.permitUrl ? `${API_URL}/stalls/doc/${currentApp.permitUrl}` : null;
-  const contractUri = currentApp.contractUrl ? `${API_URL}/stalls/doc/${currentApp.contractUrl}` : null;
-  const communityTaxUri = currentApp.communityTaxUrl ? `${API_URL}/stalls/doc/${currentApp.communityTaxUrl}` : null;
-  const policeClearanceUri = currentApp.policeClearanceUrl ? `${API_URL}/stalls/doc/${currentApp.policeClearanceUrl}` : null;
+  useEffect(() => {
+    if (!applying && paymentData?.referenceNo === '') {
+        setPaymentModalVisible(false);
+    }
+  }, [applying, paymentData?.referenceNo]);
 
-  
   const dueDate = currentApp.due 
     ? new Date(currentApp.due).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -160,11 +177,14 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
 
   const handleRenewalSubmit = () => {
       submitRenewal();
-      setPaymentModalVisible(false); 
+    
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+    <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.success]} />}
+    >
       
       <Card style={[styles.card, { borderColor: colors.success, borderWidth: 1, marginBottom: 20 }]}>
         <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
@@ -236,12 +256,12 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               .sort((a: any, b: any) => new Date(b.datePaid).getTime() - new Date(a.datePaid).getTime())
               .map((payment: any, index: number) => {
 
-                const rawReceipt = payment.receiptUrl || receiptImageUri || "";
+                const rawReceipt = payment.receiptUrl || payment.receipt || currentApp.receiptUrl || "";
                 const isValidReceipt = rawReceipt && rawReceipt.trim() !== "" && rawReceipt !== "undefined" && rawReceipt !== "null";
-
+                
                 const specificReceiptUri = isValidReceipt 
-                ? (rawReceipt.startsWith('http') ? rawReceipt : `${API_URL}/stalls/doc/${rawReceipt}`)
-                : null;
+                  ? (rawReceipt.startsWith('http') ? rawReceipt : `${API_URL}/stalls/doc/${rawReceipt}`)
+                  : null;
 
                 return (
                   <View key={index} style={{ backgroundColor: '#ffffff', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: colors.success }}>
@@ -273,7 +293,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               </Text>
             </View>
           )}
-
+           
         </Card.Content>
       </Card>
 
