@@ -1,16 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { Clock, X } from 'lucide-react'; // Removed Chevrons
 import LOGO from "../assets/LOGO.png";
 import adsPhone from "../assets/ads_phone.png";
 import newAppImg from "../assets/New_application.png";
 import busTripsImg from "../assets/bus_trips.png";
 import lostFoundImg from "../assets/lost_found.png";
-// Import the new background image
 import ibtBg from "../assets/ibt_bg.png";
 
 const LandingPage = () => {
   const scrollRef = useRef(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const bottomImages = [
     { src: newAppImg, alt: 'Stall Application' },
@@ -18,17 +18,30 @@ const LandingPage = () => {
     { src: lostFoundImg, alt: 'Lost and Found' }
   ];
 
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const { scrollLeft } = scrollRef.current;
-      const scrollTo = direction === 'left' ? scrollLeft - 220 : scrollLeft + 220;
-      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
-    }
-  };
+  // Auto-scroll logic
+  useEffect(() => {
+    const autoScroll = setInterval(() => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        
+        // If we've reached the end of the scroll container (with a 10px buffer for rounding)
+        if (scrollLeft + clientWidth >= scrollWidth - 10) {
+          // Smoothly scroll back to the start
+          scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          // Scroll right by 256px (w-60 is 240px + 16px space-x-4 gap)
+          scrollRef.current.scrollTo({ left: scrollLeft + 256, behavior: 'smooth' });
+        }
+      }
+    }, 3000); // Changes every 3 seconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(autoScroll);
+  }, []);
 
   return (
     <div
-      className="h-screen w-full flex flex-col font-sans overflow-hidden relative selection:bg-green-200 bg-sky-300" // Added light blue base (bg-sky-100)
+      className="h-screen w-full flex flex-col font-sans overflow-hidden relative selection:bg-green-200 bg-sky-300"
     >
       {/* Background Image Layer */}
       <div 
@@ -36,11 +49,11 @@ const LandingPage = () => {
         style={{ backgroundImage: `url(${ibtBg})` }}
       />
 
-      {/* Header - Ensure relative and z-index to stay above background */}
+      {/* Header */}
       <header className="flex justify-between items-center px-6 md:px-12 py-1 relative z-50">
         <div className="flex items-center space-x-2">
           <img src={LOGO} alt="IBT Logo" className="h-8 w-8 object-contain drop-shadow-sm" />
-          <h1 className="text- font-black text-gray-700 tracking-tight">Integrated Bus Terminal ZC</h1>
+          <h1 className="font-black text-gray-700 tracking-tight">Integrated Bus Terminal ZC</h1>
         </div>
         <Link
           to="/login"
@@ -70,55 +83,21 @@ const LandingPage = () => {
 
           {/* CTA */}
           <div className="flex items-center space-x-5">
-            <button className="bg-[#00a86b] hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-lg font-black uppercase transition-all duration-200 hover:scale-95 tracking-widest shadow-lg border-1 border-green">
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="bg-[#00a86b] hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-lg font-black uppercase transition-all duration-200 hover:scale-95 tracking-widest shadow-lg border-1 border-green"
+            >
               Download App
             </button>
-
-            <div className="bg-white p-3 w-[72px] h-[72px] rounded-2xl shadow-lg flex-shrink-0 flex items-center justify-center">
-              <svg viewBox="0 0 21 21" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1" y="1" width="7" height="7" fill="none" stroke="#111" strokeWidth="1"/>
-                <rect x="2.5" y="2.5" width="4" height="4" fill="#111"/>
-                <rect x="13" y="1" width="7" height="7" fill="none" stroke="#111" strokeWidth="1"/>
-                <rect x="14.5" y="2.5" width="4" height="4" fill="#111"/>
-                <rect x="1" y="13" width="7" height="7" fill="none" stroke="#111" strokeWidth="1"/>
-                <rect x="2.5" y="14.5" width="4" height="4" fill="#111"/>
-                <rect x="9" y="1" width="1" height="1" fill="#111"/><rect x="11" y="1" width="1" height="1" fill="#111"/>
-                <rect x="9" y="3" width="2" height="1" fill="#111"/><rect x="11" y="3" width="1" height="1" fill="#111"/>
-                <rect x="9" y="5" width="1" height="1" fill="#111"/><rect x="11" y="5" width="2" height="1" fill="#111"/>
-                <rect x="9" y="7" width="3" height="1" fill="#111"/>
-                <rect x="1" y="9" width="2" height="1" fill="#111"/><rect x="4" y="9" width="1" height="1" fill="#111"/>
-                <rect x="6" y="9" width="2" height="1" fill="#111"/><rect x="9" y="9" width="1" height="1" fill="#111"/>
-                <rect x="11" y="9" width="2" height="1" fill="#111"/><rect x="14" y="9" width="1" height="1" fill="#111"/>
-                <rect x="16" y="9" width="2" height="1" fill="#111"/><rect x="19" y="9" width="1" height="1" fill="#111"/>
-                <rect x="1" y="11" width="1" height="1" fill="#111"/><rect x="3" y="11" width="2" height="1" fill="#111"/>
-                <rect x="7" y="11" width="1" height="1" fill="#111"/><rect x="9" y="11" width="2" height="1" fill="#111"/>
-                <rect x="13" y="11" width="2" height="1" fill="#111"/><rect x="17" y="11" width="3" height="1" fill="#111"/>
-                <rect x="9" y="13" width="1" height="1" fill="#111"/><rect x="11" y="13" width="2" height="1" fill="#111"/>
-                <rect x="15" y="13" width="1" height="1" fill="#111"/><rect x="17" y="13" width="3" height="1" fill="#111"/>
-                <rect x="9" y="15" width="3" height="1" fill="#111"/><rect x="13" y="15" width="1" height="1" fill="#111"/>
-                <rect x="16" y="15" width="2" height="1" fill="#111"/>
-                <rect x="9" y="17" width="1" height="1" fill="#111"/><rect x="12" y="17" width="2" height="1" fill="#111"/>
-                <rect x="15" y="17" width="1" height="1" fill="#111"/><rect x="17" y="17" width="3" height="1" fill="#111"/>
-                <rect x="9" y="19" width="2" height="1" fill="#111"/><rect x="13" y="19" width="1" height="1" fill="#111"/>
-                <rect x="16" y="19" width="4" height="1" fill="#111"/>
-              </svg>
-            </div>
           </div>
 
-          {/* Feature Scroller */}
+          {/* Auto-Scroller */}
           <div className="w-full">
-            <p className="text-[12px] text-white-100 font-black italic mb-4 uppercase tracking-[0.1em] opacity-80">
+            <p className="text-[12px] text-white font-black italic mb-4 uppercase tracking-[0.1em] opacity-80">
               Process Stall Application Online!
             </p>
 
             <div className="relative flex items-center px-5">
-              <button
-                onClick={() => scroll('left')}
-                className="absolute left-0 z-40 bg-white p-2 rounded-full shadow-xl hover:scale-110 transition-transform border border-green-100"
-              >
-                <ChevronLeft size={18} className="text-green-700" />
-              </button>
-
               <div
                 ref={scrollRef}
                 className="flex overflow-x-auto space-x-4 pb-2 no-scrollbar snap-x scroll-smooth w-full"
@@ -132,13 +111,6 @@ const LandingPage = () => {
                   </div>
                 ))}
               </div>
-
-              <button
-                onClick={() => scroll('right')}
-                className="absolute right-0 z-40 bg-white p-2 rounded-full shadow-xl hover:scale-110 transition-transform border border-green-100"
-              >
-                <ChevronRight size={18} className="text-green-700" />
-              </button>
             </div>
           </div>
         </div>
@@ -170,9 +142,67 @@ const LandingPage = () => {
         <p className="opacity-70">© 2026 CYNERGYOPS. ALL RIGHTS RESERVED. | PRIVACY POLICY | TERMS</p>
       </footer>
 
+      {/* QR Code Modal Overlay */}
+      {isModalOpen && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-overlay"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full relative flex flex-col items-center animate-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            <h3 className="text-2xl font-black text-green-800 mb-1 uppercase tracking-tight text-center mt-2">
+              Scan to Download
+            </h3>
+            <p className="text-gray-500 text-sm text-center mb-6 font-medium">
+              Available on Android
+            </p>
+            
+            <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300 w-64 h-64 flex items-center justify-center mb-6 shadow-inner">
+              <img 
+                src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://your-app-link.com" 
+                alt="App QR Code" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition-colors uppercase tracking-wider text-sm"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Styles */}
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleUp {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-overlay {
+          animation: fadeIn 0.2s ease-out forwards;
+        }
+        .animate-modal {
+          animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
       `}</style>
     </div>
   );
