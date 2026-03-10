@@ -403,13 +403,6 @@ const LostFound = () => {
     paginatedData.every((item) => selectedIds.includes(item.id));
 
   const handleBulkDelete = async () => {
-    const confirmMsg =
-      role === "lostfound"
-        ? `Request deletion for ${selectedIds.length} records?`
-        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
-
-    if (!window.confirm(confirmMsg)) return;
-
     setIsLoading(true);
     try {
       if (role === "lostfound") {
@@ -788,6 +781,7 @@ const LostFound = () => {
       <div className="px-4 lg:px-8 mt-4">
         <div className="flex flex-col gap-4 w-full">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              
             <FilterBar
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -827,11 +821,33 @@ const LostFound = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
-            <LostFoundStatusFilter
-              activeStatus={activeStatus}
-              onStatusChange={setActiveStatus}
-            />
 
+  {/* LEFT SIDE: Bulk Delete + Status Filter */}
+  <div className="flex items-center gap-3">
+
+    {isSelectionMode && selectedIds.length > 0 && (
+      <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+        <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+          {selectedIds.length} Selected
+        </span>
+
+        <button
+          onClick={handleBulkDelete}
+          title="Delete or Request Deletion for Selected Records"
+          className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
+        >
+          <Trash2 className="h-5 w-5" />
+        </button>
+      </div>
+    )}
+
+    <LostFoundStatusFilter
+      activeStatus={activeStatus}
+      onStatusChange={setActiveStatus}
+    />
+
+  </div>            
+            {/* RIGHT SIDE */}
             <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setShowLogModal(true)}
