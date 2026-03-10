@@ -15,9 +15,6 @@ Admin Login Page (Faint IBT coverpage layout)
 
 (Lloyd) 
 Add notificatiions in mobile module 🔴 **To be Fixed**
-Mobile 
-Dashboard: Change Icon to Logo not Bus
-Lost and Found: Remove Description and swap it with Item Type, Fix the order in descding. If claimed remove it, only unclaimed should be visible
 fix the otp verification for each admin per module (same flow as logging in superadmin part)
 
 Mobile:
@@ -40,7 +37,7 @@ For Admin Specific Accounts
 - The Archive should also be filtered, if the bus admin checks the archive they should also be able to view the bus archive and nothing more. Same goes to the other admins. Except the superadmin
 
 
-
+test
 
 
 
@@ -211,3 +208,8 @@ The layout of the financial breakdown should be the same layout in the edit moda
 
 after approving the renewal payment review it will update the reference number and shows in the modal and also it updates the due date in the edit modal.
 62 slots in the stat card instead of 64 slots total
+
+Lloyd
+Mobile 
+Dashboard: Change Icon to Logo not Bus 🟢 **Done**
+Lost and Found: Remove Description and swap it with Item Type, Fix the order in descding. If claimed remove it, only unclaimed should be visible 🟢 **Done**
