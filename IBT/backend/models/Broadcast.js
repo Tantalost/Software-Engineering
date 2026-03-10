@@ -4,6 +4,7 @@ const broadcastSchema = new mongoose.Schema({
   title: { type: String, required: true },
   message: { type: String, required: true },
   source: { type: String, default: 'INTEGRATED BUS TERMINAL ZC' },
+  targetGroup: { type: String, default: 'All' },
  
   attachments: [{
     type: { type: String, enum: ['image', 'video'] },

@@ -19,7 +19,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const [isLoadingBroadcasts, setIsLoadingBroadcasts] = useState(false);
 
   const [postTiming, setPostTiming] = useState("now");
-  const [broadcastData, setBroadcastData] = useState({ title: "", message: "" });
+  const [broadcastData, setBroadcastData] = useState({ title: "", message: "", targetGroup: "All" });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
@@ -120,7 +120,7 @@ const Topbar = ({ title, onMenuClick }) => {
   };
 
   const resetForm = () => {
-    setBroadcastData({ title: "", message: "" });
+    setBroadcastData({ title: "", message: "", targetGroup: "All" });
     setSelectedFiles([]);
     setExistingAttachments([]);
     setScheduledDate("");
@@ -128,6 +128,22 @@ const Topbar = ({ title, onMenuClick }) => {
     setPostTiming("now");
     setEditMode(false);
     setEditId(null);
+  };
+
+  const applyRentReminderTemplate = () => {
+    const today = new Date();
+    // If we are past the 5th, assume the reminder is for next month
+    if (today.getDate() > 5) {
+        today.setMonth(today.getMonth() + 1);
+    }
+    const monthName = today.toLocaleString('default', { month: 'long' });
+    const year = today.getFullYear();
+
+    setBroadcastData({
+        title: `Rent Due Reminder: ${monthName} ${year}`,
+        message: `Dear Permanent Tenants,\n\nPlease be reminded that your rent for ${monthName} ${year} is due between the 1st and the 5th of the month.\n\nKindly settle your accounts on or before ${monthName} 5th to avoid any late penalties.\n\nThank you,\nIBT Management`,
+        targetGroup: "Permanent"
+    });
   };
 
   useEffect(() => {
@@ -160,6 +176,7 @@ const Topbar = ({ title, onMenuClick }) => {
     const formData = new FormData();
     formData.append('title', broadcastData.title);
     formData.append('message', broadcastData.message);
+    formData.append('targetGroup', broadcastData.targetGroup);
     
     if (postTiming === "schedule" && !editMode) {
       if (!scheduledDate || !scheduledTime) {
@@ -404,15 +421,31 @@ const Topbar = ({ title, onMenuClick }) => {
             {broadcastTab === "create" && (
               <>
                 <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Subject</label>
-                    <input
-                      type="text"
-                      value={broadcastData.title}
-                      onChange={(e) => setBroadcastData({...broadcastData, title: e.target.value})}
-                      placeholder="Announcement Title"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    />
+                  <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Target Audience</label>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                              {['All', 'Permanent', 'Night Market'].map(group => (
+                                  <button
+                                      key={group}
+                                      onClick={() => setBroadcastData({...broadcastData, targetGroup: group})}
+                                      className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap ${broadcastData.targetGroup === group ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                                  >
+                                      {group}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+
+                      <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Templates</label>
+                          <button
+                              onClick={applyRentReminderTemplate}
+                              className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 font-medium transition-colors cursor-pointer"
+                          >
+                               Permanent Rent Due (1st-5th)
+                          </button>
+                      </div>
                   </div>
 
                   <div>

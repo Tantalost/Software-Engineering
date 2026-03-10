@@ -62,6 +62,7 @@ export default function StallsPage() {
   const [pendingStalls, setPendingStalls] = useState<string[]>([]);
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -135,17 +136,46 @@ export default function StallsPage() {
     }
   };
 
-  const handleLoginSuccess = (userData: UserData) => {
-    setUser(userData);
-    setShowLogin(false);
-    setFormData(prev => ({
-        ...prev,
-        firstName: userData.name.split(' ')[0] || '',
-        lastName: userData.name.split(' ').slice(1).join(' ') || '',
-        email: userData.email,
-        contact: userData.contact || ''
-    }));
-    fetchData(userData.id);
+  const handleLoginSuccess = async (userData: any) => {
+    try {
+        
+        setTimeout(async () => {
+           
+            const storedUserStr = await AsyncStorage.getItem('ibt_user');
+            const storedToken = await AsyncStorage.getItem('token');
+            
+            let fullUser = userData;
+            
+            if (storedUserStr) {
+                fullUser = JSON.parse(storedUserStr);
+            } else {
+                
+                await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+            }
+
+            if (!storedToken && userData?.token) {
+                await AsyncStorage.setItem('token', userData.token);
+            } else if (!storedToken && fullUser?.token) {
+                await AsyncStorage.setItem('token', fullUser.token);
+            }
+
+            setUser(fullUser);
+            setShowLogin(false);
+
+            const safeName = fullUser.name || "";
+            setFormData(prev => ({
+                ...prev,
+                firstName: safeName.split(' ')[0] || '',
+                lastName: safeName.split(' ').slice(1).join(' ') || '',
+                email: fullUser.email || '',
+                contact: fullUser.contact || ''
+            }));
+            
+            fetchData(fullUser.id);
+        }, 150); 
+    } catch (error) {
+        console.error("Error recovering session:", error);
+    }
   };
 
   const fetchData = async (userId: string | undefined, isBackgroundRefresh = false) => {
@@ -177,7 +207,13 @@ export default function StallsPage() {
       if (userId) {
           const myAppRes = await fetch(`${API_URL}/stalls/my-application/${userId}?_t=${timestamp}`);
           const myAppData = await myAppRes.json();
-          let apps = Array.isArray(myAppData) ? myAppData : (myAppData ? [myAppData] : []);
+          
+          let apps = [];
+          if (Array.isArray(myAppData)) {
+              apps = myAppData;
+          } else if (myAppData && myAppData.targetSlot) {
+              apps = [myAppData];
+          }
 
           apps = apps.filter(app => {
               if (app.status === 'TENANT') {
@@ -197,6 +233,7 @@ export default function StallsPage() {
               }
           }
       }
+
     } catch (error) {
       console.error("Fetch error:", error);
     } finally {
@@ -204,6 +241,12 @@ export default function StallsPage() {
       setInitialLoading(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    
+    fetchData(user?.id).then(() => setRefreshing(false));
+}, [user, selectedFloor]);
   
   useEffect(() => {
     if (user) fetchData(user.id);
@@ -326,6 +369,28 @@ export default function StallsPage() {
     }
   };
 
+  const handleApiError = async (res: any) => {
+      if (!res.ok) {
+          const errorText = await res.text();
+          let errorMessage = errorText;
+          
+          try {
+              const parsed = JSON.parse(errorText);
+              errorMessage = parsed.error || parsed.message || errorText;
+          } catch (e) {}
+
+          if (res.status === 401 || res.status === 403 || errorMessage.toLowerCase().includes('token')) {
+              await AsyncStorage.multiRemove(['ibt_user', 'token']);
+              setUser(null);
+              setModalVisible(false);
+              setShowLogin(true); 
+              throw new Error("Session expired. Please log in again.");
+          }
+          
+          throw new Error(errorMessage || "Request failed");
+      }
+  };
+  
   const submitApplication = async () => {
     if (!user) return;
     setApplying(true);
@@ -361,16 +426,19 @@ export default function StallsPage() {
               appendFile(formPayload, 'policeClearance', files.policeClearance, encPolice);
           }
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/apply`, {
             method: 'POST',
             body: formPayload,
-            headers: { 'Accept': 'application/json' }
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            }
           });
 
-          if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(errorText || "Server rejected application");
-          }
+          await handleApiError(res);
 
           setModalVisible(false); 
           setModalStep('form'); 
@@ -403,13 +471,64 @@ export default function StallsPage() {
           const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
           appendFile(formPayload, 'receipt', files.receipt, encReceipt);
 
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
           const res = await fetch(`${API_URL}/stalls/pay`, { 
-            method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+            method: 'POST', 
+            body: formPayload, 
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
           });
 
-          if (!res.ok) throw new Error("Server payment error");
+         await handleApiError(res);
           
           Alert.alert("Sent", "Payment submitted for review."); 
+          fetchData(user.id);
+        } catch (error) { 
+            Alert.alert("Error", "Could not process receipt."); 
+        } finally { 
+            setApplying(false); 
+        }
+    }, 100);
+  };
+
+  const submitRenewalPayment = async () => {
+    if (!user || !files.receipt) { return Alert.alert("Missing Receipt", "Please upload the payment receipt."); }
+    if (!paymentData.referenceNo) { return Alert.alert("Missing Details", "Please enter the Reference Number."); }
+    if (!currentApp) return;
+
+    setApplying(true);
+    setTimeout(async () => {
+        try {
+          const formPayload = new FormData();
+          formPayload.append('userId', user.id);
+          formPayload.append('tenantId', currentApp.tenantId || ""); 
+          formPayload.append('targetSlot', currentApp.targetSlot);
+          formPayload.append('paymentReference', paymentData.referenceNo);
+          
+          const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
+          appendFile(formPayload, 'receipt', files.receipt, encReceipt);
+
+          const rawUser = await AsyncStorage.getItem('ibt_user');
+          const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
+          const res = await fetch(`${API_URL}/stalls/pay-renewal`, { 
+            method: 'POST', 
+            body: formPayload, 
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+          });
+
+          await handleApiError(res);
+          
+          Alert.alert("Success", "Renewal payment submitted for review."); 
+          setPaymentData({ referenceNo: '' });
+          setFiles(prev => ({ ...prev, receipt: null }));
           fetchData(user.id);
         } catch (error) { 
             Alert.alert("Error", "Could not process receipt."); 
@@ -433,11 +552,19 @@ export default function StallsPage() {
             const encContract = await encryptFileBeforeUpload(files.contract!.uri, files.contract!.name || 'contract.pdf');
             appendFile(formPayload, 'contract', files.contract, encContract);
 
+            const rawUser = await AsyncStorage.getItem('ibt_user');
+            const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
+
             const res = await fetch(`${API_URL}/stalls/upload-contract`, { 
-                method: 'POST', body: formPayload, headers: { 'Accept': 'application/json' }
+                method: 'POST', 
+                body: formPayload, 
+                headers: { 
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
-            if (!res.ok) throw new Error(await res.text());
+            await handleApiError(res);
             
             Alert.alert("Success", "Contract PDF submitted."); 
             fetchData(user.id);
@@ -486,7 +613,7 @@ export default function StallsPage() {
   const renderContent = () => {
     if (viewIndex === -1) {
         return (
-            <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, , { paddingBottom: 125 }]} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => user && fetchData(user.id)} colors={[colors.primary]} />}>
+           <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: 125 }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
                 <Card style={styles.floorCard} mode="elevated"><Card.Content><Text variant="titleMedium" style={styles.sectionTitle}>Select Location</Text><SegmentedButtons value={selectedFloor} onValueChange={(val) => { setSelectedFloor(val); setSelectedStall(null); }} theme={{colors: {secondaryContainer: colors.black, onSecondaryContainer: colors.white }}} buttons={[{ value: 'Permanent', label: 'Permanent', uncheckedColor: colors.black}, { value: 'Night Market', label: 'Night Market', uncheckedColor: colors.black }]} /></Card.Content></Card>
                 {loading ? <ActivityIndicator animating={true} color={colors.primary} style={{marginTop: 20}} /> : (
                 <View> 
@@ -535,11 +662,13 @@ export default function StallsPage() {
 
     if (!currentApp) return <ActivityIndicator color={colors.primary} style={{marginTop: 50}} />;
     
-    if (currentApp.status === "VERIFICATION_PENDING") return <VerificationPendingView currentApp={currentApp} />;
+    const appStatus = (currentApp.status || "VERIFICATION_PENDING").toUpperCase();
     
-    if (currentApp.status === "CONTRACT_REVIEW") return <ContractReviewView currentApp={currentApp} />;
+    if (appStatus === "VERIFICATION_PENDING" || appStatus === "PENDING") return <VerificationPendingView currentApp={currentApp} />;
+    
+    if (appStatus === "CONTRACT_REVIEW") return <ContractReviewView currentApp={currentApp} />;
 
-    if (currentApp.status === "CONTRACT_PENDING") {
+    if (appStatus === "CONTRACT_PENDING") {
         return (
             <ContractPendingView 
                 currentApp={currentApp} 
@@ -553,9 +682,9 @@ export default function StallsPage() {
         );
     }
     
-    if (currentApp.status === "PAYMENT_REVIEW") return <PaymentReviewView currentApp={currentApp} />;
+    if (appStatus === "PAYMENT_REVIEW") return <PaymentReviewView currentApp={currentApp} />;
 
-    if (currentApp.status === "PAYMENT_UNLOCKED") {
+    if (appStatus === "PAYMENT_UNLOCKED") {
         return (
             <PaymentUnlockedView 
                 currentApp={currentApp} 
@@ -571,9 +700,22 @@ export default function StallsPage() {
         );
     }
 
-    if (currentApp.status === "TENANT") return <TenantView currentApp={currentApp} />;
+    if (appStatus === "TENANT") {
+        return (
+            <TenantView 
+                currentApp={currentApp} 
+                paymentData={paymentData}
+                setPaymentData={setPaymentData}
+                submitRenewal={submitRenewalPayment}
+                applying={applying}
+                files={files}
+                uploadProgress={uploadProgress}
+                onPickFile={pickFile}
+            />
+        );
+    }
 
-    if (currentApp.status === "REJECTED") {
+    if (appStatus === "REJECTED") {
         return <RejectedView currentApp={currentApp} />;
     }
     
@@ -599,12 +741,41 @@ export default function StallsPage() {
                     <Icon name="plus" size={16} color={viewIndex === -1 ? colors.white : colors.primary} style={{ marginRight: 5 }} />
                     <Text style={{ color: viewIndex === -1 ? colors.white : colors.primary, fontWeight: 'bold' }}>New Slot</Text>
                 </TouchableOpacity>
-                {myApplications.map((app, index) => (
-                    <TouchableOpacity key={index} onPress={() => setViewIndex(index)} style={{ paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: viewIndex === index ? colors.primary : colors.white, borderWidth: 1, borderColor: colors.primary, marginRight: 10, flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name={app.status === 'TENANT' ? "store" : "clock-outline"} size={16} color={viewIndex === index ? colors.white : colors.primary} style={{ marginRight: 5 }} />
-                        <Text style={{ color: viewIndex === index ? colors.white : colors.primary, fontWeight: 'bold' }}>{app.targetSlot}</Text>
-                    </TouchableOpacity>
-                ))}
+                {myApplications.map((app, index) => {
+   
+    if (!app.targetSlot) return null; 
+
+    const isActive = viewIndex === index;
+    const isTenant = app.status === 'TENANT';
+
+    return (
+        <TouchableOpacity 
+            key={index} 
+            onPress={() => setViewIndex(index)} 
+            style={{ 
+                paddingHorizontal: 15, 
+                paddingVertical: 8, 
+                borderRadius: 20, 
+                backgroundColor: isActive ? colors.primary : colors.white, 
+                borderWidth: 1, 
+                borderColor: colors.primary, 
+                marginRight: 10, 
+                flexDirection: 'row', 
+                alignItems: 'center' 
+            }}
+        >
+            <Icon 
+                name={isTenant ? "store" : "clock-outline"} 
+                size={16} 
+                color={isActive ? colors.white : colors.primary} 
+                style={{ marginRight: 5 }} 
+            />
+            <Text style={{ color: isActive ? colors.white : colors.primary, fontWeight: 'bold' }}>
+                {app.targetSlot}
+            </Text>
+        </TouchableOpacity>
+    );
+})}
             </ScrollView>
         </View>
       )}

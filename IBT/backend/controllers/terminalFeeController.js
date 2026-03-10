@@ -1,5 +1,32 @@
 import TerminalFee from "../models/TerminalFee.js";
 import BasePrice from "../models/BasePrice.js";
+import Counter from "../models/Counter.js";
+
+export const getNextTicketNumber = async (req, res) => {
+  try {
+    let nextNumber = 1;
+    const counter = await Counter.findOne({ id: "ticketNo" });
+
+    if (counter) {
+      // If the counter exists, the next ticket is simply the current sequence + 1
+      nextNumber = counter.seq + 1;
+    } else {
+      // If the counter hasn't been created yet, calculate it exactly like the pre-save hook does
+      const result = await TerminalFee.aggregate([
+        { $addFields: { numericTicketNo: { $toInt: "$ticketNo" } } },
+        { $sort: { numericTicketNo: -1 } },
+        { $limit: 1 }
+      ]);
+      const maxTicket = result.length > 0 && result[0].numericTicketNo ? result[0].numericTicketNo : 0;
+      nextNumber = maxTicket + 1;
+    }
+
+    res.json({ nextTicketNo: nextNumber });
+  } catch (error) {
+    console.error("Error fetching next ticket number:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
 export const getTerminalFees = async (req, res) => {
   try {

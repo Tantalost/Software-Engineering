@@ -1,5 +1,6 @@
 import Tenant from '../models/Tenant.js'; 
 import TenantApplication from '../models/TenantApplication.js';
+import Settings from '../models/Settings.js';
 import Notification from '../models/Notification.js'; 
 import mongoose from 'mongoose';
 import CryptoJS from 'crypto-js';
@@ -115,41 +116,67 @@ export const getMyApplication = async (req, res) => {
     try {
         const { userId } = req.params;
         
-        
         let applications = await TenantApplication.find({ userId }).lean();
         
-       
-        const tenants = await Tenant.find({ uid: userId }).lean();
+        const approvedSlots = applications
+            .filter(app => app.status === 'TENANT')
+            .map(app => app.targetSlot);
+
+        const tenants = await Tenant.find({ 
+            $or: [
+                { uid: userId },
+                { slotNo: { $in: approvedSlots } }
+            ]
+        }).lean();
+        
+        const nightSetting = await Settings.findOne({ key: "defaultNightPrice" });
+        const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
+        const globalNightPrice = nightSetting ? Number(nightSetting.value) : 150;
+        const globalPermPrice = permSetting ? Number(permSetting.value) : 6000;
         
         let combinedApps = [...applications];
         
-        
         tenants.forEach(tenant => {
-           
             const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
+            const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
+            const isNightMarket = tenant.tenantType === 'Night Market';
             
+           
+            let calcRent = tenant.rentAmount;
+            if (!calcRent || calcRent === 0) {
+                 calcRent = isNightMarket ? (globalNightPrice * slotCount) : (globalPermPrice * slotCount);
+            }
+            
+            const calcUtil = tenant.utilityAmount || 0;
+            const calcTotal = (tenant.totalAmount && tenant.totalAmount > 0) ? tenant.totalAmount : (calcRent + calcUtil);
+
+            let calcDue = tenant.DueDateTime;
+            if (!calcDue && tenant.StartDateTime) {
+                 const d = new Date(tenant.StartDateTime);
+                 if (isNightMarket) d.setDate(d.getDate() + 7);
+                 else d.setMonth(d.getMonth() + 1);
+                 calcDue = d.toISOString();
+            }
+            
+            const tenantData = {
+                status: 'TENANT',
+                start: tenant.StartDateTime,
+                due: calcDue,
+                rentAmount: calcRent,
+                utilityAmount: calcUtil,
+                totalAmount: calcTotal,
+                tenantId: tenant._id
+            };
+
             if (existingAppIndex >= 0) {
-            
-                combinedApps[existingAppIndex].status = 'TENANT';
-                combinedApps[existingAppIndex].start = tenant.StartDateTime;
-                combinedApps[existingAppIndex].due = tenant.DueDateTime;
+                combinedApps[existingAppIndex] = { ...combinedApps[existingAppIndex], ...tenantData };
             } else {
-                
-                combinedApps.push({
-                    status: 'TENANT',
-                    targetSlot: tenant.slotNo,
-                    floor: tenant.tenantType,
-                    start: tenant.StartDateTime,
-                    due: tenant.DueDateTime
-                });
+                combinedApps.push({ ...tenantData, targetSlot: tenant.slotNo, floor: tenant.tenantType });
             }
         });
         
-       
         res.json(combinedApps); 
-      } catch (error) {
-        res.status(500).json({ message: error.message });
-      }
+      } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
 export const submitApplication = async (req, res) => {
@@ -237,4 +264,32 @@ export const uploadContract = async (req, res) => {
       } catch (error) {
         res.status(500).json({ message: error.message });
       }
+};
+
+export const submitRenewalPayment = async (req, res) => {
+    try {
+        const { tenantId, paymentReference } = req.body;
+        
+        let receiptUrl = "";
+        if (req.file) { receiptUrl = req.file.filename; } 
+        else if (req.body.receiptUrl) { receiptUrl = req.body.receiptUrl; }
+        
+        if (!receiptUrl) return res.status(400).json({ message: "Receipt file is missing." });
+        if (!tenantId) return res.status(400).json({ message: "Tenant ID is missing." });
+
+        const updatedTenant = await Tenant.findByIdAndUpdate(
+            tenantId,
+            { 
+                status: "Payment Review", 
+                referenceNo: paymentReference,
+                "documents.proofOfReceipt": receiptUrl
+            },
+            { new: true }
+        );
+
+        await createAdminNotification("Renewal Payment Uploaded", `Ref: ${paymentReference}. Verify renewal payment for Slot ${updatedTenant.slotNo}.`);
+        res.json(updatedTenant);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };
