@@ -221,7 +221,6 @@ const Topbar = ({ title, onMenuClick }) => {
   };
 
   const handleNotificationClick = async (notif) => {
-    // 1. Mark as read in the background if it's unread
     const notifId = notif.id || notif._id;
     if (!notif.read) {
       await handleMarkAsRead(notifId);
@@ -233,20 +232,18 @@ const Topbar = ({ title, onMenuClick }) => {
     const title = (notif.title || "").toLowerCase();
 
     if (source.includes("terminal") || title.includes("terminal")) {
-      route = "/terminal-fees";
+      route = "/api/terminal-fees";
     } else if (source.includes("bus") || title.includes("bus")) {
-      route = "/bus-trips";
+      route = "/api/bus-trips";
     } else if (source.includes("lost") || title.includes("lost")) {
-      route = "/lost-found";
+      route = "/api/lost-found";
     } else if (source.includes("parking") || title.includes("parking")) {
-      route = "/parking";
+      route = "/api/parking";
     } else if (source.includes("tenant") || title.includes("tenant")) {
-      route = "/tenants";
+      route = "/api/tenants";
     } else if (title.includes("deletion request")) {
-      route = "/deletion-requests";
+      route = "/api/deletion-requests";
     }
-
-    // Navigate to the matched page
     navigate(route);
   };
 
