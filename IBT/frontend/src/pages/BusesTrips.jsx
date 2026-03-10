@@ -16,7 +16,8 @@ import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
 import StatCardGroupBus from "../components/busTrips/StatCardGroupBus";
 import { submitPageReport } from "../utils/reportService.js";
-
+import TableActions from "../components/common/TableActions";
+import ViewModal from "../components/common/ViewModal";
 import { logActivity } from "../utils/logger";
 import NotificationToast from "../components/common/NotificationToast";
 import {
@@ -94,198 +95,198 @@ const ManageCompaniesModal = ({
 
 
   const handleAddCompany = async () => {
-  if (!newCompanyName.trim()) return;
-  setIsProcessing(true);
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newCompanyName }),
-    });
-    if (res.ok) {
-      await fetchCompanies();
-      setNewCompanyName("");
-      setIsEditingCompany(false);
-      
-      
-      setNotificationState({
-        isOpen: true,
-        type: 'success',
-        message: `Company "${newCompanyName}" added successfully!`,
-        autoClose: true,
-        duration: 3000
+    if (!newCompanyName.trim()) return;
+    setIsProcessing(true);
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCompanyName }),
       });
-    } else {
-      
+      if (res.ok) {
+        await fetchCompanies();
+        setNewCompanyName("");
+        setIsEditingCompany(false);
+
+
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Company "${newCompanyName}" added successfully!`,
+          autoClose: true,
+          duration: 3000
+        });
+      } else {
+
+        setNotificationState({
+          isOpen: true,
+          type: 'error',
+          message: "Failed to create company",
+          autoClose: true,
+          duration: 3000
+        });
+      }
+    } catch (err) {
+      console.error(err);
       setNotificationState({
         isOpen: true,
         type: 'error',
-        message: "Failed to create company",
+        message: "Error creating company",
         autoClose: true,
         duration: 3000
       });
+    } finally {
+      setIsProcessing(false);
     }
-  } catch (err) {
-    console.error(err);
-    setNotificationState({
-      isOpen: true,
-      type: 'error',
-      message: "Error creating company",
-      autoClose: true,
-      duration: 3000
-    });
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
 
   const confirmDeleteCompany = async () => {
-  if (!deleteCompanyTarget) return;
+    if (!deleteCompanyTarget) return;
 
-  try {
-    const res = await fetch(`${API_URL}/${deleteCompanyTarget._id}`, {
-      method: "DELETE",
-    });
-
-    if (res.ok) {
-      await fetchCompanies();
-
-      setNotificationState({
-        isOpen: true,
-        type: "success",
-        message: `Company "${deleteCompanyTarget.name}" deleted successfully!`,
-        autoClose: true,
-        duration: 3000,
+    try {
+      const res = await fetch(`${API_URL}/${deleteCompanyTarget._id}`, {
+        method: "DELETE",
       });
 
-      if (selectedCompanyId === deleteCompanyTarget._id) {
-        setSelectedCompanyId(null);
+      if (res.ok) {
+        await fetchCompanies();
+
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: `Company "${deleteCompanyTarget.name}" deleted successfully!`,
+          autoClose: true,
+          duration: 3000,
+        });
+
+        if (selectedCompanyId === deleteCompanyTarget._id) {
+          setSelectedCompanyId(null);
+        }
+
+      } else {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: "Failed to delete company",
+          autoClose: true,
+          duration: 3000,
+        });
       }
 
-    } else {
+    } catch (err) {
+      console.error(err);
+
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Failed to delete company",
+        message: "Error deleting company",
         autoClose: true,
         duration: 3000,
       });
+
+    } finally {
+      setDeleteCompanyTarget(null);
     }
+  };
 
-  } catch (err) {
-    console.error(err);
+  const confirmDeleteBus = async () => {
+    if (!deleteBusTarget || !activeCompany) return;
 
-    setNotificationState({
-      isOpen: true,
-      type: "error",
-      message: "Error deleting company",
-      autoClose: true,
-      duration: 3000,
-    });
+    const updatedBuses = activeCompany.buses.filter(
+      (b) => b.plateNumber !== deleteBusTarget.plateNumber
+    );
 
-  } finally {
-    setDeleteCompanyTarget(null);
-  }
-};
-
-const confirmDeleteBus = async () => {
-  if (!deleteBusTarget || !activeCompany) return;
-
-  const updatedBuses = activeCompany.buses.filter(
-    (b) => b.plateNumber !== deleteBusTarget.plateNumber
-  );
-
-  try {
-    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
-    });
-
-    if (res.ok) {
-      await fetchCompanies();
-
-      setNotificationState({
-        isOpen: true,
-        type: "success",
-        message: `Bus ${deleteBusTarget.plateNumber} removed successfully!`,
-        autoClose: true,
-        duration: 3000,
+    try {
+      const res = await fetch(`${API_URL}/${activeCompany._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
       });
-    } else {
+
+      if (res.ok) {
+        await fetchCompanies();
+
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: `Bus ${deleteBusTarget.plateNumber} removed successfully!`,
+          autoClose: true,
+          duration: 3000,
+        });
+      } else {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: "Failed to remove bus",
+          autoClose: true,
+          duration: 3000,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Failed to remove bus",
+        message: "Error removing bus",
         autoClose: true,
         duration: 3000,
       });
+    } finally {
+      setDeleteBusTarget(null);
     }
-  } catch (err) {
-    console.error(err);
-
-    setNotificationState({
-      isOpen: true,
-      type: "error",
-      message: "Error removing bus",
-      autoClose: true,
-      duration: 3000,
-    });
-  } finally {
-    setDeleteBusTarget(null);
-  }
-};
+  };
 
 
   const handleAddBus = async () => {
-  if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
+    if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
 
-  const updatedBuses = [
-    ...activeCompany.buses,
-    { plateNumber: newBusPlate, route: newBusRoute },
-  ];
+    const updatedBuses = [
+      ...activeCompany.buses,
+      { plateNumber: newBusPlate, route: newBusRoute },
+    ];
 
-  try {
-    const res = await fetch(`${API_URL}/${activeCompany._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
-    });
-
-    if (res.ok) {
-      await fetchCompanies();
-      
-      // ADD THIS TOAST MESSAGE
-      setNotificationState({
-        isOpen: true,
-        type: 'success',
-        message: `Bus ${newBusPlate} added successfully!`,
-        autoClose: true,
-        duration: 3000
+    try {
+      const res = await fetch(`${API_URL}/${activeCompany._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...activeCompany, buses: updatedBuses }),
       });
-      
-      setNewBusPlate("");
-      setNewBusRoute("");
-    } else {
+
+      if (res.ok) {
+        await fetchCompanies();
+
+        // ADD THIS TOAST MESSAGE
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Bus ${newBusPlate} added successfully!`,
+          autoClose: true,
+          duration: 3000
+        });
+
+        setNewBusPlate("");
+        setNewBusRoute("");
+      } else {
+        setNotificationState({
+          isOpen: true,
+          type: 'error',
+          message: "Failed to add bus",
+          autoClose: true,
+          duration: 3000
+        });
+      }
+    } catch (err) {
+      console.error(err);
       setNotificationState({
         isOpen: true,
         type: 'error',
-        message: "Failed to add bus",
+        message: "Error adding bus",
         autoClose: true,
         duration: 3000
       });
     }
-  } catch (err) {
-    console.error(err);
-    setNotificationState({
-      isOpen: true,
-      type: 'error',
-      message: "Error adding bus",
-      autoClose: true,
-      duration: 3000
-    });
-  }
-};
+  };
 
 
   if (!isOpen) return null;
@@ -489,92 +490,92 @@ const confirmDeleteBus = async () => {
 
           {/* Delete Company Modal */}
           {deleteCompanyTarget && (
-  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
 
-      <div className="flex flex-col items-center text-center">
-        <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
-          <Trash2 size={24} />
-        </div>
+                <div className="flex flex-col items-center text-center">
+                  <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
+                    <Trash2 size={24} />
+                  </div>
 
-        <h3 className="text-lg font-semibold text-slate-800">
-          Delete Company
-        </h3>
+                  <h3 className="text-lg font-semibold text-slate-800">
+                    Delete Company
+                  </h3>
 
-        <p className="text-sm text-slate-600 mt-2">
-          Are you sure you want to delete
-          <span className="font-semibold"> {deleteCompanyTarget.name}</span>?
-        </p>
+                  <p className="text-sm text-slate-600 mt-2">
+                    Are you sure you want to delete
+                    <span className="font-semibold"> {deleteCompanyTarget.name}</span>?
+                  </p>
 
-        <p className="text-xs text-red-500 mt-1">
-          All buses under this company will also be removed.
-        </p>
+                  <p className="text-xs text-red-500 mt-1">
+                    All buses under this company will also be removed.
+                  </p>
 
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={() => setDeleteCompanyTarget(null)}
-            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-          >
-            Cancel
-          </button>
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={() => setDeleteCompanyTarget(null)}
+                      className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
 
-          <button
-            onClick={confirmDeleteCompany}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-          >
-            Delete
-          </button>
-        </div>
+                    <button
+                      onClick={confirmDeleteCompany}
+                      className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
 
-      </div>
+                </div>
 
-    </div>
-  </div>
-)}
+              </div>
+            </div>
+          )}
 
-{deleteBusTarget && (
-  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+          {deleteBusTarget && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
 
-      <div className="flex flex-col items-center text-center">
-        <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
-          <Trash2 size={24} />
-        </div>
+                <div className="flex flex-col items-center text-center">
+                  <div className="bg-red-100 text-red-600 p-3 rounded-full mb-3">
+                    <Trash2 size={24} />
+                  </div>
 
-        <h3 className="text-lg font-semibold text-slate-800">
-          Remove Bus
-        </h3>
+                  <h3 className="text-lg font-semibold text-slate-800">
+                    Remove Bus
+                  </h3>
 
-        <p className="text-sm text-slate-600 mt-2">
-          Remove bus
-          <span className="font-semibold">
-            {" "}
-            {deleteBusTarget.plateNumber}
-          </span>
-          ?
-        </p>
+                  <p className="text-sm text-slate-600 mt-2">
+                    Remove bus
+                    <span className="font-semibold">
+                      {" "}
+                      {deleteBusTarget.plateNumber}
+                    </span>
+                    ?
+                  </p>
 
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={() => setDeleteBusTarget(null)}
-            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-          >
-            Cancel
-          </button>
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={() => setDeleteBusTarget(null)}
+                      className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
 
-          <button
-            onClick={confirmDeleteBus}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-          >
-            Remove
-          </button>
-        </div>
+                    <button
+                      onClick={confirmDeleteBus}
+                      className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
 
-      </div>
+                </div>
 
-    </div>
-  </div>
-)}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
@@ -593,6 +594,7 @@ const BusTrips = () => {
   const [companyData, setCompanyData] = useState([]);
 
 
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showManageCompaniesModal, setShowManageCompaniesModal] =
@@ -603,7 +605,8 @@ const BusTrips = () => {
   const [selectedIds, setSelectedIds] = useState([]);
 
   const [archiveRow, setArchiveRow] = useState(null);
-
+  const [viewRow, setViewRow] = useState(null);
+  const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [logoutRow, setLogoutRow] = useState(null);
   const [ticketRefInput, setTicketRefInput] = useState("");
@@ -665,69 +668,69 @@ const BusTrips = () => {
   const [isSettingPrice, setIsSettingPrice] = useState(false);
 
   const handleSetPrice = async () => {
-  if (!newPrice || isNaN(newPrice)) {
-    alert("Please enter a valid price.");
-    return;
-  }
-
-  const priceValue = Number(newPrice);
-  if (priceValue <= 0) {
-    alert("Please enter a valid price greater than 0.");
-    return;
-  }
-
-  setIsSettingPrice(true);
-
-  try {
-    const response = await fetch(`${API_URL}/update-prices/all`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ newPrice: priceValue }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to update prices in database");
+    if (!newPrice || isNaN(newPrice)) {
+      alert("Please enter a valid price.");
+      return;
     }
 
-    const result = await response.json();
+    const priceValue = Number(newPrice);
+    if (priceValue <= 0) {
+      alert("Please enter a valid price greater than 0.");
+      return;
+    }
 
-    setDefaultPrice(priceValue);
-    localStorage.setItem("defaultBusPrice", priceValue.toString());
+    setIsSettingPrice(true);
 
-    await fetchBusTrips();
+    try {
+      const response = await fetch(`${API_URL}/update-prices/all`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPrice: priceValue }),
+      });
 
-    await logActivity(
-      role,
-      "SET_DEFAULT_PRICE",
-      `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
-      "BusTrips",
-    );
+      if (!response.ok) {
+        throw new Error("Failed to update prices in database");
+      }
 
-    setShowSetPriceModal(false);
-    setNewPrice("");
-    
+      const result = await response.json();
 
-    setNotificationState({
-      isOpen: true,
-      type: 'success',
-      message: `Prices updated to ₱${priceValue}!`,
-      autoClose: true,
-      duration: 3000
-    });
-  } catch (err) {
-    console.error(err);
-    
-    setNotificationState({
-      isOpen: true,
-      type: 'error',
-      message: "Failed to set price: " + err.message,
-      autoClose: true,
-      duration: 3000
-    });
-  } finally {
-    setIsSettingPrice(false);
-  }
-};
+      setDefaultPrice(priceValue);
+      localStorage.setItem("defaultBusPrice", priceValue.toString());
+
+      await fetchBusTrips();
+
+      await logActivity(
+        role,
+        "SET_DEFAULT_PRICE",
+        `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
+        "BusTrips",
+      );
+
+      setShowSetPriceModal(false);
+      setNewPrice("");
+
+
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Prices updated to ₱${priceValue}!`,
+        autoClose: true,
+        duration: 3000
+      });
+    } catch (err) {
+      console.error(err);
+
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to set price: " + err.message,
+        autoClose: true,
+        duration: 3000
+      });
+    } finally {
+      setIsSettingPrice(false);
+    }
+  };
 
 
 
@@ -860,57 +863,104 @@ const BusTrips = () => {
 
 
   const handleCreateRecord = async (e) => {
-  e.preventDefault();
-  try {
-    const tripData = {
-      ...newBusData,
-      price: newBusData.price || defaultPrice
-    };
+    e.preventDefault();
+    try {
+      const tripData = {
+        ...newBusData,
+        price: newBusData.price || defaultPrice
+      };
 
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(tripData),
-    });
-    if (response.ok) {
-      const newItem = await response.json();
-      await logActivity(
-        role,
-        "CREATE_TRIP",
-        `Created Trip ${newItem.templateNo} - ${newItem.route}`,
-        "BusTrips",
-      );
-      fetchBusTrips();
-      setShowAddModal(false);
-      
-      
-      setNotificationState({
-        isOpen: true,
-        type: 'success',
-        message: `Bus trip ${newItem.templateNo} created successfully!`,
-        autoClose: true,
-        duration: 3000
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tripData),
       });
-    } else {
+      if (response.ok) {
+        const newItem = await response.json();
+        await logActivity(
+          role,
+          "CREATE_TRIP",
+          `Created Trip ${newItem.templateNo} - ${newItem.route}`,
+          "BusTrips",
+        );
+        fetchBusTrips();
+        setShowAddModal(false);
+
+
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Bus trip ${newItem.templateNo} created successfully!`,
+          autoClose: true,
+          duration: 3000
+        });
+      } else {
+        setNotificationState({
+          isOpen: true,
+          type: 'error',
+          message: "Failed to create bus trip",
+          autoClose: true,
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      console.error("Error creating:", error);
       setNotificationState({
         isOpen: true,
         type: 'error',
-        message: "Failed to create bus trip",
+        message: "Error creating bus trip",
         autoClose: true,
         duration: 3000
       });
     }
-  } catch (error) {
-    console.error("Error creating:", error);
-    setNotificationState({
-      isOpen: true,
-      type: 'error',
-      message: "Error creating bus trip",
-      autoClose: true,
-      duration: 3000
-    });
-  }
-};
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_URL}/${editRow.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editRow),
+      });
+
+      if (response.ok) {
+        await logActivity(
+          role,
+          "UPDATE_TRIP",
+          `Updated Bus Trip: ${editRow.templateNo}`,
+          "BusTrips"
+        );
+        fetchBusTrips();
+        setEditRow(null);
+
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: `Bus trip ${editRow.templateNo} updated successfully!`,
+          autoClose: true,
+          duration: 3000,
+        });
+      } else {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: "Failed to update bus trip.",
+          autoClose: true,
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating:", error);
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Error updating bus trip.",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+  };
 
   //EXCEL
   const handleExportExcel = async () => {
@@ -1047,38 +1097,92 @@ const BusTrips = () => {
 
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.length} records?`)) return;
+    // 1. Customize the confirmation message based on role
+    const confirmMsg =
+      role === "bus"
+        ? `Request deletion for ${selectedIds.length} records?`
+        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+
+    if (!window.confirm(confirmMsg)) return;
+    
     setIsLoading(true);
+    
+    // We need the base API URL without '/bustrips' for the deletion-requests endpoint
+    const GLOBAL_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api`;
+
     try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          fetch(`${API_URL}/${id}`, { method: "DELETE" }),
-        ),
-      );
-      await logActivity(
-        role,
-        "BULK_DELETE",
-        `Deleted ${selectedIds.length} items`,
-        "BusTrips",
-      );
-      await fetchBusTrips();
+      if (role === "bus") {
+        // --- BUS ADMIN: Send Deletion Requests ---
+        const requestPromises = selectedIds.map(async (id) => {
+          const item = records.find((r) => r.id === id);
+          if (!item) return;
 
-      setNotificationState({
-        isOpen: true,
-        type: 'success',
-        message: `Successfully deleted ${selectedIds.length} records!`,
-        autoClose: true,
-        duration: 3000
-      });
+          return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              itemType: "Bus Trip",
+              itemDescription: `Plate No: ${item.templateNo || item.templateno} - ${item.company}`,
+              requestedBy: localStorage.getItem("authName") || "Bus Admin",
+              originalData: item,
+              reason: "Bulk deletion request",
+            }),
+          });
+        });
 
+        await Promise.all(requestPromises);
+        
+        await logActivity(
+          role,
+          "REQUEST_BULK_DELETE",
+          `Requested deletion for ${selectedIds.length} bus trips`,
+          "BusTrips",
+        );
+
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Sent deletion requests for ${selectedIds.length} records.`,
+          autoClose: true,
+          duration: 3000
+        });
+
+      } else {
+        // --- SUPERADMIN: Immediate Deletion ---
+        await Promise.all(
+          selectedIds.map((id) =>
+            fetch(`${API_URL}/${id}`, { method: "DELETE" }),
+          ),
+        );
+        
+        await logActivity(
+          role,
+          "BULK_DELETE",
+          `Deleted ${selectedIds.length} items`,
+          "BusTrips",
+        );
+        
+        await fetchBusTrips();
+
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Successfully deleted ${selectedIds.length} records!`,
+          autoClose: true,
+          duration: 3000
+        });
+      }
+
+      // Clear selections after either action is complete
       setSelectedIds([]);
       setIsSelectionMode(false);
+      
     } catch (e) {
-      console.error(e);
+      console.error("Bulk action failed", e);
       setNotificationState({
         isOpen: true,
         type: 'error',
-        message: "Failed to delete some records.",
+        message: "Failed to process some records.",
         autoClose: true,
         duration: 3000
       });
@@ -1086,7 +1190,6 @@ const BusTrips = () => {
       setIsLoading(false);
     }
   };
-
 
   const handleSubmitReport = async () => {
     setIsReporting(true);
@@ -1229,53 +1332,53 @@ const BusTrips = () => {
 
   const handleArchive = (row) => setArchiveRow(row);
   const confirmArchive = async () => {
-  if (!archiveRow) return;
-  try {
-    const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (archiveRes.ok) {
-      await logActivity(
-        role,
-        "ARCHIVE_TRIP",
-        `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`,
-        "BusTrips",
-      );
-
-      fetchBusTrips();
-      
-      setNotificationState({
-        isOpen: true,
-        type: 'success',
-        message: `Bus ${archiveRow.templateNo} archived successfully!`,
-        autoClose: true,
-        duration: 3000
+    if (!archiveRow) return;
+    try {
+      const archiveRes = await fetch(`${API_URL}/${archiveRow.id}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
       });
-    } else {
-      console.error("Failed to archive bus trip");
+
+      if (archiveRes.ok) {
+        await logActivity(
+          role,
+          "ARCHIVE_TRIP",
+          `Archived Bus: ${archiveRow.templateNo} - ${archiveRow.route}`,
+          "BusTrips",
+        );
+
+        fetchBusTrips();
+
+        setNotificationState({
+          isOpen: true,
+          type: 'success',
+          message: `Bus ${archiveRow.templateNo} archived successfully!`,
+          autoClose: true,
+          duration: 3000
+        });
+      } else {
+        console.error("Failed to archive bus trip");
+        setNotificationState({
+          isOpen: true,
+          type: 'error',
+          message: "Failed to archive bus trip",
+          autoClose: true,
+          duration: 3000
+        });
+      }
+    } catch (e) {
+      console.error("Error archiving:", e);
       setNotificationState({
         isOpen: true,
         type: 'error',
-        message: "Failed to archive bus trip",
+        message: "Error archiving bus trip",
         autoClose: true,
         duration: 3000
       });
+    } finally {
+      setArchiveRow(null);
     }
-  } catch (e) {
-    console.error("Error archiving:", e);
-    setNotificationState({
-      isOpen: true,
-      type: 'error',
-      message: "Error archiving bus trip",
-      autoClose: true,
-      duration: 3000
-    });
-  } finally {
-    setArchiveRow(null);
-  }
-};
+  };
 
 
 
@@ -1349,6 +1452,7 @@ const BusTrips = () => {
                 </span>
                 <button
                   onClick={handleBulkDelete}
+                  title={role === "bus" ? "Request Deletion" : "Delete Selected"}
                   className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 shadow-sm border"
                 >
                   <Trash2 size={20} />
@@ -1463,50 +1567,61 @@ const BusTrips = () => {
               }
               return rowData;
             })}
-            actions={(row) => (
-              <div className="flex justify-end items-center space-x-2">
+            actions={(row) => {
+              // Find the full record based on the ID
+              const selectedRecord = records.find((r) => r.id === row.id);
 
-                {row.status === "Pending" && (
+              return (
+                <div className="flex justify-end items-center space-x-2">
+
+                  {/* Reusable Table Actions (View & Edit) */}
+                  <TableActions
+                    onView={() => setViewRow(selectedRecord)}
+                    onEdit={() => setEditRow(selectedRecord)}
+                  />
+
+                  {row.status === "Pending" && (
+                    <button
+                      onClick={() => handleMarkArrived(row)}
+                      className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 flex items-center gap-1 px-2"
+                      title="Mark as Arrived"
+                    >
+                      <CheckCircle size={16} />
+                      <span className="text-xs">Arrive</span>
+                    </button>
+                  )}
+
+                  {row.status === "Arrived" && (
+                    <button
+                      onClick={() => handleLogoutClick(row)}
+                      className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 flex items-center gap-1 px-2"
+                      title="Depart"
+                    >
+                      <LogOut size={16} />
+                      <span className="text-xs">Depart</span>
+                    </button>
+                  )}
+
                   <button
-                    onClick={() => handleMarkArrived(row)}
-                    className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 flex items-center gap-1 px-2"
+                    onClick={() => setArchiveRow(selectedRecord)}
+                    className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                    title="Archive"
                   >
-                    <CheckCircle size={16} />
-                    <span className="text-xs">Arrive</span>
+                    <Archive size={16} />
                   </button>
-                )}
 
-
-                {row.status === "Arrived" && (
-                  <button
-                    onClick={() => handleLogoutClick(row)}
-                    className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 flex items-center gap-1 px-2"
-                  >
-                    <LogOut size={16} />
-                    <span className="text-xs">Depart</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() =>
-                    handleArchive(records.find((r) => r.id === row.id))
-                  }
-                  className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
-                >
-                  <Archive size={16} />
-                </button>
-                {role === "superadmin" && (
-                  <button
-                    onClick={() =>
-                      setDeleteRow(records.find((r) => r.id === row.id))
-                    }
-                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            )}
+                  {role === "superadmin" && (
+                    <button
+                      onClick={() => setDeleteRow(selectedRecord)}
+                      className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              );
+            }}
           />
         )}
         <Pagination
@@ -1883,6 +1998,122 @@ const BusTrips = () => {
         message={notificationState.message}
         onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
       />
+      {/* View Modal */}
+      {viewRow && (
+        <ViewModal
+          title="View Bus Trip Details"
+          fields={[
+            { label: "Plate No.", value: viewRow.templateNo || viewRow.templateno || "-" },
+            { label: "Company", value: viewRow.company || "-" },
+            { label: "Route", value: viewRow.route || "-" },
+            { label: "Status", value: viewRow.status || "-" },
+            { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
+            { label: "Arrival Time", value: viewRow.time || "-" },
+            { label: "Departure Time", value: viewRow.departureTime || "-" },
+            { label: "Ticket Reference", value: viewRow.ticketReferenceNo || "-" },
+            { label: "Date", value: viewRow.date ? new Date(viewRow.date).toLocaleDateString() : "-" },
+          ]}
+          onClose={() => setViewRow(null)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center mb-5 border-b pb-3">
+              <h3 className="text-lg font-bold text-slate-800">
+                Edit Bus Trip
+              </h3>
+              <button
+                onClick={() => setEditRow(null)}
+                className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Plate Number</label>
+                    <input
+                      type="text"
+                      value={editRow.templateNo || editRow.templateno || ""}
+                      onChange={(e) => setEditRow({ ...editRow, templateNo: e.target.value })}
+                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Company</label>
+                    <select
+                      value={editRow.company || ""}
+                      onChange={(e) => setEditRow({ ...editRow, company: e.target.value })}
+                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    >
+                      <option value="">Select Company</option>
+                      {companyData.map((c) => (
+                        <option key={c._id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Route</label>
+                  <input
+                    type="text"
+                    value={editRow.route || ""}
+                    onChange={(e) => setEditRow({ ...editRow, route: e.target.value })}
+                    className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Price (₱)</label>
+                    <input
+                      type="number"
+                      value={editRow.price || 0}
+                      onChange={(e) => setEditRow({ ...editRow, price: Number(e.target.value) })}
+                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Status</label>
+                    <select
+                      value={editRow.status || ""}
+                      onChange={(e) => setEditRow({ ...editRow, status: e.target.value })}
+                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Arrived">Arrived</option>
+                      <option value="Paid">Paid</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditRow(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg border border-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
