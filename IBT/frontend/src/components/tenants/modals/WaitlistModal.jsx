@@ -103,7 +103,7 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
               <button onClick={() => setStatusFilter("Contract Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Contract Review" ? "bg-green-600 text-white border-green-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><FileSignature size={12}/> Contract Review</button>
               <button onClick={() => setStatusFilter("Rejected")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Rejected" ? "bg-red-500 text-white border-red-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><XCircle size={12}/> Rejected</button>
               
-              <button onClick={() => setStatusFilter("Renewals")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Renewals" ? "bg-purple-600 text-white border-purple-600 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200"}`}>
+              <button onClick={() => setStatusFilter("Renewals")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Renewals" ? "bg-yellow-500 text-white border-yellow-500 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:bg-yellow-50 hover:text-yellow-700 hover:border-yelow-200"}`}>
                   <ClipboardList size={12}/> Pending Renewals ({renewalsData?.length || 0})
               </button>
           </div>
@@ -160,7 +160,7 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
                               <button 
                                 onClick={() => isRenewalRecord(app) ? onReviewRenewal(app) : onApprove(app)} 
                                 className={`px-3 py-1.5 rounded-lg text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 ${
-                                  isRenewalRecord(app) ? 'bg-purple-600 hover:bg-purple-700' :
+                                  isRenewalRecord(app) ? 'bg-orange-600 hover:bg-orange-700' :
                                   (app.status === 'PAYMENT_REVIEW' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-600 hover:bg-emerald-700')
                                 }`}
                               >
