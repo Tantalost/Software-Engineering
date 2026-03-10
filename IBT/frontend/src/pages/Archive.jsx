@@ -20,9 +20,11 @@ const Archive = () => {
       case "bus": return ["Bus Trip"];
       case "ticket": return ["Terminal Fee"];
       case "parking": return ["Parking Ticket"];
-      case "tenant": 
-      case "tenant admin": 
-      case "tenantadmin": 
+      // backend uses "lease" to represent tenant admin users
+      case "tenant":
+      case "tenant admin":
+      case "tenantadmin":
+      case "lease":
         return ["Tenant"];
       case "lostandfound": return ["Lost & Found"];
       default: return ["All"];
@@ -36,9 +38,10 @@ const Archive = () => {
       case "bus": return "Bus Trip";
       case "ticket": return "Terminal Fee";
       case "parking": return "Parking Ticket";
-      case "tenant": 
-      case "tenant admin": 
-      case "tenantadmin": 
+      case "tenant":
+      case "tenant admin":
+      case "tenantadmin":
+      case "lease":
         return "Tenant";
       case "lostandfound": return "Lost & Found";
       default: return "All";
@@ -165,7 +168,7 @@ const Archive = () => {
       if (role === "ticket" && item.type !== "Terminal Fee") return false;
       if (role === "parking" && item.type !== "Parking Ticket") return false;
       
-      if ((role === "tenant" || role === "tenant admin" || role === "tenantadmin") && item.type !== "Tenant") return false;
+      if ((role === "tenant" || role === "tenant admin" || role === "tenantadmin" || role === "lease") && item.type !== "Tenant") return false;
       
       if (role === "lostandfound" && item.type !== "Lost & Found") return false;
 
