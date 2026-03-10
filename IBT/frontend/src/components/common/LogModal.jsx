@@ -30,21 +30,25 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
     }
   };
 
-  // 1. Get the current user's role
   const currentRole = localStorage.getItem("authRole") || "superadmin";
-
-  // 2. Filter the logs based on the admin type
   const displayedLogs = logs.filter((log) => {
-    // Superadmin sees everything
     if (currentRole === "superadmin") return true;
+    if (currentRole === "bus") {
+      return log.user === "bus" && (log.module === "BusTrips" || log.source === "BusTrips");
+    }
+    if (currentRole === "ticket") {
+      return log.user === "ticket" && (log.module === "TerminalFees" || log.source === "TerminalFees");
+    }
+    if (currentRole === "tenant") {
+      return log.user === "tenant" && (log.module === "Tenants" || log.source === "Tenants"); 
+    }
+    if (currentRole === "parking") {
+      return log.user === "parking" && (log.module === "Parking" || log.source === "Parking");
+    }
+    if (currentRole === "lostandfound") {
+      return log.user === "lostandfound" && (log.module === "LostAndFound" || log.source === "LostAndFound");
+    }
     
-    // Bus Admin only sees BusTrips logs
-    if (currentRole === "bus") return log.module === "BusTrips" || log.source === "BusTrips";
-    
-    // Ticket Admin only sees TerminalFees logs
-    if (currentRole === "ticket") return log.module === "TerminalFees" || log.source === "TerminalFees";
-    
-    // Fallback just in case
     return false;
   });
 
