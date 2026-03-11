@@ -529,27 +529,25 @@ const modalBilling = useMemo(() => {
   };
 
  const appendFile = (form: FormData, key: string, fileObj: any, encryptedUri: string | null = null) => {
-    if (fileObj) {
-      let finalUri = encryptedUri ? encryptedUri : fileObj.uri;
+  if (fileObj) {
+    let finalUri = encryptedUri ? encryptedUri : fileObj.uri;
 
-      // Ensure the URI has the 'file://' prefix for iOS compatibility
-      if (Platform.OS === 'ios' && !finalUri.startsWith('file://')) {
-          finalUri = `file://${finalUri}`;
-      } else if (Platform.OS === 'android' && finalUri.startsWith('file://')) {
-          // Some Android devices prefer the prefix removed for FormData uploads
-          finalUri = finalUri.replace('file://', '');
-      }
-
-      const name = fileObj.name || `${key}.jpg`;
-      const type = fileObj.mimeType || 'application/octet-stream';
-
-      form.append(key, {
-        uri: finalUri,
-        name: name,
-        type: type,
-      } as any);
+    // CRITICAL FIX: Ensure BOTH iOS and Android have the file:// prefix
+    // Do NOT strip it out for Android.
+    if (!finalUri.startsWith('file://')) {
+        finalUri = `file://${finalUri}`;
     }
-  };
+
+    const name = fileObj.name || `${key}.jpg`;
+    const type = fileObj.mimeType || 'application/octet-stream';
+
+    form.append(key, {
+      uri: finalUri,
+      name: name,
+      type: type,
+    } as any);
+  }
+};
 
   const handleApiError = async (res: any) => {
     if (!res.ok) {
