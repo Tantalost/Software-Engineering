@@ -107,7 +107,13 @@ export default function ApplicationModal({
                 <Text variant="headlineSmall" style={[styles.modalTitle, {textAlign:'center'}]}>Review Application</Text>
                 <Divider style={{marginVertical: 15}} />
 
-                <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Applicant:</Text><Text style={styles.reviewValue}>{formData.firstName} {formData.lastName}</Text></View>
+                <View style={styles.reviewRow}>
+                  <Text style={styles.reviewLabel}>Applicant:</Text>
+                  <Text style={styles.reviewValue}>
+                    {[formData.firstName, formData.middleName, formData.lastName, formData.suffix].filter(Boolean).join(' ')}
+                  </Text>
+                </View>
+
                 <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Contact:</Text><Text style={styles.reviewValue}>{phone}</Text></View>
                 <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Email:</Text><Text style={styles.reviewValue}>{formData.email}</Text></View>
                 <Divider style={{marginVertical: 10}} />

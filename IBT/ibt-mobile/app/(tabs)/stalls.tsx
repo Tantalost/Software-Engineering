@@ -167,6 +167,13 @@ const modalBilling = useMemo(() => {
         setShowLogin(false);
 
         const safeName = userData.name || "";
+
+        const safeContact = userData.contact || userData.contactNo || "";
+        let cleanedPhone = safeContact.replace(/[^0-9]/g, '');
+        if (cleanedPhone.startsWith('63')) cleanedPhone = cleanedPhone.substring(2);
+        if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.substring(1);
+        setPhone(cleanedPhone.substring(0, 10)); // Sets the standalone phone state
+        
         setFormData(prev => ({
           ...prev,
           firstName: safeName.split(' ')[0] || '',
@@ -464,7 +471,7 @@ const modalBilling = useMemo(() => {
   };
   
   const handleReview = () => {
-    if (!formData.firstName || !formData.contact || !selectedStall) {
+   if (!formData.firstName || !phone || !selectedStall) {
       return Alert.alert("Incomplete", "Please fill in Name, Contact & Select a Stall.");
     }
     if (!files.permit || !files.validId || !files.clearance) {
