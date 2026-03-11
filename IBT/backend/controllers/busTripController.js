@@ -35,7 +35,10 @@ export const createBusTrip = async (req, res) => {
       company,
       price: price || defaultPrice,
       status: status || "Pending",
-      isArchived: false
+      isArchived: false,
+
+      parkingEstimation: parkingEstimation || "10 minutes",
+      expectedDeparture: expectedDeparture || ""
     });
 
     const savedTrip = await newTrip.save();

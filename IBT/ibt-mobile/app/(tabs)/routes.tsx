@@ -18,7 +18,9 @@ interface BusTrip {
   status: string;
   busType?: string; 
   price?: number;   
-  seats?: number;   
+  seats?: number; 
+  parkingEstimation?: string; // Add this
+  expectedDeparture?: string;  
 }
 
 export default function RoutesPage() {
@@ -133,16 +135,13 @@ export default function RoutesPage() {
 
 
  const renderItem = ({ item }: { item: BusTrip }) => {
-   
     const hasArrived = item.status === 'Arrived';
-   
     const isDelayed = !hasArrived && isPastArrival(item.date, item.time);
     
     let statusText = 'Est. Arrival';
     let statusColor = '#2E7D32'; 
 
     if (hasArrived) {
-       
         statusText = 'Arrived At';
         statusColor = '#2E7D32'; 
     } else if (isDelayed) {
@@ -153,7 +152,7 @@ export default function RoutesPage() {
     return (
       <Card style={styles.card} mode="elevated">
         <Card.Content>
-          {/* ... [Keep your existing card header and divider code here] ... */}
+          {/* ... [Card header here] ... */}
           
           <View style={styles.routeRow}>
              <View style={{flex: 1}}>
@@ -164,25 +163,39 @@ export default function RoutesPage() {
                 <Text variant="bodyMedium" style={styles.value}>
                   {new Date(item.date).toLocaleDateString()}
                 </Text>
+
+                {/* ADD THIS CONDITIONAL BLOCK FOR EXPECTED DEPARTURE */}
+                {item.expectedDeparture && (
+                  <>
+                    <Text style={[styles.label, { marginTop: 12 }]}>Exp. Departure</Text>
+                    <Text variant="bodyMedium" style={[styles.value, { color: '#D35400' }]}>
+                      {formatTime(item.expectedDeparture)}
+                    </Text>
+                  </>
+                )}
              </View>
              
              <View style={{alignItems: 'flex-end'}}>
-                {/* 3. The label will now say "Arrived At" */}
                 <Text style={[styles.label, { color: statusColor, fontWeight: 'bold' }]}>
                   {statusText}
                 </Text>
-                
-                {/* 4. And the exact time will sit right underneath it */}
                 <Text variant="titleLarge" style={[styles.timeValue, { color: statusColor }]}>
                   {formatTime(item.time)}
                 </Text>
+
+                {/* Optional: You can also show the parking estimation string here if you want */}
+                {item.parkingEstimation && (
+                  <Text style={{ fontSize: 10, color: '#888', marginTop: 4 }}>
+                    Est. wait: {item.parkingEstimation}
+                  </Text>
+                )}
              </View>
           </View>
         </Card.Content>
       </Card>
     );
   };
-
+  
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
