@@ -1395,7 +1395,7 @@ const BusTrips = () => {
   }
 };
 
- const handleMarkArrived = async (row) => {
+ const handleMarkArrived = async (record) => {
     try {
       // 1. Capture the current real-time arrival
       const actualArrivalTime = new Date().toLocaleTimeString("en-GB", {
@@ -1403,13 +1403,18 @@ const BusTrips = () => {
         minute: "2-digit",
       });
 
-      const response = await fetch(`${API_URL}/${row.id}`, {
+      // 2. Recalculate Expected Departure based on real arrival time
+      const estimation = record.parkingEstimation || "10 minutes";
+      const newExpectedDeparture = calculateExpectedDeparture(actualArrivalTime, estimation);
+
+      const response = await fetch(`${API_URL}/${record.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        // 2. Send both the new status and the actual arrival time
+        // 3. Send both the new arrival time AND the recalculated expected departure
         body: JSON.stringify({ 
           status: "Arrived", 
-          time: actualArrivalTime 
+          time: actualArrivalTime,
+          expectedDeparture: newExpectedDeparture
         }),
       });
       
@@ -1418,8 +1423,7 @@ const BusTrips = () => {
         setNotificationState({
           isOpen: true,
           type: "success",
-          // Optional: Update the toast message to show the time
-          message: `Bus ${row.plateno} marked as Arrived at ${actualArrivalTime}!`, 
+          message: `Bus ${record.templateNo || record.templateno} marked as Arrived at ${actualArrivalTime}!`, 
           autoClose: true,
           duration: 3000,
         });
@@ -1708,7 +1712,7 @@ const BusTrips = () => {
 
                   {row.status === "Pending" && (
                     <button
-                      onClick={() => handleMarkArrived(row)}
+                      onClick={() => handleMarkArrived(selectedRecord)}
                       className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 flex items-center gap-1 px-2"
                       title="Mark as Arrived"
                     >
