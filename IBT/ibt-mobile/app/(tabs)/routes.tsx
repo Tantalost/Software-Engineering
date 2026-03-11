@@ -6,8 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import API_URL from '../../src/config'; 
 
-
-
+// 1. Updated Interface with new fields
 interface BusTrip {
   _id: string;
   templateNo: string;
@@ -18,9 +17,9 @@ interface BusTrip {
   status: string;
   busType?: string; 
   price?: number;   
-  seats?: number; 
-  parkingEstimation?: string; // Add this
-  expectedDeparture?: string;  
+  seats?: number;   
+  parkingEstimation?: string; // Added field
+  expectedDeparture?: string; // Added field
 }
 
 export default function RoutesPage() {
@@ -73,7 +72,6 @@ export default function RoutesPage() {
     fetchRoutes();
   };
 
-
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '--:--';
  
@@ -82,7 +80,6 @@ export default function RoutesPage() {
     
     const ampm = hour >= 12 ? 'PM' : 'AM';
     
-
     hour = hour % 12;
     hour = hour ? hour : 12; 
     
@@ -105,9 +102,7 @@ export default function RoutesPage() {
     }
   };
 
- 
   const filteredRoutes = useMemo(() => {
-   
     let data = routes.filter(item => item.status === 'Pending' || item.status === 'Arrived');
 
     if (activeFilterId && searchQuery === '') {
@@ -133,8 +128,8 @@ export default function RoutesPage() {
     router.setParams({ tripId: '', search: '' }); 
   };
 
-
- const renderItem = ({ item }: { item: BusTrip }) => {
+  // 2. Updated renderItem function
+  const renderItem = ({ item }: { item: BusTrip }) => {
     const hasArrived = item.status === 'Arrived';
     const isDelayed = !hasArrived && isPastArrival(item.date, item.time);
     
@@ -152,7 +147,23 @@ export default function RoutesPage() {
     return (
       <Card style={styles.card} mode="elevated">
         <Card.Content>
-          {/* ... [Card header here] ... */}
+          {/* Card Header Section */}
+          <View style={styles.cardHeader}>
+            <View style={styles.companyContainer}>
+              <Avatar.Icon size={40} icon="bus" style={{ backgroundColor: '#E8F5E9' }} color="#1B5E20" />
+              <View>
+                <Text style={styles.companyName}>{item.company}</Text>
+                <Text style={styles.busType}>{item.templateNo}</Text>
+              </View>
+            </View>
+            <View style={[styles.statusChip, { backgroundColor: hasArrived ? '#E0F7EC' : '#FFF3CD' }]}>
+               <Text style={{ color: hasArrived ? '#1B5E20' : '#856404', fontSize: 12, fontWeight: 'bold', paddingHorizontal: 12 }}>
+                  {item.status}
+               </Text>
+            </View>
+          </View>
+
+          <Divider style={styles.divider} />
           
           <View style={styles.routeRow}>
              <View style={{flex: 1}}>
@@ -164,7 +175,7 @@ export default function RoutesPage() {
                   {new Date(item.date).toLocaleDateString()}
                 </Text>
 
-                {/* ADD THIS CONDITIONAL BLOCK FOR EXPECTED DEPARTURE */}
+                {/* Expected Departure Block */}
                 {item.expectedDeparture && (
                   <>
                     <Text style={[styles.label, { marginTop: 12 }]}>Exp. Departure</Text>
@@ -183,7 +194,7 @@ export default function RoutesPage() {
                   {formatTime(item.time)}
                 </Text>
 
-                {/* Optional: You can also show the parking estimation string here if you want */}
+                {/* Parking Estimation Text */}
                 {item.parkingEstimation && (
                   <Text style={{ fontSize: 10, color: '#888', marginTop: 4 }}>
                     Est. wait: {item.parkingEstimation}
@@ -195,7 +206,7 @@ export default function RoutesPage() {
       </Card>
     );
   };
-  
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -206,7 +217,6 @@ export default function RoutesPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-    
       <View style={styles.headerContainer}>
         <Text variant="headlineMedium" style={styles.headerTitle}>Bus Schedules</Text>
         
@@ -234,7 +244,6 @@ export default function RoutesPage() {
         )}
       </View>
 
-    
       <FlatList
         data={filteredRoutes}
         keyExtractor={(item) => item._id}
@@ -340,7 +349,9 @@ const styles = StyleSheet.create({
   statusChip: {
     backgroundColor: '#E0F7EC',
     height: 30,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 15,
   },
   divider: {
     marginVertical: 12,
