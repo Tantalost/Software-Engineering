@@ -12,7 +12,8 @@ export const getBusTrips = async (req, res) => {
 
 export const createBusTrip = async (req, res) => {
   try {
-    const { templateNo, route, time, date, company, status, price } = req.body;
+    // FIX: Add parkingEstimation and expectedDeparture to this line
+    const { templateNo, route, time, date, company, status, price, parkingEstimation, expectedDeparture } = req.body;
 
     if (!templateNo || !route || !company) {
       return res.status(400).json({ message: "Template, Route, and Company are required." });
@@ -36,7 +37,7 @@ export const createBusTrip = async (req, res) => {
       price: price || defaultPrice,
       status: status || "Pending",
       isArchived: false,
-
+      // Now these variables actually exist!
       parkingEstimation: parkingEstimation || "10 minutes",
       expectedDeparture: expectedDeparture || ""
     });
