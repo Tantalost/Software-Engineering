@@ -397,13 +397,29 @@ const Dashboard = () => {
     setRecentActivity(processedActivity);
 
     const getChartMetrics = (items, moduleKey, dateMatchFn) => {
-      const dateMatched = items.filter(dateMatchFn);
-      const paidOnly = getPaidItems(dateMatched, moduleKey);
-      return {
-        revenue: calculateRevenue(paidOnly),
-        volume: paidOnly.length,
-      };
+  const dateMatched = items.filter(dateMatchFn);
+
+  // Special handling for Tenants revenue
+  if (moduleKey === "tenants") {
+    const revenue = dateMatched.reduce((sum, tenant) => {
+      const rent = parseFloat(tenant.rentAmount) || 0;
+      const util = parseFloat(tenant.utilityAmount) || 0;
+      return sum + rent + util;
+    }, 0);
+
+    return {
+      revenue,
+      volume: dateMatched.length,
     };
+  }
+
+  const paidOnly = getPaidItems(dateMatched, moduleKey);
+
+  return {
+    revenue: calculateRevenue(paidOnly),
+    volume: paidOnly.length,
+  };
+};
 
     let chartPoints = [];
     if (filterView === "week") {

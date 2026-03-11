@@ -8,6 +8,12 @@ Color Coding
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
 
+**To be Fixed**
+Bus Trips
+- Manage Companies: di lumalabas ang actions sa logs
+- dapat ang default route Zamboanga - (input destination)
+- 
+
 Revisions for web general 
 - dashboard export format 🔴 **To be Fixed**
 
