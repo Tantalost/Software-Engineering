@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 
+import * as ImageManipulator from 'expo-image-manipulator';
+
 import * as FileSystem from 'expo-file-system/legacy';
 
 const customRandomValues = (array: Uint8Array) => {
@@ -477,15 +479,34 @@ const modalBilling = useMemo(() => {
     setModalStep('review');
   };
 
-  const encryptFileBeforeUpload = async (fileUri: string, fileName: string) => {
+ const encryptFileBeforeUpload = async (fileUri: string, fileName: string) => {
     try {
+      let processUri = fileUri;
+      const isPdf = fileName.toLowerCase().endsWith('.pdf');
 
-      const fileData = await FileSystem.readAsStringAsync(fileUri, {
+      // 1. Image Optimization (Skip if it's a PDF contract)
+      if (!isPdf) {
+        // Resize to max 1080px width, compress by 30%, and force JPEG output
+        const manipResult = await ImageManipulator.manipulateAsync(
+          fileUri,
+          [{ resize: { width: 1080 } }], 
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG } 
+        );
+        processUri = manipResult.uri;
+        
+        // Update filename extension to .jpg since we forced JPEG format
+        fileName = fileName.replace(/\.[^/.]+$/, "") + ".jpg"; 
+      }
+
+      // 2. Read the (now much smaller) file into Base64
+      const fileData = await FileSystem.readAsStringAsync(processUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
+      // 3. Encrypt the string
       const encryptedData = CryptoJS.AES.encrypt(fileData, SECRET_KEY).toString();
 
+      // 4. Save to a temporary file
       const tempDir = FileSystem.cacheDirectory;
       const tempUri = tempDir + 'enc_' + fileName.replace(/[^a-zA-Z0-9.]/g, '_');
 
@@ -500,17 +521,23 @@ const modalBilling = useMemo(() => {
     }
   };
 
-  const appendFile = (form: FormData, key: string, fileObj: any, encryptedUri: string | null = null) => {
+ const appendFile = (form: FormData, key: string, fileObj: any, encryptedUri: string | null = null) => {
     if (fileObj) {
-      const uri = encryptedUri
-        ? (Platform.OS === 'android' ? encryptedUri : encryptedUri.replace('file://', ''))
-        : (Platform.OS === 'android' ? fileObj.uri : fileObj.uri.replace('file://', ''));
+      let finalUri = encryptedUri ? encryptedUri : fileObj.uri;
+
+      // Ensure the URI has the 'file://' prefix for iOS compatibility
+      if (Platform.OS === 'ios' && !finalUri.startsWith('file://')) {
+          finalUri = `file://${finalUri}`;
+      } else if (Platform.OS === 'android' && finalUri.startsWith('file://')) {
+          // Some Android devices prefer the prefix removed for FormData uploads
+          finalUri = finalUri.replace('file://', '');
+      }
 
       const name = fileObj.name || `${key}.jpg`;
-      const type = 'application/octet-stream';
+      const type = fileObj.mimeType || 'application/octet-stream';
 
       form.append(key, {
-        uri: uri,
+        uri: finalUri,
         name: name,
         type: type,
       } as any);
