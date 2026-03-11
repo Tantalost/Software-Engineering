@@ -1362,19 +1362,31 @@ const BusTrips = () => {
   }
 };
 
-  const handleMarkArrived = async (row) => {
+ const handleMarkArrived = async (row) => {
     try {
+      // 1. Capture the current real-time arrival
+      const actualArrivalTime = new Date().toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
       const response = await fetch(`${API_URL}/${row.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Arrived" }),
+        // 2. Send both the new status and the actual arrival time
+        body: JSON.stringify({ 
+          status: "Arrived", 
+          time: actualArrivalTime 
+        }),
       });
+      
       if (response.ok) {
         fetchBusTrips();
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Bus ${row.plateno} marked as Arrived!`,
+          // Optional: Update the toast message to show the time
+          message: `Bus ${row.plateno} marked as Arrived at ${actualArrivalTime}!`, 
           autoClose: true,
           duration: 3000,
         });

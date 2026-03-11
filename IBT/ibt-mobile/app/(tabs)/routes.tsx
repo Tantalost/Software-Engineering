@@ -132,17 +132,18 @@ export default function RoutesPage() {
   };
 
 
-  const renderItem = ({ item }: { item: BusTrip }) => {
+ const renderItem = ({ item }: { item: BusTrip }) => {
    
     const hasArrived = item.status === 'Arrived';
    
     const isDelayed = !hasArrived && isPastArrival(item.date, item.time);
     
-    let statusText = 'On Time';
+    let statusText = 'Est. Arrival';
     let statusColor = '#2E7D32'; 
 
     if (hasArrived) {
-        statusText = 'Arrived';
+       
+        statusText = 'Arrived At';
         statusColor = '#2E7D32'; 
     } else if (isDelayed) {
         statusText = 'Delayed';
@@ -152,29 +153,8 @@ export default function RoutesPage() {
     return (
       <Card style={styles.card} mode="elevated">
         <Card.Content>
-          <View style={styles.cardHeader}>
-            <View style={styles.companyContainer}>
-               <Avatar.Icon 
-                  size={36} 
-                  icon="bus" 
-                  style={{backgroundColor: '#E8F5E9'}} 
-                  color="#1B5E20"
-               />
-               <View>
-                  <Text variant="titleMedium" style={styles.companyName}>{item.company}</Text>
-                  <Text variant="bodySmall" style={styles.busType}>Plate No: {item.templateNo}</Text>
-               </View>
-            </View>
-            
-            <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-              <Text style={{ color: '#E65100', fontSize: 12, fontWeight: 'bold' }}>
-                {hasArrived ? 'Parking' : 'Pending'}
-              </Text>
-            </View>
-          </View>
-
-          <Divider style={styles.divider} />
-
+          {/* ... [Keep your existing card header and divider code here] ... */}
+          
           <View style={styles.routeRow}>
              <View style={{flex: 1}}>
                 <Text style={styles.label}>Route</Text>
@@ -187,11 +167,12 @@ export default function RoutesPage() {
              </View>
              
              <View style={{alignItems: 'flex-end'}}>
-              
+                {/* 3. The label will now say "Arrived At" */}
                 <Text style={[styles.label, { color: statusColor, fontWeight: 'bold' }]}>
                   {statusText}
                 </Text>
                 
+                {/* 4. And the exact time will sit right underneath it */}
                 <Text variant="titleLarge" style={[styles.timeValue, { color: statusColor }]}>
                   {formatTime(item.time)}
                 </Text>
