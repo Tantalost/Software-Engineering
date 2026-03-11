@@ -1395,26 +1395,43 @@ const BusTrips = () => {
   }
 };
 
- const handleMarkArrived = async (record) => {
+ const handleMarkArrived = async (row) => {
     try {
-      // 1. Capture the current real-time arrival
-      const actualArrivalTime = new Date().toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      // 1. Get the FULL record directly from state so we don't lose parkingEstimation
+      const fullRecord = records.find(r => r.id === row.id) || row;
+      
+      // 2. Generate a strict 24-hour current arrival time (bypassing browser locale quirks)
+      const now = new Date();
+      const currentHours = String(now.getHours()).padStart(2, "0");
+      const currentMinutes = String(now.getMinutes()).padStart(2, "0");
+      const actualArrivalTime = `${currentHours}:${currentMinutes}`;
 
-      // 2. Recalculate Expected Departure based on real arrival time
-      const estimation = record.parkingEstimation || "10 minutes";
-      const newExpectedDeparture = calculateExpectedDeparture(actualArrivalTime, estimation);
+      // 3. Extract the estimation safely
+      const estimationStr = fullRecord.parkingEstimation || "10 minutes";
+      let minutesToAdd = 10; 
+      if (estimationStr === "1 hr") {
+         minutesToAdd = 60;
+      } else {
+         // Extracts just the number (e.g., "20" from "20 minutes")
+         minutesToAdd = parseInt(estimationStr.replace(/[^0-9]/g, "")) || 10;
+      }
 
-      const response = await fetch(`${API_URL}/${record.id}`, {
+      // 4. Calculate Expected Departure perfectly
+      const departureDate = new Date(now.getTime());
+      departureDate.setMinutes(departureDate.getMinutes() + minutesToAdd);
+      
+      const expHours = String(departureDate.getHours()).padStart(2, "0");
+      const expMinutes = String(departureDate.getMinutes()).padStart(2, "0");
+      const newExpectedDeparture = `${expHours}:${expMinutes}`;
+
+      // 5. Send everything to the Database
+      const response = await fetch(`${API_URL}/${row.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        // 3. Send both the new arrival time AND the recalculated expected departure
         body: JSON.stringify({ 
           status: "Arrived", 
           time: actualArrivalTime,
-          expectedDeparture: newExpectedDeparture
+          expectedDeparture: newExpectedDeparture // This triggers the mobile app update!
         }),
       });
       
@@ -1423,9 +1440,9 @@ const BusTrips = () => {
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Bus ${record.templateNo || record.templateno} marked as Arrived at ${actualArrivalTime}!`, 
+          message: `Arrived! Expected Departure updated to ${newExpectedDeparture}.`, 
           autoClose: true,
-          duration: 3000,
+          duration: 4000,
         });
       }
     } catch (error) {
