@@ -5,6 +5,9 @@ Color Coding
 
 
 **MOCK REVISIONS**
+**Login**
+- Remove otp for superadmin
+
 **Mobile**
 - should have otp when creating acc 🔴 **To be Fixed**
 - should have authenticated receipt 🔴 **To be Fixed**
