@@ -4,6 +4,44 @@ Color Coding
 🟢 **Done**
 
 
+**MOCK REVISIONS**
+**Mobile**
+- should have otp when creating acc 🔴 **To be Fixed**
+- should have authenticated receipt 🔴 **To be Fixed**
+
+
+**Tenants**
+- indicate when it started  (verify when is grace period before start and set up of stalls) 🔴 **To be Fixed**
+- changeable interest value 🔴 **To be Fixed**
+- fines should be static 🔴 **To be Fixed**
+
+**parking management**
+- indication should be 3 wheels or 4 wheels 🔴 **To be Fixed**
+
+**Lost and found**
+- need photo for superadmin verification sa view modal ilagay 🔴 **To be Fixed**
+- process of claiming 🔴 **To be Fixed**
+- with evidence and who claimed it 🔴 **To be Fixed**
+
+**Terminal Fees**
+- make a duration (daily, monthly) for passengers revenue 🔴 **To be Fixed**
+- should be able to view previous data 🔴 **To be Fixed**
+
+**Bus admin**
+- add,delete, edit, view when adding bus companies  🔴 **To be Fixed**
+- should indicate aircon and not 🔴 **To be Fixed**
+- should not be able to toggle the same bus twice 🔴 **To be Fixed**
+- should have a scheduled bus trip advance within the day 🔴 **To be Fixed**
+- process of selecting bus type: company - bus type(aircon or not) - route 🔴 **To be Fixed**
+
+
+
+
+
+
+
+
+
 🔴 **To be Fixed**
 **PRIORITY**
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
