@@ -38,6 +38,11 @@ export const updateLostFound = async (req, res) => {
   try {
     const update = { ...req.body };
 
+    // NEW: If an evidence photo was uploaded, save its filename
+    if (req.file) {
+      update.claimEvidence = req.file.filename;
+    }
+
     // If status moved to Claimed and no claimedAt provided, stamp it
     if (update.status === 'Claimed' && !update.claimedAt) {
       update.claimedAt = new Date();

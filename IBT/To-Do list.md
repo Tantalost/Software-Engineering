@@ -9,7 +9,6 @@ Color Coding
 Major Adjustment (Priority)
 (Lloyd)
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
-- send email in the tenants table if its working or not , needed to be fix
 
 Tenants
 - indicate when it started  (verify when is grace period before start and set up of stalls)
@@ -41,11 +40,6 @@ Bus Admin
 
 Parking management
 - indication should be 3 wheels or 4 wheels
-
-Lost and Found
-- need photo for superadmin verification sa view modal ilagay
-- process of claiming 
-- with evidence and who claimed it
 
 Terminal Fees
 - make a duration (daily, monthly) for passengers revenue
@@ -132,8 +126,6 @@ Delete Button - add a toast message, also check if nandun pa ang data sa mongodb
 Archive button - iadjust ang backend nito kay if mawala yung data sa tenant page, nagiging multo sya sa mobile kase ang data is nandun lang sa mongo database. Addition, if irestore ng admin, dapat magbalik sya sa tenant table. (LLoyd) 🟢 **Done**
 Delete button - iadjust din yung backend nito since nagiging ghost data sa mobile dinilete. Kahit nakadelete nasya, nandun parin ang data sa mongodb. (LLoyd) 🟢 **Done**
 
-
-
 NEW TO DO LIST (TenantLease Module)
 View modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
 Edit modal - kailangan maview ang uploaded documents (Steph) 🟢 **Done**
@@ -179,44 +171,10 @@ Manage Employee
 - Remove create superadmin
 
 iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🟢 **Done**
+- send email in the tenants table if its working or not , needed to be fix 🟢 **Done**
 
-
-SUPER ADMIN
-
-*Dashboard
-Set Target revenue - Not working and di nagsasave ang na set na target
-Notification - Hindi nag reredirect if pindutin ang mga notification
-
-*Buses
-view and Edit button - ilagay ulit
-
-*Terminal fee
-StatCard (Senior/PWD/Student) - 2x ang add if mag add fee ng senior
-
-*Parking
-Edit button - di nag rereflect sa stat card(Total revenue) pag inedit
-
-*Lost&Found
-Date&Time - Empty ang Data
-Add new - Di maka add 
-
-*Manage Employees - 
-sa edit button, dapat may button if magchange role ang admin
-
-
-Admins
-- delete icons dapat consistent ang design
-- Remove all Broadcast modal 
-- Archive - Dapat own Data lang ang makita
-- Activity Logs - Ang mga activity na dapat ishow is based sa mga own role lang
-- If mag edit ng Data magrequest muna ng password before ma edit, before mag save changes dapat mag enter ng password.
-
-*Terminal Admin
-StatCard (Senior/PWD/Student) - 2x ang add if mag add fee ng seniors/student
-
-*Lost&Found Admin
-Date&Time - Empty ang Data
-Add new - Di maka add 
-
-*Buses admin
-view and Edit button - ilagay ulit
+🟢 **Done**
+Lost and Found
+- need photo for superadmin verification sa view modal ilagay
+- process of claiming 
+- with evidence and who claimed it

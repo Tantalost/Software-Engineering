@@ -66,6 +66,7 @@ const LostFound = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [viewRow, setViewRow] = useState(null);
+  const [editEvidencePhoto, setEditEvidencePhoto] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [deleteRow, setDeleteRow] = useState(null);
@@ -129,8 +130,8 @@ const LostFound = () => {
       setEditFormData({
         ...editRow,
         claimedBy: editRow.claimedBy || "",
-        claimEvidence: editRow.claimEvidence || "",
       });
+      setEditEvidencePhoto(null);
     }
   }, [editRow]);
 
@@ -194,8 +195,8 @@ const LostFound = () => {
       }
 
       const response = await fetch(API_URL, {
-      method: "POST",
-      body: formData,
+        method: "POST",
+        body: formData,
       });
 
       if (response.ok) {
@@ -210,7 +211,7 @@ const LostFound = () => {
 
         fetchLostFound();
         setShowAddModal(false);
-      setNewItemPhoto(null);
+        setNewItemPhoto(null);
 
         // Success Toast
         setNotificationState({
@@ -241,10 +242,26 @@ const LostFound = () => {
     e.preventDefault();
 
     try {
+      const formData = new FormData();
+
+      // Append all existing text fields
+      Object.keys(editFormData).forEach(key => {
+        // Don't append empty strings or nulls to avoid backend validation issues
+        if (editFormData[key] !== null && editFormData[key] !== undefined) {
+          formData.append(key, editFormData[key]);
+        }
+      });
+
+      // Append the new evidence photo if the user selected one
+      if (editEvidencePhoto) {
+        formData.append("evidencePhoto", editEvidencePhoto);
+      }
+
       const response = await fetch(`${API_URL}/${editFormData.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editFormData),
+        // Notice: We removed the "Content-Type": "application/json" header!
+        // The browser will automatically set the correct multipart/form-data header and boundaries.
+        body: formData,
       });
 
       if (response.ok) {
@@ -258,7 +275,6 @@ const LostFound = () => {
         fetchLostFound();
         setEditRow(null);
 
-        // Success Toast
         setNotificationState({
           isOpen: true,
           type: "success",
@@ -271,8 +287,6 @@ const LostFound = () => {
       }
     } catch (error) {
       console.error("Error updating:", error);
-
-      //  Error Toast
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -376,7 +390,7 @@ const LostFound = () => {
     const matchesDate =
       !selectedDate ||
       new Date(item.dateTime).toDateString() ===
-        new Date(selectedDate).toDateString();
+      new Date(selectedDate).toDateString();
 
     const matchesStatus =
       activeStatus === "All" ||
@@ -520,13 +534,13 @@ const LostFound = () => {
           ...rest,
           dateTime: rest.dateTime
             ? new Date(rest.dateTime).toLocaleString("en-US", {
-                year: "numeric",
-                month: "numeric",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })
+              year: "numeric",
+              month: "numeric",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
             : "-",
         };
       });
@@ -609,118 +623,118 @@ const LostFound = () => {
       return;
     }
 
-        try {
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Lost and Found Report");
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Lost and Found Report");
 
-            // 1. ADJUSTED HEADER IMAGE (-1/8 height)
-            worksheet.getRow(1).height = 35;
-            await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:F4');
+      // 1. ADJUSTED HEADER IMAGE (-1/8 height)
+      worksheet.getRow(1).height = 35;
+      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:F4');
 
-            // 2. Title and Summary Metadata
-            worksheet.mergeCells('A6:F6');
-            const titleCell = worksheet.getCell('A6');
-            titleCell.value = 'LOST & FOUND REPORTS';
-            titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } }; // IBT Red
-            titleCell.alignment = { horizontal: 'center' };
+      // 2. Title and Summary Metadata
+      worksheet.mergeCells('A6:F6');
+      const titleCell = worksheet.getCell('A6');
+      titleCell.value = 'LOST & FOUND REPORTS';
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } }; // IBT Red
+      titleCell.alignment = { horizontal: 'center' };
 
-            worksheet.addRow([]); // Spacer
-            worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', `Total Items: ${filtered.length}`]);
-            worksheet.addRow([`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`]);
-            worksheet.addRow([`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`]);
-            worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); // Spacer
+      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', `Total Items: ${filtered.length}`]);
+      worksheet.addRow([`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`]);
+      worksheet.addRow([`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`]);
+      worksheet.addRow([]); // Spacer
 
-            // 3. Table Headers
-            const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date & Time", "Status"]);
-            headerRow.eachCell((cell) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
-                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            });
+      // 3. Table Headers
+      const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date & Time", "Status"]);
+      headerRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
 
-            // 4. Populate Data
-            filtered.forEach(item => {
-                const row = worksheet.addRow([
-                    item.trackingNo,
-                    item.itemType || "-",
-                    item.location,
-                    formatDateTimeForExport(item.dateTime),
-                    item.status,
-                ]);
+      // 4. Populate Data
+      filtered.forEach(item => {
+        const row = worksheet.addRow([
+          item.trackingNo,
+          item.itemType || "-",
+          item.location,
+          formatDateTimeForExport(item.dateTime),
+          item.status,
+        ]);
 
-                // Conditional Status Colors
-                const statusCell = row.getCell(5);
-                if (item.status === 'Claimed') {
-                    statusCell.font = { color: { argb: 'FF16A34A' }, bold: true };
-                } else {
-                    statusCell.font = { color: { argb: 'FFDC2626' }, bold: true };
-                }
-            });
-
-            // 5. ADJUSTED FOOTER IMAGE (-1/8 height)
-            const lastRowNumber = worksheet.lastRow.number + 2;
-            worksheet.getRow(lastRowNumber).height = 52.5;
-            await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:F${lastRowNumber + 3}`);
-
-            // 6. Formatting Column Widths
-            worksheet.columns = [
-                { width: 20 }, { width: 20 }, { width: 30 }, { width: 25 }, { width: 15 }, { width: 45 }
-            ];
-
-            // 7. Generate and Download
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            saveAs(blob, `LostFound_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-
-            logActivity(role, "EXPORT_EXCEL", `Exported branded report with adjusted image heights`, "LostFound");
-
-        } catch (error) {
-            console.error("Excel Export Error:", error);
-            alert("Failed to generate branded Excel. Please try again.");
+        // Conditional Status Colors
+        const statusCell = row.getCell(5);
+        if (item.status === 'Claimed') {
+          statusCell.font = { color: { argb: 'FF16A34A' }, bold: true };
+        } else {
+          statusCell.font = { color: { argb: 'FFDC2626' }, bold: true };
         }
-    };
+      });
 
-    // --- EXPORT TO CSV (USING EXCELJS) ---
-    const handleExportCSV = async () => {
-        if (filtered.length === 0) {
-            alert("No records to export.");
-            return;
-        }
+      // 5. ADJUSTED FOOTER IMAGE (-1/8 height)
+      const lastRowNumber = worksheet.lastRow.number + 2;
+      worksheet.getRow(lastRowNumber).height = 52.5;
+      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:F${lastRowNumber + 3}`);
 
-        try {
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("LostFound");
+      // 6. Formatting Column Widths
+      worksheet.columns = [
+        { width: 20 }, { width: 20 }, { width: 30 }, { width: 25 }, { width: 15 }, { width: 45 }
+      ];
 
-            // Define Columns
-            worksheet.columns = [
-                { header: "Tracking No", key: "trackingNo", width: 20 },
-                { header: "Item Type", key: "itemType", width: 20 },
-                { header: "Location", key: "location", width: 30 },
-                { header: "Date & Time", key: "dateTime", width: 25 },
-                { header: "Status", key: "status", width: 15 },
-            ];
+      // 7. Generate and Download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `LostFound_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-            // Add Data
-            filtered.forEach(item => {
-                worksheet.addRow({
-                    trackingNo: item.trackingNo,
-                    itemType: item.itemType || "-",
-                    location: item.location,
-                    dateTime: formatDateTimeForExport(item.dateTime),
-                    status: item.status,
-                });
-            });
+      logActivity(role, "EXPORT_EXCEL", `Exported branded report with adjusted image heights`, "LostFound");
 
-            // Write as CSV
-            const buffer = await workbook.csv.writeBuffer();
-            const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8;' });
-            saveAs(blob, `LostFound_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    } catch (error) {
+      console.error("Excel Export Error:", error);
+      alert("Failed to generate branded Excel. Please try again.");
+    }
+  };
 
-        } catch (error) {
-            console.error("CSV Export Failed:", error);
-            alert("Failed to export CSV file.");
-        }
-    };
+  // --- EXPORT TO CSV (USING EXCELJS) ---
+  const handleExportCSV = async () => {
+    if (filtered.length === 0) {
+      alert("No records to export.");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("LostFound");
+
+      // Define Columns
+      worksheet.columns = [
+        { header: "Tracking No", key: "trackingNo", width: 20 },
+        { header: "Item Type", key: "itemType", width: 20 },
+        { header: "Location", key: "location", width: 30 },
+        { header: "Date & Time", key: "dateTime", width: 25 },
+        { header: "Status", key: "status", width: 15 },
+      ];
+
+      // Add Data
+      filtered.forEach(item => {
+        worksheet.addRow({
+          trackingNo: item.trackingNo,
+          itemType: item.itemType || "-",
+          location: item.location,
+          dateTime: formatDateTimeForExport(item.dateTime),
+          status: item.status,
+        });
+      });
+
+      // Write as CSV
+      const buffer = await workbook.csv.writeBuffer();
+      const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `LostFound_Report_${new Date().toISOString().split('T')[0]}.csv`);
+
+    } catch (error) {
+      console.error("CSV Export Failed:", error);
+      alert("Failed to export CSV file.");
+    }
+  };
 
   const handleExportPDF = () => {
     if (filtered.length === 0) {
@@ -750,24 +764,24 @@ const LostFound = () => {
       { align: "right" },
     );
 
-        autoTable(doc, {
-            startY: 70,
-            margin: { bottom: 35 },
-            head: [["Tracking No", "Item Type", "Location", "Date & Time", "Status"]],
-            body: filtered.map(item => [
-                item.trackingNo,
-                item.itemType || "-",
-                item.location,
-                formatDateTimeForExport(item.dateTime),
-                item.status,
-            ]),
-            headStyles: { fillColor: [16, 185, 129] },
-            styles: { fontSize: 9 },
-            didDrawPage: (data) => {
+    autoTable(doc, {
+      startY: 70,
+      margin: { bottom: 35 },
+      head: [["Tracking No", "Item Type", "Location", "Date & Time", "Status"]],
+      body: filtered.map(item => [
+        item.trackingNo,
+        item.itemType || "-",
+        item.location,
+        formatDateTimeForExport(item.dateTime),
+        item.status,
+      ]),
+      headStyles: { fillColor: [16, 185, 129] },
+      styles: { fontSize: 9 },
+      didDrawPage: (data) => {
 
-                if (footerImg) doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
-            },
-        });
+        if (footerImg) doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+      },
+    });
 
     doc.save(`LostFound_Report_${new Date().toISOString().split("T")[0]}.pdf`);
     logActivity(
@@ -780,21 +794,21 @@ const LostFound = () => {
 
   const tableColumns = isSelectionMode
     ? [
-        <div key="header-check" className="flex items-center">
-          <input
-            type="checkbox"
-            title="Select All Records on Page"
-            checked={isAllSelected}
-            onChange={handleSelectAll}
-            className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-          />
-        </div>,
-        "Tracking No",
-        "Item Type",
-        "Location",
-        "Date & Time",
-        "Status",
-      ]
+      <div key="header-check" className="flex items-center">
+        <input
+          type="checkbox"
+          title="Select All Records on Page"
+          checked={isAllSelected}
+          onChange={handleSelectAll}
+          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+        />
+      </div>,
+      "Tracking No",
+      "Item Type",
+      "Location",
+      "Date & Time",
+      "Status",
+    ]
     : ["Tracking No", "Item Type", "Location", "Date Time", "Status"];
 
 
@@ -880,11 +894,10 @@ const LostFound = () => {
                       ? "Exit Multi-Selection Mode"
                       : "Enter Multi-Selection Mode"
                   }
-                  className={`flex items-center justify-center h-10 cursor-pointer w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-                    isSelectionMode
-                      ? "bg-red-500 text-white shadow-md"
-                      : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                  }`}
+                  className={`flex items-center justify-center h-10 cursor-pointer w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
+                    ? "bg-red-500 text-white shadow-md"
+                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}
                 >
                   {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
                 </button>
@@ -1127,7 +1140,7 @@ const LostFound = () => {
 
       {viewRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow">
+          <div className="w-full max-w-xl rounded-xl bg-white p-5 shadow max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-semibold text-slate-800">
                 View Lost/Found Details
@@ -1163,11 +1176,30 @@ const LostFound = () => {
                         : "—"
                     }
                   />
-                  <div className="md:col-span-2">
-                    <Field
-                      label="Claim Evidence / Notes"
-                      value={viewRow.claimEvidence || "—"}
-                    />
+
+                  {/* NEW: Claim Evidence Image Display */}
+                  <div className="md:col-span-2 mt-2">
+                    <p className="text-xs font-semibold text-slate-600 mb-1">
+                      Claim Evidence
+                    </p>
+                    {viewRow.claimEvidence ? (
+                      <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50 relative">
+                        <img
+                          src={`${BASE_URL}/api/lostfound/photo/${viewRow.claimEvidence}`}
+                          alt="Claim Evidence"
+                          className="w-full max-h-56 object-contain bg-black/5"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                        <div style={{ display: 'none' }} className="p-3 text-sm text-slate-700">
+                          {viewRow.claimEvidence}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500">—</p>
+                    )}
                   </div>
                 </>
               )}
@@ -1181,7 +1213,7 @@ const LostFound = () => {
                     <img
                       src={`${BASE_URL}/api/lostfound/photo/${viewRow.photoFilename}`}
                       alt="Lost item"
-                      className="w-full max-h-80 object-contain bg-black/5"
+                      className="w-full max-h-56 object-contain bg-black/5"
                     />
                   </div>
                 </div>
@@ -1249,11 +1281,10 @@ const LostFound = () => {
                         })
                       }
                       title="Mark Item as Unclaimed"
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${
-                        editFormData.status === "Unclaimed"
-                          ? "bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1"
-                          : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === "Unclaimed"
+                        ? "bg-red-50 text-red-600 border-red-200 ring-2 ring-red-500 ring-offset-1"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                        }`}
                     >
                       <XCircle size={18} />
                       Unclaimed
@@ -1264,11 +1295,10 @@ const LostFound = () => {
                         setEditFormData({ ...editFormData, status: "Claimed" })
                       }
                       title="Mark Item as Claimed"
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${
-                        editFormData.status === "Claimed"
-                          ? "bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1"
-                          : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border cursor-pointer ${editFormData.status === "Claimed"
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-200 ring-2 ring-emerald-500 ring-offset-1"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                        }`}
                     >
                       <CheckCircle size={18} />
                       Claimed
@@ -1361,19 +1391,20 @@ const LostFound = () => {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Claim Evidence / Verification Notes
+                    Claim Evidence (Upload ID/Proof)
                   </label>
-                  <textarea
-                    value={editFormData.claimEvidence || ""}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        claimEvidence: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm min-h-[72px]"
-                    placeholder="Describe the evidence checked (e.g., valid ID, description of item contents, etc.)"
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files[0];
+                      setEditEvidencePhoto(file || null);
+                    }}
+                    className="w-full text-sm text-slate-700 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
                   />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Upload a photo of the claimant's ID or proof of ownership.
+                  </p>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
