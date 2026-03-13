@@ -42,11 +42,16 @@ const adminSchema = new mongoose.Schema(
     otpExpiresAt: {
       type: Date,
     },
+    knownDevices: [{
+      type: String,
+    }],
+    recoveryCodes: [{
+      type: String,
+    }],
   },
   { timestamps: true }
 );
 
-// Enforce one admin per role (page). Superadmin is treated as its own role.
 adminSchema.index({ role: 1 }, { unique: true });
 
 const Admin = mongoose.model("Admin", adminSchema);

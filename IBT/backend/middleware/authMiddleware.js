@@ -27,3 +27,12 @@ export const verifyToken = (req, res, next) => {
     res.status(403).json({ error: "Invalid or expired token. Please log in again." });
   }
 };
+
+export const requireSuperAdmin = (req, res, next) => {
+  // Assuming req.user is set by verifyToken
+  if (req.user && req.user.role === 'superadmin') {
+    next();
+  } else {
+    res.status(403).json({ error: "Access denied. Superadmin privileges required." });
+  }
+};

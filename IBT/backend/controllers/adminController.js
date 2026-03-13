@@ -1,8 +1,16 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto"; // Built-in Node module
 import Admin from "../models/Admin.js";
+import jwt from "jsonwebtoken";
 import PasswordReset from "../models/PasswordReset.js"; // New model
 import sendEmail from "../utils/sendEmail.js";
+
+const getDeviceFingerprint = (req) => {
+  let rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown-ip';
+  const clientIp = typeof rawIp === 'string' ? rawIp.split(',')[0].trim() : rawIp;
+  const userAgent = req.headers['user-agent'] || 'unknown-device';
+  return crypto.createHash('sha256').update(`${clientIp}-${userAgent}`).digest('hex');
+};
 
 const sanitizeAdmin = (admin) => ({
   id: admin._id,
@@ -17,8 +25,6 @@ const sanitizeAdmin = (admin) => ({
   updatedAt: admin.updatedAt,
 });
 
-// --- EXISTING CRUD (Create, List, Delete) ---
-
 export const createAdmin = async (req, res) => {
   try {
     const { firstName, lastName, middleName, suffix, email, role, password } = req.body;
@@ -28,9 +34,31 @@ export const createAdmin = async (req, res) => {
     if (existing) return res.status(409).json({ message: "Admin with this email or role already exists." });
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const admin = await Admin.create({ firstName, lastName, middleName, suffix, email: email.toLowerCase(), role, passwordHash });
+    
+    // NEW: Generate 5 static recovery codes if creating a superadmin
+    let plainTextRecoveryCodes = [];
+    let hashedRecoveryCodes = [];
+    
+    if (role === 'superadmin') {
+      for (let i = 0; i < 5; i++) {
+        const code = crypto.randomBytes(4).toString('hex'); // e.g., 'a1b2c3d4'
+        plainTextRecoveryCodes.push(code);
+        hashedRecoveryCodes.push(await bcrypt.hash(code, 10));
+      }
+    }
 
-    return res.status(201).json({ message: "Created successfully.", admin: sanitizeAdmin(admin) });
+    const admin = await Admin.create({ 
+      firstName, lastName, middleName, suffix, 
+      email: email.toLowerCase(), role, passwordHash,
+      recoveryCodes: hashedRecoveryCodes
+    });
+
+    return res.status(201).json({ 
+      message: "Created successfully.", 
+      admin: sanitizeAdmin(admin),
+      // ONLY return these once during creation so the owner can print them
+      recoveryCodes: plainTextRecoveryCodes.length > 0 ? plainTextRecoveryCodes : undefined 
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -123,71 +151,100 @@ export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required." });
-    }
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required." });
 
     const admin = await Admin.findOne({ email: email.toLowerCase() });
-    
-    // Check if admin exists
-    if (!admin) {
-      return res.status(401).json({ message: "Invalid credentials." });
-    }
+    if (!admin) return res.status(401).json({ message: "Invalid credentials." });
 
-    // UPDATED: Check password and flag superadmin for reset
     const isMatch = await bcrypt.compare(password, admin.passwordHash);
     if (!isMatch) {
-      const isSuperAdmin = admin.role === 'superadmin';
       return res.status(401).json({ 
         message: "Invalid credentials.", 
-        showReset: isSuperAdmin // <--- This triggers the frontend "Forgot Password" button!
+        showReset: admin.role === 'superadmin' 
       });
     }
 
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); 
+    // NEW: Conditional 2FA Logic
+    const deviceFingerprint = getDeviceFingerprint(req);
+    const isKnownDevice = admin.knownDevices && admin.knownDevices.includes(deviceFingerprint);
 
+    if (isKnownDevice) {
+      // Known device! Skip OTP, issue JWT directly.
+      const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+      return res.json({ 
+        message: "Login successful.", 
+        requiresOtp: false, 
+        token, 
+        admin: sanitizeAdmin(admin) 
+      });
+    }
+
+    // Unknown device -> Trigger OTP
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
     admin.otpCode = otpCode;
-    admin.otpExpiresAt = otpExpiresAt;
+    admin.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); 
     await admin.save();
 
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      try {
-        await sendEmail({
-          email: admin.email,
-          subject: "Your IBT Admin Login OTP",
-          message: `Your login OTP is ${otpCode}. It expires in 5 minutes.`,
-        });
-      } catch (emailError) {
-        console.error("Failed to send OTP email:", emailError);
-      }
+      await sendEmail({
+        email: admin.email,
+        subject: "New Device Login Attempt - OTP",
+        message: `We detected a login from an unrecognized device. Your login OTP is ${otpCode}. It expires in 5 minutes.`,
+      });
     }
 
     return res.json({ message: "OTP sent to your email.", requiresOtp: true });
   } catch (error) {
-    console.error("Login Error:", error);
     return res.status(500).json({ message: "Login failed." });
   }
 };
 
 export const verifyAdminOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, isRecoveryCode } = req.body; // Added isRecoveryCode flag
     const admin = await Admin.findOne({ email: email.toLowerCase() });
 
-    if (!admin || !admin.otpCode || admin.otpCode !== otp) {
-        return res.status(401).json({ message: "Invalid or expired OTP." });
+    if (!admin) return res.status(401).json({ message: "Invalid request." });
+
+    // NEW: Handle Superadmin Recovery Code usage
+    if (isRecoveryCode && admin.role === 'superadmin') {
+      let codeMatched = false;
+      let matchedIndex = -1;
+
+      for (let i = 0; i < admin.recoveryCodes.length; i++) {
+        if (await bcrypt.compare(otp, admin.recoveryCodes[i])) {
+          codeMatched = true;
+          matchedIndex = i;
+          break;
+        }
+      }
+
+      if (!codeMatched) return res.status(401).json({ message: "Invalid recovery code." });
+
+      // Remove the used recovery code so it can't be used again
+      admin.recoveryCodes.splice(matchedIndex, 1);
+    } else {
+      // Standard OTP Flow
+      if (!admin.otpCode || admin.otpCode !== otp) return res.status(401).json({ message: "Invalid or expired OTP." });
+      if (new Date() > admin.otpExpiresAt) return res.status(401).json({ message: "OTP has expired." });
     }
 
-    if (new Date() > admin.otpExpiresAt) {
-        return res.status(401).json({ message: "OTP has expired." });
+    // NEW: Save the new device fingerprint
+    const deviceFingerprint = getDeviceFingerprint(req);
+    if (!admin.knownDevices) admin.knownDevices = [];
+    if (!admin.knownDevices.includes(deviceFingerprint)) {
+      admin.knownDevices.push(deviceFingerprint);
     }
 
+    // Clear OTP states
     admin.otpCode = undefined;
     admin.otpExpiresAt = undefined;
     await admin.save();
 
-    return res.json({ message: "Login successful.", admin: sanitizeAdmin(admin) });
+    // NEW: Issue JWT Token
+    const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    return res.json({ message: "Login successful.", token, admin: sanitizeAdmin(admin) });
   } catch(e) {
       return res.status(500).json({message: "Verification failed."});
   }

@@ -3,8 +3,6 @@ import "dotenv/config";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import mongoose from "mongoose";
-
-
 import busTripRoutes from "./routes/busTripRoutes.js";
 import terminalFeeRoutes from "./routes/terminalFeeRoutes.js";
 import logRoutes from "./routes/logRoutes.js";
@@ -18,18 +16,18 @@ import reportRoutes from "./routes/reportRoutes.js";
 import notifications from "./routes/notifications.js"; 
 import companyRoutes from "./routes/companyRoutes.js"; 
 import adminRoutes from "./routes/adminRoutes.js";
-
 import broadcastRoutes from "./routes/broadcastRoutes.js";
 import stallRoutes from "./routes/stallRoutes.js"; 
 import lostFoundRoutes from './routes/lostNFoundRoutes.js';
 import busRoutes from './routes/busRoutes.js';
 import authRoutes from "./routes/authRoutes.js";
-
 import { startCleanUP } from './utils/cleanUP.js';
 
 connectDB();
 
 const app = express();
+
+app.set('trust proxy', 1);
 
 
 let bucket;
