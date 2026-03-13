@@ -6,25 +6,18 @@ Color Coding
 
 🔴 **To be Fixed**
 **PRIORITY**
-iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🔴 **To be Fixed**
+Major Adjustment (Priority)
+(Lloyd)
+- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
+- send email in the tenants table if its working or not , needed to be fix
 
-**To be Fixed**
-Bus Trips
-- Manage Companies: di lumalabas ang actions sa logs
-- dapat ang default route Zamboanga - (input destination)
-- 
-
-Revisions for web general 
-- dashboard export format 🔴 **To be Fixed**
-
-(Alviar)
-NEW TO DO LISTS (Terminal Fee Module)
-Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🔴 **To be Fixed**
-Admin Login Page
-- layout revised 🔴 **To be Fixed**
+Tenants
+- indicate when it started  (verify when is grace period before start and set up of stalls)
+- changeable interest value
+- fines should be static
 
 (Steph) 🔴 **To be Fixed**
-Next payment due details (Tenant List Module) 🔴 **To be Fixed**
+Next payment due details (Tenant List Module)
 - Date 
 - next amount to be paid
 - add button for send payment receipt so that if the user is already paid it will shows in the payment record history
@@ -32,10 +25,40 @@ UI fix:
 - Add tenant Modal - add progress bar for uploading docs
 - can't view uploaded documents after the contract review phase, in the add tenant modal.
 
-(Lloyd) 🔴 **To be Fixed**
-- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
-- send email in the tenants table if its working or not , needed to be fix
+Mobile
+- should have otp when creating acc
+- should have authenticated receipt (When sending a require it should verify the reference number and not be randomized)
 
+Minor Adjustment
+Bus Admin
+- add, delete, edit, view when adding bus companies 
+- should indicate aircon and not
+- should not be able to toggle the same bus twice
+- should have a scheduled bus trip advance within the day
+- process of selecting bus type: company - bus type(aircon or not) - route
+- Manage Companies: di lumalabas ang actions sa logs
+- dapat ang default route Zamboanga - (input destination)
+
+Parking management
+- indication should be 3 wheels or 4 wheels
+
+Lost and Found
+- need photo for superadmin verification sa view modal ilagay
+- process of claiming 
+- with evidence and who claimed it
+
+Terminal Fees
+- make a duration (daily, monthly) for passengers revenue
+- should be able to view previous data
+
+Revisions for web general 
+- dashboard export format
+
+(Alviar)
+NEW TO DO LISTS (Terminal Fee Module)
+Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 
+Admin Login Page
+- layout revised
 
 
 🟢 **Done**
@@ -141,6 +164,22 @@ Export buttons - adjust the format dapat same pdf format sa lahat ng modules and
 NEW TO DO LIST (Parking Module)
 Add New+ button - Change the UI , dapat lighten lang ibase sa color ng counting cards, remove the border and adjust the color it should be the same as the counting cards. Change also the Font weight, it should be medium or basta hindi sya masyadong bold. 🟢 **Done**
 Add "X" icon button sa view modal 🟢 **Done**
+
+🟢 **Done**
+Login Flow
+Super Admin - Recovery Codes: When the Super Admin account is first created, the system should generate a set of static "Recovery Codes" (just like Google or GitHub does). The system owner prints these out and keeps them in a physical safe. If they lose access to their email, they can use a recovery code to log in and update their email address. OR We can manually update the Super Admin's email directly in the database.
+OTP Spam
+- Instead of sending an email OTP every time, implement a standard Session-Based or Token-Based Authentication with conditional security.
+- Conditional 2FA (Two-Factor Authentication): Instead of an OTP on every login, only require an OTP if:
+1. The admin is logging in from a completely new device or IP address they haven't used before.
+2. They are trying to perform a highly sensitive action (like deleting another admin or changing a password).
+
+🟢 **Done**
+Manage Employee
+- Remove create superadmin
+
+iadvertise nyo na sa homepage yung app para dun nalang idownload ng panelists, or create an index page para lang sa app link 🟢 **Done**
+
 
 SUPER ADMIN
 
