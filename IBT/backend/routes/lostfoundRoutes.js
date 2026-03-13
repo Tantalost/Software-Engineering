@@ -1,4 +1,5 @@
 import express from "express";
+import upload from "../middleware/upload.js";
 import { 
     getLostFound, 
     createLostFound, 
@@ -6,14 +7,15 @@ import {
     deleteLostFound,
     archiveLostFound,
     restoreLostFound,
-    getArchivedLostFound
+    getArchivedLostFound,
+    getLostFoundPhoto,
 } from "../controllers/lostfoundController.js";
 
 const router = express.Router();
 
 // Standard Routes
 router.get("/", getLostFound);
-router.post("/", createLostFound);
+router.post("/", upload.single("photo"), createLostFound);
 router.put("/:id", updateLostFound);
 
 // New Soft Delete Routes
@@ -23,5 +25,8 @@ router.patch("/:id/restore", restoreLostFound);
 
 // Hard Delete Route
 router.delete("/:id", deleteLostFound);
+
+// Serve stored item photos (admin UI can consume)
+router.get("/photo/:filename", getLostFoundPhoto);
 
 export default router;

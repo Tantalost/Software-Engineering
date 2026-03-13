@@ -77,7 +77,8 @@ const LostFound = () => {
   const [selectedIds, setSelectedIds] = useState([]);
 
   const role = localStorage.getItem("authRole") || "superadmin";
-  const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/lostfound`;
+  const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
+  const API_URL = `${BASE_URL}/api/lostfound`;
 
   const [newItem, setNewItem] = useState({
     trackingNo: "",
@@ -86,6 +87,7 @@ const LostFound = () => {
     dateTime: "",
     status: "Unclaimed",
   });
+  const [newItemPhoto, setNewItemPhoto] = useState(null);
 
   const fetchLostFound = async () => {
     setIsLoading(true);
@@ -126,6 +128,8 @@ const LostFound = () => {
     if (editRow) {
       setEditFormData({
         ...editRow,
+        claimedBy: editRow.claimedBy || "",
+        claimEvidence: editRow.claimEvidence || "",
       });
     }
   }, [editRow]);
@@ -178,10 +182,20 @@ const LostFound = () => {
   const handleCreateItem = async (e) => {
     e.preventDefault();
     try {
+      const formData = new FormData();
+      formData.append("trackingNo", newItem.trackingNo);
+      formData.append("itemType", newItem.itemType);
+      formData.append("location", newItem.location);
+      formData.append("dateTime", newItem.dateTime);
+      formData.append("status", newItem.status);
+
+      if (newItemPhoto) {
+        formData.append("photo", newItemPhoto);
+      }
+
       const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItem),
+      method: "POST",
+      body: formData,
       });
 
       if (response.ok) {
@@ -196,6 +210,7 @@ const LostFound = () => {
 
         fetchLostFound();
         setShowAddModal(false);
+      setNewItemPhoto(null);
 
         // Success Toast
         setNotificationState({
@@ -403,6 +418,13 @@ const LostFound = () => {
     paginatedData.every((item) => selectedIds.includes(item.id));
 
   const handleBulkDelete = async () => {
+    const confirmMsg =
+      role === "lostfound"
+        ? `Request deletion for ${selectedIds.length} records?`
+        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
     setIsLoading(true);
     try {
       if (role === "lostfound") {
@@ -609,7 +631,7 @@ const LostFound = () => {
             worksheet.addRow([]); // Spacer
 
             // 3. Table Headers
-            const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date Time", "Status"]);
+            const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date & Time", "Status"]);
             headerRow.eachCell((cell) => {
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
                 cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
@@ -731,7 +753,7 @@ const LostFound = () => {
         autoTable(doc, {
             startY: 70,
             margin: { bottom: 35 },
-            head: [["Tracking No", "Item Type", "Location", "Date Time", "Status"]],
+            head: [["Tracking No", "Item Type", "Location", "Date & Time", "Status"]],
             body: filtered.map(item => [
                 item.trackingNo,
                 item.itemType || "-",
@@ -770,7 +792,7 @@ const LostFound = () => {
         "Tracking No",
         "Item Type",
         "Location",
-        "Date Time",
+        "Date & Time",
         "Status",
       ]
     : ["Tracking No", "Item Type", "Location", "Date Time", "Status"];
@@ -781,7 +803,6 @@ const LostFound = () => {
       <div className="px-4 lg:px-8 mt-4">
         <div className="flex flex-col gap-4 w-full">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              
             <FilterBar
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -821,33 +842,11 @@ const LostFound = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
+            <LostFoundStatusFilter
+              activeStatus={activeStatus}
+              onStatusChange={setActiveStatus}
+            />
 
-  {/* LEFT SIDE: Bulk Delete + Status Filter */}
-  <div className="flex items-center gap-3">
-
-    {isSelectionMode && selectedIds.length > 0 && (
-      <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-        <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-          {selectedIds.length} Selected
-        </span>
-
-        <button
-          onClick={handleBulkDelete}
-          title="Delete or Request Deletion for Selected Records"
-          className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
-        >
-          <Trash2 className="h-5 w-5" />
-        </button>
-      </div>
-    )}
-
-    <LostFoundStatusFilter
-      activeStatus={activeStatus}
-      onStatusChange={setActiveStatus}
-    />
-
-  </div>            
-            {/* RIGHT SIDE */}
             <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setShowLogModal(true)}
@@ -910,7 +909,7 @@ const LostFound = () => {
                 trackingno: item.trackingNo,
                 itemtype: item.itemType,
                 location: item.location,
-                datetime: formatDateTime(item.dateTime || item.createdAt),
+                datetime: formatDateTime(item.dateTime),
                 status: item.status,
               };
 
@@ -1084,6 +1083,24 @@ const LostFound = () => {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Item Photo (Admin Verification Only)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files[0];
+                      setNewItemPhoto(file || null);
+                    }}
+                    className="w-full text-sm text-slate-700 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    This photo is visible only to Lost &amp; Found administrators for verification during claiming.
+                  </p>
+                </div>
+
                 <input type="hidden" name="status" value={newItem.status} />
               </div>
               <div className="flex gap-3 mt-6">
@@ -1128,12 +1145,47 @@ const LostFound = () => {
               <Field label="Type" value={viewRow.itemType} />
               <Field label="Status" value={viewRow.status} />
               <Field
-                label="DateTime"
+                label="Date & Time"
                 value={formatDateTime(viewRow.dateTime)}
               />
               <div className="md:col-span-2">
                 <Field label="Location" value={viewRow.location} />
               </div>
+
+              {viewRow.claimedBy && (
+                <>
+                  <Field label="Claimed By" value={viewRow.claimedBy} />
+                  <Field
+                    label="Claimed At"
+                    value={
+                      viewRow.claimedAt
+                        ? formatDateTime(viewRow.claimedAt)
+                        : "—"
+                    }
+                  />
+                  <div className="md:col-span-2">
+                    <Field
+                      label="Claim Evidence / Notes"
+                      value={viewRow.claimEvidence || "—"}
+                    />
+                  </div>
+                </>
+              )}
+
+              {viewRow.photoFilename && (
+                <div className="md:col-span-2 mt-2">
+                  <p className="text-xs font-semibold text-slate-600 mb-1">
+                    Item Photo (Admin Only)
+                  </p>
+                  <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50">
+                    <img
+                      src={`${BASE_URL}/api/lostfound/photo/${viewRow.photoFilename}`}
+                      alt="Lost item"
+                      className="w-full max-h-80 object-contain bg-black/5"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="mt-4 flex justify-end">
               <button
@@ -1287,6 +1339,41 @@ const LostFound = () => {
                       required
                     />
                   </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Claimed By (if claimed)
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.claimedBy || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        claimedBy: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                    placeholder="Name of person who claimed the item"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Claim Evidence / Verification Notes
+                  </label>
+                  <textarea
+                    value={editFormData.claimEvidence || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        claimEvidence: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm min-h-[72px]"
+                    placeholder="Describe the evidence checked (e.g., valid ID, description of item contents, etc.)"
+                  />
                 </div>
               </div>
               <div className="flex gap-3 mt-6">

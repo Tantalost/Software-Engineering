@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import LostFound from '../models/LostFound.js';
 
 // GET ALL ACTIVE (Includes older documents missing the flag)
@@ -13,10 +14,18 @@ export const getLostFound = async (req, res) => {
 // CREATE
 export const createLostFound = async (req, res) => {
   try {
+    const body = req.body || {};
+
     const newItem = new LostFound({
-      ...req.body,
-      isArchived: false // Ensure it's active on creation
+      trackingNo: body.trackingNo,
+      itemType: body.itemType,
+      location: body.location,
+      dateTime: body.dateTime,
+      status: body.status || 'Unclaimed',
+      isArchived: false,
+      photoFilename: req.file ? req.file.filename : undefined,
     });
+
     await newItem.save();
     res.status(201).json(newItem);
   } catch (error) {
@@ -27,12 +36,20 @@ export const createLostFound = async (req, res) => {
 // UPDATE
 export const updateLostFound = async (req, res) => {
   try {
+    const update = { ...req.body };
+
+    // If status moved to Claimed and no claimedAt provided, stamp it
+    if (update.status === 'Claimed' && !update.claimedAt) {
+      update.claimedAt = new Date();
+    }
+
     const updatedItem = await LostFound.findByIdAndUpdate(
-      req.params.id, 
-      req.body, 
-      { new: true }
+      req.params.id,
+      update,
+      { new: true },
     );
-    if (!updatedItem) return res.status(404).json({ message: "Item not found" });
+
+    if (!updatedItem) return res.status(404).json({ message: 'Item not found' });
     res.status(200).json(updatedItem);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -75,6 +92,21 @@ export const getArchivedLostFound = async (req, res) => {
     res.status(200).json(items);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const getLostFoundPhoto = async (req, res) => {
+  try {
+    const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+      bucketName: 'uploads',
+    });
+
+    const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+    downloadStream.on('data', (chunk) => res.write(chunk));
+    downloadStream.on('error', () => res.status(404).json({ message: 'Image not found' }));
+    downloadStream.on('end', () => res.end());
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching image' });
   }
 };
 
