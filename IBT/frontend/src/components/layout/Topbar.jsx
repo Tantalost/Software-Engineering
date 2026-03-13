@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import NotificationToast from "../common/NotificationToast";
+import RecoveryCodeBadge from "../common/RecoveryCodeBadge";
 
 const Topbar = ({ title, onMenuClick }) => {
   const navigate = useNavigate();
@@ -392,7 +393,7 @@ const Topbar = ({ title, onMenuClick }) => {
                         Settings
                       </button>
                     )}
-
+                    <RecoveryCodeBadge />
                     <button onClick={() => setShowLogoutModal(true)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50">Logout</button>
                   </div>
                 )}

@@ -10,6 +10,9 @@ import {
   Send,
   Eye,
   EyeOff,
+  KeyRound,
+  AlertTriangle,
+  Copy
 } from "lucide-react";
 import NotificationToast from "../components/common/NotificationToast";
 
@@ -61,6 +64,11 @@ export default function EmployeeManage() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  // Recovery Code State
+  const [recoveryPassword, setRecoveryPassword] = useState("");
+  const [newRecoveryCodes, setNewRecoveryCodes] = useState([]);
+  const [isGeneratingCodes, setIsGeneratingCodes] = useState(false);
 
   const showToast = (type, message) => {
     setNotificationState({
@@ -213,14 +221,12 @@ export default function EmployeeManage() {
     try {
       setIsLoading(true);
 
-      // Using the path that matches typical admin route mounting
       const res = await fetch(`${API_BASE_URL}/api/admins/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: editForm.email }),
       });
 
-      // SAFETY CHECK: Ensure we got JSON back (prevents the "Unexpected token <" crash)
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         throw new Error(
@@ -250,7 +256,6 @@ export default function EmployeeManage() {
   const handleUpdateAdmin = async () => {
     if (!editTarget) return;
 
-    // LOGIC: Only block update if they are trying to change the password
     if (editForm.password && !editForm.otp) {
       setNotificationState({
         isOpen: true,
@@ -264,7 +269,6 @@ export default function EmployeeManage() {
     try {
       setIsLoading(true);
 
-      // Base payload (Name/Email always updateable)
       const payload = {
         firstName: editForm.firstName,
         lastName: editForm.lastName,
@@ -273,7 +277,6 @@ export default function EmployeeManage() {
         email: editForm.email,
       };
 
-      // Only add Password/OTP if the user typed something in the password field
       if (editForm.password) {
         payload.password = editForm.password;
         payload.otp = editForm.otp;
@@ -349,6 +352,52 @@ export default function EmployeeManage() {
     setOtpTimer(0);
   };
 
+  // --- RECOVERY CODES ACTIONS ---
+  const handleGenerateCodes = async (e) => {
+    e.preventDefault();
+    if (!recoveryPassword) {
+      return showToast("error", "Please enter your current password.");
+    }
+
+    setIsGeneratingCodes(true);
+    setNewRecoveryCodes([]); 
+
+    try {
+      const token = localStorage.getItem("authToken");
+
+      const res = await fetch(`${API_BASE_URL}/api/admins/generate-recovery-codes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify({ currentPassword: recoveryPassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to generate codes.");
+      }
+
+      setNewRecoveryCodes(data.recoveryCodes);
+      showToast("success", "New recovery codes generated successfully!");
+      setRecoveryPassword(""); 
+      
+    } catch (err) {
+      console.error(err);
+      showToast("error", err.message || "System error. Please try again.");
+    } finally {
+      setIsGeneratingCodes(false);
+    }
+  };
+
+  const handleCopyCodes = () => {
+    const formattedCodes = newRecoveryCodes.join("\n");
+    navigator.clipboard.writeText(formattedCodes);
+    showToast("success", "Recovery codes copied to clipboard!");
+  };
+
   return (
     <Layout title="Manage Employees">
       {!isSuperAdmin ? (
@@ -357,6 +406,8 @@ export default function EmployeeManage() {
         </div>
       ) : (
         <div className="space-y-8">
+          
+          {/* --- ADMINS TABLE SECTION --- */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-800">
@@ -424,6 +475,87 @@ export default function EmployeeManage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </section>
+
+          {/* --- RECOVERY CODES MANAGER SECTION --- */}
+          <section className="space-y-4 pt-4 border-t border-slate-200">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <KeyRound size={20} className="text-emerald-600" />
+                Emergency Recovery Codes
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Generate static backup codes to access your Super Admin account if you lose access to your email or are locked out by 2FA.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-2xl shadow-sm">
+              {newRecoveryCodes.length === 0 ? (
+                <form onSubmit={handleGenerateCodes} className="space-y-4">
+                  <div className="flex flex-col sm:flex-row items-end gap-4">
+                    <div className="w-full sm:w-2/3">
+                       <Field
+                        label="Verify Current Password"
+                        type="password"
+                        placeholder="Enter password to generate new codes"
+                        value={recoveryPassword}
+                        onChange={(e) => setRecoveryPassword(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isGeneratingCodes || !recoveryPassword}
+                      className="w-full sm:w-1/3 h-[42px] bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {isGeneratingCodes ? "Generating..." : "Generate Codes"}
+                    </button>
+                  </div>
+                  <p className="text-xs text-amber-600 flex items-center gap-1.5">
+                    <AlertTriangle size={14} />
+                    Generating new codes will permanently invalidate your old codes.
+                  </p>
+                </form>
+              ) : (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl mb-6">
+                    <h4 className="text-amber-800 font-bold flex items-center gap-2 mb-1">
+                      <AlertTriangle size={18} />
+                      Save these codes immediately!
+                    </h4>
+                    <p className="text-amber-700 text-sm">
+                      Store them in a secure password manager or print them out and keep them safe. 
+                      <strong> You will not be able to see them again after you leave this page.</strong>
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-900 p-6 rounded-xl mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+                      {newRecoveryCodes.map((code, index) => (
+                        <div key={index} className="bg-slate-800 py-3 px-4 rounded-lg font-mono text-emerald-400 text-lg tracking-[0.2em] shadow-inner">
+                          {code}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => setNewRecoveryCodes([])}
+                      className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      I saved them
+                    </button>
+                    <button
+                      onClick={handleCopyCodes}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors shadow-sm cursor-pointer"
+                    >
+                      <Copy size={18} />
+                      Copy to Clipboard
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -495,11 +627,14 @@ export default function EmployeeManage() {
                       }
                       className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
                     >
-                      {Object.keys(roleLabels).map((role) => (
-                        <option key={role} value={role}>
-                          {roleLabels[role]}
-                        </option>
-                      ))}
+                      {/* FILTER APPLIED HERE: Prevents "Super Admin" from being an option */}
+                      {Object.keys(roleLabels)
+                        .filter((role) => role !== "superadmin")
+                        .map((role) => (
+                          <option key={role} value={role}>
+                            {roleLabels[role]}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>
@@ -524,7 +659,7 @@ export default function EmployeeManage() {
           {/* EDIT MODAL */}
           {editTarget && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-lg">
+              <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-lg overflow-y-auto max-h-[90vh]">
                 <h3 className="mb-4 text-lg font-semibold text-slate-800">
                   Edit Admin Details
                 </h3>

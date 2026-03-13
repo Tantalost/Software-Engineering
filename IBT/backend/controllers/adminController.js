@@ -28,36 +28,42 @@ const sanitizeAdmin = (admin) => ({
 export const createAdmin = async (req, res) => {
   try {
     const { firstName, lastName, middleName, suffix, email, role, password } = req.body;
-    if (!firstName || !lastName || !email || !role || !password) return res.status(400).json({ message: "All required fields are required." });
+    
+    if (!firstName || !lastName || !email || !role || !password) {
+      return res.status(400).json({ message: "All required fields are required." });
+    }
+
+    // --- NEW STRICT SECURITY CHECK ---
+    if (role === 'superadmin') {
+      return res.status(403).json({ 
+        message: "Security restriction: Super Admin accounts cannot be created or cloned via the API." 
+      });
+    }
+    // ---------------------------------
 
     const existing = await Admin.findOne({ $or: [{ email: email.toLowerCase() }, { role }] });
-    if (existing) return res.status(409).json({ message: "Admin with this email or role already exists." });
+    if (existing) {
+      return res.status(409).json({ message: "Admin with this email or role already exists." });
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
     
-    // NEW: Generate 5 static recovery codes if creating a superadmin
-    let plainTextRecoveryCodes = [];
-    let hashedRecoveryCodes = [];
+    // Notice: We can safely remove the recovery code generation logic from here 
+    // because this endpoint will never process a 'superadmin' role anymore!
     
-    if (role === 'superadmin') {
-      for (let i = 0; i < 5; i++) {
-        const code = crypto.randomBytes(4).toString('hex'); // e.g., 'a1b2c3d4'
-        plainTextRecoveryCodes.push(code);
-        hashedRecoveryCodes.push(await bcrypt.hash(code, 10));
-      }
-    }
-
     const admin = await Admin.create({ 
-      firstName, lastName, middleName, suffix, 
-      email: email.toLowerCase(), role, passwordHash,
-      recoveryCodes: hashedRecoveryCodes
+      firstName, 
+      lastName, 
+      middleName, 
+      suffix, 
+      email: email.toLowerCase(), 
+      role, 
+      passwordHash
     });
 
     return res.status(201).json({ 
       message: "Created successfully.", 
-      admin: sanitizeAdmin(admin),
-      // ONLY return these once during creation so the owner can print them
-      recoveryCodes: plainTextRecoveryCodes.length > 0 ? plainTextRecoveryCodes : undefined 
+      admin: sanitizeAdmin(admin)
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -321,5 +327,72 @@ export const resetPassword = async (req, res) => {
     res.status(200).json({ message: "Password updated successfully." });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const generateNewRecoveryCodes = async (req, res) => {
+  try {
+    // req.user is set by your verifyToken middleware
+    const adminId = req.user.id; 
+    const { currentPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: "Your current password is required." });
+    }
+
+    const admin = await Admin.findById(adminId);
+    
+    // Extra safety: only superadmins can have recovery codes
+    if (!admin || admin.role !== 'superadmin') {
+       return res.status(403).json({ message: "Unauthorized. Super Admin access required." });
+    }
+
+    // Verify they know the current password
+    const isMatch = await bcrypt.compare(currentPassword, admin.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect password." });
+    }
+
+    // Generate 5 brand new codes
+    let plainTextRecoveryCodes = [];
+    let hashedRecoveryCodes = [];
+
+    for (let i = 0; i < 5; i++) {
+      const code = crypto.randomBytes(4).toString('hex');
+      plainTextRecoveryCodes.push(code);
+      hashedRecoveryCodes.push(await bcrypt.hash(code, 10));
+    }
+
+    // Overwrite the old array with the new hashes
+    admin.recoveryCodes = hashedRecoveryCodes;
+    await admin.save();
+
+    return res.json({
+      message: "Recovery codes generated successfully.",
+      recoveryCodes: plainTextRecoveryCodes // Send plain text ONCE
+    });
+
+  } catch (error) {
+    console.error("Generate Codes Error:", error);
+    return res.status(500).json({ message: "Failed to generate recovery codes." });
+  }
+};
+
+export const getRecoveryCodeCount = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const admin = await Admin.findById(adminId);
+
+    // Only superadmins should have access to this
+    if (!admin || admin.role !== 'superadmin') {
+      return res.status(403).json({ message: "Unauthorized." });
+    }
+
+    // Return the length of the array
+    const count = admin.recoveryCodes ? admin.recoveryCodes.length : 0;
+    return res.json({ count });
+  } catch (error) {
+    console.error("Fetch Count Error:", error);
+    return res.status(500).json({ message: "Failed to fetch code count." });
   }
 };
