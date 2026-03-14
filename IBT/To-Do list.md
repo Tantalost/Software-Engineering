@@ -16,11 +16,6 @@ Color Coding
 **parking management**
 - indication should be 3 wheels or 4 wheels 🔴 **To be Fixed**
 
-**Lost and found**
-- need photo for superadmin verification sa view modal ilagay 🔴 **To be Fixed**
-- process of claiming 🔴 **To be Fixed**
-- with evidence and who claimed it 🔴 **To be Fixed**
-
 **Terminal Fees**
 - make a duration (daily, monthly) for passengers revenue 🔴 **To be Fixed**
 - should be able to view previous data 🔴 **To be Fixed**
@@ -31,13 +26,6 @@ Color Coding
 - should not be able to toggle the same bus twice 🔴 **To be Fixed**
 - should have a scheduled bus trip advance within the day 🔴 **To be Fixed**
 - process of selecting bus type: company - bus type(aircon or not) - route 🔴 **To be Fixed**
-
-
-
-
-
-
-
 
 
 🔴 **To be Fixed**
@@ -79,6 +67,10 @@ Revisions for web general
 
 
 
+**Lost and found** 🟢 **Done**
+- need photo for superadmin verification sa view modal ilagay 🟢 **Done**
+- process of claiming 🟢 **Done**
+- with evidence and who claimed it 🟢 **Done**
 
 **Mobile**
 - should have otp when creating acc 🟢 **Done**
