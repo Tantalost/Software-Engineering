@@ -3,31 +3,6 @@ Color Coding
 🟡 **In ProgrWWess**
 🟢 **Done**
 
-
-**MOCK REVISIONS**
-**Login**
-- Remove otp for superadmin
-
-**Tenants**
-- indicate when it started  (verify when is grace period before start and set up of stalls) 🔴 **To be Fixed**
-- changeable interest value 🔴 **To be Fixed**
-- fines should be static 🔴 **To be Fixed**
-
-**parking management**
-- indication should be 3 wheels or 4 wheels 🔴 **To be Fixed**
-
-**Terminal Fees**
-- make a duration (daily, monthly) for passengers revenue 🔴 **To be Fixed**
-- should be able to view previous data 🔴 **To be Fixed**
-
-**Bus admin**
-- add,delete, edit, view when adding bus companies  🔴 **To be Fixed**
-- should indicate aircon and not 🔴 **To be Fixed**
-- should not be able to toggle the same bus twice 🔴 **To be Fixed**
-- should have a scheduled bus trip advance within the day 🔴 **To be Fixed**
-- process of selecting bus type: company - bus type(aircon or not) - route 🔴 **To be Fixed**
-
-
 🔴 **To be Fixed**
 **PRIORITY**
 Major Adjustment (Priority)
