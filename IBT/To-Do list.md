@@ -8,11 +8,6 @@ Color Coding
 **Login**
 - Remove otp for superadmin
 
-**Mobile**
-- should have otp when creating acc 🟢 **Done**
-- should have authenticated receipt 🔴 **To be Fixed**
-
-
 **Tenants**
 - indicate when it started  (verify when is grace period before start and set up of stalls) 🔴 **To be Fixed**
 - changeable interest value 🔴 **To be Fixed**
@@ -49,25 +44,12 @@ Color Coding
 **PRIORITY**
 Major Adjustment (Priority)
 (Lloyd)
-- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot
+- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 
 
 Tenants
 - indicate when it started  (verify when is grace period before start and set up of stalls)
 - changeable interest value
 - fines should be static
-
-(Steph) 🔴 **To be Fixed**
-Next payment due details (Tenant List Module)
-- Date 
-- next amount to be paid
-- add button for send payment receipt so that if the user is already paid it will shows in the payment record history
-UI fix: 
-- Add tenant Modal - add progress bar for uploading docs
-- can't view uploaded documents after the contract review phase, in the add tenant modal.
-
-Mobile
-- should have otp when creating acc
-- should have authenticated receipt (When sending a require it should verify the reference number and not be randomized)
 
 Minor Adjustment
 Bus Admin
@@ -89,12 +71,29 @@ Terminal Fees
 Revisions for web general 
 - dashboard export format
 
-(Alviar)
-NEW TO DO LISTS (Terminal Fee Module)
-Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 
-Admin Login Page
-- layout revised
 
+
+
+
+
+
+
+
+
+**Mobile**
+- should have otp when creating acc 🟢 **Done**
+- should have authenticated receipt 🟢 **Done**
+
+(Steph) 🟢 **Done**
+Mobile
+- should have otp when creating acc 🟢 **Done**
+- should have authenticated receipt (When sending a payment receipt it should verify the reference number and not be randomized) 🟢 **Done**
+
+(Alviar) 🟢 **Done**
+NEW TO DO LISTS (Terminal Fee Module) 🟢 **Done**
+Change the toast message, dapat same toast message lahat ng module, reference nyo na toast message is yung nasa parking module or tenant lease module. 🟢 **Done**
+Admin Login Page 🟢 **Done**
+- layout revised 🟢 **Done**
 
 🟢 **Done**
 Revisions for web general 

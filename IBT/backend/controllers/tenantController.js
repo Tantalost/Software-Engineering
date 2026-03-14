@@ -12,7 +12,7 @@ export const getTenants = async (req, res) => {
   }
 };
 
-// --- SEND CUSTOM EMAIL TO TENANT ---
+
 export const sendTenantEmail = async (req, res) => {
   try {
     const { email, subject, message } = req.body;
@@ -21,7 +21,7 @@ export const sendTenantEmail = async (req, res) => {
       return res.status(400).json({ error: "Email, subject, and message are required." });
     }
 
-    // Call your existing sendEmail utility
+  
     await sendEmail({
       email: email,
       subject: subject,
@@ -114,6 +114,22 @@ export const createTenant = async (req, res) => {
     const communityTax = getFile('communityTax');       
     const policeClearance = getFile('policeClearance');
 
+    const submittedRef = req.body.referenceNo;
+    if (!submittedRef || submittedRef.trim() === "") {
+        return res.status(400).json({ error: "A valid Reference / OR Number is required." });
+    }
+
+    const existingReceipt = await Tenant.findOne({
+        $or: [
+            { referenceNo: submittedRef },
+            { "paymentHistory.referenceNo": submittedRef }
+        ]
+    });
+
+    if (existingReceipt) {
+        return res.status(400).json({ error: "This Reference / OR Number has already been used." });
+    }
+
     let parsedFeeBreakdown = {};
     if (req.body.feeBreakdown) {
         try {
@@ -202,7 +218,7 @@ IBT Management
 
 export const updateTenant = async (req, res) => {
   try {
-    // fetch previous record so we can compare status later
+  
     const oldTenant = await Tenant.findById(req.params.id);
 
     const updateData = { ...req.body };
@@ -266,7 +282,7 @@ export const updateTenant = async (req, res) => {
 
     if (!updatedTenant) return res.status(404).json({ error: "Tenant not found" });
 
-    // if status just became overdue, send notification email
+    
     if (oldTenant && oldTenant.status !== 'Overdue' && updatedTenant.status === 'Overdue' && updatedTenant.email) {
       try {
         const rent = updatedTenant.rentAmount || 0;
@@ -401,6 +417,19 @@ export const approveRenewalPayment = async (req, res) => {
   try {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const submittedRef = tenant.referenceNo;
+    if (!submittedRef || submittedRef === "N/A" || submittedRef.trim() === "") {
+        return res.status(400).json({ error: "Cannot approve: No Reference/OR Number was provided." });
+    }
+
+    const existingHistoryReceipt = await Tenant.findOne({
+        "paymentHistory.referenceNo": submittedRef
+    });
+
+    if (existingHistoryReceipt) {
+        return res.status(400).json({ error: "This Reference / OR Number was already used in a previous month." });
+    }
 
     const isNightMarket = tenant.tenantType === 'Night Market';
     

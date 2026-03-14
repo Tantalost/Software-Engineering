@@ -76,8 +76,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
   useEffect(() => {
     if (isOpen) {
-      const generateRef = () => `REF-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
-
+      
       if (initialData) {
         const fullName = initialData.name || initialData.tenantName || "";
         let nameParts = fullName.trim().split(/\s+/);
@@ -101,7 +100,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
         setFormData({
           slotNo: initialData.slotNo || "", 
-          referenceNo: initialData.referenceNo || generateRef(),
+          referenceNo: initialData.paymentReference || initialData.referenceNo || "",
           firstName: fName,
           middleName: mName,
           lastName: lName,
@@ -134,7 +133,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             middleName: "",
             lastName: "",
             suffix: "", 
-            referenceNo: generateRef(), 
+            referenceNo: "",
             email: "",
             contactNo: "",
             tenantType: activeTab === "night" ? "Night Market" : "Permanent", 
@@ -378,12 +377,14 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Reference No </label>
+                  <label className="text-xs font-semibold text-slate-600">Reference No</label>
                   <input 
-                  type="text" 
-                  readOnly 
-                  className="p-2.5 rounded-lg border border-slate-200 bg-slate-100 text-slate-600 font-mono focus:outline-none cursor-not-allowed" 
-                  value={formData.referenceNo}
+                    type="text" 
+                    className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                    value={formData.referenceNo}
+                    onChange={(e) => setFormData({...formData, referenceNo: e.target.value})}
+                    placeholder="Enter OR / Reference No."
+                    required
                   />
                 </div>
 

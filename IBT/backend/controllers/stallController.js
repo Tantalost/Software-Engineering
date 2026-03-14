@@ -240,14 +240,36 @@ export const submitApplication = async (req, res) => {
 
 export const submitPayment = async (req, res) => {
     try {
-        
         const { userId, targetSlot, paymentReference, paymentAmount } = req.body;
-        
+
+        if (!paymentReference || paymentReference.trim() === "") {
+            return res.status(400).json({ message: "A valid Reference / OR Number is required." });
+        }
+
+        const duplicateApp = await TenantApplication.findOne({
+            paymentReference: paymentReference,
+            $or: [{ userId: { $ne: userId } }, { targetSlot: { $ne: targetSlot } }] 
+        });
+
+        if (duplicateApp) {
+            return res.status(400).json({ message: "This Reference / OR Number is already used in another application." });
+        }
+
+        const duplicateTenant = await Tenant.findOne({
+            $or: [
+                { referenceNo: paymentReference },
+                { "paymentHistory.referenceNo": paymentReference }
+            ]
+        });
+
+        if (duplicateTenant) {
+            return res.status(400).json({ message: "This Reference / OR Number has already been used for a lease payment." });
+        }
+
         let receiptUrl = "";
         if (req.file) { receiptUrl = req.file.filename; } else if (req.body.receiptUrl) { receiptUrl = req.body.receiptUrl; }
         if (!receiptUrl) return res.status(400).json({ message: "Receipt file is missing." });
         
-       
         const updatedApp = await TenantApplication.findOneAndUpdate(
             { userId: userId, targetSlot: targetSlot }, 
             { receiptUrl, paymentReference, paymentAmount, status: 'PAYMENT_REVIEW', paymentSubmittedAt: new Date(), adminViewed: false },
@@ -256,9 +278,9 @@ export const submitPayment = async (req, res) => {
         
         await createAdminNotification("Payment Receipt Uploaded", `Ref: ${paymentReference}. Verify payment for Applicant ID: ${userId.slice(-6)}.`);
         res.json(updatedApp);
-      } catch (error) {
+    } catch (error) {
         res.status(500).json({ message: error.message });
-      }
+    }
 };
 
 export const uploadContract = async (req, res) => {
@@ -289,6 +311,29 @@ export const submitRenewalPayment = async (req, res) => {
     try {
         const { tenantId, paymentReference } = req.body;
         
+        if (!paymentReference || paymentReference.trim() === "") {
+            return res.status(400).json({ message: "A valid Reference / OR Number is required." });
+        }
+
+        const duplicateApp = await TenantApplication.findOne({
+            paymentReference: paymentReference
+        });
+
+        if (duplicateApp) {
+            return res.status(400).json({ message: "This Reference / OR Number is already used in a pending application." });
+        }
+
+        const duplicateTenant = await Tenant.findOne({
+            $or: [
+                { referenceNo: paymentReference, _id: { $ne: tenantId } },
+                { "paymentHistory.referenceNo": paymentReference }
+            ]
+        });
+
+        if (duplicateTenant) {
+            return res.status(400).json({ message: "This Reference / OR Number has already been used in a previous transaction." });
+        }
+
         let receiptUrl = "";
         if (req.file) { receiptUrl = req.file.filename; } 
         else if (req.body.receiptUrl) { receiptUrl = req.body.receiptUrl; }
