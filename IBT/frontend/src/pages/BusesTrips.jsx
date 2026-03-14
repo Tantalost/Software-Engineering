@@ -81,7 +81,10 @@ const ManageCompaniesModal = ({
   const [newCompanyName, setNewCompanyName] = useState("");
 
   const [newBusPlate, setNewBusPlate] = useState("");
-  const [newBusRoute, setNewBusRoute] = useState("");
+  const [newBusFrom, setNewBusFrom] = useState("");
+  const [newBusTo, setNewBusTo] = useState("");
+  const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [editCompanyTarget, setEditCompanyTarget] = useState(null);
   const [editBusTarget, setEditBusTarget] = useState(null);
@@ -99,7 +102,8 @@ const ManageCompaniesModal = ({
     setEditCompanyTarget(null);
     setNewCompanyName("");
     setNewBusPlate("");
-    setNewBusRoute("");
+    setNewBusFrom(""); 
+    setNewBusTo("");  
     setNewBusType("Regular");
     setEditBusTarget(null);
   };
@@ -255,21 +259,21 @@ const ManageCompaniesModal = ({
   };
 
   const handleSaveBus = async () => {
-    if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
+   if (!newBusPlate.trim() || !newBusFrom.trim() || !newBusTo.trim() || !activeCompany) return;
+
+    const routeString = `${newBusFrom} - ${newBusTo}`; 
 
     let updatedBuses;
     if (editBusTarget) {
-      
       updatedBuses = activeCompany.buses.map(b => 
         b.plateNumber === editBusTarget.plateNumber 
-          ? { plateNumber: newBusPlate, route: newBusRoute, busType: newBusType } 
+          ? { plateNumber: newBusPlate, route: routeString, busType: newBusType } 
           : b
       );
     } else {
-     
       updatedBuses = [
         ...activeCompany.buses,
-        { plateNumber: newBusPlate, route: newBusRoute, busType: newBusType },
+        { plateNumber: newBusPlate, route: routeString, busType: newBusType },
       ];
     }
 
@@ -408,7 +412,7 @@ const ManageCompaniesModal = ({
             <div className="flex-1 flex flex-col overflow-hidden">
              
               <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-3 items-end">
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <label className="text-xs font-semibold text-slate-500 uppercase">Type</label>
                   <select
                     className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none"
@@ -423,33 +427,55 @@ const ManageCompaniesModal = ({
                   <label className="text-xs font-semibold text-slate-500 uppercase">Plate Number</label>
                   <input
                     type="text"
+                    placeholder="ex. ABC-1234"
                     className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none"
                     value={newBusPlate}
                     onChange={(e) => setNewBusPlate(e.target.value)}
                   />
                 </div>
-                <div className="col-span-4">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Route</label>
+                <div className="col-span-3">
+                  <label className="text-xs font-semibold text-slate-500 uppercase">From</label>
                   <input
                     type="text"
+                    placeholder="ex. Zamboanga"
                     className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none"
-                    value={newBusRoute}
-                    onChange={(e) => setNewBusRoute(e.target.value)}
+                    value={newBusFrom}
+                    onChange={(e) => setNewBusFrom(e.target.value)}
                   />
                 </div>
-                <div className="col-span-2 flex gap-1">
-                  <button
-                    onClick={handleSaveBus}
-                    className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-                  >
+                <div className="col-span-3">
+                  <label className="text-xs font-semibold text-slate-500 uppercase">To</label>
+                  <input
+                    type="text"
+                    placeholder="ex. Pagadian"
+                    className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none"
+                    value={newBusTo}
+                    onChange={(e) => setNewBusTo(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-1 flex gap-1">
+                  <button onClick={handleSaveBus} className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
                     {editBusTarget ? 'Save' : 'Add'}
                   </button>
                   {editBusTarget && (
-                    <button onClick={resetForms} className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg">
+                    <button onClick={resetForms} className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300">
                       <X size={16} />
                     </button>
                   )}
                 </div>
+              </div>
+
+              <div className="p-3 bg-white border-b border-slate-100 flex justify-between items-center">
+                 <h4 className="text-sm font-semibold text-slate-700">Registered Buses</h4>
+                 <select 
+                    value={tableBusTypeFilter} 
+                    onChange={(e) => setTableBusTypeFilter(e.target.value)}
+                    className="p-1.5 text-sm border border-slate-300 rounded-lg outline-none bg-slate-50"
+                 >
+                    <option value="All">All Types</option>
+                    <option value="Regular">Regular Only</option>
+                    <option value="Aircon">Aircon Only</option>
+                 </select>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
@@ -464,7 +490,9 @@ const ManageCompaniesModal = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {activeCompany.buses.map((bus, idx) => (
+                      {activeCompany.buses
+                        .filter(bus => tableBusTypeFilter === "All" || bus.busType === tableBusTypeFilter) // Filter logic
+                        .map((bus, idx) => (
                         <tr key={`${bus.plateNumber}-${idx}`} className="hover:bg-slate-50 group">
                           <td className="px-4 py-3">
                             <span className={`px-2 py-1 text-xs rounded-full ${bus.busType === 'Aircon' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
@@ -478,17 +506,16 @@ const ManageCompaniesModal = ({
                               onClick={() => {
                                 setEditBusTarget(bus);
                                 setNewBusPlate(bus.plateNumber);
-                                setNewBusRoute(bus.route);
+                                const [fromRoute, toRoute] = bus.route.split(" - "); // Split it back into two inputs when editing
+                                setNewBusFrom(fromRoute ? fromRoute.trim() : bus.route || "");
+                                setNewBusTo(toRoute ? toRoute.trim() : "");
                                 setNewBusType(bus.busType || "Regular");
                               }}
                               className="text-slate-400 hover:text-blue-500 p-1 mr-1 rounded-md"
                             >
                               <Settings size={16} />
                             </button>
-                            <button
-                              onClick={() => setDeleteBusTarget(bus)}
-                              className="text-slate-400 hover:text-red-500 p-1 rounded-md"
-                            >
+                            <button onClick={() => setDeleteBusTarget(bus)} className="text-slate-400 hover:text-red-500 p-1 rounded-md">
                               <Trash2 size={16} />
                             </button>
                           </td>
@@ -615,6 +642,7 @@ const BusTrips = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedBusType, setSelectedBusType] = useState("");
   const [companyData, setCompanyData] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -837,12 +865,18 @@ const BusTrips = () => {
       !selectedDate ||
       new Date(bus.date).toDateString() ===
         new Date(selectedDate).toDateString();
-    return matchesSearch && matchesCompany && matchesDate;
+    
+    const matchesBusType = 
+      selectedBusType === "" || bus.busType === selectedBusType;
+
+    return matchesSearch && matchesCompany && matchesDate && matchesBusType;
   });
 
   const totalTrips = filtered.length;
+  const scheduledTrips = filtered.filter((t) => t.status === "Scheduled").length;
+  const pendingTrips = filtered.filter((t) => t.status === "Pending").length;
+  const arrivedTrips = filtered.filter((t) => t.status === "Arrived").length;
   const paidTrips = filtered.filter((t) => t.status === "Paid").length;
-  const pendingTrips = filtered.filter((t) => t.status === "Arrived").length;
   const totalRevenue = filtered
     .filter((t) => t.status === "Paid")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
@@ -1325,7 +1359,16 @@ const BusTrips = () => {
     }
   };
 
-  const formatTime = (t) => t;
+  const formatTime = (timeString) => {
+    if (!timeString || timeString === "-") return "-";
+    const [hourString, minute] = timeString.split(":");
+    if (!hourString || !minute) return timeString;
+    const hour = parseInt(hourString, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const formattedHour = hour % 12 || 12;
+    return `${formattedHour}:${minute} ${ampm}`;
+  };
+
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds([]);
@@ -1578,9 +1621,10 @@ const BusTrips = () => {
       <div className="mb-6">
         <StatCardGroupBus
           totalTrips={totalTrips}
-          paidTrips={paidTrips}
+          scheduledTrips={scheduledTrips}
           pendingTrips={pendingTrips}
-          totalRevenue={totalRevenue}
+          arrivedTrips={arrivedTrips}
+          paidTrips={paidTrips}
         />
       </div>
 
@@ -1594,6 +1638,8 @@ const BusTrips = () => {
             selectedCompany={selectedCompany}
             setSelectedCompany={setSelectedCompany}
             uniqueCompanies={availableCompanies}
+            selectedBusType={selectedBusType}       
+            setSelectedBusType={setSelectedBusType}
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
@@ -2205,11 +2251,12 @@ const BusTrips = () => {
             { label: "Bus Type", value: viewRow.busType || "Regular" },
             { label: "Status", value: viewRow.status || "-" },
             { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
-            { label: "Arrival Time", value: viewRow.time || "-" },
             
+            { label: "Arrival Time", value: formatTime(viewRow.time) },
             { label: "Parking Est.", value: viewRow.parkingEstimation || "-" },
-            { label: "Exp. Departure", value: viewRow.expectedDeparture || "-" },
-            { label: "Actual Departure", value: viewRow.departureTime || "-" },
+            { label: "Exp. Departure", value: formatTime(viewRow.expectedDeparture) },
+            { label: "Actual Departure", value: formatTime(viewRow.departureTime) },
+            
             { label: "Ticket Reference", value: viewRow.ticketReferenceNo || "-" },
             { label: "Date", value: viewRow.date ? new Date(viewRow.date).toLocaleDateString() : "-" },
           ]}

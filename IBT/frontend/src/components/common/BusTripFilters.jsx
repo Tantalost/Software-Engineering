@@ -5,7 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 const BusTripFilters = ({
     searchQuery, setSearchQuery,
     selectedCompany, selectedDate, setSelectedDate, setSelectedCompany, uniqueCompanies,
-
+    selectedBusType, setSelectedBusType 
 }) => {
     const handleDateChange = (date) => {
         if (date) {
@@ -52,6 +52,26 @@ const BusTripFilters = ({
                 </select>
             </div>
 
+           
+            <div className="cursor-pointer flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
+                <label
+                    htmlFor="busType"
+                    className="text-gray-500 text-sm mr-2 whitespace-nowrap cursor-pointer "
+                >
+                    Type:
+                </label>
+                <select
+                    id="busType"
+                    value={selectedBusType}
+                    onChange={(e) => setSelectedBusType(e.target.value)}
+                    className="text-gray-700 text-sm outline-none bg-transparent w-full sm:w-auto"
+                >
+                    <option value="">All</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Aircon">Aircon</option>
+                </select>
+            </div>
+
             <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto hover:border-emerald-400 hover:shadow-md transition-all duration-200 cursor-pointer group">
                 <label className="text-gray-500 text-sm mr-2 group-hover:text-emerald-600 transition-colors cursor-pointer whitespace-nowrap">
                     Date
@@ -68,7 +88,6 @@ const BusTripFilters = ({
                     wrapperClassName="w-full sm:w-auto"
                 />
             </div>
-
         </div>
     );
 };
