@@ -733,7 +733,27 @@ const BusTrips = () => {
     date: new Date().toISOString().split("T")[0],
     status: "Pending",
     price: 75,
+    parkingEstimation: "10 minutes",
+    expectedDeparture: ""
   });
+
+  useEffect(() => {
+    if (newBusData.time && newBusData.parkingEstimation) {
+      const expected = calculateExpectedDeparture(newBusData.time, newBusData.parkingEstimation);
+      if (expected !== newBusData.expectedDeparture) {
+         setNewBusData(prev => ({ ...prev, expectedDeparture: expected }));
+      }
+    }
+  }, [newBusData.time, newBusData.parkingEstimation]);
+
+  useEffect(() => {
+    if (editRow && editRow.time && editRow.parkingEstimation) {
+      const expected = calculateExpectedDeparture(editRow.time, editRow.parkingEstimation);
+      if (expected !== editRow.expectedDeparture) {
+         setEditRow(prev => ({ ...prev, expectedDeparture: expected }));
+      }
+    }
+  }, [editRow?.time, editRow?.parkingEstimation]);
 
   const fetchBusTrips = async () => {
     setIsLoading(true);
@@ -800,20 +820,19 @@ const BusTrips = () => {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
-  const handleAddClick = () => {
+ const handleAddClick = () => {
+    const currentTime = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
     setNewBusData({
       templateNo: "",
       route: "",
       company: "",
-      time: new Date().toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      time: currentTime,
       date: new Date().toISOString().split("T")[0],
       status: "Pending",
       price: defaultPrice,
+      parkingEstimation: "10 minutes",
+      expectedDeparture: calculateExpectedDeparture(currentTime, "10 minutes")
     });
-
     setShowAddModal(true);
   };
 
@@ -943,6 +962,20 @@ const BusTrips = () => {
       });
     }
   };
+
+  const calculateExpectedDeparture = (arrivalTime, estimationString) => {
+    if (!arrivalTime || !estimationString) return "";
+    
+    let minutesToAdd = 0;
+    if (estimationString === "1 hr") minutesToAdd = 60;
+    else minutesToAdd = parseInt(estimationString.split(" ")[0]); // extracts 10, 20, 30, etc.
+
+    const [hours, minutes] = arrivalTime.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes + minutesToAdd, 0, 0);
+
+    return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+};
 
   //EXCEL
   const handleExportExcel = async () => {
@@ -1362,21 +1395,54 @@ const BusTrips = () => {
   }
 };
 
-  const handleMarkArrived = async (row) => {
+ const handleMarkArrived = async (row) => {
     try {
+      // 1. Get the FULL record directly from state so we don't lose parkingEstimation
+      const fullRecord = records.find(r => r.id === row.id) || row;
+      
+      // 2. Generate a strict 24-hour current arrival time (bypassing browser locale quirks)
+      const now = new Date();
+      const currentHours = String(now.getHours()).padStart(2, "0");
+      const currentMinutes = String(now.getMinutes()).padStart(2, "0");
+      const actualArrivalTime = `${currentHours}:${currentMinutes}`;
+
+      // 3. Extract the estimation safely
+      const estimationStr = fullRecord.parkingEstimation || "10 minutes";
+      let minutesToAdd = 10; 
+      if (estimationStr === "1 hr") {
+         minutesToAdd = 60;
+      } else {
+         // Extracts just the number (e.g., "20" from "20 minutes")
+         minutesToAdd = parseInt(estimationStr.replace(/[^0-9]/g, "")) || 10;
+      }
+
+      // 4. Calculate Expected Departure perfectly
+      const departureDate = new Date(now.getTime());
+      departureDate.setMinutes(departureDate.getMinutes() + minutesToAdd);
+      
+      const expHours = String(departureDate.getHours()).padStart(2, "0");
+      const expMinutes = String(departureDate.getMinutes()).padStart(2, "0");
+      const newExpectedDeparture = `${expHours}:${expMinutes}`;
+
+      // 5. Send everything to the Database
       const response = await fetch(`${API_URL}/${row.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Arrived" }),
+        body: JSON.stringify({ 
+          status: "Arrived", 
+          time: actualArrivalTime,
+          expectedDeparture: newExpectedDeparture // This triggers the mobile app update!
+        }),
       });
+      
       if (response.ok) {
         fetchBusTrips();
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Bus ${row.plateno} marked as Arrived!`,
+          message: `Arrived! Expected Departure updated to ${newExpectedDeparture}.`, 
           autoClose: true,
-          duration: 3000,
+          duration: 4000,
         });
       }
     } catch (error) {
@@ -1663,7 +1729,7 @@ const BusTrips = () => {
 
                   {row.status === "Pending" && (
                     <button
-                      onClick={() => handleMarkArrived(row)}
+                      onClick={() => handleMarkArrived(selectedRecord)}
                       className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 flex items-center gap-1 px-2"
                       title="Mark as Arrived"
                     >
@@ -1912,6 +1978,37 @@ const BusTrips = () => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Parking Est.
+                    </label>
+                    <select
+                      value={newBusData.parkingEstimation}
+                      onChange={(e) => setNewBusData({ ...newBusData, parkingEstimation: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 bg-white"
+                    >
+                      <option value="10 minutes">10 minutes</option>
+                      <option value="20 minutes">20 minutes</option>
+                      <option value="30 minutes">30 minutes</option>
+                      <option value="40 minutes">40 minutes</option>
+                      <option value="50 minutes">50 minutes</option>
+                      <option value="1 hr">1 hr</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Expected Departure
+                    </label>
+                    <input
+                      type="time"
+                      value={newBusData.expectedDeparture}
+                      readOnly
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-700 font-medium cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
                 <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-100 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                   Status will be set to <strong>Pending</strong>
@@ -2093,26 +2190,18 @@ const BusTrips = () => {
         <ViewModal
           title="View Bus Trip Details"
           fields={[
-            {
-              label: "Plate No.",
-              value: viewRow.templateNo || viewRow.templateno || "-",
-            },
+            { label: "Plate No.", value: viewRow.templateNo || viewRow.templateno || "-" },
             { label: "Company", value: viewRow.company || "-" },
             { label: "Route", value: viewRow.route || "-" },
             { label: "Status", value: viewRow.status || "-" },
             { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
             { label: "Arrival Time", value: viewRow.time || "-" },
-            { label: "Departure Time", value: viewRow.departureTime || "-" },
-            {
-              label: "Ticket Reference",
-              value: viewRow.ticketReferenceNo || "-",
-            },
-            {
-              label: "Date",
-              value: viewRow.date
-                ? new Date(viewRow.date).toLocaleDateString()
-                : "-",
-            },
+            // Add the two new fields here
+            { label: "Parking Est.", value: viewRow.parkingEstimation || "-" },
+            { label: "Exp. Departure", value: viewRow.expectedDeparture || "-" },
+            { label: "Actual Departure", value: viewRow.departureTime || "-" },
+            { label: "Ticket Reference", value: viewRow.ticketReferenceNo || "-" },
+            { label: "Date", value: viewRow.date ? new Date(viewRow.date).toLocaleDateString() : "-" },
           ]}
           onClose={() => setViewRow(null)}
         />
@@ -2183,6 +2272,37 @@ const BusTrips = () => {
                     }
                     className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                      Parking Est.
+                    </label>
+                    <select
+                      value={editRow.parkingEstimation || "10 minutes"}
+                      onChange={(e) => setEditRow({ ...editRow, parkingEstimation: e.target.value })}
+                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    >
+                      <option value="10 minutes">10 minutes</option>
+                      <option value="20 minutes">20 minutes</option>
+                      <option value="30 minutes">30 minutes</option>
+                      <option value="40 minutes">40 minutes</option>
+                      <option value="50 minutes">50 minutes</option>
+                      <option value="1 hr">1 hr</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                      Exp. Departure
+                    </label>
+                    <input
+                      type="time"
+                      value={editRow.expectedDeparture || ""}
+                      readOnly
+                      className="w-full bg-slate-50 border border-slate-300 text-slate-500 px-3 py-2 rounded-lg text-sm cursor-not-allowed outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

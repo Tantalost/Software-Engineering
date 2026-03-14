@@ -10,7 +10,9 @@ const BusTripSchema = new mongoose.Schema({
   price: { type: Number, default: 75 },
   status: { type: String, default: "Active" }, 
   ticketReferenceNo: { type: String, default: "" }, 
-  isArchived: { type: Boolean, default: false } 
+  isArchived: { type: Boolean, default: false },
+  parkingEstimation: { type: String, default: "10 minutes" },
+  expectedDeparture: { type: String }
 }, { timestamps: true });
 
 export default mongoose.model("BusTrip", BusTripSchema);

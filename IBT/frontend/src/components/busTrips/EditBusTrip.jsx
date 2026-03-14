@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Select from "../common/Select";
 import { busCompanyRoutes } from '../../data/busRoutes.js'; 
 
@@ -8,17 +8,44 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
         return new Date(isoDate).toISOString().split('T')[0];
     };
 
+    // Helper function to calculate expected departure
+    const calculateExpectedDeparture = (arrivalTime, estimationString) => {
+        if (!arrivalTime || !estimationString) return "";
+        
+        let minutesToAdd = 0;
+        if (estimationString === "1 hr") minutesToAdd = 60;
+        else minutesToAdd = parseInt(estimationString.split(" ")[0]);
+
+        const [hours, minutes] = arrivalTime.split(":").map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes + minutesToAdd, 0, 0);
+
+        return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    };
+
     const [form, setForm] = useState({
-        id: row.id,
-        templateNo: row.templateno,
-        route: row.route,
-        time: row.rawTime || row.time,
+        id: row.id || row._id,
+        templateNo: row.templateno || row.templateNo || "",
+        route: row.route || "",
+        time: row.rawTime || row.time || "",
         date: formatDateForInput(row.rawDate || row.date),
-        company: row.company,
-        status: row.status,
-        ticketReferenceNo: row.ticketref === "-" ? "" : row.ticketref, 
-        departureTime: row.rawDepartureTime || "" 
+        company: row.company || "",
+        status: row.status || "Pending",
+        ticketReferenceNo: row.ticketref === "-" ? "" : (row.ticketReferenceNo || row.ticketref || ""), 
+        departureTime: row.rawDepartureTime || row.departureTime || "",
+        parkingEstimation: row.parkingEstimation || "10 minutes",
+        expectedDeparture: row.expectedDeparture || ""
     });
+
+    // Automatically recalculate the expected departure whenever time or parking estimation changes
+    useEffect(() => {
+        if (form.time && form.parkingEstimation) {
+            const expected = calculateExpectedDeparture(form.time, form.parkingEstimation);
+            if (expected !== form.expectedDeparture) {
+                setForm(prev => ({ ...prev, expectedDeparture: expected }));
+            }
+        }
+    }, [form.time, form.parkingEstimation]);
 
     const getTemplates = (companyName) => {
         if (!companyName) return {};
@@ -30,6 +57,7 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
     };
 
     const currentTemplates = getTemplates(form.company);
+    
     const handleTemplateChange = (e) => {
         const selectedTemplate = e.target.value;
         setForm(prev => ({
@@ -41,7 +69,7 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg">
+            <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg overflow-y-auto max-h-[90vh]">
                 <h3 className="mb-4 text-xl font-bold text-slate-800">Edit Bus Trip</h3>
                 
                 <div className="space-y-4">
@@ -117,6 +145,34 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                              />
                         </div>
 
+                        {/* NEW FIELD: Parking Estimation */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Parking Est.</label>
+                            <select
+                                value={form.parkingEstimation}
+                                onChange={(e) => setForm({...form, parkingEstimation: e.target.value})}
+                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
+                            >
+                                <option value="10 minutes">10 minutes</option>
+                                <option value="20 minutes">20 minutes</option>
+                                <option value="30 minutes">30 minutes</option>
+                                <option value="40 minutes">40 minutes</option>
+                                <option value="50 minutes">50 minutes</option>
+                                <option value="1 hr">1 hr</option>
+                            </select>
+                        </div>
+
+                        {/* NEW FIELD: Expected Departure */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Expected Departure</label>
+                            <input
+                                type="time"
+                                value={form.expectedDeparture}
+                                readOnly
+                                className="w-full rounded-lg border border-slate-200 bg-emerald-50 text-emerald-700 p-2.5 text-sm cursor-not-allowed font-medium"
+                            />
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Ticket Reference No.</label>
                             <input
@@ -143,7 +199,7 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                                 label="Status" 
                                 value={form.status} 
                                 onChange={(e) => setForm({...form, status: e.target.value})} 
-                                options={["Paid", "Pending", "Inactive", "Active"]} 
+                                options={["Paid", "Pending", "Arrived", "Inactive", "Active"]} 
                              />
                         </div>
                     </div>
@@ -158,15 +214,7 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                     </button>
                     <button 
                         onClick={() => onSave({
-                            id: form.id,
-                            templateNo: form.templateNo,
-                            route: form.route,
-                            time: form.time,
-                            date: form.date,
-                            company: form.company,
-                            status: form.status,
-                            ticketReferenceNo: form.ticketReferenceNo,
-                            departureTime: form.departureTime
+                            ...form
                         })} 
                         className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
                     >
