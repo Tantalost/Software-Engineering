@@ -115,37 +115,91 @@ export const getAvatar = async (req, res) => {
 };
 
 
+
 export const register = async (req, res) => {
   try {
-    const { email, password, fullName, contactNo } = req.body;
+    const { email, password, username, contactNo } = req.body; 
     
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ error: "Email already exists" });
+    let user = await User.findOne({ email });
+    
+    // Generate a 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    if (user) {
+       
+        return res.status(400).json({ error: "Email already exists. Please login or reset your password." });
+    }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
+    user = new User({
         email,
         password: hashedPassword,
-        fullName,
+        fullName: username, 
         contactNo,
-        avatarUrl: null
+        avatarUrl: null,
+        otp: otp,
+        otpExpires: otpExpires
     });
 
-    const savedUser = await newUser.save();
-    const token = jwt.sign({ id: savedUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    await user.save();
 
-    res.status(201).json({ 
-        message: "User created", 
+   
+    await sendEmail({
+      email: user.email,
+      subject: "Stall Application - Registration Code",
+      message: `Welcome! Your registration verification code is: ${otp}\n\nThis code will expire in 10 minutes.`
+    });
+
+ 
+    res.status(201).json({ message: "Registration initiated. OTP sent to email." });
+
+  } catch (err) {
+    console.error("Registration Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+export const verifyRegistration = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    if (!user.otp || user.otp !== otp) {
+        return res.status(400).json({ error: "Invalid verification code." });
+    }
+
+    if (user.otpExpires < Date.now()) {
+        return res.status(400).json({ error: "Verification code has expired." });
+    }
+
+   
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    res.status(200).json({ 
+        message: "Account verified and logged in successfully", 
         token, 
-        user: { id: savedUser._id, name: savedUser.fullName, email: savedUser.email } 
+        user: { 
+            id: user._id, 
+            name: user.fullName, 
+            email: user.email,
+            contact: user.contactNo
+        } 
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 export const login = async (req, res) => {
   try {

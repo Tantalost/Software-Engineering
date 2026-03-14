@@ -5,6 +5,9 @@ interface RegisterPayload { email: string; password: string; username: string; c
 interface ResetRequestPayload { email: string; }
 interface ResetConfirmPayload { email: string; otp: string; newPassword: string; }
 
+
+interface VerifyRegisterPayload { email: string; otp: string; }
+
 export const authService = {
   
   login: async (payload: LoginPayload) => {
@@ -33,6 +36,18 @@ export const authService = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Registration Failed");
+    return data;
+  },
+
+ 
+  verifyRegistration: async (payload: VerifyRegisterPayload) => {
+    const res = await fetch(`${API_URL}/auth/verify-registration`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Verification Failed");
     return data;
   },
 

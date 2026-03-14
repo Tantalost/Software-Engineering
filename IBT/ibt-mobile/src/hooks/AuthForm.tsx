@@ -8,8 +8,10 @@ import { AuthMode, ResetStep, UserData } from '../types/auth.types';
 export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [resetStep, setResetStep] = useState<ResetStep>('request');
-  const [loading, setLoading] = useState(false);
+
+  const [registerStep, setRegisterStep] = useState<'form' | 'verify-otp'>('form');
   
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({ 
     email: '', 
@@ -53,24 +55,26 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     
     if (authMode === 'register') {
         if (!validateRegister()) return;
+        setLoading(true);
+        try {
+            await authService.register({ ...form, contactNo: `+63${form.contactNo}` });
+            setRegisterStep('verify-otp');
+            Alert.alert("Code Sent", "Please check your email for the verification code.");
+        } catch (error: any) {
+            Alert.alert("Error", error.message);
+        } finally {
+            setLoading(false);
+        }
+        return; 
     }
 
     setLoading(true);
     try {
-        let data;
-        if (authMode === 'register') {
-            data = await authService.register({ ...form, contactNo: `+63${form.contactNo}` });
-        } else {
-            data = await authService.login({ email: form.email, password: form.password });
-        }
-
-       if (data.token) await AsyncStorage.setItem('token', data.token);
-
-       const userData = { ...data.user, token: data.token };
-        
+        const data = await authService.login({ email: form.email, password: form.password });
+        if (data.token) await AsyncStorage.setItem('token', data.token);
+        const userData = { ...data.user, token: data.token };
         await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
         onLoginSuccess(userData);
-
     } catch (error: any) {
         Alert.alert("Error", error.message);
     } finally {
@@ -88,6 +92,25 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
         setResetStep('verify-otp');
     } catch (error: any) {
         Alert.alert("Error", error.message);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleVerifyRegister = async () => {
+    if (!form.otp || form.otp.length < 4) return Alert.alert("Error", "Please enter the verification code.");
+    
+    setLoading(true);
+    try {
+        const data = await authService.verifyRegistration({ email: form.email, otp: form.otp });
+        
+        if (data.token) await AsyncStorage.setItem('token', data.token);
+        const userData = { ...data.user, token: data.token };
+        await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+        
+        onLoginSuccess(userData);
+    } catch (error: any) {
+        Alert.alert("Verification Failed", error.message);
     } finally {
         setLoading(false);
     }
@@ -126,11 +149,13 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
   return {
     authMode, setAuthMode,
+    registerStep, setRegisterStep,
     resetStep, setResetStep,
     loading,
     form, updateForm, resetFormState,
     handleAuth,
     handleRequestReset,
+    handleVerifyRegister,
     handleVerifyOtpLocal,
     handleFinalReset
   };
