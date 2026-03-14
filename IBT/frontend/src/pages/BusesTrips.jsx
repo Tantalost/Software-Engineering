@@ -1625,6 +1625,7 @@ const BusTrips = () => {
           pendingTrips={pendingTrips}
           arrivedTrips={arrivedTrips}
           paidTrips={paidTrips}
+          totalRevenue={totalRevenue}
         />
       </div>
 
