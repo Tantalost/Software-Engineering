@@ -16,9 +16,9 @@ Color Coding
 **parking management**
 - indication should be 3 wheels or 4 wheels 🔴 **To be Fixed**
 
-**Terminal Fees**
-- make a duration (daily, monthly) for passengers revenue 🔴 **To be Fixed**
-- should be able to view previous data 🔴 **To be Fixed**
+**Terminal Fees** 🟡 **In ProgrWWess**
+- make a duration (daily, monthly) for passengers revenue 🟡 **In ProgrWWess**
+- should be able to view previous data 🟡 **In ProgrWWess**
 
 **Bus admin**
 - add,delete, edit, view when adding bus companies  🔴 **To be Fixed**
@@ -46,13 +46,13 @@ Bus Admin
 - should not be able to toggle the same bus twice
 - should have a scheduled bus trip advance within the day
 - process of selecting bus type: company - bus type(aircon or not) - route
-- Manage Companies: di lumalabas ang actions sa logs
-- dapat ang default route Zamboanga - (input destination)
+- Manage Companies: did not show up in the logs
+- default route Zamboanga - (input destination)
 
 Parking management
 - indication should be 3 wheels or 4 wheels
 
-Terminal Fees
+Terminal Fees 🟡 **In ProgrWWess ipacheck ulit kay maam marj**
 - make a duration (daily, monthly) for passengers revenue
 - should be able to view previous data
 
