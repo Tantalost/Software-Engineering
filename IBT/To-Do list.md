@@ -9,20 +9,11 @@ Major Adjustment (Priority)
 (Lloyd)
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 
 
-Tenants
+Tenants 🟡 **In ProgrWWess** need meeting with sir Derick for further information regarding the Application process
+
 - indicate when it started  (verify when is grace period before start and set up of stalls)
 - changeable interest value
 - fines should be static
-
-Minor Adjustment
-Bus Admin
-- add, delete, edit, view when adding bus companies 
-- should indicate aircon and not
-- should not be able to toggle the same bus twice
-- should have a scheduled bus trip advance within the day
-- process of selecting bus type: company - bus type(aircon or not) - route
-- Manage Companies: did not show up in the logs
-- default route Zamboanga - (input destination)
 
 Parking management
 - indication should be 3 wheels or 4 wheels
@@ -41,6 +32,22 @@ Revisions for web general
 
 
 
+
+
+
+
+
+
+
+Minor Adjustment
+Bus Admin 🟢 **Done**
+- add, delete, edit, view when adding bus companies 🟢 **Done**
+- should indicate aircon and not 🟢 **Done**
+- should not be able to toggle the same bus twice 🟢 **Done**
+- should have a scheduled bus trip advance within the day 🟢 **Done**
+- process of selecting bus type: company - bus type(aircon or not) - route 🟢 **Done**
+- Manage Companies: did not show up in the logs 🟢 **Done**
+- default route Zamboanga - (input destination) 🟢 **Done**
 
 **Lost and found** 🟢 **Done**
 - need photo for superadmin verification sa view modal ilagay 🟢 **Done**
