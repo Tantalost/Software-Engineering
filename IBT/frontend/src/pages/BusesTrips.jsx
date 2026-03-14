@@ -411,9 +411,9 @@ const ManageCompaniesModal = ({
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
              
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-3 items-end">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-2 sm:gap-3 items-end">
                 <div className="col-span-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Type</label>
+                  <label className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase">Type</label>
                   <select
                     className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none"
                     value={newBusType}
@@ -423,18 +423,20 @@ const ManageCompaniesModal = ({
                     <option value="Aircon">Aircon</option>
                   </select>
                 </div>
-                <div className="col-span-3">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Plate Number</label>
+                
+                <div className="col-span-2">
+                  <label className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase whitespace-nowrap overflow-hidden text-ellipsis">Plate Number</label>
                   <input
                     type="text"
-                    placeholder="ex. ABC-1234"
+                    placeholder="ex. ABC-123"
                     className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none"
                     value={newBusPlate}
                     onChange={(e) => setNewBusPlate(e.target.value)}
                   />
                 </div>
+
                 <div className="col-span-3">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">From</label>
+                  <label className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase">From</label>
                   <input
                     type="text"
                     placeholder="ex. Zamboanga"
@@ -443,8 +445,9 @@ const ManageCompaniesModal = ({
                     onChange={(e) => setNewBusFrom(e.target.value)}
                   />
                 </div>
+
                 <div className="col-span-3">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">To</label>
+                  <label className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase">To</label>
                   <input
                     type="text"
                     placeholder="ex. Pagadian"
@@ -453,12 +456,13 @@ const ManageCompaniesModal = ({
                     onChange={(e) => setNewBusTo(e.target.value)}
                   />
                 </div>
-                <div className="col-span-1 flex gap-1">
-                  <button onClick={handleSaveBus} className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
+
+                <div className="col-span-2 flex gap-1">
+                  <button onClick={handleSaveBus} className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
                     {editBusTarget ? 'Save' : 'Add'}
                   </button>
                   {editBusTarget && (
-                    <button onClick={resetForms} className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300">
+                    <button onClick={resetForms} className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors" title="Cancel Edit">
                       <X size={16} />
                     </button>
                   )}
