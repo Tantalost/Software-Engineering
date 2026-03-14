@@ -9,7 +9,7 @@ Color Coding
 - Remove otp for superadmin
 
 **Mobile**
-- should have otp when creating acc 🔴 **To be Fixed**
+- should have otp when creating acc 🟢 **Done**
 - should have authenticated receipt 🔴 **To be Fixed**
 
 
