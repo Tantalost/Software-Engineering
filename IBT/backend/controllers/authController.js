@@ -118,16 +118,15 @@ export const getAvatar = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const { email, password, username, contactNo } = req.body; 
+    
+    const { email, password, fullName, contactNo } = req.body; 
     
     let user = await User.findOne({ email });
     
-    // Generate a 4-digit OTP
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const otpExpires = Date.now() + 10 * 60 * 1000;
 
     if (user) {
-       
         return res.status(400).json({ error: "Email already exists. Please login or reset your password." });
     }
 
@@ -137,7 +136,7 @@ export const register = async (req, res) => {
     user = new User({
         email,
         password: hashedPassword,
-        fullName: username, 
+        fullName: fullName || "New Vendor", 
         contactNo,
         avatarUrl: null,
         otp: otp,
@@ -146,14 +145,12 @@ export const register = async (req, res) => {
 
     await user.save();
 
-   
     await sendEmail({
       email: user.email,
       subject: "Stall Application - Registration Code",
       message: `Welcome! Your registration verification code is: ${otp}\n\nThis code will expire in 10 minutes.`
     });
 
- 
     res.status(201).json({ message: "Registration initiated. OTP sent to email." });
 
   } catch (err) {
@@ -204,7 +201,10 @@ export const verifyRegistration = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    
+    const user = await User.findOne({ 
+        $or: [ { email: email }, { fullName: email } ] 
+    });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(400).json({ error: "Invalid credentials" });
