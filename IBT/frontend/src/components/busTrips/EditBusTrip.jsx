@@ -1,25 +1,18 @@
 import React, { useState, useEffect } from "react";
 import Select from "../common/Select";
-import { busCompanyRoutes } from '../../data/busRoutes.js'; 
 
-const EditBusTrip = ({ row, onClose, onSave }) => {
+const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
     const formatDateForInput = (isoDate) => {
         if (!isoDate) return "";
         return new Date(isoDate).toISOString().split('T')[0];
     };
 
-    // Helper function to calculate expected departure
     const calculateExpectedDeparture = (arrivalTime, estimationString) => {
         if (!arrivalTime || !estimationString) return "";
-        
-        let minutesToAdd = 0;
-        if (estimationString === "1 hr") minutesToAdd = 60;
-        else minutesToAdd = parseInt(estimationString.split(" ")[0]);
-
+        let minutesToAdd = estimationString === "1 hr" ? 60 : parseInt(estimationString.split(" ")[0]);
         const [hours, minutes] = arrivalTime.split(":").map(Number);
         const date = new Date();
         date.setHours(hours, minutes + minutesToAdd, 0, 0);
-
         return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
     };
 
@@ -27,17 +20,17 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
         id: row.id || row._id,
         templateNo: row.templateno || row.templateNo || "",
         route: row.route || "",
+        busType: row.busType || "", 
         time: row.rawTime || row.time || "",
         date: formatDateForInput(row.rawDate || row.date),
         company: row.company || "",
-        status: row.status || "Pending",
+        status: row.status || "Scheduled", 
         ticketReferenceNo: row.ticketref === "-" ? "" : (row.ticketReferenceNo || row.ticketref || ""), 
         departureTime: row.rawDepartureTime || row.departureTime || "",
         parkingEstimation: row.parkingEstimation || "10 minutes",
         expectedDeparture: row.expectedDeparture || ""
     });
 
-    // Automatically recalculate the expected departure whenever time or parking estimation changes
     useEffect(() => {
         if (form.time && form.parkingEstimation) {
             const expected = calculateExpectedDeparture(form.time, form.parkingEstimation);
@@ -47,70 +40,67 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
         }
     }, [form.time, form.parkingEstimation]);
 
-    const getTemplates = (companyName) => {
-        if (!companyName) return {};
-        const key = companyName.toLowerCase();
-        if (busCompanyRoutes[key]) return busCompanyRoutes[key];
-        const firstWord = key.split(" ")[0];
-        if (busCompanyRoutes[firstWord]) return busCompanyRoutes[firstWord];
-        return {}; 
-    };
+    const activeCompanyObj = companyData.find(c => c.name === form.company);
+    const availableBuses = activeCompanyObj?.buses.filter(b => b.busType === form.busType) || [];
 
-    const currentTemplates = getTemplates(form.company);
-    
-    const handleTemplateChange = (e) => {
-        const selectedTemplate = e.target.value;
+    const handlePlateChange = (e) => {
+        const selectedPlate = e.target.value;
+        const selectedBus = availableBuses.find(b => b.plateNumber === selectedPlate);
         setForm(prev => ({
             ...prev,
-            templateNo: selectedTemplate,
-            route: currentTemplates[selectedTemplate] || "" 
+            templateNo: selectedPlate,
+            route: selectedBus ? selectedBus.route : "" 
         }));
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg overflow-y-auto max-h-[90vh]">
+            <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg overflow-y-auto max-h-[90vh]">
                 <h3 className="mb-4 text-xl font-bold text-slate-800">Edit Bus Trip</h3>
                 
                 <div className="space-y-4">
                     
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Company</label>
-                        <div className="flex p-1 bg-slate-100 rounded-lg">
-                            {["Dindo", "Alga", "Ceres", "Lizamae"].map((comp) => (
-                                <button
-                                    type="button"
-                                    key={comp}
-                                    onClick={() => setForm({ 
-                                        ...form, 
-                                        company: comp, 
-                                        templateNo: "",
-                                        route: "" 
-                                    })}
-                                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                                        form.company === comp
-                                            ? "bg-white text-emerald-600 shadow-sm"
-                                            : "text-slate-500 hover:text-slate-700"
-                                    }`}
-                                >
-                                    {comp}
-                                </button>
+                        <select
+                            value={form.company}
+                            onChange={(e) => setForm({ ...form, company: e.target.value, busType: "", templateNo: "", route: "" })}
+                            className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
+                        >
+                            <option value="">Select Company</option>
+                            {companyData.map((comp) => (
+                                <option key={comp._id} value={comp.name}>{comp.name}</option>
                             ))}
-                        </div>
+                        </select>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-    
+                        
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Bus Type</label>
+                            <select
+                                value={form.busType}
+                                onChange={(e) => setForm({ ...form, busType: e.target.value, templateNo: "", route: "" })}
+                                disabled={!form.company}
+                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none disabled:bg-slate-100"
+                            >
+                                <option value="">Select Type</option>
+                                <option value="Aircon">Aircon</option>
+                                <option value="Regular">Regular</option>
+                            </select>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Template No</label>
                             <select
                                 value={form.templateNo}
-                                onChange={handleTemplateChange}
-                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
+                                onChange={handlePlateChange}
+                                disabled={!form.busType}
+                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none disabled:bg-slate-100"
                             >
                                 <option value="">Select Template</option>
-                                {Object.keys(currentTemplates).map((key) => (
-                                    <option key={key} value={key}>{key}</option>
+                                {availableBuses.map((bus) => (
+                                    <option key={bus.plateNumber} value={bus.plateNumber}>{bus.plateNumber}</option>
                                 ))}
                             </select>
                         </div>
@@ -130,8 +120,8 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                              <input 
                                 type="time"
                                 value={form.time}
-                                readOnly 
-                                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-500 cursor-not-allowed"
+                                onChange={(e) => setForm({...form, time: e.target.value})}
+                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
                              />
                         </div>
 
@@ -140,12 +130,11 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                              <input 
                                 type="date"
                                 value={form.date}
-                                readOnly 
-                                className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-500 cursor-not-allowed"
+                                onChange={(e) => setForm({...form, date: e.target.value})}
+                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
                              />
                         </div>
 
-                        {/* NEW FIELD: Parking Estimation */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Parking Est.</label>
                             <select
@@ -162,7 +151,6 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                             </select>
                         </div>
 
-                        {/* NEW FIELD: Expected Departure */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Expected Departure</label>
                             <input
@@ -184,40 +172,22 @@ const EditBusTrip = ({ row, onClose, onSave }) => {
                             />
                         </div>
 
-                        <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Actual Departure</label>
-                             <input 
-                                type="time"
-                                value={form.departureTime}
-                                onChange={(e) => setForm({...form, departureTime: e.target.value})}
-                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500"
-                             />
-                        </div>
-
                         <div className="md:col-span-2">
                              <Select 
                                 label="Status" 
                                 value={form.status} 
                                 onChange={(e) => setForm({...form, status: e.target.value})} 
-                                options={["Paid", "Pending", "Arrived", "Inactive", "Active"]} 
+                                options={["Scheduled", "Pending", "Arrived", "Paid", "Active", "Inactive"]} 
                              />
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                    <button 
-                        onClick={onClose} 
-                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                    >
+                    <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                         Cancel
                     </button>
-                    <button 
-                        onClick={() => onSave({
-                            ...form
-                        })} 
-                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
-                    >
+                    <button onClick={() => onSave({ ...form })} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">
                         Save Changes
                     </button>
                 </div>

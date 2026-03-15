@@ -1,39 +1,40 @@
 import React from "react";
 import StatCard from "../tenants/StatCard";
-import { Bus, CheckCircle, Clock, TrendingUp, PhilippinePeso } from "lucide-react";
+import { Bus, Clock, CheckCircle, CalendarClock, MapPin, PhilippinePeso } from "lucide-react";
 
-const StatCardGroupBus = ({ totalTrips, paidTrips, pendingTrips, totalRevenue }) => {
+const StatCardGroupBus = ({ totalTrips, scheduledTrips, pendingTrips, arrivedTrips, paidTrips, totalRevenue }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-4 gap-10 mb-6">
+    <div className="flex overflow-x-auto gap-4 mb-6 pb-4 w-full snap-x">
       
-      <StatCard
-        title="Total Trips"
-        value={totalTrips}
-        icon={Bus}
-        color="cyan"
-      />
+      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
+        <StatCard title="Total Trips" value={totalTrips} icon={Bus} color="cyan" />
+      </div>
 
-      <StatCard
-        title="Pending"
-        value={pendingTrips}
-        icon={Clock}
-        color="red"
-      />
+      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
+        <StatCard title="Scheduled" value={scheduledTrips} icon={CalendarClock} color="blue" />
+      </div>
 
-      <StatCard
-        title="Departed (Paid)"
-        value={paidTrips}
-        icon={CheckCircle}
-        color="emerald"
-      />
+      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
+        <StatCard title="Pending" value={pendingTrips} icon={Clock} color="orange" />
+      </div>
 
-      <StatCard
-        title="Total Revenue"
-        /* Updated to use PhilippinePeso and consistent orange color */
-        icon={PhilippinePeso}
-        value={totalRevenue.toFixed(2)}
-        color="orange"
-      />
+      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
+        <StatCard title="Arrived" value={arrivedTrips} icon={MapPin} color="purple" />
+      </div>
+
+      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
+        <StatCard title="Departed" value={paidTrips} icon={CheckCircle} color="emerald" />
+      </div>
+
+      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
+        <StatCard 
+          title="Revenue" 
+          value={totalRevenue ? totalRevenue.toFixed(2) : "0.00"} 
+          icon={PhilippinePeso} 
+          color="orange" 
+        />
+      </div>
+
     </div>
   );
 };

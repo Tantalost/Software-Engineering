@@ -1,7 +1,7 @@
 import React from "react";
 
 const ParkingFilter = ({ activeType, onTypeChange }) => {
-  const statuses = ["All", "Car", "Motorcycle"];
+  const statuses = ["All", "FourWheels", "TwoWheels"];
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto py-1">

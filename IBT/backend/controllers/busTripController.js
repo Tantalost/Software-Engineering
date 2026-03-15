@@ -12,14 +12,27 @@ export const getBusTrips = async (req, res) => {
 
 export const createBusTrip = async (req, res) => {
   try {
-    // FIX: Add parkingEstimation and expectedDeparture to this line
-    const { templateNo, route, time, date, company, status, price, parkingEstimation, expectedDeparture } = req.body;
+    const { templateNo, route, time, date, company, status, price, parkingEstimation, expectedDeparture, busType } = req.body;
 
-    if (!templateNo || !route || !company) {
-      return res.status(400).json({ message: "Template, Route, and Company are required." });
+    if (!templateNo || !route || !company || !busType) {
+      return res.status(400).json({ message: "Template, Route, Company, and Bus Type are required." });
     }
 
-    // Get default price from settings if price is not provided
+    const tripDate = new Date(date);
+    const startOfDay = new Date(tripDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(tripDate.setHours(23, 59, 59, 999));
+
+    const activeTrip = await BusTrip.findOne({
+      templateNo,
+      date: { $gte: startOfDay, $lte: endOfDay },
+      status: { $in: ["Scheduled", "Pending", "Arrived"] }, 
+      isArchived: false
+    });
+
+    if (activeTrip) {
+      return res.status(400).json({ message: `Bus ${templateNo} already has an active trip today.` });
+    }
+
     let defaultPrice = 75;
     if (!price) {
       const priceSetting = await Settings.findOne({ key: "defaultBusPrice" });
@@ -31,13 +44,13 @@ export const createBusTrip = async (req, res) => {
     const newTrip = new BusTrip({
       templateNo,
       route,
+      busType, 
       time,
       date,
       company,
       price: price || defaultPrice,
-      status: status || "Pending",
+      status: status || "Scheduled", 
       isArchived: false,
-      // Now these variables actually exist!
       parkingEstimation: parkingEstimation || "10 minutes",
       expectedDeparture: expectedDeparture || ""
     });
@@ -141,14 +154,14 @@ export const updateAllBusTripPrices = async (req, res) => {
 
     const priceValue = parseFloat(newPrice);
 
-    // Update or create the default price setting in database
+   
     await Settings.findOneAndUpdate(
       { key: "defaultBusPrice" },
       { key: "defaultBusPrice", value: priceValue },
       { upsert: true, new: true }
     );
 
-    // Update all pending trips with new price
+   
     const result = await BusTrip.updateMany(
       { status: "Pending" },
       { price: priceValue }
@@ -163,7 +176,7 @@ export const updateAllBusTripPrices = async (req, res) => {
   }
 };
 
-// Get default bus price from settings
+
 export const getDefaultBusPrice = async (req, res) => {
   try {
     const priceSetting = await Settings.findOne({ key: "defaultBusPrice" });

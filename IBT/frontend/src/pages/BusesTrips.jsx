@@ -9,6 +9,7 @@ import Layout from "../components/layout/Layout";
 import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
+import EditBusTrip from "../components/busTrips/EditBusTrip.jsx";
 
 import Pagination from "../components/common/Pagination";
 
@@ -50,10 +51,10 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
       extension: "png",
     });
 
-    // Parse range string like "A1:H4" to coordinates
+  
     const [start, end] = range.split(':');
-    const startCol = start.charCodeAt(0) - 65; // A=0, B=1, etc.
-    const startRow = parseInt(start.slice(1)) - 1; // 1-based to 0-based
+    const startCol = start.charCodeAt(0) - 65;
+    const startRow = parseInt(start.slice(1)) - 1; 
     const endCol = end.charCodeAt(0) - 65;
     const endRow = parseInt(end.slice(1)) - 1;
 
@@ -62,7 +63,7 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
       br: { col: endCol, row: endRow }
     });
   } catch (error) {
-    // Log the error but don't stop the export
+    
     console.error("Branding image error:", error);
   }
 };
@@ -80,68 +81,39 @@ const ManageCompaniesModal = ({
   const [newCompanyName, setNewCompanyName] = useState("");
 
   const [newBusPlate, setNewBusPlate] = useState("");
-  const [newBusRoute, setNewBusRoute] = useState("");
+  const [newBusFrom, setNewBusFrom] = useState("");
+  const [newBusTo, setNewBusTo] = useState("");
+  const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
+  
   const [isProcessing, setIsProcessing] = useState(false);
+  const [editCompanyTarget, setEditCompanyTarget] = useState(null);
+  const [editBusTarget, setEditBusTarget] = useState(null);
   const [deleteCompanyTarget, setDeleteCompanyTarget] = useState(null);
   const [deleteBusTarget, setDeleteBusTarget] = useState(null);
 
+  const [newBusType, setNewBusType] = useState("Regular");
+
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
+
+  const activeCompany = companyData.find((c) => c._id === selectedCompanyId);
+
+  const resetForms = () => {
+    setIsEditingCompany(false);
+    setEditCompanyTarget(null);
+    setNewCompanyName("");
+    setNewBusPlate("");
+    setNewBusFrom(""); 
+    setNewBusTo("");  
+    setNewBusType("Regular");
+    setEditBusTarget(null);
+  };
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedCompanyId(null);
-      setIsEditingCompany(false);
-      setNewCompanyName("");
-      setNewBusPlate("");
-      setNewBusRoute("");
+      resetForms();
     }
   }, [isOpen]);
-
-  const activeCompany = companyData.find((c) => c._id === selectedCompanyId);
-
-  const handleAddCompany = async () => {
-    if (!newCompanyName.trim()) return;
-    setIsProcessing(true);
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newCompanyName }),
-      });
-      if (res.ok) {
-        await fetchCompanies();
-        setNewCompanyName("");
-        setIsEditingCompany(false);
-
-        setNotificationState({
-          isOpen: true,
-          type: "success",
-          message: `Company "${newCompanyName}" added successfully!`,
-          autoClose: true,
-          duration: 3000,
-        });
-      } else {
-        setNotificationState({
-          isOpen: true,
-          type: "error",
-          message: "Failed to create company",
-          autoClose: true,
-          duration: 3000,
-        });
-      }
-    } catch (err) {
-      console.error(err);
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Error creating company",
-        autoClose: true,
-        duration: 3000,
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const confirmDeleteCompany = async () => {
     if (!deleteCompanyTarget) return;
@@ -237,13 +209,73 @@ const ManageCompaniesModal = ({
     }
   };
 
-  const handleAddBus = async () => {
-    if (!newBusPlate.trim() || !newBusRoute.trim() || !activeCompany) return;
+  const handleSaveCompany = async () => {
+    if (!newCompanyName.trim()) return;
+    setIsProcessing(true);
+    
+    const method = editCompanyTarget ? "PUT" : "POST";
+    const url = editCompanyTarget ? `${API_URL}/${editCompanyTarget._id}` : API_URL;
 
-    const updatedBuses = [
-      ...activeCompany.buses,
-      { plateNumber: newBusPlate, route: newBusRoute },
-    ];
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCompanyName }),
+      });
+      if (res.ok) {
+        await fetchCompanies();
+        setNewCompanyName("");
+        setIsEditingCompany(false);
+        setEditCompanyTarget(null); 
+
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: `Company "${newCompanyName}" ${editCompanyTarget ? 'updated' : 'added'} successfully!`,
+          autoClose: true,
+          duration: 3000,
+        });
+      } else {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: `Failed to ${editCompanyTarget ? 'update' : 'create'} company`,
+          autoClose: true,
+          duration: 3000,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: `Error ${editCompanyTarget ? 'updating' : 'creating'} company`,
+        autoClose: true,
+        duration: 3000,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSaveBus = async () => {
+   if (!newBusPlate.trim() || !newBusFrom.trim() || !newBusTo.trim() || !activeCompany) return;
+
+    const routeString = `${newBusFrom} - ${newBusTo}`; 
+
+    let updatedBuses;
+    if (editBusTarget) {
+      updatedBuses = activeCompany.buses.map(b => 
+        b.plateNumber === editBusTarget.plateNumber 
+          ? { plateNumber: newBusPlate, route: routeString, busType: newBusType } 
+          : b
+      );
+    } else {
+      updatedBuses = [
+        ...activeCompany.buses,
+        { plateNumber: newBusPlate, route: routeString, busType: newBusType },
+      ];
+    }
 
     try {
       const res = await fetch(`${API_URL}/${activeCompany._id}`, {
@@ -254,36 +286,16 @@ const ManageCompaniesModal = ({
 
       if (res.ok) {
         await fetchCompanies();
-
-        // ADD THIS TOAST MESSAGE
+        resetForms();
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Bus ${newBusPlate} added successfully!`,
-          autoClose: true,
-          duration: 3000,
-        });
-
-        setNewBusPlate("");
-        setNewBusRoute("");
-      } else {
-        setNotificationState({
-          isOpen: true,
-          type: "error",
-          message: "Failed to add bus",
-          autoClose: true,
-          duration: 3000,
+          message: `Bus ${editBusTarget ? 'updated' : 'added'} successfully!`,
+          autoClose: true, duration: 3000,
         });
       }
     } catch (err) {
       console.error(err);
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Error adding bus",
-        autoClose: true,
-        duration: 3000,
-      });
     }
   };
 
@@ -315,7 +327,7 @@ const ManageCompaniesModal = ({
               />
               <div className="flex gap-2">
                 <button
-                  onClick={handleAddCompany}
+                  onClick={handleSaveCompany}
                   disabled={isProcessing}
                   className="flex-1 bg-emerald-600 text-white text-xs py-1.5 rounded-md hover:bg-emerald-700 disabled:opacity-50"
                 >
@@ -357,16 +369,29 @@ const ManageCompaniesModal = ({
                     </span>
                   </div>
                 </div>
-                {role === "superadmin" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteCompanyTarget(company);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 transition-opacity"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+               {role === "superadmin" && (
+                  <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditCompanyTarget(company);
+                        setNewCompanyName(company.name);
+                        setIsEditingCompany(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-blue-500"
+                    >
+                      <Settings size={16} /> 
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteCompanyTarget(company);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-red-500"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -376,54 +401,90 @@ const ManageCompaniesModal = ({
         <div className="w-2/3 flex flex-col bg-white">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center">
             <h3 className="font-bold text-slate-800">
-              {activeCompany
-                ? `Manage ${activeCompany.name} Buses`
-                : "Select a Company"}
+              {activeCompany ? `Manage ${activeCompany.name} Buses` : "Select a Company"}
             </h3>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-600"
-            >
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
               <X size={24} />
             </button>
           </div>
 
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Add Bus Form */}
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-12 gap-3 items-end">
-                <div className="col-span-4">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">
-                    Plate Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. DIN-123"
-                    className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                    value={newBusPlate}
-                    onChange={(e) => setNewBusPlate(e.target.value)}
-                  />
+             
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">Type</label>
+                    <select
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusType}
+                      onChange={(e) => setNewBusType(e.target.value)}
+                    >
+                      <option value="Regular">Regular</option>
+                      <option value="Aircon">Aircon</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">Plate Number</label>
+                    <input
+                      type="text"
+                      placeholder="ex. ABC-1234"
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusPlate}
+                      onChange={(e) => setNewBusPlate(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="col-span-6">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">
-                    Default Route
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Surigao - Butuan"
-                    className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                    value={newBusRoute}
-                    onChange={(e) => setNewBusRoute(e.target.value)}
-                  />
+
+                <div className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase">From</label>
+                    <input
+                      type="text"
+                      placeholder="ex. Zamboanga"
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusFrom}
+                      onChange={(e) => setNewBusFrom(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="col-span-5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase">To</label>
+                    <input
+                      type="text"
+                      placeholder="ex. Pagadian"
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusTo}
+                      onChange={(e) => setNewBusTo(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="col-span-2 flex gap-1">
+                    <button onClick={handleSaveBus} className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+                      {editBusTarget ? 'Save' : 'Add'}
+                    </button>
+                    {editBusTarget && (
+                      <button onClick={resetForms} className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors" title="Cancel Edit">
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <button
-                    onClick={handleAddBus}
-                    className="w-full h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center justify-center gap-1"
-                  >
-                    <Plus size={16} /> Add
-                  </button>
-                </div>
+              </div>
+
+              <div className="p-3 bg-white border-b border-slate-100 flex justify-between items-center">
+                 <h4 className="text-sm font-semibold text-slate-700">Registered Buses</h4>
+                 <select 
+                    value={tableBusTypeFilter} 
+                    onChange={(e) => setTableBusTypeFilter(e.target.value)}
+                    className="p-1.5 text-sm border border-slate-300 rounded-lg outline-none bg-slate-50"
+                 >
+                    <option value="All">All Types</option>
+                    <option value="Regular">Regular Only</option>
+                    <option value="Aircon">Aircon Only</option>
+                 </select>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
@@ -431,30 +492,39 @@ const ManageCompaniesModal = ({
                   <table className="w-full text-sm text-left">
                     <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
                       <tr>
-                        <th className="px-4 py-3 rounded-tl-lg">Plate No.</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Plate No.</th>
                         <th className="px-4 py-3">Route</th>
-                        <th className="px-4 py-3 text-right rounded-tr-lg">
-                          Action
-                        </th>
+                        <th className="px-4 py-3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {activeCompany.buses.map((bus, idx) => (
-                        <tr
-                          key={`${bus.plateNumber}-${idx}`}
-                          className="hover:bg-slate-50 group"
-                        >
-                          <td className="px-4 py-3 font-medium text-slate-900">
-                            {bus.plateNumber}
+                      {activeCompany.buses
+                        .filter(bus => tableBusTypeFilter === "All" || bus.busType === tableBusTypeFilter) // Filter logic
+                        .map((bus, idx) => (
+                        <tr key={`${bus.plateNumber}-${idx}`} className="hover:bg-slate-50 group">
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 text-xs rounded-full ${bus.busType === 'Aircon' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                              {bus.busType || 'Regular'}
+                            </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {bus.route}
-                          </td>
+                          <td className="px-4 py-3 font-medium text-slate-900">{bus.plateNumber}</td>
+                          <td className="px-4 py-3 text-slate-600">{bus.route}</td>
                           <td className="px-4 py-3 text-right">
                             <button
-                              onClick={() => setDeleteBusTarget(bus)}
-                              className="text-slate-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition"
+                              onClick={() => {
+                                setEditBusTarget(bus);
+                                setNewBusPlate(bus.plateNumber);
+                                const [fromRoute, toRoute] = bus.route.split(" - "); // Split it back into two inputs when editing
+                                setNewBusFrom(fromRoute ? fromRoute.trim() : bus.route || "");
+                                setNewBusTo(toRoute ? toRoute.trim() : "");
+                                setNewBusType(bus.busType || "Regular");
+                              }}
+                              className="text-slate-400 hover:text-blue-500 p-1 mr-1 rounded-md"
                             >
+                              <Settings size={16} />
+                            </button>
+                            <button onClick={() => setDeleteBusTarget(bus)} className="text-slate-400 hover:text-red-500 p-1 rounded-md">
                               <Trash2 size={16} />
                             </button>
                           </td>
@@ -464,8 +534,7 @@ const ManageCompaniesModal = ({
                   </table>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                    <Bus size={48} className="mb-2 opacity-20" />
-                    <p>No buses added yet for {activeCompany.name}</p>
+                    <p>No buses added yet.</p>
                   </div>
                 )}
               </div>
@@ -484,7 +553,7 @@ const ManageCompaniesModal = ({
             </div>
           )}
 
-          {/* Delete Company Modal */}
+          
           {deleteCompanyTarget && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -582,6 +651,7 @@ const BusTrips = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
+  const [selectedBusType, setSelectedBusType] = useState("");
   const [companyData, setCompanyData] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -729,9 +799,10 @@ const BusTrips = () => {
     templateNo: "",
     route: "",
     company: "",
+    busType: "", 
     time: "",
     date: new Date().toISOString().split("T")[0],
-    status: "Pending",
+    status: "Scheduled", 
     price: 75,
     parkingEstimation: "10 minutes",
     expectedDeparture: ""
@@ -796,19 +867,25 @@ const BusTrips = () => {
     const templateNo = bus.templateNo || bus.templateno || "";
     const matchesSearch =
       templateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bus.route.toLowerCase().includes(searchQuery.toLowerCase());
+      (bus.route || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCompany =
       selectedCompany === "" || bus.company === selectedCompany;
     const matchesDate =
       !selectedDate ||
       new Date(bus.date).toDateString() ===
         new Date(selectedDate).toDateString();
-    return matchesSearch && matchesCompany && matchesDate;
+    
+    const matchesBusType = 
+      selectedBusType === "" || bus.busType === selectedBusType;
+
+    return matchesSearch && matchesCompany && matchesDate && matchesBusType;
   });
 
   const totalTrips = filtered.length;
+  const scheduledTrips = filtered.filter((t) => t.status === "Scheduled").length;
+  const pendingTrips = filtered.filter((t) => t.status === "Pending").length;
+  const arrivedTrips = filtered.filter((t) => t.status === "Arrived").length;
   const paidTrips = filtered.filter((t) => t.status === "Paid").length;
-  const pendingTrips = filtered.filter((t) => t.status === "Arrived").length;
   const totalRevenue = filtered
     .filter((t) => t.status === "Paid")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
@@ -826,24 +903,15 @@ const BusTrips = () => {
       templateNo: "",
       route: "",
       company: "",
+      busType: "", 
       time: currentTime,
       date: new Date().toISOString().split("T")[0],
-      status: "Pending",
+      status: "Scheduled", 
       price: defaultPrice,
       parkingEstimation: "10 minutes",
       expectedDeparture: calculateExpectedDeparture(currentTime, "10 minutes")
     });
     setShowAddModal(true);
-  };
-
-  const handleAddFormCompanyChange = (e) => {
-    const selectedCompName = e.target.value;
-    setNewBusData((prev) => ({
-      ...prev,
-      company: selectedCompName,
-      templateNo: "",
-      route: "",
-    }));
   };
 
   const handleAddFormPlateChange = (e) => {
@@ -916,20 +984,19 @@ const BusTrips = () => {
     }
   };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
+  const handleEditSubmit = async (updatedData) => {
     try {
-      const response = await fetch(`${API_URL}/${editRow.id}`, {
+      const response = await fetch(`${API_URL}/${updatedData.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editRow),
+        body: JSON.stringify(updatedData),
       });
 
       if (response.ok) {
         await logActivity(
           role,
           "UPDATE_TRIP",
-          `Updated Bus Trip: ${editRow.templateNo}`,
+          `Updated Bus Trip: ${updatedData.templateNo}`,
           "BusTrips",
         );
         fetchBusTrips();
@@ -938,7 +1005,7 @@ const BusTrips = () => {
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Bus trip ${editRow.templateNo} updated successfully!`,
+          message: `Bus trip ${updatedData.templateNo} updated successfully!`,
           autoClose: true,
           duration: 3000,
         });
@@ -968,7 +1035,7 @@ const BusTrips = () => {
     
     let minutesToAdd = 0;
     if (estimationString === "1 hr") minutesToAdd = 60;
-    else minutesToAdd = parseInt(estimationString.split(" ")[0]); // extracts 10, 20, 30, etc.
+    else minutesToAdd = parseInt(estimationString.split(" ")[0]); 
 
     const [hours, minutes] = arrivalTime.split(":").map(Number);
     const date = new Date();
@@ -977,7 +1044,7 @@ const BusTrips = () => {
     return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 };
 
-  //EXCEL
+  
   const handleExportExcel = async () => {
     if (filtered.length === 0) return alert("No records to export.");
 
@@ -985,18 +1052,18 @@ const BusTrips = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Bus Parking Report");
 
-      // 1. BRANDED HEADER (-1/8 height adjustment)
+     
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, "A1:H4");
 
-      // 2. Report Title & Metadata
+     
       worksheet.mergeCells("A6:H6");
       const titleCell = worksheet.getCell("A6");
       titleCell.value = "BUS PARKING REPORTS";
       titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
       titleCell.alignment = { horizontal: "center" };
 
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); 
       worksheet.addRow([
         `Date: ${new Date().toLocaleDateString()}`,
         "",
@@ -1019,9 +1086,10 @@ const BusTrips = () => {
       ]);
       worksheet.addRow([]); // Spacer
 
-      // 3. Table Headers with IBT Red Styling
+     
       const headerRow = worksheet.addRow([
         "Plate No.",
+        "Type",
         "Ticket Ref.",
         "Route",
         "Price",
@@ -1041,10 +1109,11 @@ const BusTrips = () => {
         cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
-      // 4. Populate Bus Data
+      
       filtered.forEach((item) => {
         worksheet.addRow([
           item.templateNo || item.templateno || "-",
+          item.busType || "Regular",
           item.ticketReferenceNo || "-",
           item.route || "-",
           `Php ${(item.price || 75).toFixed(2)}`,
@@ -1055,7 +1124,7 @@ const BusTrips = () => {
         ]);
       });
 
-      // 5. BRANDED FOOTER (-1/8 height adjustment)
+     
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
       await addImageToWorksheet(
@@ -1065,19 +1134,18 @@ const BusTrips = () => {
         `A${lastRowNumber}:H${lastRowNumber + 3}`,
       );
 
-      // 6. Formatting Column Widths
       worksheet.columns = [
-        { width: 15 }, // Plate
-        { width: 18 }, // Ticket Ref
-        { width: 25 }, // Route
-        { width: 12 }, // Price
-        { width: 12 }, // Arrival
-        { width: 12 }, // Departure
-        { width: 20 }, // Company
-        { width: 15 }, // Status
+        { width: 15 },
+        { width: 18 }, 
+        { width: 25 }, 
+        { width: 12 }, 
+        { width: 12 }, 
+        { width: 12 }, 
+        { width: 20 }, 
+        { width: 15 }, 
       ];
 
-      // 7. Generate and Download
+      
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1099,14 +1167,14 @@ const BusTrips = () => {
     }
   };
 
-  // PDF Export Fix
+  
   const handleExportPDF = () => {
     if (filtered.length === 0) return alert("No records to export.");
 
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15; // Standardized margin for both text and table
+    const margin = 15; 
 
     // Header Image
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
@@ -1118,7 +1186,7 @@ const BusTrips = () => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
 
-    // Left-aligned header info
+    
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
     doc.text(
       `Operator: ${localStorage.getItem("authName") || "Admin"}`,
@@ -1126,7 +1194,7 @@ const BusTrips = () => {
       61,
     );
 
-    // Fixed right-alignment: Uses pageWidth - margin to stay within table bounds
+    
     doc.text(`No. of Bus: ${filtered.length}`, pageWidth - margin, 55, {
       align: "right",
     });
@@ -1139,10 +1207,11 @@ const BusTrips = () => {
 
     autoTable(doc, {
       startY: 70,
-      margin: { left: margin, right: margin, bottom: 35 }, // Explicitly set horizontal margins
+      margin: { left: margin, right: margin, bottom: 35 }, 
       head: [
         [
           "Plate No.",
+          "Type",
           "Ticket Ref.",
           "Route",
           "Price",
@@ -1154,9 +1223,10 @@ const BusTrips = () => {
       ],
       body: filtered.map((item) => [
         item.templateNo || "-",
+        item.busType || "Regular",
         item.ticketReferenceNo || "-",
         item.route || "-",
-        `Php ${(item.price || 75).toFixed(2)}`, // Replaced symbol with "Php"
+        `Php ${(item.price || 75).toFixed(2)}`, 
         item.time || "-",
         item.departureTime || "-",
         item.company || "-",
@@ -1194,7 +1264,7 @@ const BusTrips = () => {
 
   try {
     if (role === "bus") {
-      // BUS ADMIN → Send deletion requests
+     
       const requestPromises = selectedIds.map(async (id) => {
         const item = records.find((r) => r.id === id);
         if (!item) return;
@@ -1231,7 +1301,7 @@ const BusTrips = () => {
         duration: 3000,
       });
     } else {
-      // SUPERADMIN → Immediate deletion
+      
       await Promise.all(
         selectedIds.map((id) =>
           fetch(`${API_URL}/${id}`, { method: "DELETE" }),
@@ -1298,7 +1368,16 @@ const BusTrips = () => {
     }
   };
 
-  const formatTime = (t) => t;
+  const formatTime = (timeString) => {
+    if (!timeString || timeString === "-") return "-";
+    const [hourString, minute] = timeString.split(":");
+    if (!hourString || !minute) return timeString;
+    const hour = parseInt(hourString, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const formattedHour = hour % 12 || 12;
+    return `${formattedHour}:${minute} ${ampm}`;
+  };
+
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds([]);
@@ -1397,26 +1476,25 @@ const BusTrips = () => {
 
  const handleMarkArrived = async (row) => {
     try {
-      // 1. Get the FULL record directly from state so we don't lose parkingEstimation
+   
       const fullRecord = records.find(r => r.id === row.id) || row;
-      
-      // 2. Generate a strict 24-hour current arrival time (bypassing browser locale quirks)
+  
       const now = new Date();
       const currentHours = String(now.getHours()).padStart(2, "0");
       const currentMinutes = String(now.getMinutes()).padStart(2, "0");
       const actualArrivalTime = `${currentHours}:${currentMinutes}`;
 
-      // 3. Extract the estimation safely
+     
       const estimationStr = fullRecord.parkingEstimation || "10 minutes";
       let minutesToAdd = 10; 
       if (estimationStr === "1 hr") {
          minutesToAdd = 60;
       } else {
-         // Extracts just the number (e.g., "20" from "20 minutes")
+         
          minutesToAdd = parseInt(estimationStr.replace(/[^0-9]/g, "")) || 10;
       }
 
-      // 4. Calculate Expected Departure perfectly
+      
       const departureDate = new Date(now.getTime());
       departureDate.setMinutes(departureDate.getMinutes() + minutesToAdd);
       
@@ -1424,14 +1502,14 @@ const BusTrips = () => {
       const expMinutes = String(departureDate.getMinutes()).padStart(2, "0");
       const newExpectedDeparture = `${expHours}:${expMinutes}`;
 
-      // 5. Send everything to the Database
+      
       const response = await fetch(`${API_URL}/${row.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           status: "Arrived", 
           time: actualArrivalTime,
-          expectedDeparture: newExpectedDeparture // This triggers the mobile app update!
+          expectedDeparture: newExpectedDeparture 
         }),
       });
       
@@ -1544,35 +1622,18 @@ const BusTrips = () => {
             className="h-4 w-4 rounded border-slate-300"
           />
         </div>,
-        "Plate No",
-        "Ticket Ref",
-        "Route",
-        "Price",
-        "Time",
-        "Departure",
-        "Date",
-        "Company",
-        "Status",
-      ]
-    : [
-        "Plate No",
-        "Ticket Ref",
-        "Route",
-        "Price",
-        "Time",
-        "Departure",
-        "Date",
-        "Company",
-        "Status",
-      ];
+        "Plate No", "Type", "Ticket Ref", "Route", "Price", "Time", "Departure", "Date", "Company", "Status"]
+    : ["Plate No", "Type", "Ticket Ref", "Route", "Price", "Time", "Departure", "Date", "Company", "Status"];
 
   return (
     <Layout title="Bus Trips Management">
       <div className="mb-6">
         <StatCardGroupBus
           totalTrips={totalTrips}
-          paidTrips={paidTrips}
+          scheduledTrips={scheduledTrips}
           pendingTrips={pendingTrips}
+          arrivedTrips={arrivedTrips}
+          paidTrips={paidTrips}
           totalRevenue={totalRevenue}
         />
       </div>
@@ -1587,6 +1648,8 @@ const BusTrips = () => {
             selectedCompany={selectedCompany}
             setSelectedCompany={setSelectedCompany}
             uniqueCompanies={availableCompanies}
+            selectedBusType={selectedBusType}       
+            setSelectedBusType={setSelectedBusType}
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
@@ -1676,7 +1739,7 @@ const BusTrips = () => {
         </div>
       </div>
 
-      {/* Table */}
+      
       <div className="p-4 lg:p-8">
         {isLoading ? (
           <div className="flex justify-center p-10">
@@ -1689,6 +1752,8 @@ const BusTrips = () => {
               const rowData = {
                 id: bus.id,
                 plateno: bus.templateNo || bus.templateno || "-",
+                type: bus.busType || "Regular", 
+                ticketref: bus.ticketReferenceNo || "-",
                 route: bus.route,
                 price: `₱${(bus.price || 75).toFixed(2)}`,
                 time: formatTime(bus.time),
@@ -1696,7 +1761,6 @@ const BusTrips = () => {
                 date: bus.date ? new Date(bus.date).toLocaleDateString() : "",
                 company: bus.company,
                 status: bus.status,
-                ticketref: bus.ticketReferenceNo || "-",
               };
               if (isSelectionMode) {
                 return {
@@ -1716,12 +1780,12 @@ const BusTrips = () => {
               return rowData;
             })}
             actions={(row) => {
-              // Find the full record based on the ID
+              
               const selectedRecord = records.find((r) => r.id === row.id);
 
               return (
                 <div className="flex justify-end items-center space-x-2">
-                  {/* Reusable Table Actions (View & Edit) */}
+                 
                   <TableActions
                     onView={() => setViewRow(selectedRecord)}
                     onEdit={() => setEditRow(selectedRecord)}
@@ -1781,7 +1845,7 @@ const BusTrips = () => {
         />
       </div>
 
-      {/* --- NEW MODAL: Manage Companies --- */}
+      
       <ManageCompaniesModal
         isOpen={showManageCompaniesModal}
         onClose={() => setShowManageCompaniesModal(false)}
@@ -1790,11 +1854,11 @@ const BusTrips = () => {
         role={role}
       />
 
-      {/* --- UPDATED MODAL: Set Price Modal (Strict Terminal Fees Format) --- */}
+      
       {showSetPriceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
-            {/* Header Structure matching TerminalFees.jsx */}
+          
             <div className="flex items-center justify-between mb-5 border-b pb-3">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <Settings size={20} className="text-emerald-600" /> Bus Fee
@@ -1814,7 +1878,7 @@ const BusTrips = () => {
               saving.
             </p>
 
-            {/* Input Field matching TerminalFees.jsx logic */}
+            
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
@@ -1838,7 +1902,7 @@ const BusTrips = () => {
               </div>
             </div>
 
-            {/* Footer Buttons matching TerminalFees.jsx style */}
+           
             <div className="mt-8 flex justify-end gap-3 border-t pt-4">
               <button
                 onClick={() => setShowSetPriceModal(false)}
@@ -1862,7 +1926,7 @@ const BusTrips = () => {
           </div>
         </div>
       )}
-      {/* --- UPDATED MODAL: Add Bus Trip --- */}
+      
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
@@ -1880,75 +1944,76 @@ const BusTrips = () => {
 
             <form onSubmit={handleCreateRecord}>
               <div className="space-y-4">
-                {/* 1. Company Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Company
-                  </label>
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
                   <select
                     required
                     value={newBusData.company}
-                    onChange={handleAddFormCompanyChange}
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none bg-white"
+                    onChange={(e) => setNewBusData(prev => ({ ...prev, company: e.target.value, busType: "", templateNo: "", route: "" }))}
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none"
                   >
                     <option value="">Select Company</option>
                     {companyData.map((c) => (
-                      <option key={c._id} value={c.name}>
-                        {c.name}
-                      </option>
+                      <option key={c._id} value={c.name}>{c.name}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* 2. Plate Number Selection (Filtered) */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Bus Plate Number
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Bus Type</label>
+                  <select
+                    required
+                    value={newBusData.busType}
+                    onChange={(e) => setNewBusData(prev => ({ ...prev, busType: e.target.value, templateNo: "", route: "" }))}
+                    disabled={!newBusData.company}
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none disabled:bg-slate-100"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Aircon">Aircon</option>
+                    <option value="Regular">Regular</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Bus Plate Number</label>
                   <select
                     required
                     value={newBusData.templateNo}
                     onChange={handleAddFormPlateChange}
-                    disabled={!newBusData.company}
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                    disabled={!newBusData.busType}
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none disabled:bg-slate-100"
                   >
-                    <option value="">Select Plate Number</option>
-                    {newBusData.company &&
-                      companyData
-                        .find((c) => c.name === newBusData.company)
-                        ?.buses.map((bus) => (
-                          <option key={bus.plateNumber} value={bus.plateNumber}>
-                            {bus.plateNumber}
-                          </option>
-                        ))}
+                  <option value="">Select Plate Number</option>
+                  {newBusData.company && newBusData.busType &&
+                    companyData
+                    .find((c) => c.name === newBusData.company)
+                    ?.buses.filter(bus => bus.busType === newBusData.busType)
+                    .map((bus) => {
+                      const isCurrentlyActive = records.some(r => 
+                        (r.templateNo === bus.plateNumber || r.templateno === bus.plateNumber) && 
+                        r.date?.substring(0, 10) === newBusData.date && 
+                        ["Scheduled", "Pending", "Arrived"].includes(r.status)
+                      );
+                      return (
+                        <option key={bus.plateNumber} value={bus.plateNumber} disabled={isCurrentlyActive}>
+                          {bus.plateNumber} {isCurrentlyActive ? "(Active Today)" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
-                  {!newBusData.company && (
-                    <p className="text-xs text-slate-400 mt-1">
-                      Select a company first
-                    </p>
-                  )}
                 </div>
 
-                {/* 3. Auto-filled Route */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Route
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={newBusData.route}
-                      readOnly
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-700 font-medium cursor-not-allowed pl-9"
-                      placeholder="Auto-filled based on Plate No."
-                    />
-                    <div className="absolute left-3 top-2.5 text-slate-400">
-                      <Bus size={16} />
-                    </div>
-                  </div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Route</label>
+                  <input
+                    type="text"
+                    value={newBusData.route}
+                    readOnly
+                    placeholder="Route will auto-fill..."
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-700 font-medium cursor-not-allowed"
+                  />
                 </div>
 
-                {/* 4. Date & Time */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -2011,7 +2076,7 @@ const BusTrips = () => {
 
                 <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-100 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  Status will be set to <strong>Pending</strong>
+                  Status will be set to <strong>Scheduled</strong> 
                 </div>
               </div>
 
@@ -2035,7 +2100,7 @@ const BusTrips = () => {
         </div>
       )}
 
-      {/* --- OTHER EXISTING MODALS --- */}
+     
       <LogModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} />
 
       {logoutRow && (
@@ -2185,7 +2250,7 @@ const BusTrips = () => {
           })
         }
       />
-      {/* View Modal */}
+ 
       {viewRow && (
         <ViewModal
           title="View Bus Trip Details"
@@ -2193,13 +2258,15 @@ const BusTrips = () => {
             { label: "Plate No.", value: viewRow.templateNo || viewRow.templateno || "-" },
             { label: "Company", value: viewRow.company || "-" },
             { label: "Route", value: viewRow.route || "-" },
+            { label: "Bus Type", value: viewRow.busType || "Regular" },
             { label: "Status", value: viewRow.status || "-" },
             { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
-            { label: "Arrival Time", value: viewRow.time || "-" },
-            // Add the two new fields here
+            
+            { label: "Arrival Time", value: formatTime(viewRow.time) },
             { label: "Parking Est.", value: viewRow.parkingEstimation || "-" },
-            { label: "Exp. Departure", value: viewRow.expectedDeparture || "-" },
-            { label: "Actual Departure", value: viewRow.departureTime || "-" },
+            { label: "Exp. Departure", value: formatTime(viewRow.expectedDeparture) },
+            { label: "Actual Departure", value: formatTime(viewRow.departureTime) },
+            
             { label: "Ticket Reference", value: viewRow.ticketReferenceNo || "-" },
             { label: "Date", value: viewRow.date ? new Date(viewRow.date).toLocaleDateString() : "-" },
           ]}
@@ -2207,174 +2274,15 @@ const BusTrips = () => {
         />
       )}
 
-      {/* Edit Modal */}
-      {editRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center mb-5 border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-800">
-                Edit Bus Trip
-              </h3>
-              <button
-                onClick={() => setEditRow(null)}
-                className="text-slate-400 hover:text-red-500 p-1 rounded-full transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleEditSubmit}>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                      Plate Number
-                    </label>
-                    <input
-                      type="text"
-                      value={editRow.templateNo || editRow.templateno || ""}
-                      onChange={(e) =>
-                        setEditRow({ ...editRow, templateNo: e.target.value })
-                      }
-                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                      Company
-                    </label>
-                    <select
-                      value={editRow.company || ""}
-                      onChange={(e) =>
-                        setEditRow({ ...editRow, company: e.target.value })
-                      }
-                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                    >
-                      <option value="">Select Company</option>
-                      {companyData.map((c) => (
-                        <option key={c._id} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                    Route
-                  </label>
-                  <input
-                    type="text"
-                    value={editRow.route || ""}
-                    onChange={(e) =>
-                      setEditRow({ ...editRow, route: e.target.value })
-                    }
-                    className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                      Parking Est.
-                    </label>
-                    <select
-                      value={editRow.parkingEstimation || "10 minutes"}
-                      onChange={(e) => setEditRow({ ...editRow, parkingEstimation: e.target.value })}
-                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                    >
-                      <option value="10 minutes">10 minutes</option>
-                      <option value="20 minutes">20 minutes</option>
-                      <option value="30 minutes">30 minutes</option>
-                      <option value="40 minutes">40 minutes</option>
-                      <option value="50 minutes">50 minutes</option>
-                      <option value="1 hr">1 hr</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                      Exp. Departure
-                    </label>
-                    <input
-                      type="time"
-                      value={editRow.expectedDeparture || ""}
-                      readOnly
-                      className="w-full bg-slate-50 border border-slate-300 text-slate-500 px-3 py-2 rounded-lg text-sm cursor-not-allowed outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                      Price (₱)
-                    </label>
-
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={editRow.price || ""}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "");
-                        setEditRow({
-                          ...editRow,
-                          price: value === "" ? "" : Number(value),
-                        });
-                      }}
-                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                      Status
-                    </label>
-                    <select
-                      value={editRow.status || ""}
-                      onChange={(e) =>
-                        setEditRow({ ...editRow, status: e.target.value })
-                      }
-                      className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Arrived">Arrived</option>
-                      <option value="Paid">Paid</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-                <button
-                  type="button"
-                  onClick={() => setEditRow(null)}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg border border-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+     {editRow && (
+        <EditBusTrip 
+          row={editRow} 
+          onClose={() => setEditRow(null)} 
+          onSave={handleEditSubmit} 
+          companyData={companyData} 
+        />
       )}
 
-      <NotificationToast
-  isOpen={notificationState.isOpen}
-  type={notificationState.type}
-  message={notificationState.message}
-  autoClose={notificationState.autoClose}
-  duration={notificationState.duration}
-  onClose={() =>
-    setNotificationState((prev) => ({ ...prev, isOpen: false }))
-  }
-/>
     </Layout>
   );
 };
