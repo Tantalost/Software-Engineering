@@ -21,7 +21,7 @@ Parking management
 - same plate number cannot parked at the same time 🟢 **Done**
 
 Reports
-- add date filter (daily, weekly, monthly, yearly) when clicking the weekly all the records for that week should appear same with the monthly and yearly. for daily should be specific date. 🔴 **To be Fixed**
+- add date filter (daily), when clicking the date (ex. Jan 1) specific record of that day should appear 🔴 **To be Fixed**
 
 
 Revisions for web general 
