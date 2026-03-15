@@ -33,6 +33,9 @@ export default function ApplicationModal({
   onDismiss, onReview, onSubmit, setStep, loading 
 }: ApplicationModalProps) {
   
+ 
+  const fullName = [formData.firstName, formData.middleName, formData.lastName, formData.suffix].filter(Boolean).join(' ');
+
   return (
     <Portal>
         <Modal visible={visible} onDismiss={onDismiss} contentContainerStyle={styles.modalContent}>
@@ -41,26 +44,31 @@ export default function ApplicationModal({
               <View>
                 <View style={styles.modalHeader}>
                     <Icon name="store-plus" size={28} color={colors.primary} />
-                    <Text variant="headlineSmall" style={styles.modalTitle}>New Application</Text>
+                    <Text variant="headlineSmall" style={[styles.modalTitle, { marginLeft: 10 }]}>New Application</Text>
                 </View>
-                <Text style={{textAlign:'center', marginBottom: 15, color: 'grey'}}>Applying for Slot: <Text style={{fontWeight:'bold', color: colors.primary}}>{selectedStall}</Text></Text>
+                <Text style={{textAlign:'center', marginBottom: 15, color: 'grey'}}>
+                  Applying for Slot: <Text style={{fontWeight:'bold', color: colors.primary}}>{selectedStall}</Text>
+                </Text>
 
                 <Divider style={{marginBottom: 15}} />
                 
-                <Text variant="titleMedium" style={styles.sectionHeader}>1. Personal Information</Text>
-                <TextInput label="First Name" value={formData.firstName} onChangeText={(text) => setFormData({ ...formData, firstName: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
-                <TextInput label="Middle Name (Optional)" value={formData.middleName} onChangeText={(text) => setFormData({ ...formData, middleName: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
-                <TextInput label="Last Name" value={formData.lastName} onChangeText={(text) => setFormData({ ...formData, lastName: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
-                <TextInput label="Suffix (e.g., Jr., Sr., III) - Optional" value={formData.suffix} onChangeText={(text) => setFormData({ ...formData, suffix: text })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
-                
-                <View style={styles.phoneRow}>
-                  <View style={styles.prefixContainer}><Text style={styles.prefixText}>+63</Text></View>
-                  <TextInput label="Mobile Number" value={phone} onChangeText={handlePhoneChange} keyboardType="numeric" maxLength={10} mode="outlined" style={styles.phoneInput} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} placeholder="9XX XXX XXXX" />
+               
+                <Text variant="titleMedium" style={styles.sectionHeader}>Applicant Details</Text>
+                <View style={{ backgroundColor: '#f5f5f5', padding: 15, borderRadius: 8, marginBottom: 20 }}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.textDark, marginBottom: 5 }}>
+                      {fullName || 'Loading Profile...'}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+                        <Icon name="email-outline" size={16} color="grey" style={{ marginRight: 8 }} />
+                        <Text style={{ color: 'grey', fontSize: 14 }}>{formData.email}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon name="phone-outline" size={16} color="grey" style={{ marginRight: 8 }} />
+                        <Text style={{ color: 'grey', fontSize: 14 }}>{phone}</Text>
+                    </View>
                 </View>
 
-                <TextInput label="Email Address" value={formData.email} onChangeText={(text) => setFormData({ ...formData, email: text })} keyboardType="email-address" autoCapitalize="none" mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
-
-                <Text variant="titleMedium" style={styles.sectionHeader}>2. Business Details</Text>
+                <Text variant="titleMedium" style={styles.sectionHeader}>1. Business Details</Text>
                 <Text style={{marginBottom: 5, color: '#555'}}>Product Category:</Text>
                 
                 <RadioButton.Group onValueChange={value => setFormData({ ...formData, productType: value })} value={formData.productType}>
@@ -77,7 +85,7 @@ export default function ApplicationModal({
                   <TextInput label="Please specify product category" value={formData.otherProduct} onChangeText={(text) => setFormData({ ...formData, otherProduct: text })} mode="outlined" outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} textColor='black' />
                 )}
 
-                <Text variant="titleMedium" style={styles.sectionHeader}>3. Requirements</Text>
+                <Text variant="titleMedium" style={styles.sectionHeader}>2. Requirements</Text>
                 <Text style={{fontSize: 12, color:'grey', marginBottom: 10}}>Tap to upload images (JPG/PNG)</Text>
 
                 <FileUploadButton label="Business Permit" fileKey="permit" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
@@ -109,9 +117,7 @@ export default function ApplicationModal({
 
                 <View style={styles.reviewRow}>
                   <Text style={styles.reviewLabel}>Applicant:</Text>
-                  <Text style={styles.reviewValue}>
-                    {[formData.firstName, formData.middleName, formData.lastName, formData.suffix].filter(Boolean).join(' ')}
-                  </Text>
+                  <Text style={styles.reviewValue}>{fullName}</Text>
                 </View>
 
                 <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Contact:</Text><Text style={styles.reviewValue}>{phone}</Text></View>

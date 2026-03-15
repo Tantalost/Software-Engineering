@@ -142,8 +142,26 @@ const modalBilling = useMemo(() => {
       const storedUser = await AsyncStorage.getItem('ibt_user');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
+        
+        const safeContact = parsedUser.contact || parsedUser.contactNo || "";
+        let cleanedPhone = safeContact.replace(/[^0-9]/g, '');
+        if (cleanedPhone.startsWith('63')) cleanedPhone = cleanedPhone.substring(2);
+        if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.substring(1);
+        
+        setPhone(cleanedPhone.substring(0, 10));
+        setFormData(prev => ({
+          ...prev,
+          firstName: parsedUser.firstName || '',
+          middleName: parsedUser.middleName || '',
+          lastName: parsedUser.lastName || '',
+          suffix: parsedUser.suffix || '',
+          email: parsedUser.email || '',
+          contact: safeContact
+        }));
+        
         if (!user || user.id !== parsedUser.id) {
-          handleLoginSuccess(parsedUser);
+          setUser(parsedUser);
+          fetchData(parsedUser.id);
         }
       } else {
         setUser(null);
@@ -157,7 +175,6 @@ const modalBilling = useMemo(() => {
   const handleLoginSuccess = async (userData: any) => {
     try {
       setTimeout(async () => {
-       
         await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
         if (userData?.token) {
           await AsyncStorage.setItem('token', userData.token);
@@ -166,20 +183,20 @@ const modalBilling = useMemo(() => {
         setUser(userData);
         setShowLogin(false);
 
-        const safeName = userData.name || "";
-
         const safeContact = userData.contact || userData.contactNo || "";
         let cleanedPhone = safeContact.replace(/[^0-9]/g, '');
         if (cleanedPhone.startsWith('63')) cleanedPhone = cleanedPhone.substring(2);
         if (cleanedPhone.startsWith('0')) cleanedPhone = cleanedPhone.substring(1);
-        setPhone(cleanedPhone.substring(0, 10)); // Sets the standalone phone state
+        setPhone(cleanedPhone.substring(0, 10)); 
         
         setFormData(prev => ({
           ...prev,
-          firstName: safeName.split(' ')[0] || '',
-          lastName: safeName.split(' ').slice(1).join(' ') || '',
+          firstName: userData.firstName || '',
+          middleName: userData.middleName || '',
+          lastName: userData.lastName || '',
+          suffix: userData.suffix || '',
           email: userData.email || '',
-          contact: userData.contact || ''
+          contact: safeContact 
         }));
 
         fetchData(userData.id);
@@ -337,7 +354,10 @@ const modalBilling = useMemo(() => {
  const generateContractPDF = async () => {
     try {
       setApplying(true);
-      const currentName = currentApp?.name || user?.name || "____________________";
+      const safeUserName = user 
+      ? [user.firstName, user.middleName, user.lastName, user.suffix].filter(Boolean).join(' ') 
+      : "____________________";
+      const currentName = currentApp?.name || safeUserName;
       const currentSlot = currentApp?.targetSlot || "________";
       const currentRent = currentBilling.amountLabel;
       const currentDate = new Date().toLocaleDateString();
@@ -471,9 +491,6 @@ const modalBilling = useMemo(() => {
   };
   
   const handleReview = () => {
-   if (!formData.firstName || !phone || !selectedStall) {
-      return Alert.alert("Incomplete", "Please fill in Name, Contact & Select a Stall.");
-    }
     if (!files.permit || !files.validId || !files.clearance) {
       return Alert.alert("Missing Photos", "Please upload Permit, Valid ID, and Barangay Clearance.");
     }
@@ -491,9 +508,8 @@ const modalBilling = useMemo(() => {
       let processUri = fileUri;
       const isPdf = fileName.toLowerCase().endsWith('.pdf');
 
-      // 1. Image Optimization (Skip if it's a PDF contract)
       if (!isPdf) {
-        // Resize to max 1080px width, compress by 30%, and force JPEG output
+    
         const manipResult = await ImageManipulator.manipulateAsync(
           fileUri,
           [{ resize: { width: 1080 } }], 
@@ -501,19 +517,15 @@ const modalBilling = useMemo(() => {
         );
         processUri = manipResult.uri;
         
-        // Update filename extension to .jpg since we forced JPEG format
         fileName = fileName.replace(/\.[^/.]+$/, "") + ".jpg"; 
       }
 
-      // 2. Read the (now much smaller) file into Base64
       const fileData = await FileSystem.readAsStringAsync(processUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      // 3. Encrypt the string
       const encryptedData = CryptoJS.AES.encrypt(fileData, SECRET_KEY).toString();
 
-      // 4. Save to a temporary file
       const tempDir = FileSystem.cacheDirectory;
       const tempUri = tempDir + 'enc_' + fileName.replace(/[^a-zA-Z0-9.]/g, '_');
 
@@ -532,8 +544,6 @@ const modalBilling = useMemo(() => {
   if (fileObj) {
     let finalUri = encryptedUri ? encryptedUri : fileObj.uri;
 
-    // CRITICAL FIX: Ensure BOTH iOS and Android have the file:// prefix
-    // Do NOT strip it out for Android.
     if (!finalUri.startsWith('file://')) {
         finalUri = `file://${finalUri}`;
     }

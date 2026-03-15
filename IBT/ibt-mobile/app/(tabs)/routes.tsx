@@ -24,8 +24,9 @@ interface BusTrip {
 export default function RoutesPage() {
   const router = useRouter();
   const params = useLocalSearchParams<{ tripId?: string; search?: string }>();
-  
+  const todayDate = new Date().toLocaleDateString(); 
   const [routes, setRoutes] = useState<BusTrip[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -196,12 +197,6 @@ export default function RoutesPage() {
                 <Text style={styles.label}>Route</Text>
                 <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
 
-                <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
-                <Text variant="bodyMedium" style={styles.value}>
-                  {new Date(item.date).toLocaleDateString()}
-                </Text>
-
-              
                 {item.parkingEstimation && (
                   <>
                     <Text style={[styles.label, { marginTop: 12 }]}>Parking Est.</Text>
@@ -250,6 +245,8 @@ export default function RoutesPage() {
       <View style={styles.headerContainer}>
         <Text variant="headlineMedium" style={styles.headerTitle}>Bus Schedules</Text>
         
+        <Text style={styles.dateHeader}>Today: {todayDate}</Text>
+
         <Searchbar
           placeholder="Search location, company..."
           onChangeText={(text) => {
@@ -276,17 +273,29 @@ export default function RoutesPage() {
                  </TouchableOpacity>
               ))}
            </ScrollView>
-           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-              {busTypes.map(t => (
-                 <TouchableOpacity 
-                    key={t} 
-                    onPress={() => setSelectedBusType(t)} 
-                    style={[styles.filterChip, selectedBusType === t && styles.activeFilterChip]}
-                 >
-                    <Text style={[styles.filterChipText, selectedBusType === t && styles.activeFilterChipText]}>{t}</Text>
-                 </TouchableOpacity>
-              ))}
-           </ScrollView>
+          
+          <View style={styles.segmentedControl}>
+          {busTypes.map((type, index) => {
+            const isActive = selectedBusType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                activeOpacity={0.8}
+                onPress={() => setSelectedBusType(type)}
+                style={[
+                  styles.segmentButton,
+                  isActive && styles.activeSegmentButton,
+                  index !== 0 && !isActive && styles.segmentBorder
+                ]}
+              >
+                <Text style={[styles.segmentText, isActive && styles.activeSegmentText]}>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        
         </View>
 
         {activeFilterId && (
@@ -342,6 +351,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1A1A1A',
     marginBottom: 12,
+  },
+  dateHeader: {
+    fontSize: 16,
+    color: '#1B5E20',
+    marginBottom: 12,
+    fontWeight: '800',
   },
   searchBar: {
     backgroundColor: '#F0F4F8',
@@ -471,5 +486,37 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#888',
     fontSize: 16,
+  },
+
+  segmentedControl: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 25,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#E5E7EB',
+  },
+  activeSegmentButton: {
+    backgroundColor: '#1B5E20',
+  },
+  segmentText: {
+    color: '#4B5563',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  activeSegmentText: {
+    color: '#FFFFFF',
   },
 });

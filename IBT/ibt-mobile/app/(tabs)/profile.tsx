@@ -11,9 +11,13 @@ import AuthScreen from '@/src/AuthScreen';
 import API_URL from '@/src/config';
 import { colors } from '@/src/themes/stallsColors';
 
+// 1. Updated UserData type to match the new backend schema
 type UserData = {
   id: string;
-  name: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  suffix?: string;
   email: string;
   contact: string;
   avatarUrl?: string;
@@ -38,16 +42,14 @@ export default function ProfileScreen() {
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  
   const [editForm, setEditForm] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     contact: '',
     avatar: null as string | null
   });
-
-  const avatarUri = user?.avatarUrl
-  ? `${API_URL}/auth/avatar/${user.avatarUrl}?t=${new Date().getTime()}`
-  : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -113,7 +115,8 @@ export default function ProfileScreen() {
   const openEditModal = () => {
     if (!user) return;
     setEditForm({
-      name: user.name || '',
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
       email: user.email || '',
       contact: user.contact || '',
       avatar: user.avatarUrl || null
@@ -146,8 +149,10 @@ export default function ProfileScreen() {
     try {
       const formData = new FormData();
 
+      // 3. Append the specific name fields to the FormData
       formData.append('userId', user.id);
-      formData.append('name', editForm.name);
+      formData.append('firstName', editForm.firstName);
+      formData.append('lastName', editForm.lastName);
       formData.append('email', editForm.email);
       formData.append('contact', editForm.contact);
 
@@ -178,7 +183,8 @@ export default function ProfileScreen() {
 
       const updatedUser = {
         ...user,
-        name: data.user.name,
+        firstName: data.user.firstName,
+        lastName: data.user.lastName,
         email: data.user.email,
         contact: data.user.contact,
         avatarUrl: newAvatarUrl
@@ -200,10 +206,13 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLoginSuccess = (userData: UserData) => {
+  const handleLoginSuccess = (userData: any) => {
     setUser(userData);
     setShowLogin(false);
-    fetchApplications(userData.id);
+    
+    if (userData && userData.id) {
+        fetchApplications(userData.id);
+    }
   };
 
   const handleLogout = () => {
@@ -295,7 +304,7 @@ export default function ProfileScreen() {
               ) : (
                 <Avatar.Text
                   size={100}
-                  label={editForm.name ? editForm.name.charAt(0).toUpperCase() : 'U'}
+                  label={editForm.firstName ? editForm.firstName.charAt(0).toUpperCase() : 'U'}
                   style={{ backgroundColor: colors.primary }}
                 />
               )}
@@ -306,7 +315,10 @@ export default function ProfileScreen() {
             <Text style={{ fontSize: 12, color: 'grey', marginTop: 5 }}>Tap to change photo</Text>
           </View>
 
-          <TextInput label="Username" value={editForm.name} onChangeText={t => setEditForm({ ...editForm, name: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
+          {/* 4. Replaced single 'Username' input with First Name and Last Name inputs */}
+          <TextInput label="First Name" value={editForm.firstName} onChangeText={t => setEditForm({ ...editForm, firstName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
+          <TextInput label="Last Name" value={editForm.lastName} onChangeText={t => setEditForm({ ...editForm, lastName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
+          
           <TextInput label="Email" value={editForm.email} onChangeText={t => setEditForm({ ...editForm, email: t })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
           <TextInput label="Contact Number" value={editForm.contact} onChangeText={t => setEditForm({ ...editForm, contact: t })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} keyboardType="phone-pad" />
 
@@ -352,14 +364,17 @@ export default function ProfileScreen() {
             ) : (
               <Avatar.Text
                 size={80}
-                label={user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                label={user.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
                 style={{ backgroundColor: colors.primary }}
               />
             )}
           </View>
+          
+          {/* Display Full Name safely */}
           <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: colors.black }}>
-            {user.name || 'New Vendor'}
+             {user.firstName ? `${user.firstName} ${user.lastName}` : 'New Vendor'}
           </Text>
+          
           <Text variant="bodyMedium" style={{ color: 'grey' }}>{user.email}</Text>
           <Text variant="bodyMedium" style={{ color: 'grey' }}>{user.contact}</Text>
         </View>

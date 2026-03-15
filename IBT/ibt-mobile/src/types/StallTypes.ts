@@ -2,9 +2,14 @@ import * as DocumentPicker from 'expo-document-picker';
 
 export type UserData = {
   id: string;
-  name: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  suffix?: string;
   email: string;
   contact: string;
+  avatarUrl?: string;
+  token?: string;
 };
 
 export type FileState = {
@@ -22,7 +27,8 @@ export type ApplicationData = {
   targetSlot: string;
   floor: string; 
   contact: string;
-  name: string;
+ 
+  name: string; 
   paymentReference?: string;
   [key: string]: any;
 };

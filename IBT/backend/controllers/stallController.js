@@ -75,10 +75,14 @@ export const getSecureDocument = async (req, res) => {
 
 
 export const getOccupiedStalls = async (req, res) => {
-   
-    try {
+   try {
         const { floor } = req.query; 
-        const tenants = await Tenant.find({ tenantType: floor });
+        
+        const tenants = await Tenant.find({ 
+            tenantType: floor, 
+            isArchived: { $ne: true } 
+        });
+        
         let occupiedLabels = [];
         tenants.forEach(t => {
           if (t.slotNo) {
@@ -199,7 +203,6 @@ export const getMyApplication = async (req, res) => {
 };
 
 export const submitApplication = async (req, res) => {
-  
     try {
         const data = req.body; 
         const files = req.files;
@@ -213,7 +216,8 @@ export const submitApplication = async (req, res) => {
         }
 
         const existingTenant = await Tenant.findOne({ 
-          slotNo: { $regex: new RegExp(`\\b${data.targetSlot}\\b`, 'i') } 
+          slotNo: { $regex: new RegExp(`\\b${data.targetSlot}\\b`, 'i') },
+          isArchived: { $ne: true } 
         });
 
         if (existingTenant) return res.status(400).json({ message: "Sorry, this slot was just taken by another user." });
@@ -222,8 +226,8 @@ export const submitApplication = async (req, res) => {
             targetSlot: data.targetSlot, 
             status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED', 'PAYMENT_REVIEW', 'CONTRACT_PENDING', 'CONTRACT_REVIEW'] } 
         });
-        if (pendingApp) return res.status(400).json({ message: "Someone else is currently applying for this slot." });
         
+        if (pendingApp) return res.status(400).json({ message: "Someone else is currently applying for this slot." });
         
         const newApp = await TenantApplication.findOneAndUpdate(
             { userId: data.userId, targetSlot: data.targetSlot }, 
