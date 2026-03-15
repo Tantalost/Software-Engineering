@@ -177,7 +177,7 @@ const Parking = () => {
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
-    type: "Car",
+    type: "FourWheels",
     plateNo: "",
     baseRate: 10,
     timeIn: "",
@@ -246,7 +246,7 @@ const Parking = () => {
     try {
       // Determine correct rate based on vehicle type
       let baseRate =
-        updatedData.type === "Car"
+        updatedData.type === "FourWheels"
           ? priceSettings.carRate
           : priceSettings.motorcycleRate;
 
@@ -344,12 +344,14 @@ const Parking = () => {
   }, [filtered, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const carCount = filtered.filter((t) => t.type === "Car").length;
-  const motoCount = filtered.filter((t) => t.type === "Motorcycle").length;
+  const fourWheelCount = filtered.filter(
+    (t) => t.type === "FourWheels",
+  ).length;
+  const twoWheelCount = filtered.filter((t) => t.type === "TwoWheels").length;
   const revenue = filtered.reduce((sum, t) => {
     if (t.finalPrice) return sum + Number(t.finalPrice);
 
-    const duration = Number(t.duration) || 0;
+    const duration = parseFloat(t.duration) || 0;
     const rate = Number(t.baseRate) || 0;
 
     return sum + duration * rate;
@@ -479,15 +481,11 @@ const Parking = () => {
 
   const handleAddClick = () => {
     const now = new Date();
-    const formattedTimeIn = new Date(
-      now.getTime() - now.getTimezoneOffset() * 60000,
-    )
-      .toISOString()
-      .slice(0, 16);
+    const formattedTimeIn = now.toISOString();
 
     setNewTicket({
       ticketNo: generateTicketNumber(),
-      type: "Car",
+      type: "FourWheels",
       plateNo: "",
       baseRate: 5,
       timeIn: formattedTimeIn,
@@ -498,7 +496,9 @@ const Parking = () => {
 
   const handleSelectType = (type) => {
     const rate =
-      type === "Car" ? priceSettings.carRate : priceSettings.motorcycleRate;
+      type === "FourWheels"
+        ? priceSettings.carRate
+        : priceSettings.motorcycleRate;
     setNewTicket((prev) => ({
       ...prev,
       type,
@@ -514,7 +514,7 @@ const Parking = () => {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
-    if (!newTicket.plateNo || !newTicket.ticketNo) {
+    if (!newTicket.plateNo.trim() || !newTicket.ticketNo.trim()) {
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -525,7 +525,21 @@ const Parking = () => {
       return;
     }
 
-    const duplicateTicket = existingTicketNumbers.includes(newTicket.ticketNo);
+    const duplicateTicket = records.some(
+      (ticket) => ticket.ticketNo === newTicket.ticketNo,
+    );
+    const duplicatePlateActive = records.some(
+      (ticket) =>
+        ticket.plateNo === newTicket.plateNo && ticket.status === "Parked",
+    );
+
+    if (duplicatePlateActive) {
+      setDuplicateModal({
+        isOpen: true,
+        message: `Vehicle with plate number ${newTicket.plateNo} is already parked.`,
+      });
+      return;
+    }
 
     if (duplicateTicket) {
       setDuplicateModal({
@@ -805,7 +819,7 @@ const Parking = () => {
   };
 
   const getBadgeStyles = () => {
-    if (newTicket.type === "Car")
+    if (newTicket.type === "FourWheels")
       return "bg-blue-50 text-blue-600 border-blue-600";
     return "bg-orange-50 text-orange-500 border-orange-500";
   };
@@ -1019,8 +1033,8 @@ const Parking = () => {
     <Layout title="Parking Management">
       <div className="mb-6">
         <StatCardGroupPark
-          cars={carCount}
-          motorcycles={motoCount}
+          cars={fourWheelCount}
+          motorcycles={twoWheelCount}
           totalVehicles={filtered.length}
           totalRevenue={revenue}
         />
@@ -1273,7 +1287,7 @@ const Parking = () => {
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Car / Jeep Rate (per hour)
+                  4 Wheels Rate (per hour)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -1294,7 +1308,7 @@ const Parking = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Motorcycle Rate (per hour)
+                  2 Wheels Rate (per hour)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -1349,24 +1363,28 @@ const Parking = () => {
             {step === 1 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
                 <button
-                  onClick={() => handleSelectType("Car")}
+                  onClick={() => handleSelectType("FourWheels")}
                   className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
                   <Car size={80} className="mb-4" />
-                  <span className="text-2xl font-bold mt-2">CAR / JEEP</span>
-                  <span className="text-sm opacity-70 mt-1 font-medium">
-                    {" "}
+
+                  <span className="text-2xl font-bold mt-2">
+                    4 Wheels 
+                  </span>
+
+                  <span className="text-sm opacity-70 mt-2 font-medium">
                     ₱{priceSettings.carRate}.00 / hr
                   </span>
                 </button>
                 <button
-                  onClick={() => handleSelectType("Motorcycle")}
+                  onClick={() => handleSelectType("TwoWheels")}
                   className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
                   <Bike size={80} className="mb-4" />
-                  <span className="text-2xl font-bold mt-2">MOTORCYCLE</span>
-                  <span className="text-sm opacity-70 mt-1 font-medium">
-                    {" "}
+
+                  <span className="text-2xl font-bold mt-2">2 Wheels</span>
+
+                  <span className="text-sm opacity-70 mt-2 font-medium">
                     ₱{priceSettings.motorcycleRate}.00 / hr
                   </span>
                 </button>
@@ -1379,7 +1397,9 @@ const Parking = () => {
                     className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}
                   >
                     Selected:{" "}
-                    {newTicket.type === "Car" ? "Car / Bus" : "Motorcycle"}
+                    {newTicket.type === "FourWheels"
+                      ? "4 Wheels / 3 Wheels"
+                      : "2 Wheels"}
                   </span>
                 </div>
                 <div className="text-left">
