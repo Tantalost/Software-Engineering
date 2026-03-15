@@ -19,10 +19,10 @@ Parking management
 - indication should be 3 wheels or 4 wheels 🟢 **Done**
 - fix time in bug 🟢 **Done**
 - same plate number cannot parked at the same time 🟢 **Done**
- 
-Terminal Fees 🟡 **In ProgrWWess ipacheck ulit kay maam marj**
-- make a duration (daily, monthly) for passengers revenue
-- should be able to view previous data
+
+Reports
+- add date filter (daily, weekly, monthly, yearly) when clicking the weekly all the records for that week should appear same with the monthly and yearly. for daily should be specific date. 🔴 **To be Fixed**
+
 
 Revisions for web general 
 - dashboard export format
