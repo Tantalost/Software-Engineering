@@ -58,7 +58,7 @@ const BusTripFilters = ({
                     htmlFor="busType"
                     className="text-gray-500 text-sm mr-2 whitespace-nowrap cursor-pointer "
                 >
-                    Type:
+                    Bus Type:
                 </label>
                 <select
                     id="busType"
