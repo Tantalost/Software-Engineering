@@ -16,8 +16,10 @@ Tenants 🟡 **In ProgrWWess** need meeting with sir Derick for further informat
 - fines should be static
 
 Parking management
-- indication should be 3 wheels or 4 wheels
-
+- indication should be 3 wheels or 4 wheels 🟢 **Done**
+- fix time in bug 🟢 **Done**
+- same plate number cannot parked at the same time 🟢 **Done**
+ 
 Terminal Fees 🟡 **In ProgrWWess ipacheck ulit kay maam marj**
 - make a duration (daily, monthly) for passengers revenue
 - should be able to view previous data
@@ -192,3 +194,6 @@ Lost and Found
 - need photo for superadmin verification sa view modal ilagay
 - process of claiming 
 - with evidence and who claimed it
+
+Revisions for web general 🟢 **Done**
+- dashboard export format
