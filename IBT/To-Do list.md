@@ -24,22 +24,12 @@ Bus Admin
 - Manage Companies: di lumalabas ang actions sa logs
 - dapat ang default route Zamboanga - (input destination)
 
-Parking management
+Parking management 🟢 **Done**
 - indication should be 3 wheels or 4 wheels
 
 Terminal Fees
 - make a duration (daily, monthly) for passengers revenue
 - should be able to view previous data
-
-Revisions for web general 
-- dashboard export format
-
-
-
-
-
-
-
 
 
 **Lost and found** 🟢 **Done**
@@ -185,3 +175,6 @@ Lost and Found
 - need photo for superadmin verification sa view modal ilagay
 - process of claiming 
 - with evidence and who claimed it
+
+Revisions for web general 🟢 **Done**
+- dashboard export format
