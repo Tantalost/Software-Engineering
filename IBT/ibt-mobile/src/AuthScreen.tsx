@@ -7,6 +7,7 @@ import { useAuthForm } from './hooks/AuthForm';
 import { getPasswordStrength, sanitizePhoneNumber } from './utils/validation';
 import { UserData } from './types/auth.types';
 import styles from './styles/LogForm';
+import { black } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 
 interface AuthScreenProps {
   onLoginSuccess: (user: UserData) => void;
@@ -42,9 +43,9 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
         return (
           <View style={{ alignItems: 'center', paddingVertical: 10 }}>
             <Icon name="store" size={80} color="#1B5E20" style={{ marginBottom: 20 }} />
-            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>Stall Application</Text>
+            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: "black"}}>Stall Application</Text>
             <Text style={{ textAlign: 'center', color: 'grey', marginBottom: 30, paddingHorizontal: 10 }}>
-              Your all-in-one solution for streamlined access to local stall applications.
+             Your gateway to easy and organized local stall applications.
             </Text>
             
             <Button mode="contained" onPress={() => setRegisterStep('email_entry')} style={[styles.button, { width: '100%' }]} textColor="#ffffff">
@@ -62,7 +63,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       case 'email_entry':
         return (
           <View>
-            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5 }}>Let's Get Started!</Text>
+            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: 'black' }}>Let's Get Started!</Text>
             <Text style={{ color: 'grey', marginBottom: 20 }}>To start, please enter your email address:</Text>
             
             <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
@@ -90,7 +91,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       case 'otp_verify':
         return (
           <View>
-            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5 }}>Enter One-Time-Password</Text>
+            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black" }}>Enter One-Time-Password</Text>
             <Text style={{ color: 'grey', marginBottom: 20 }}>Please enter the one-time Password (OTP) that we sent to {form.email}</Text>
             
             <TextInput label="OTP" value={form.otp} onChangeText={(t) => updateForm('otp', t)} mode="outlined" style={styles.input} keyboardType="number-pad" activeOutlineColor="#1B5E20" textColor='#000000' maxLength={6} />
@@ -107,7 +108,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       case 'personal_info':
         return (
           <View>
-            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5 }}>Personal Information</Text>
+            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black" }}>Personal Information</Text>
             <Text style={{ color: 'grey', marginBottom: 20 }}>Please provide your accurate details.</Text>
 
             <TextInput label="First Name" value={form.firstName} onChangeText={(t) => updateForm('firstName', t)} mode="outlined" style={styles.input} activeOutlineColor="#1B5E20" textColor='#000000' />
@@ -148,7 +149,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       case 'create_password':
         return (
           <View>
-            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5 }}>Create your Password</Text>
+            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black"}}>Create your Password</Text>
             <Text style={{ color: 'grey', marginBottom: 20 }}>Secure your account with a strong password.</Text>
 
             <TextInput label="Password" value={form.password} onChangeText={(t) => updateForm('password', t)} mode="outlined" style={[styles.input, { marginBottom: 0 }]} secureTextEntry={!showPassword} activeOutlineColor={strength.color} outlineColor={strength.color === 'transparent' ? '#79747E' : strength.color} textColor='#000000' right={form.password.length > 0 ? (<TextInput.Icon icon={showPassword ? "eye-off" : "eye"} onPress={() => setShowPassword(!showPassword)} /> ) : null} />
