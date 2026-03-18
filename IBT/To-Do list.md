@@ -20,9 +20,11 @@ Color Coding
 - use Bus Number instead of plate number (Justin )🔴 **To be Fixed**
 - add a feature where you can display arrival and departure  (Justin )🔴 **To be Fixed**
 - Add name of collector (Justin )🔴 **To be Fixed**
+- Add collector name sa export excel and pdf 🔴 **To be Fixed**
 
 **Tenant Module**
-- Add name of collector
+- Add name of collector (Steph)🔴 **To be Fixed**
+- Add collector name sa export excel and pdf (Steph)🔴 **To be Fixed**
 
 Night Market
 - No garbage fee, permit fee, business tax, water bill. Electricity bill only sa Permanent lang (Steph)🔴 **To be Fixed**
@@ -36,9 +38,11 @@ Permanent
 - add classification for jeep fixed 10 pesos daily (Justin )🔴 **To be Fixed**
 - 4wheels ₱10/3hrs for every succeeding after 3hrs + 10 (Justin )🔴 **To be Fixed**
 - Add name of collector (Justin )🔴 **To be Fixed**
+- Add collector name sa export excel and pdf 🔴 **To be Fixed**
 
 **Terminal Fees Module**
-- Add name of collector (Justin )🔴 **To be Fixed**
+- Add name of collector (Justin )🟢 **Done**
+- Add collector name sa export excel and pdf  🟢 **Done**
  
 **Report Module**
 - Reports accessibility 

@@ -15,8 +15,8 @@ import jsPDF from "jspdf";
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
 import autoTable from "jspdf-autotable";
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import Layout from "../components/layout/Layout";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
@@ -53,14 +53,15 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
   if (!imageSrc) return;
   try {
     const response = await fetch(imageSrc);
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+    if (!response.ok)
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
 
     const blob = await response.blob();
     const arrayBuffer = await blob.arrayBuffer();
 
     const imageId = workbook.addImage({
       buffer: arrayBuffer,
-      extension: 'png',
+      extension: "png",
     });
 
     worksheet.addImage(imageId, range);
@@ -92,9 +93,10 @@ const TerminalFees = () => {
   const [pendingEdit, setPendingEdit] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   const [deleteRemarks, setDeleteRemarks] = useState("");
-  const [toast, setToast] = useState(null);
   const [isReporting, setIsReporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [collectorName, setCollectorName] = useState("");
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -260,9 +262,16 @@ const TerminalFees = () => {
     paginatedData.every((item) => selectedIds.includes(item._id || item.id));
 
   const showToastMessage = (message, type = "success") => {
-  setToast({ message, type });
-  setTimeout(() => setToast(null), 3000);
-};
+    setToast({
+      isOpen: true,
+      message,
+      type,
+    });
+
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
 
   const handleSubmitReport = async () => {
     setIsReporting(true);
@@ -541,9 +550,9 @@ const TerminalFees = () => {
   };
 
   const handleOpenAdd = async () => {
-    const now = new Date();    
+    const now = new Date();
     setNewTicket({
-      ticketNo: "Loading...", 
+      ticketNo: "Loading...",
       passengerType: "Regular",
       price: basePrices.regular,
       date: now.toISOString().split("T")[0],
@@ -558,9 +567,9 @@ const TerminalFees = () => {
     try {
       const res = await fetch(`${API_URL}/terminal-fees/next-ticket`);
       if (!res.ok) throw new Error("Failed to fetch next ticket number");
-      
+
       const data = await res.json();
-      
+
       setNewTicket((prev) => ({
         ...prev,
         ticketNo: data.nextTicketNo,
@@ -582,7 +591,9 @@ const TerminalFees = () => {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         console.error("Backend Error Details:", errorData);
-        throw new Error(errorData.message || errorData.error || "Failed to save to database");
+        throw new Error(
+          errorData.message || errorData.error || "Failed to save to database",
+        );
       }
 
       if (!res.ok) throw new Error("Failed to save to database");
@@ -599,7 +610,7 @@ const TerminalFees = () => {
       console.error("Error saving ticket:", error);
       showToastMessage(
         "Failed to save ticket. Please check server connection.",
-        "error"
+        "error",
       );
     }
   };
@@ -637,6 +648,17 @@ const TerminalFees = () => {
     }
   };
 
+  const validateCollector = () => {
+    if (!collectorName || collectorName.trim() === "") {
+      showToastMessage(
+        "Please enter the Name of Collector before exporting.",
+        "error",
+      );
+      return false;
+    }
+    return true;
+  };
+
   const getExportData = (data) => {
     return data.map((item) => ({
       "Ticket No": item.ticketNo || "-",
@@ -648,6 +670,23 @@ const TerminalFees = () => {
   };
 
   const handleExportExcel = async () => {
+    if (!collectorName || collectorName.trim() === "") {
+      setToast({
+        isOpen: true,
+        type: "error",
+        message: "Collector name is required before exporting.",
+      });
+
+      setTimeout(() => {
+        setToast({
+          isOpen: false,
+          type: "",
+          message: "",
+        });
+      }, 3000);
+
+      return;
+    }
     if (filtered.length === 0) return alert("No records to export.");
 
     try {
@@ -656,26 +695,59 @@ const TerminalFees = () => {
 
       // 1. BRANDED HEADER (-1/8 height adjustment)
       worksheet.getRow(1).height = 35;
-      await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:E4');
+      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:E4");
 
       // 2. Report Title & Summary Metadata
-      worksheet.mergeCells('A6:E6');
-      const titleCell = worksheet.getCell('A6');
-      titleCell.value = 'PASSENGER REPORTS';
-      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
-      titleCell.alignment = { horizontal: 'center' };
+      worksheet.mergeCells("A6:E6");
+      const titleCell = worksheet.getCell("A6");
+      titleCell.value = "PASSENGER REPORTS";
+      titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
+      titleCell.alignment = { horizontal: "center" };
 
       worksheet.addRow([]); // Spacer
-      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', `Regular: ${stats.regular}`, '', `Total Passengers: ${stats.total}`]);
-      worksheet.addRow([`Operator: ${localStorage.getItem("authName") || "Admin"}`, '', `Student/Senior: ${stats.student + stats.senior}`, '', `Total Revenue: Php ${stats.revenue.toFixed(2)}`]);
+      worksheet.addRow([
+        `Date: ${new Date().toLocaleDateString()}`,
+        "",
+        `Regular: ${stats.regular}`,
+        "",
+        `Total Passengers: ${stats.total}`,
+      ]);
+
+      const collectorRow = worksheet.addRow([
+        `Collector: ${collectorName || "N/A"}`,
+        "",
+        "",
+        "",
+        "",
+      ]);
+
+      collectorRow.getCell(1).font = { bold: true };
+
+      worksheet.addRow([
+        `Operator: ${localStorage.getItem("authName") || "Admin"}`,
+        "",
+        `Student/Senior: ${stats.student + stats.senior}`,
+        "",
+        `Total Revenue: Php ${stats.revenue.toFixed(2)}`,
+      ]);
       worksheet.addRow([]); // Spacer
 
       // 3. Styled Table Headers
-      const headerRow = worksheet.addRow(["Ticket No", "Passenger Type", "Time", "Date", "Price"]);
+      const headerRow = worksheet.addRow([
+        "Ticket No",
+        "Passenger Type",
+        "Time",
+        "Date",
+        "Price",
+      ]);
       headerRow.eachCell((cell) => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
-        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF10B981" },
+        };
+        cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
       // 4. Populate Data
@@ -692,20 +764,38 @@ const TerminalFees = () => {
       // 5. BRANDED FOOTER (-1/8 height adjustment)
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
-      await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:E${lastRowNumber + 3}`);
+      await addImageToWorksheet(
+        workbook,
+        worksheet,
+        footerImg,
+        `A${lastRowNumber}:E${lastRowNumber + 3}`,
+      );
 
       // 6. Formatting Column Widths
       worksheet.columns = [
-        { width: 15 }, { width: 25 }, { width: 15 }, { width: 15 }, { width: 20 }
+        { width: 15 },
+        { width: 25 },
+        { width: 15 },
+        { width: 15 },
+        { width: 20 },
       ];
 
       // 7. Write and Save
       const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      saveAs(blob, `Terminal_Fees_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(
+        blob,
+        `Terminal_Fees_Report_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
 
-      logActivity(role, "EXPORT_EXCEL", `Exported branded report for ${filtered.length} terminal fees`, "TerminalFees");
-
+      logActivity(
+        role,
+        "EXPORT_EXCEL",
+        `Exported branded report for ${filtered.length} terminal fees`,
+        "TerminalFees",
+      );
     } catch (err) {
       console.error("Terminal Fees ExcelJS Export Failed:", err);
       alert("Failed to export Excel. Please check the console for details.");
@@ -713,6 +803,23 @@ const TerminalFees = () => {
   };
 
   const exportToPDF = () => {
+    if (!collectorName || collectorName.trim() === "") {
+      setToast({
+        isOpen: true,
+        type: "error",
+        message: "Collector name is required before exporting.",
+      });
+
+      setTimeout(() => {
+        setToast({
+          isOpen: false,
+          type: "",
+          message: "",
+        });
+      }, 3000);
+
+      return;
+    }
     if (filtered.length === 0) return alert("No records to export.");
 
     const doc = new jsPDF("p", "mm", "a4");
@@ -728,8 +835,9 @@ const TerminalFees = () => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
-    doc.text(`No. Regular: ${stats.regular}`, 75, 55);
-    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, 75, 61);
+    doc.text(`Collector: ${collectorName || "N/A"}`, margin, 61);
+    doc.text(`No. Regular: ${stats.regular}`, 75, 67);
+    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, 75, 73);
     doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, {
       align: "right",
     });
@@ -738,7 +846,7 @@ const TerminalFees = () => {
     });
 
     autoTable(doc, {
-      startY: 70,
+      startY: 80,
       margin: { left: margin, right: margin, bottom: 35 },
       head: [["Ticket No", "Passenger Type", "Price", "Time", "Date"]],
       body: filtered.map((item) => [
@@ -804,6 +912,22 @@ const TerminalFees = () => {
 
       {/* --- Main container justified to the right --- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
+        {/* LEFT SIDE — Collector Name */}
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+            Name of Collector:
+          </label>
+
+          <input
+            type="text"
+            value={collectorName}
+            maxLength={100}
+            onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
+            placeholder="Enter collector name"
+            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          />
+        </div>
+
         <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
           {role === "superadmin" && (
             <button
@@ -836,7 +960,8 @@ const TerminalFees = () => {
 
           <ExportMenu
             onExportExcel={handleExportExcel}
-            onExportPDF={exportToPDF} />
+            onExportPDF={exportToPDF}
+          />
         </div>
       </div>
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -1364,7 +1489,7 @@ const TerminalFees = () => {
           </div>
         </div>
       )}
-      
+
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
@@ -1404,13 +1529,13 @@ const TerminalFees = () => {
         </div>
       )}
       {toast && (
-  <NotificationToast
-    isOpen={!!toast}
-    type={toast.type}
-    message={toast.message}
-    onClose={() => setToast(null)}
-  />
-)}
+        <NotificationToast
+          isOpen={toast.isOpen}
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </Layout>
   );
 };
