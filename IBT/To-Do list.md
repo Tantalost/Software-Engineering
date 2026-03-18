@@ -3,6 +3,52 @@ Color Coding
 🟡 **In ProgrWWess**
 🟢 **Done**
 
+**IMPORTANT INFO PARA SA REQUEST NI MAAM MARJ**
+1. NO BUS Schedule - some days 72, 60, 80 
+2. Plaza application requirements - Send letter, forward to city admin for approval. City activities with no rental.  5-10k - di pwede iadd sa system
+3. grace period for when applying stall and opening - letter of intent, ibt committee approval, city council, mayor signs contract. If Magstart in middle, march 20 til april 5 200 per day. 1 month advance. Only start payment when operation starts. 
+4. How is the first payment - 1 month advance 
+5. Ticket upon arrival then issued ticket upon exit pero exceeding ₱100 OR na ibibigay
+
+**REQUEST NI SIR DERICK**
+
+**Error During Presentation**
+- Fix Submit Report per admin (John Loyd) 🔴 **To be Fixed**
+- Login nagsesend parin ng otp twice kahit sa same device (John Loyd) 🔴 **To be Fixed**
+
+**Bus Module**
+- use Bus Number instead of plate number (Justin )🔴 **To be Fixed**
+- add a feature where you can display arrival and departure  (Justin )🔴 **To be Fixed**
+- Add name of collector (Justin )🔴 **To be Fixed**
+
+**Tenant Module**
+- Add name of collector
+
+Night Market
+- No garbage fee, permit fee, business tax, water bill. Electricity bill only sa Permanent lang (Steph)🔴 **To be Fixed**
+
+Permanent
+- payment 1month in advance ( so first applicant dapat 12k mag bayad) (Steph)🔴 **To be Fixed**
+- May additional na type of tenant (OFFICES) sa permanent tenants (Steph)🔴 **To be Fixed**
+
+
+**Parking Module**
+- add classification for jeep fixed 10 pesos daily (Justin )🔴 **To be Fixed**
+- 4wheels ₱10/3hrs for every succeeding after 3hrs + 10 (Justin )🔴 **To be Fixed**
+- Add name of collector (Justin )🔴 **To be Fixed**
+
+**Terminal Fees Module**
+- Add name of collector (Justin )🔴 **To be Fixed**
+ 
+**Report Module**
+- Reports accessibility 
+- Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🔴 **To be Fixed**
+
+**Manage Employees Module**
+- Dapat make create na 4 accounts per admin (John Loyd) 🔴 **To be Fixed**
+
+
+
 🔴 **To be Fixed**
 **PRIORITY**
 Major Adjustment (Priority)
@@ -26,6 +72,8 @@ Reports
 
 Revisions for web general 
 - dashboard export format
+
+
 
 
 
