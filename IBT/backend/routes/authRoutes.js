@@ -2,7 +2,7 @@ import express from "express";
 import upload from "../middleware/upload.js";
 import { 
     register, 
-    verifyRegistration,
+    sendRegistrationOtp,
     login, 
     requestPasswordReset, 
     resetPassword,
@@ -12,9 +12,8 @@ import {
 
 const router = express.Router();
 
-
+router.post("/send-registration-otp", sendRegistrationOtp);
 router.post("/register", register);
-router.post("/verify-registration", verifyRegistration);
 router.post("/login", login);
 router.post("/forgot-password-request", requestPasswordReset);
 router.post("/reset-password", resetPassword);

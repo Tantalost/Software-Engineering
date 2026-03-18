@@ -138,6 +138,16 @@ const DataRenderer = ({ reportPayload }) => {
     });
   };
 
+  const getDateKey = (dateInput) => {
+    const date = new Date(dateInput);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
 const Reports = () => {
   const location = useLocation();
   const [records, setRecords] = useState([]);
@@ -224,8 +234,7 @@ const Reports = () => {
         report.author?.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesDate =
-        !selectedDate ||
-        reportDate.toDateString() === new Date(selectedDate).toDateString();
+        !selectedDate || getDateKey(reportDate) === getDateKey(selectedDate);
       const matchesCategory =
         selectedCategory === "All" || report.type === selectedCategory;
 
@@ -246,6 +255,10 @@ const Reports = () => {
       );
     });
   }, [records, searchQuery, selectedDate, selectedCategory, timeRange]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedDate, selectedCategory, timeRange]);
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -533,6 +546,10 @@ const Reports = () => {
     setIsSelectionMode(!isSelectionMode);
   };
 
+  const handleClearDateFilter = () => {
+    setSelectedDate("");
+  };
+
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
@@ -686,7 +703,7 @@ const Reports = () => {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
             <Tag size={16} />
@@ -755,6 +772,31 @@ const Reports = () => {
               />
             </svg>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <Calendar size={16} />
+            </div>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 hover:border-slate-400 transition-all"
+              aria-label="Filter reports by date"
+            />
+          </div>
+
+          {selectedDate && (
+            <button
+              onClick={handleClearDateFilter}
+              className="h-[42px] px-3 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 transition-all"
+              title="Clear date filter"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2">

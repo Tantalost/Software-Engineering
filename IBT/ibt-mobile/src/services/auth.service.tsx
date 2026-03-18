@@ -1,12 +1,35 @@
 import API_URL from '../config'; 
 
-interface LoginPayload { email: string; password: string; }
-interface RegisterPayload { email: string; password: string; username: string; contactNo: string; }
-interface ResetRequestPayload { email: string; }
-interface ResetConfirmPayload { email: string; otp: string; newPassword: string; }
+interface LoginPayload { 
+    email: string; 
+    password: string; 
+}
 
 
-interface VerifyRegisterPayload { email: string; otp: string; }
+interface SendOtpPayload { 
+    email: string; 
+}
+
+interface RegisterPayload { 
+    email: string; 
+    otp: string;
+    password: string; 
+    firstName: string; 
+    middleName: string; 
+    lastName: string; 
+    suffix: string; 
+    contactNo: string; 
+}
+
+interface ResetRequestPayload { 
+    email: string; 
+}
+
+interface ResetConfirmPayload { 
+    email: string; 
+    otp: string; 
+    newPassword: string; 
+}
 
 export const authService = {
   
@@ -21,33 +44,27 @@ export const authService = {
     return data;
   },
 
-  register: async (payload: RegisterPayload) => {
-    const backendPayload = {
-      email: payload.email,
-      password: payload.password,
-      fullName: payload.username, 
-      contactNo: payload.contactNo
-    };
-
-    const res = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(backendPayload) 
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Registration Failed");
-    return data;
-  },
-
- 
-  verifyRegistration: async (payload: VerifyRegisterPayload) => {
-    const res = await fetch(`${API_URL}/auth/verify-registration`, {
+  
+  sendRegistrationOtp: async (payload: SendOtpPayload) => {
+    const res = await fetch(`${API_URL}/auth/send-registration-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Verification Failed");
+    if (!res.ok) throw new Error(data.error || "Failed to send OTP");
+    return data;
+  },
+
+
+  register: async (payload: RegisterPayload) => {
+    const res = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload) 
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Registration Failed");
     return data;
   },
 
@@ -59,9 +76,7 @@ export const authService = {
     });
 
     if (!res.ok) {
-   
       const errorText = await res.text();
-      
       console.error("BACKEND CRASH REPORT:", errorText);
       try {
         const parsedData = JSON.parse(errorText);

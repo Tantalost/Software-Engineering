@@ -14,10 +14,28 @@ Tenants 🟡 **In ProgrWWess** need meeting with sir Derick for further informat
 - indicate when it started  (verify when is grace period before start and set up of stalls)
 - changeable interest value
 - fines should be static
- 
-Terminal Fees 🟡 **In ProgrWWess ipacheck ulit kay maam marj**
-- make a duration (daily, monthly) for passengers revenue
-- should be able to view previous data
+
+Parking management
+- indication should be 3 wheels or 4 wheels 🟢 **Done**
+- fix time in bug 🟢 **Done**
+- same plate number cannot parked at the same time 🟢 **Done**
+
+Reports
+- add date filter (daily), when clicking the date (ex. Jan 1) specific record of that day should appear 🔴 **To be Fixed**
+
+
+Revisions for web general 
+- dashboard export format
+
+
+
+
+
+
+
+
+
+
 
 
 

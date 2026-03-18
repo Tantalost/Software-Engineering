@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, View, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Text, Card, Searchbar, Avatar, Button, Divider } from 'react-native-paper';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import API_URL from '../../src/config'; 
 
-// 1. Updated Interface with new fields
 interface BusTrip {
   _id: string;
   templateNo: string;
@@ -18,24 +17,27 @@ interface BusTrip {
   busType?: string; 
   price?: number;   
   seats?: number;   
-  parkingEstimation?: string; // Added field
-  expectedDeparture?: string; // Added field
+  parkingEstimation?: string; 
+  expectedDeparture?: string; 
 }
 
 export default function RoutesPage() {
   const router = useRouter();
-  
   const params = useLocalSearchParams<{ tripId?: string; search?: string }>();
-  
+  const todayDate = new Date().toLocaleDateString(); 
   const [routes, setRoutes] = useState<BusTrip[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilterId, setActiveFilterId] = useState<string | null>(null);
 
+
+  const [selectedCompany, setSelectedCompany] = useState('All');
+  const [selectedBusType, setSelectedBusType] = useState('All');
+
   useFocusEffect(
     useCallback(() => {
-    
       if (params.tripId) {
         setActiveFilterId(params.tripId);
       } else if (params.search) {
@@ -48,9 +50,7 @@ export default function RoutesPage() {
         fetchRoutes();
       }, 60000); 
 
-      return () => {
-        clearInterval(refreshInterval);
-      };
+      return () => clearInterval(refreshInterval);
     }, [params])
   );
 
@@ -72,14 +72,20 @@ export default function RoutesPage() {
     fetchRoutes();
   };
 
+  
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '--:--';
- 
-    const [hourStr, minuteStr] = timeStr.split(':');
-    let hour = parseInt(hourStr, 10);
+    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+      return timeStr; 
+    }
+    
+    const parts = timeStr.split(':');
+    if (parts.length < 2) return timeStr;
+
+    let hour = parseInt(parts[0], 10);
+    const minuteStr = parts[1];
     
     const ampm = hour >= 12 ? 'PM' : 'AM';
-    
     hour = hour % 12;
     hour = hour ? hour : 12; 
     
@@ -88,25 +94,39 @@ export default function RoutesPage() {
 
   const isPastArrival = (dateString: string, timeString: string) => {
     if (!dateString || !timeString) return false;
-    
     try {
       const scheduledDate = new Date(dateString);
       const [hours, minutes] = timeString.split(':').map(Number);
-      
       scheduledDate.setHours(hours, minutes, 0, 0);
-      
-      const now = new Date();
-      return now > scheduledDate; 
+      return new Date() > scheduledDate; 
     } catch (error) {
       return false;
     }
   };
 
+
+  const companies = ['All', ...Array.from(new Set(routes.map(r => r.company)))];
+  const busTypes = ['All', 'Aircon', 'Regular'];
+
   const filteredRoutes = useMemo(() => {
-    let data = routes.filter(item => item.status === 'Pending' || item.status === 'Arrived');
+   
+    let data = routes.filter(item => 
+      item.status === 'Pending' || 
+      item.status === 'Arrived' || 
+      item.status === 'Scheduled'
+    );
 
     if (activeFilterId && searchQuery === '') {
       return data.filter(item => item._id === activeFilterId);
+    }
+
+    if (selectedCompany !== 'All') {
+      data = data.filter(item => item.company === selectedCompany);
+    }
+
+    if (selectedBusType !== 'All') {
+    
+      data = data.filter(item => (item.busType || 'Regular') === selectedBusType);
     }
 
     if (searchQuery.trim()) {
@@ -120,44 +140,50 @@ export default function RoutesPage() {
     }
 
     return data;
-  }, [routes, searchQuery, activeFilterId]);
+  }, [routes, searchQuery, activeFilterId, selectedCompany, selectedBusType]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setActiveFilterId(null);
+    setSelectedCompany('All');
+    setSelectedBusType('All');
     router.setParams({ tripId: '', search: '' }); 
   };
 
-  // 2. Updated renderItem function
   const renderItem = ({ item }: { item: BusTrip }) => {
     const hasArrived = item.status === 'Arrived';
-    const isDelayed = !hasArrived && isPastArrival(item.date, item.time);
+    const isScheduled = item.status === 'Scheduled';
+    const isDelayed = !hasArrived && !isScheduled && isPastArrival(item.date, item.time);
     
     let statusText = 'Est. Arrival';
-    let statusColor = '#2E7D32'; 
+    let statusColor = '#E67E22'; 
 
-    if (hasArrived) {
+    if (isScheduled) {
+        statusText = 'Scheduled';
+        statusColor = '#2980B9'; 
+    } else if (hasArrived) {
         statusText = 'Arrived At';
-        statusColor = '#2E7D32'; 
+        statusColor = '#27AE60'; 
     } else if (isDelayed) {
         statusText = 'Delayed';
-        statusColor = '#D32F2F';
+        statusColor = '#C0392B'; 
     }
 
     return (
       <Card style={styles.card} mode="elevated">
         <Card.Content>
-          {/* Card Header Section */}
+          
           <View style={styles.cardHeader}>
             <View style={styles.companyContainer}>
               <Avatar.Icon size={40} icon="bus" style={{ backgroundColor: '#E8F5E9' }} color="#1B5E20" />
               <View>
                 <Text style={styles.companyName}>{item.company}</Text>
-                <Text style={styles.busType}>{item.templateNo}</Text>
+               
+                <Text style={styles.busType}>{item.templateNo} • {item.busType || 'Regular'}</Text>
               </View>
             </View>
-            <View style={[styles.statusChip, { backgroundColor: hasArrived ? '#E0F7EC' : '#FFF3CD' }]}>
-               <Text style={{ color: hasArrived ? '#1B5E20' : '#856404', fontSize: 12, fontWeight: 'bold', paddingHorizontal: 12 }}>
+            <View style={[styles.statusChip, { backgroundColor: isScheduled ? '#EBF5FB' : (hasArrived ? '#E0F7EC' : '#FFF3CD') }]}>
+               <Text style={{ color: isScheduled ? '#2980B9' : (hasArrived ? '#1B5E20' : '#856404'), fontSize: 12, fontWeight: 'bold', paddingHorizontal: 12 }}>
                   {item.status}
                </Text>
             </View>
@@ -166,26 +192,22 @@ export default function RoutesPage() {
           <Divider style={styles.divider} />
           
           <View style={styles.routeRow}>
+            
              <View style={{flex: 1}}>
                 <Text style={styles.label}>Route</Text>
                 <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
 
-                <Text style={[styles.label, { marginTop: 12 }]}>Date</Text>
-                <Text variant="bodyMedium" style={styles.value}>
-                  {new Date(item.date).toLocaleDateString()}
-                </Text>
-
-                {/* Expected Departure Block */}
-                {item.expectedDeparture && (
+                {item.parkingEstimation && (
                   <>
-                    <Text style={[styles.label, { marginTop: 12 }]}>Exp. Departure</Text>
-                    <Text variant="bodyMedium" style={[styles.value, { color: '#D35400' }]}>
-                      {formatTime(item.expectedDeparture)}
+                    <Text style={[styles.label, { marginTop: 12 }]}>Parking Est.</Text>
+                    <Text variant="bodyMedium" style={[styles.value, { color: '#555' }]}>
+                      {item.parkingEstimation}
                     </Text>
                   </>
                 )}
              </View>
              
+            
              <View style={{alignItems: 'flex-end'}}>
                 <Text style={[styles.label, { color: statusColor, fontWeight: 'bold' }]}>
                   {statusText}
@@ -194,11 +216,14 @@ export default function RoutesPage() {
                   {formatTime(item.time)}
                 </Text>
 
-                {/* Parking Estimation Text */}
-                {item.parkingEstimation && (
-                  <Text style={{ fontSize: 10, color: '#888', marginTop: 4 }}>
-                    Est. wait: {item.parkingEstimation}
-                  </Text>
+               
+                {item.expectedDeparture && (
+                  <>
+                    <Text style={[styles.label, { marginTop: 12 }]}>Exp. Departure</Text>
+                    <Text variant="titleMedium" style={[styles.timeValue, { color: '#D35400' }]}>
+                      {formatTime(item.expectedDeparture)}
+                    </Text>
+                  </>
                 )}
              </View>
           </View>
@@ -220,6 +245,8 @@ export default function RoutesPage() {
       <View style={styles.headerContainer}>
         <Text variant="headlineMedium" style={styles.headerTitle}>Bus Schedules</Text>
         
+        <Text style={styles.dateHeader}>Today: {todayDate}</Text>
+
         <Searchbar
           placeholder="Search location, company..."
           onChangeText={(text) => {
@@ -232,6 +259,44 @@ export default function RoutesPage() {
           iconColor="#1B5E20"
           cursorColor={'#0000008e'}
         />
+
+       
+        <View style={styles.filtersContainer}>
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+              {companies.map(c => (
+                 <TouchableOpacity 
+                    key={c} 
+                    onPress={() => setSelectedCompany(c)} 
+                    style={[styles.filterChip, selectedCompany === c && styles.activeFilterChip]}
+                 >
+                    <Text style={[styles.filterChipText, selectedCompany === c && styles.activeFilterChipText]}>{c}</Text>
+                 </TouchableOpacity>
+              ))}
+           </ScrollView>
+          
+          <View style={styles.segmentedControl}>
+          {busTypes.map((type, index) => {
+            const isActive = selectedBusType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                activeOpacity={0.8}
+                onPress={() => setSelectedBusType(type)}
+                style={[
+                  styles.segmentButton,
+                  isActive && styles.activeSegmentButton,
+                  index !== 0 && !isActive && styles.segmentBorder
+                ]}
+              >
+                <Text style={[styles.segmentText, isActive && styles.activeSegmentText]}>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        
+        </View>
 
         {activeFilterId && (
           <View style={styles.filterBanner}>
@@ -256,8 +321,8 @@ export default function RoutesPage() {
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="bus-alert" size={48} color="#ccc" />
             <Text style={styles.emptyText}>No schedules found.</Text>
-            {(searchQuery || activeFilterId) && (
-               <Button mode="text" onPress={clearFilters} textColor="#1B5E20">Clear Search</Button>
+            {(searchQuery || activeFilterId || selectedCompany !== 'All' || selectedBusType !== 'All') && (
+               <Button mode="text" onPress={clearFilters} textColor="#1B5E20">Clear All Filters</Button>
             )}
           </View>
         }
@@ -287,6 +352,12 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginBottom: 12,
   },
+  dateHeader: {
+    fontSize: 16,
+    color: '#1B5E20',
+    marginBottom: 12,
+    fontWeight: '800',
+  },
   searchBar: {
     backgroundColor: '#F0F4F8',
     elevation: 0,
@@ -297,6 +368,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     alignSelf: 'center',
     color: 'black',
+  },
+  
+  filtersContainer: {
+    marginTop: 12,
+    gap: 10,
+  },
+  filterScroll: {
+    flexGrow: 0,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F0F4F8',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  activeFilterChip: {
+    backgroundColor: '#1B5E20',
+    borderColor: '#1B5E20',
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
+  activeFilterChipText: {
+    color: '#FFFFFF',
   },
   filterBanner: {
     flexDirection: 'row',
@@ -345,6 +445,7 @@ const styles = StyleSheet.create({
   busType: {
     color: '#666',
     fontSize: 12,
+    marginTop: 2,
   },
   statusChip: {
     backgroundColor: '#E0F7EC',
@@ -377,20 +478,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'right',
   },
-  dateValue: {
-    color: '#666',
-    textAlign: 'right',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  templateId: {
-    color: '#999',
-    fontSize: 10,
-  },
   emptyContainer: {
     alignItems: 'center',
     marginTop: 60,
@@ -399,5 +486,37 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#888',
     fontSize: 16,
+  },
+
+  segmentedControl: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 25,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#E5E7EB',
+  },
+  activeSegmentButton: {
+    backgroundColor: '#1B5E20',
+  },
+  segmentText: {
+    color: '#4B5563',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  activeSegmentText: {
+    color: '#FFFFFF',
   },
 });
