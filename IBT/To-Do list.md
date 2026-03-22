@@ -1,6 +1,6 @@
 Color Coding
 🔴 **To be Fixed**
-🟡 **In ProgrWWess**
+🟡 **In Progress**
 🟢 **Done**
 
 **IMPORTANT INFO PARA SA REQUEST NI MAAM MARJ**
@@ -16,11 +16,11 @@ Color Coding
 - Fix Submit Report per admin (John Loyd) 🔴 **To be Fixed**
 - Login nagsesend parin ng otp twice kahit sa same device (John Loyd) 🔴 **To be Fixed**
 
-**Bus Module**
-- use Bus Number instead of plate number (Justin )🔴 **To be Fixed**
-- add a feature where you can display arrival and departure  (Justin )🔴 **To be Fixed**
-- Add name of collector (Justin )🔴 **To be Fixed**
-- Add collector name sa export excel and pdf 🔴 **To be Fixed**
+**Bus Module** 🟡 **In Progress**
+- use Bus Number instead of plate number (Justin )🟡 **In Progress**
+- add a feature where you can display arrival and departure  (Justin )🟡 **In Progress**
+- Add name of collector (Justin )🟡 **In Progress**
+- Add collector name sa export excel and pdf 🟡 **In Progress**
 
 **Tenant Module**
 - Add name of collector (Steph)🔴 **To be Fixed**
@@ -32,13 +32,6 @@ Night Market
 Permanent
 - payment 1month in advance ( so first applicant dapat 12k mag bayad) (Steph)🔴 **To be Fixed**
 - May additional na type of tenant (OFFICES) sa permanent tenants (Steph)🔴 **To be Fixed**
-
-
-**Parking Module**
-- add classification for jeep fixed 10 pesos daily (Justin )🔴 **To be Fixed**
-- 4wheels ₱10/3hrs for every succeeding after 3hrs + 10 (Justin )🔴 **To be Fixed**
-- Add name of collector (Justin )🔴 **To be Fixed**
-- Add collector name sa export excel and pdf 🔴 **To be Fixed**
 
 
 **Report Module**
@@ -71,11 +64,11 @@ Reports
 
 
 
-
-
-
-
-
+**Parking Module**
+- add classification for jeep fixed 10 pesos daily (Justin )🟢 **Done**
+- 4wheels ₱10/3hrs for every succeeding after 3hrs + 10 (Justin )🟢 **Done**
+- Add name of collector (Justin ) 🟢 **Done**
+- Add collector name sa export excel and pdf 🟢 **Done**
 
 
 **Terminal Fees Module**

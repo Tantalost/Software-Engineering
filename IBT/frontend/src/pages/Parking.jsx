@@ -21,6 +21,7 @@ import {
   LogOut,
   Car,
   Bike,
+  Bus,
   Archive,
   ArrowLeft,
   FileText,
@@ -47,15 +48,33 @@ const Parking = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
 
+  const [collectorName, setCollectorName] = useState("");
+
+  const validateCollector = () => {
+    if (!collectorName || collectorName.trim() === "") {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter the Name of Collector before exporting.",
+        autoClose: true,
+        duration: 2000,
+      });
+      return false;
+    }
+    return true;
+  };
+
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [modalPrices, setModalPrices] = useState({
     car: 10,
     motorcycle: 5,
+    jeep: 10,
   });
 
   const [priceSettings, setPriceSettings] = useState({
     carRate: 10,
     motorcycleRate: 5,
+    jeepRate: 10,
   });
 
   useEffect(() => {
@@ -63,6 +82,7 @@ const Parking = () => {
       setModalPrices({
         car: priceSettings.carRate.toFixed(2),
         motorcycle: priceSettings.motorcycleRate.toFixed(2),
+        jeep: priceSettings.jeepRate.toFixed(2),
       });
     }
   }, [showPriceModal, priceSettings]);
@@ -108,12 +128,15 @@ const Parking = () => {
   const handleSaveBasePrices = () => {
     const carRate = parseFloat(modalPrices.car);
     const motorcycleRate = parseFloat(modalPrices.motorcycle);
+    const jeepRate = parseFloat(modalPrices.jeep);
 
     if (
       isNaN(carRate) ||
       isNaN(motorcycleRate) ||
+      isNaN(jeepRate) ||
       carRate <= 0 ||
-      motorcycleRate <= 0
+      motorcycleRate <= 0 ||
+      jeepRate <= 0
     ) {
       setNotificationState({
         isOpen: true,
@@ -128,6 +151,7 @@ const Parking = () => {
     setPriceSettings({
       carRate: Number(carRate.toFixed(2)),
       motorcycleRate: Number(motorcycleRate.toFixed(2)),
+      jeepRate: Number(jeepRate.toFixed(2)),
     });
 
     setShowPriceModal(false);
@@ -256,7 +280,7 @@ const Parking = () => {
       }
 
       const payload = {
-        plateNumber: updatedData.plateNumber,
+        plateNo: updatedData.plateNumber,
         type: updatedData.type,
         baseRate: baseRate,
         status: updatedData.status,
@@ -344,17 +368,45 @@ const Parking = () => {
   }, [filtered, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const fourWheelCount = filtered.filter(
-    (t) => t.type === "FourWheels",
-  ).length;
+  const fourWheelCount = filtered.filter((t) => t.type === "FourWheels").length;
   const twoWheelCount = filtered.filter((t) => t.type === "TwoWheels").length;
   const revenue = filtered.reduce((sum, t) => {
     if (t.finalPrice) return sum + Number(t.finalPrice);
 
-    const duration = parseFloat(t.duration) || 0;
-    const rate = Number(t.baseRate) || 0;
+    if (!t.timeIn) return sum;
 
-    return sum + duration * rate;
+    const timeIn = new Date(t.timeIn);
+    const timeOut = t.timeOut ? new Date(t.timeOut) : new Date();
+
+    const diffMs = timeOut - timeIn;
+    const duration = diffMs / (1000 * 60 * 60);
+
+    // ✅ 4 Wheels
+    if (t.type === "FourWheels") {
+      const base = priceSettings.carRate;
+
+      if (duration <= 3) return sum + base;
+
+      const extraHours = Math.ceil(duration - 3);
+      return sum + base + extraHours * base;
+    }
+
+    // ✅ 2 Wheels
+    if (t.type === "TwoWheels") {
+      const base = priceSettings.motorcycleRate;
+
+      if (duration <= 3) return sum + base;
+
+      const extraHours = Math.ceil(duration - 3);
+      return sum + base + extraHours * base;
+    }
+
+    // ✅ Jeep (fixed per day)
+    if (t.type === "Jeep") {
+      return sum + priceSettings.jeepRate;
+    }
+
+    return sum;
   }, 0);
 
   const toggleSelectionMode = () => {
@@ -391,17 +443,20 @@ const Parking = () => {
           const item = records.find((r) => r.id === id);
           if (!item) return;
 
-          return fetch(`${API_URL}/api/deletion-requests`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              itemType: "Parking Ticket",
-              itemDescription: `Ticket #${item.ticketNo} - ${item.plateNo}`,
-              requestedBy: "Parking Admin",
-              originalData: item,
-              reason: "Bulk deletion request",
-            }),
-          });
+          fetch(
+            `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/deletion-requests`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                itemType: "Parking Ticket",
+                itemDescription: `Ticket #${item.ticketNo} - ${item.plateNo}`,
+                requestedBy: "Parking Admin",
+                originalData: item,
+                reason: "Bulk deletion request",
+              }),
+            },
+          );
         });
 
         await sendNotification(
@@ -467,17 +522,21 @@ const Parking = () => {
     }
   };
 
-  const generateTicketNumber = () => {
-    if (records.length === 0) return "T-0001";
+const generateTicketNumber = () => {
+  const today = new Date();
+  const dateKey = today.toISOString().slice(0, 10); 
 
-    const numbers = records
-      .map((r) => parseInt(String(r.ticketNo).replace(/\D/g, "")))
-      .filter((n) => !isNaN(n));
+  let counterData = JSON.parse(localStorage.getItem("ticketCounter")) || {};
+  let count = counterData[dateKey] || 0;
 
-    const next = Math.max(...numbers) + 1;
+  count += 1;
+  counterData[dateKey] = count;
+  localStorage.setItem("ticketCounter", JSON.stringify(counterData));
 
-    return `T-${String(next).padStart(4, "0")}`;
-  };
+  const ticketNum = count.toString().padStart(2, "0"); 
+
+  return `T-${ticketNum}`;
+};
 
   const handleAddClick = () => {
     const now = new Date();
@@ -487,7 +546,7 @@ const Parking = () => {
       ticketNo: generateTicketNumber(),
       type: "FourWheels",
       plateNo: "",
-      baseRate: 5,
+      baseRate: priceSettings.carRate,
       timeIn: formattedTimeIn,
     });
     setStep(1);
@@ -495,10 +554,11 @@ const Parking = () => {
   };
 
   const handleSelectType = (type) => {
-    const rate =
-      type === "FourWheels"
-        ? priceSettings.carRate
-        : priceSettings.motorcycleRate;
+    let rate = 0;
+
+    if (type === "FourWheels") rate = priceSettings.carRate;
+    else if (type === "TwoWheels") rate = priceSettings.motorcycleRate;
+    else if (type === "Jeep") rate = priceSettings.jeepRate;
     setNewTicket((prev) => ({
       ...prev,
       type,
@@ -673,34 +733,46 @@ const Parking = () => {
 
   const confirmLogout = async () => {
     if (!logoutRow) return;
+
     try {
+      console.log("Processing departure for ID:", logoutRow.id);
+
       const response = await fetch(`${API_URL}/${logoutRow.id}/depart`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
       });
-      if (response.ok) {
-        await logActivity(
-          role,
-          "VEHICLE_DEPART",
-          `Vehicle Departed: Ticket #${logoutRow.ticketNo}`,
-          "Parking",
-        );
-        fetchParkingTickets();
-        setLogoutRow(null);
-        setNotificationState({
-          isOpen: true,
-          type: "success",
-          message: `Vehicle departed. Total price calculated.`,
-          autoClose: true,
-          duration: 2000,
-        });
+
+      const data = await response.json();
+      console.log("Response:", data);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed request");
       }
+
+      await logActivity(
+        role,
+        "VEHICLE_DEPART",
+        `Vehicle Departed: Ticket #${logoutRow.ticketNo}`,
+        "Parking",
+      );
+
+      fetchParkingTickets();
+      setLogoutRow(null);
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Vehicle departed. Total price calculated.`,
+        autoClose: true,
+        duration: 2000,
+      });
     } catch (error) {
       console.error("Error logging out:", error);
+
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Failed to process departure.",
+        message: error.message || "Failed to process departure.",
         autoClose: true,
         duration: 2000,
       });
@@ -764,8 +836,8 @@ const Parking = () => {
           activeType,
         },
         statistics: {
-          cars: carCount,
-          motorcycles: motoCount,
+          cars: fourWheelCount,
+          motorcycles: twoWheelCount,
           totalVehicles: filtered.length,
           totalRevenue: revenue,
         },
@@ -839,6 +911,7 @@ const Parking = () => {
   };
 
   const handleExportExcel = async () => {
+    if (!validateCollector()) return;
     if (filtered.length === 0) return alert("No records to export.");
 
     try {
@@ -865,6 +938,7 @@ const Parking = () => {
         `No. of Vehicles: ${filtered.length}`,
       ]);
       worksheet.addRow([
+        `Collector: ${collectorName}`,
         `Operator: ${localStorage.getItem("authName") || "Admin"}`,
         "",
         "",
@@ -944,6 +1018,7 @@ const Parking = () => {
   };
 
   const exportToPDF = () => {
+    if (!validateCollector()) return;
     if (filtered.length === 0) return alert("No records to export.");
 
     const doc = new jsPDF("p", "mm", "a4");
@@ -961,16 +1036,15 @@ const Parking = () => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-    // Metadata on the right
+    doc.text(`Collector: ${collectorName}`, 15, 61);
     doc.text(`No. of Vehicles: ${filtered.length}`, pageWidth - 15, 55, {
       align: "right",
     });
 
-    // Fix: Using "Php" and ensuring it fits within the margin by aligning right
     const revenueText = `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    doc.text(revenueText, pageWidth - 15, 61, { align: "right" });
+    doc.text(revenueText, pageWidth - 15, 67, { align: "right" });
 
-    // 3. DATA TABLE
+    // DATA TABLE
     autoTable(doc, {
       startY: 70,
       margin: { left: 15, right: 15, bottom: 35 }, // Ensure table stays within page margins
@@ -1082,6 +1156,16 @@ const Parking = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
         <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+          <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+            Name of Collector:
+          </label>
+          <input
+            type="text"
+            placeholder="Collector Name"
+            value={collectorName}
+            onChange={(e) => setCollectorName(e.target.value)}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-[180px]"
+          />
           <button
             onClick={() => setShowLogModal(true)}
             className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
@@ -1264,7 +1348,7 @@ const Parking = () => {
 
       {showPriceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between mb-5 border-b pb-3">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <Settings size={20} className="text-emerald-600" />
@@ -1287,6 +1371,26 @@ const Parking = () => {
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Jeep Rate (per day)
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
+                    ₱
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={modalPrices.jeep}
+                    onChange={(e) =>
+                      handleModalPriceChange("jeep", e.target.value)
+                    }
+                    className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   4 Wheels Rate (per hour)
                 </label>
                 <div className="relative">
@@ -1295,7 +1399,7 @@ const Parking = () => {
                   </span>
                   <input
                     type="text"
-                    inputmode="decimal"
+                    inputMode="decimal"
                     value={modalPrices.car}
                     onChange={(e) =>
                       handleModalPriceChange("car", e.target.value)
@@ -1316,7 +1420,7 @@ const Parking = () => {
                   </span>
                   <input
                     type="text"
-                    inputmode="decimal"
+                    inputMode="decimal"
                     value={modalPrices.motorcycle}
                     onChange={(e) =>
                       handleModalPriceChange("motorcycle", e.target.value)
@@ -1350,7 +1454,11 @@ const Parking = () => {
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 text-center transition-all duration-300 relative">
+          <div
+              className={`bg-white w-full ${
+              step === 1 ? "max-w-4xl p-8" : "max-w-md p-6"
+              } rounded-2xl shadow-2xl text-center transition-all duration-300 relative`}
+              >           
             <button
               onClick={() => setShowAddModal(false)}
               className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
@@ -1361,16 +1469,14 @@ const Parking = () => {
               {step === 1 ? "Select Vehicle" : "Enter Details"}
             </h1>
             {step === 1 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in duration-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 animate-in fade-in duration-300">
                 <button
                   onClick={() => handleSelectType("FourWheels")}
-                  className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
+                  className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
                   <Car size={80} className="mb-4" />
 
-                  <span className="text-2xl font-bold mt-2">
-                    4 Wheels 
-                  </span>
+                  <span className="text-2xl font-bold mt-2">4 Wheels</span>
 
                   <span className="text-sm opacity-70 mt-2 font-medium">
                     ₱{priceSettings.carRate}.00 / hr
@@ -1378,7 +1484,7 @@ const Parking = () => {
                 </button>
                 <button
                   onClick={() => handleSelectType("TwoWheels")}
-                  className="h-[220px] w-full flex flex-col items-center justify-center rounded-[20px] bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
+                  className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
                   <Bike size={80} className="mb-4" />
 
@@ -1388,67 +1494,81 @@ const Parking = () => {
                     ₱{priceSettings.motorcycleRate}.00 / hr
                   </span>
                 </button>
+                <button
+                  onClick={() => handleSelectType("Jeep")}
+                  className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-green-50 text-green-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
+                >
+                  <Bus size={80} className="mb-4 text-green-600" />
+                  <span className="text-2xl font-bold mt-2">Jeep</span>
+                  <span className="text-sm opacity-70 mt-2 font-medium">
+                    ₱{priceSettings.jeepRate}.00 / day
+                  </span>
+                </button>
               </div>
             )}
             {step === 2 && (
-              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <div>
-                  <span
-                    className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}
-                  >
-                    Selected:{" "}
-                    {newTicket.type === "FourWheels"
-                      ? "4 Wheels / 3 Wheels"
-                      : "2 Wheels"}
-                  </span>
-                </div>
-                <div className="text-left">
-                  <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
-                    Plate Number
-                  </label>
-                  <input
-                    ref={plateInputRef}
-                    type="text"
-                    list="plate-options"
-                    placeholder="ABC 123"
-                    required
-                    value={newTicket.plateNo}
-                    onChange={(e) =>
-                      setNewTicket({
-                        ...newTicket,
-                        plateNo: e.target.value.toUpperCase(),
-                      })
-                    }
-                    className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors uppercase"
-                  />
-                  <datalist id="plate-options">
-                    {existingPlates.map((plate, index) => (
-                      <option key={index} value={plate} />
-                    ))}
-                  </datalist>
-                </div>
-                <div className="text-left">
-                  <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
-                    Ticket Number
-                  </label>
-
-                  <div className="w-full p-5 text-2xl border-2 border-gray-200 rounded-xl bg-gray-100 font-bold text-gray-700">
-                    {newTicket.ticketNo}
+              <div className="flex justify-center">
+                <div className="w-full max-w-lg flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div>
+                    <span
+                      className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}
+                    >
+                      Selected:{" "}
+                      {newTicket.type === "FourWheels"
+                        ? "4 Wheels"
+                        : newTicket.type === "TwoWheels"
+                          ? "2 Wheels"
+                          : "Jeep"}
+                    </span>
                   </div>
-                </div>
-                <div className="flex gap-4 mt-2">
-                  <button
-                    onClick={handleBack}
-                    className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors py-3"
-                  >
-                    <ArrowLeft size={24} /> Back
-                  </button>
-                  <button
-                    onClick={handleCreateTicket}
-                    className="flex-[2] bg-emerald-500 text-white text-xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg py-3"
-                  >
-                    ENTER TICKET
-                  </button>
+                  <div className="text-left">
+                    <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
+                      Plate Number
+                    </label>
+                    <input
+                      ref={plateInputRef}
+                      type="text"
+                      list="plate-options"
+                      placeholder="ABC 123"
+                      required
+                      value={newTicket.plateNo}
+                      onChange={(e) =>
+                        setNewTicket({
+                          ...newTicket,
+                          plateNo: e.target.value.toUpperCase(),
+                        })
+                      }
+                      className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors uppercase"
+                    />
+                    <datalist id="plate-options">
+                      {existingPlates.map((plate, index) => (
+                        <option key={index} value={plate} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="text-left">
+                    <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
+                      Ticket Number
+                    </label>
+
+                    <div className="w-full p-5 text-2xl border-2 border-gray-200 rounded-xl bg-gray-100 font-bold text-gray-700">
+                      {newTicket.ticketNo}
+                    </div>
+                  </div>
+                  <div className="flex gap-4 mt-2">
+                    <button
+                      onClick={handleBack}
+                      className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors py-3"
+                    >
+                      <ArrowLeft size={24} /> Back
+                    </button>
+                    <button
+                      onClick={handleCreateTicket}
+                      className="flex-[2] bg-emerald-500 text-white text-xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg py-3"
+                    >
+                      ENTER TICKET
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
