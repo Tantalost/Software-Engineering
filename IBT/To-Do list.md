@@ -40,10 +40,7 @@ Permanent
 - Add name of collector (Justin )🔴 **To be Fixed**
 - Add collector name sa export excel and pdf 🔴 **To be Fixed**
 
-**Terminal Fees Module**
-- Add name of collector (Justin )🟢 **Done**
-- Add collector name sa export excel and pdf  🟢 **Done**
- 
+
 **Report Module**
 - Reports accessibility 
 - Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🔴 **To be Fixed**
@@ -65,33 +62,34 @@ Tenants 🟡 **In ProgrWWess** need meeting with sir Derick for further informat
 - changeable interest value
 - fines should be static
 
+Reports
+- add date filter (daily), when clicking the date (ex. Jan 1) specific record of that day should appear 🔴 **To be Fixed**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Terminal Fees Module**
+- Add name of collector (Justin )🟢 **Done**
+- Add collector name sa export excel and pdf  🟢 **Done**
+
+
 Parking management
 - indication should be 3 wheels or 4 wheels 🟢 **Done**
 - fix time in bug 🟢 **Done**
 - same plate number cannot parked at the same time 🟢 **Done**
 
-Reports
-- add date filter (daily), when clicking the date (ex. Jan 1) specific record of that day should appear 🔴 **To be Fixed**
-
-
-Revisions for web general 
+Revisions for web general 🟢 **Done**
 - dashboard export format
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Minor Adjustment
 Bus Admin 🟢 **Done**
