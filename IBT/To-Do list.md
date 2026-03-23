@@ -11,11 +11,6 @@ Color Coding
 5. Ticket upon arrival then issued ticket upon exit pero exceeding ₱100 OR na ibibigay
 
 **REQUEST NI SIR DERICK**
-
-**Error During Presentation**
-- Fix Submit Report per admin (John Loyd) 🔴 **To be Fixed**
-- Login nagsesend parin ng otp twice kahit sa same device (John Loyd) 🔴 **To be Fixed**
-
 **Bus Module** 🟡 **In Progress**
 - use Bus Number instead of plate number (Justin )🟡 **In Progress**
 - add a feature where you can display arrival and departure  (Justin )🟡 **In Progress**
@@ -34,16 +29,14 @@ Permanent
 - May additional na type of tenant (OFFICES) sa permanent tenants (Steph)🔴 **To be Fixed**
 
 
-**Report Module**
-- Reports accessibility 
-- Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🔴 **To be Fixed**
-
-
 🔴 **To be Fixed**
 **PRIORITY**
 Major Adjustment (Priority)
 (Lloyd)
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 
+**Report Module**
+- Reports accessibility 
+- Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🔴 **To be Fixed**
 
 Tenants 🟡 **In ProgrWWess** need meeting with sir Derick for further information regarding the Application process
 - indicate when it started  (verify when is grace period before start and set up of stalls)
@@ -51,7 +44,7 @@ Tenants 🟡 **In ProgrWWess** need meeting with sir Derick for further informat
 - fines should be static
 
 Reports
-- add date filter (daily), when clicking the date (ex. Jan 1) specific record of that day should appear 🔴 **To be Fixed**
+- add date filter (daily), when clicking the da te (ex. Jan 1) specific record of that day should appear 🔴 **To be Fixed**
 
 
 
@@ -248,3 +241,7 @@ Parking management
 - Dapat make create na 4 accounts per admin (John Loyd) 🟢 **Done**
 **Error During Presentation**
 - Fix Submit Report per admin (John Loyd) 🟢 **Done**
+
+**Error During Presentation**
+- Fix Submit Report per admin (John Loyd) 🟢 **Done**
+- Login nagsesend parin ng otp twice kahit sa same device (John Loyd) 🟢 **Done**
