@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
-import crypto from "crypto"; // Built-in Node module
+import crypto from "crypto";
 import Admin from "../models/Admin.js";
 import jwt from "jsonwebtoken";
-import PasswordReset from "../models/PasswordReset.js"; // New model
+import PasswordReset from "../models/PasswordReset.js";
 import sendEmail from "../utils/sendEmail.js";
 
 const getDeviceFingerprint = (req) => {
@@ -33,23 +33,24 @@ export const createAdmin = async (req, res) => {
       return res.status(400).json({ message: "All required fields are required." });
     }
 
-    // --- NEW STRICT SECURITY CHECK ---
     if (role === 'superadmin') {
       return res.status(403).json({ 
         message: "Security restriction: Super Admin accounts cannot be created or cloned via the API." 
       });
     }
-    // ---------------------------------
 
-    const existing = await Admin.findOne({ $or: [{ email: email.toLowerCase() }, { role }] });
-    if (existing) {
-      return res.status(409).json({ message: "Admin with this email or role already exists." });
+    const existingEmail = await Admin.findOne({ email: email.toLowerCase() });
+    if (existingEmail) {
+      return res.status(409).json({ message: "Admin with this email already exists." });
+    }
+
+    // Check the number of admins with this role
+    const roleCount = await Admin.countDocuments({ role });
+    if (roleCount >= 4) {
+      return res.status(409).json({ message: "Maximum 4 admins allowed per role." });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    
-    // Notice: We can safely remove the recovery code generation logic from here 
-    // because this endpoint will never process a 'superadmin' role anymore!
     
     const admin = await Admin.create({ 
       firstName, 

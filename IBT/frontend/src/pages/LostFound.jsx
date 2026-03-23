@@ -565,7 +565,7 @@ const LostFound = () => {
       };
 
       const adminName =
-        localStorage.getItem("authName") || "Lost & Found Admin";
+        localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Lost & Found Admin";
       await submitPageReport("Lost & Found", reportPayload, adminName);
 
       sendNotification(

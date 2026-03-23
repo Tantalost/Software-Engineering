@@ -1352,7 +1352,7 @@ const BusTrips = () => {
       await submitPageReport(
         "Bus Trips",
         reportPayload,
-        localStorage.getItem("authName") || "Admin",
+        localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin",
       );
       await Promise.all(
         filtered.map((item) =>

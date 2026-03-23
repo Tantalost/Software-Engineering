@@ -392,7 +392,7 @@ const TenantLease = () => {
                 data: formattedData
             };
 
-            const adminName = localStorage.getItem("authName") || (role === "lease" ? "Tenant Admin" : "Admin");
+            const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
             await submitPageReport("Tenant Lease", reportPayload, adminName);
             await sendNotification(
                 "Report Submitted: Tenant Lease",

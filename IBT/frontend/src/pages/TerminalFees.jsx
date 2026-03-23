@@ -320,7 +320,7 @@ const TerminalFees = () => {
         data: formattedData,
       };
 
-      const adminName = localStorage.getItem("authName") || "Ticket Admin";
+      const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Ticket Admin";
       await submitPageReport("Terminal Fees", reportPayload, adminName);
       await fetch(
         `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`,

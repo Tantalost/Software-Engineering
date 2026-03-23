@@ -753,6 +753,9 @@ const Parking = () => {
         };
       });
 
+      const carCount = filtered.filter(item => item.type && item.type.toLowerCase() === 'fourwheels').length;
+      const motoCount = filtered.filter(item => item.type && item.type.toLowerCase() === 'twowheels').length;
+
       const reportPayload = {
         screen: "Parking Management",
         generatedDate: new Date().toLocaleString(),
@@ -772,7 +775,7 @@ const Parking = () => {
         data: formattedData,
       };
 
-      const adminName = localStorage.getItem("authName") || "Parking Admin";
+      const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Parking Admin";
       await submitPageReport("Parking", reportPayload, adminName);
 
       await fetch(
