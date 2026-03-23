@@ -127,15 +127,19 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
     }
   }, [formData.editStart, formData.tenantType, initialStart]);
 
-  useEffect(() => {
-    const calculatedUtils = (parseFloat(feeBreakdown.garbageFee) || 0) +
+    useEffect(() => {
+    const isNightMarket = formData.tenantType === "Night Market";
+    const calculatedUtils = isNightMarket ? 0 : (
+                  (parseFloat(feeBreakdown.garbageFee) || 0) +
                   (parseFloat(feeBreakdown.permitFee) || 0) +
                   (parseFloat(feeBreakdown.businessTaxes) || 0) +
                   (parseFloat(feeBreakdown.electricity) || 0) +
                   (parseFloat(feeBreakdown.water) || 0) +
-                  (parseFloat(feeBreakdown.otherAmount) || 0);
+                  (parseFloat(feeBreakdown.otherAmount) || 0)
+    );
 
     const rent = parseFloat(formData.rentAmount) || 0;
+
     let total = rent + calculatedUtils;
 
     if (status === "Overdue") {
@@ -308,16 +312,20 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
              <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
                 <FormInput label="Monthly Rent" type="number" name="rentAmount" value={formData.rentAmount} readOnly={true} />
                 
-                <FormInput label="Garbage Fee" type="number" value={feeBreakdown.garbageFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, garbageFee: e.target.value})} />
-                <FormInput label="Permit Fee" type="number" value={feeBreakdown.permitFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, permitFee: e.target.value})} />
-                <FormInput label="Business Taxes" type="number" value={feeBreakdown.businessTaxes} onChange={(e) => setFeeBreakdown({...feeBreakdown, businessTaxes: e.target.value})} />
-                <FormInput label="Electricity" type="number" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} />
-                <FormInput label="Water" type="number" value={feeBreakdown.water} onChange={(e) => setFeeBreakdown({...feeBreakdown, water: e.target.value})} />
-                <FormInput label="Others (Amount)" type="number" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} />
-                
-                <div className="md:col-span-2">
-                    <FormInput label="Others (Please specify)" type="text" value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} placeholder="Specify what the other fee is for..." />
-                </div>
+                {formData.tenantType === "Permanent" && (
+                  <>
+                    <FormInput label="Garbage Fee" type="number" value={feeBreakdown.garbageFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, garbageFee: e.target.value})} />
+                    <FormInput label="Permit Fee" type="number" value={feeBreakdown.permitFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, permitFee: e.target.value})} />
+                    <FormInput label="Business Taxes" type="number" value={feeBreakdown.businessTaxes} onChange={(e) => setFeeBreakdown({...feeBreakdown, businessTaxes: e.target.value})} />
+                    <FormInput label="Electricity" type="number" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} />
+                    <FormInput label="Water" type="number" value={feeBreakdown.water} onChange={(e) => setFeeBreakdown({...feeBreakdown, water: e.target.value})} />
+                    <FormInput label="Others (Amount)" type="number" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} />
+                    
+                    <div className="md:col-span-2">
+                        <FormInput label="Others (Please specify)" type="text" value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} placeholder="Specify what the other fee is for..." />
+                    </div>
+                  </>
+                )}
 
                  <div className="flex flex-col gap-1 md:col-start-3">
                     <label className="text-sm font-medium text-slate-700">Total Amount Due</label>

@@ -141,6 +141,14 @@ export const createTenant = async (req, res) => {
         }
     }
 
+    if (req.body.tenantType === "Night Market") {
+        parsedFeeBreakdown = {
+            garbageFee: 0, permitFee: 0, businessTaxes: 0, 
+            electricity: 0, water: 0, otherAmount: 0, otherSpecify: ""
+        };
+        req.body.utilityAmount = 0; 
+    }
+
     const tenantData = {
         ...req.body,
         feeBreakdown: parsedFeeBreakdown,
@@ -248,6 +256,15 @@ export const updateTenant = async (req, res) => {
                 }
             }
         }
+    }
+
+    const isNightMarket = (updateData.tenantType || oldTenant.tenantType) === "Night Market";
+    if (isNightMarket) {
+        updateData.feeBreakdown = {
+            garbageFee: 0, permitFee: 0, businessTaxes: 0, 
+            electricity: 0, water: 0, otherAmount: 0, otherSpecify: ""
+        };
+        updateData.utilityAmount = 0;
     }
 
     const getFile = (fieldName) => {

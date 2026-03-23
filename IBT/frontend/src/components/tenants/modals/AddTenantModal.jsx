@@ -194,16 +194,19 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice]);
 
   useEffect(() => {
-    const calculatedUtils = (parseFloat(feeBreakdown.garbageFee) || 0) +
+    const isNightMarket = formData.tenantType === "Night Market";
+    const calculatedUtils = isNightMarket ? 0 : (
+                  (parseFloat(feeBreakdown.garbageFee) || 0) +
                   (parseFloat(feeBreakdown.permitFee) || 0) +
                   (parseFloat(feeBreakdown.businessTaxes) || 0) +
                   (parseFloat(feeBreakdown.electricity) || 0) +
                   (parseFloat(feeBreakdown.water) || 0) +
-                  (parseFloat(feeBreakdown.otherAmount) || 0);
+                  (parseFloat(feeBreakdown.otherAmount) || 0)
+    );
                   
     setUtilityAmount(calculatedUtils);
     setTotalAmount(parseFloat(rentAmount || 0) + calculatedUtils);
-  }, [rentAmount, feeBreakdown]);
+  }, [rentAmount, feeBreakdown, formData.tenantType]);
 
   const handleFileChange = (e, docType) => {
     if (e.target.files && e.target.files[0]) {
@@ -597,30 +600,39 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                   <label className="text-xs font-semibold text-slate-600">Garbage Fee</label>
                   <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.garbageFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, garbageFee: e.target.value})} /></div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Permit Fee</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.permitFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, permitFee: e.target.value})} /></div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Business Taxes</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.businessTaxes} onChange={(e) => setFeeBreakdown({...feeBreakdown, businessTaxes: e.target.value})} /></div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Electricity</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} /></div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Water</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.water} onChange={(e) => setFeeBreakdown({...feeBreakdown, water: e.target.value})} /></div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-600">Others (Amount)</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} /></div>
-                </div>
-                <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-600">Others (Please specify)</label>
-                  <input type="text" className="p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Specify what the other fee is for..." value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} />
-                </div>
+                
+                {formData.tenantType === "Permanent" && (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Garbage Fee</label>
+                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.garbageFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, garbageFee: e.target.value})} /></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Permit Fee</label>
+                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.permitFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, permitFee: e.target.value})} /></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Business Taxes</label>
+                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.businessTaxes} onChange={(e) => setFeeBreakdown({...feeBreakdown, businessTaxes: e.target.value})} /></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Electricity</label>
+                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} /></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Water</label>
+                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.water} onChange={(e) => setFeeBreakdown({...feeBreakdown, water: e.target.value})} /></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Others (Amount)</label>
+                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} /></div>
+                    </div>
+                    <div className="flex flex-col gap-1 md:col-span-2">
+                      <label className="text-xs font-semibold text-slate-600">Others (Please specify)</label>
+                      <input type="text" className="p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Specify what the other fee is for..." value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
