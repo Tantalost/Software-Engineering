@@ -20,6 +20,10 @@ Color Coding
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
 
+Mobile
+- add settings  (change password, deactivate account and reactivate account using email as verification)
+- set MPIN (4 digits) instead of email in loggin in an account in stall application
+- add push notifications
 
 🔴 **To be Fixed**
 **PRIORITY**
