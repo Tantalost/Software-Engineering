@@ -10,7 +10,7 @@ export const getParkingTickets = async (req, res) => {
   }
 };
 
-// CREATE (Entry)
+
 export const createParking = async (req, res) => {
   try {
     const { ticketNo, plateNo, type, baseRate, timeIn } = req.body;
@@ -23,7 +23,7 @@ export const createParking = async (req, res) => {
       timeIn: timeIn || new Date(), 
       status: "Parked",
       finalPrice: 0,
-      isArchived: false // Explicitly set just to be safe
+      isArchived: false
     });
 
     const savedTicket = await newTicket.save();
@@ -36,6 +36,7 @@ export const createParking = async (req, res) => {
 // DEPART (Calculate Duration & Price)
 export const departParking = async (req, res) => {
   try {
+    console.log("DEPART API HIT:", req.params.id);
     const { id } = req.params;
     const parkingRecord = await Parking.findById(id);
 
@@ -44,20 +45,55 @@ export const departParking = async (req, res) => {
     }
 
     const timeOut = new Date();
-    const timeIn = new Date(parkingRecord.timeIn);
-    const diffMs = timeOut - timeIn; 
-    const diffHours = diffMs / (1000 * 60 * 60);
-    const billedHours = Math.ceil(diffHours); 
-    const finalHours = billedHours < 1 ? 1 : billedHours;
-    const totalCost = finalHours * parkingRecord.baseRate;
+const timeIn = new Date(parkingRecord.timeIn);
 
-    parkingRecord.timeOut = timeOut;
-    parkingRecord.duration = `${finalHours} hour(s)`;
-    parkingRecord.finalPrice = totalCost;
-    parkingRecord.status = "Departed";
+// ✅ compute duration in hours
+const diffMs = timeOut - timeIn;
+const duration = diffMs / (1000 * 60 * 60);
 
-    const updatedRecord = await parkingRecord.save();
-    res.status(200).json(updatedRecord);
+const hours = Math.floor(duration);
+const minutes = Math.round((duration - hours) * 60);
+const durationText = `${hours} hours ${minutes} minutes`;
+
+let finalPrice = 0;
+
+// ✅ 4 Wheels (₱base for 3 hrs, +base per extra hour)
+if (parkingRecord.type === "FourWheels") {
+  const base = parkingRecord.baseRate;
+
+  if (duration <= 3) {
+    finalPrice = base;
+  } else {
+    const extraHours = Math.ceil(duration - 3);
+    finalPrice = base + extraHours * base;
+  }
+}
+
+// ✅ 2 Wheels (same logic as 4 wheels but lower base)
+else if (parkingRecord.type === "TwoWheels") {
+  const base = parkingRecord.baseRate;
+
+  if (duration <= 3) {
+    finalPrice = base;
+  } else {
+    const extraHours = Math.ceil(duration - 3);
+    finalPrice = base + extraHours * base;
+  }
+}
+
+// ✅ Jeep (flat rate)
+else if (parkingRecord.type === "Jeep") {
+  finalPrice = parkingRecord.baseRate;
+}
+
+// ✅ SAVE RESULTS
+parkingRecord.timeOut = timeOut;
+parkingRecord.duration = String(durationText);
+parkingRecord.finalPrice = finalPrice;
+parkingRecord.status = "Departed";
+
+const updatedRecord = await parkingRecord.save();
+res.status(200).json(updatedRecord);
 
   } catch (error) {
     res.status(500).json({ message: error.message });

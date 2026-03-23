@@ -911,7 +911,7 @@ const TerminalFees = () => {
       </div>
 
       {/* --- Main container justified to the right --- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-end mb-4 gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         {/* LEFT SIDE — Collector Name */}
         <div className="flex items-center gap-3 w-full lg:w-auto">
           <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
@@ -927,7 +927,6 @@ const TerminalFees = () => {
             className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           />
         </div>
-
         <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
           {role === "superadmin" && (
             <button
