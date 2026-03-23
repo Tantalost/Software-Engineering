@@ -17,45 +17,39 @@ Color Coding
 - Add name of collector (Justin )🟡 **In Progress**
 - Add collector name sa export excel and pdf 🟡 **In Progress**
 
-**Tenant Module**
-Add name of admin name collector in tenants module so that it will reflect after the admin clicked the submit report button 
-Add admin name collector in export excel and pdf in tenants module both in reports module and tenants module 
-
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
-
-
-**Report Module**
-- Reports accessibility 
-- Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🔴 **To be Fixed**
 
 
 🔴 **To be Fixed**
 **PRIORITY**
 Major Adjustment (Priority)
 (Lloyd)
+- add broadcast template message for overdue tenants
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 
 **Report Module**
 - Reports accessibility 
 - Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🔴 **To be Fixed**
 
-Tenants 🟡 **In ProgrWWess** need meeting with sir Derick for further information regarding the Application process
-- indicate when it started  (verify when is grace period before start and set up of stalls)
-- changeable interest value
-- fines should be static
+
+
+
+
+
+
+
+
+
+
+
+
 
 Reports
-- add date filter (daily), when clicking the da te (ex. Jan 1) specific record of that day should appear 🔴 **To be Fixed**
+- add date filter (daily), when clicking the da te (ex. Jan 1) specific record of that day should appear 🟢 **Done**
 
-
-
-
-
-
-
-
-
-
+**Tenant Module** 🟢 **Done**
+Add name of admin name collector in tenants module so that it will reflect after the admin clicked the submit report button 
+Add admin name collector in export excel and pdf in tenants module both in reports module and tenants module 
 
 Night Market
 - No garbage fee, permit fee, business tax, water bill. Electricity bill in the night market, only in the permanent side in tenants module (web and mobile side). 🟢 **Done**
