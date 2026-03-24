@@ -34,7 +34,7 @@ const PinPad = ({ mpin, setMpin, label, isError, errorMessage }: { mpin: string,
         onChangeText={(t) => setMpin(t.replace(/[^0-9]/g, ''))}
         keyboardType="number-pad"
         maxLength={4}
-        style={{ width: 0, height: 0, opacity: 0 }} 
+        style={{ width: 0, height: 0, opacity: 0 }} // Hidden securely
         caretHidden={true}
         autoFocus={false}
       />
@@ -53,6 +53,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     authMode, setAuthMode, resetStep, setResetStep, 
     registerStep, setRegisterStep, 
     loading, form, updateForm, resetFormState,
+    isDeviceLinked, handleUnlinkDevice,
     handleAuth, handleSendRegistrationOtp,
     handleRequestReset, handleVerifyOtpLocal, handleFinalReset 
   } = useAuthForm(onLoginSuccess);
@@ -250,7 +251,17 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                 ) : (
                  
                     <View>
-                        <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
+                        {isDeviceLinked ? (
+                            <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                                <Text style={{ color: 'grey', fontSize: 14 }}>Welcome back,</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#1B5E20', marginBottom: 5 }}>{form.email}</Text>
+                                <Button mode="text" compact onPress={handleUnlinkDevice} textColor="grey" labelStyle={{ fontSize: 12 }}>
+                                    Not you? Switch account
+                                </Button>
+                            </View>
+                        ) : (
+                            <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
+                        )}
                         
                         <View style={{ marginTop: 10 }}>
                           <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="Tap to enter MPIN" />

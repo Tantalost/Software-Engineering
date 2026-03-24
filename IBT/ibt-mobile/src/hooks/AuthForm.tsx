@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/auth.service';
@@ -13,6 +13,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   const [registerStep, setRegisterStep] = useState<RegisterStep>('landing');
   
   const [loading, setLoading] = useState(false);
+  const [isDeviceLinked, setIsDeviceLinked] = useState(false);
 
   const [form, setForm] = useState({ 
     email: '', 
@@ -27,13 +28,32 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     agreedToTerms: false
   });
 
+
+  useEffect(() => {
+    const checkSavedDevice = async () => {
+      const savedEmail = await AsyncStorage.getItem('linked_email');
+      if (savedEmail) {
+        setForm(prev => ({ ...prev, email: savedEmail }));
+        setIsDeviceLinked(true);
+      }
+    };
+    checkSavedDevice();
+  }, []);
+
+  const handleUnlinkDevice = async () => {
+    await AsyncStorage.removeItem('linked_email');
+    setForm(prev => ({ ...prev, email: '', mpin: '' }));
+    setIsDeviceLinked(false);
+  };
+
   const updateForm = (key: keyof typeof form, value: string | boolean) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
   const resetFormState = () => {
     setForm({ 
-        email: '', mpin: '', confirmMpin: '', 
+        email: isDeviceLinked ? form.email : '', // Preserve email if linked
+        mpin: '', confirmMpin: '', 
         firstName: '', middleName: '', lastName: '', suffix: '', 
         contactNo: '', otp: '', agreedToTerms: false 
     });
@@ -65,7 +85,10 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             const data = await authService.login({ email: form.email, mpin: form.mpin });
             if (data.token) await AsyncStorage.setItem('token', data.token);
             const userData = { ...data.user, token: data.token };
+            
             await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+            await AsyncStorage.setItem('linked_email', form.email); // Remember device
+            
             onLoginSuccess(userData);
         } catch (error: any) {
             Alert.alert("Error", error.message);
@@ -113,7 +136,9 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             
             if (data.token) await AsyncStorage.setItem('token', data.token);
             const userData = { ...data.user, token: data.token };
+            
             await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+            await AsyncStorage.setItem('linked_email', form.email); // Remember device
             
             Alert.alert("Success", "Account created successfully!");
             onLoginSuccess(userData); 
@@ -177,6 +202,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     resetStep, setResetStep,
     loading, setLoading,
     form, updateForm, resetFormState,
+    isDeviceLinked, handleUnlinkDevice,
     handleAuth,
     handleSendRegistrationOtp, 
     handleRequestReset,
