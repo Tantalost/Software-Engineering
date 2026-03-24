@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, Alert, RefreshControl, TouchableOpacity, Platform } from 'react-native';
-import { Text, Card, Avatar, Divider, Button, List, ActivityIndicator, Portal, Modal, TextInput } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, Alert, RefreshControl, TouchableOpacity } from 'react-native';
+import { Text, Card, Avatar, Divider, Button, ActivityIndicator, Portal, Modal, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,7 +11,6 @@ import AuthScreen from '@/src/AuthScreen';
 import API_URL from '@/src/config';
 import { colors } from '@/src/themes/stallsColors';
 
-// 1. Updated UserData type to match the new backend schema
 type UserData = {
   id: string;
   firstName: string;
@@ -42,7 +41,11 @@ export default function ProfileScreen() {
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [settingsStep, setSettingsStep] = useState<'menu' | 'changePassword'>('menu');
+  const [passForm, setPassForm] = useState({ oldPass: '', newPass: '', confirmPass: '' });
+
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
@@ -148,8 +151,6 @@ export default function ProfileScreen() {
 
     try {
       const formData = new FormData();
-
-      // 3. Append the specific name fields to the FormData
       formData.append('userId', user.id);
       formData.append('firstName', editForm.firstName);
       formData.append('lastName', editForm.lastName);
@@ -174,7 +175,6 @@ export default function ProfileScreen() {
       });
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.message || "Update failed");
 
       const newAvatarUrl = data.user.avatarUrl
@@ -287,6 +287,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
 
       <Portal>
+    
         <Modal visible={editModalVisible} onDismiss={() => setEditModalVisible(false)} contentContainerStyle={styles.modalContent}>
           <Text variant="headlineSmall" style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: 20, color: colors.textDark }}>Edit Profile</Text>
 
@@ -315,23 +316,93 @@ export default function ProfileScreen() {
             <Text style={{ fontSize: 12, color: 'grey', marginTop: 5 }}>Tap to change photo</Text>
           </View>
 
-          {/* 4. Replaced single 'Username' input with First Name and Last Name inputs */}
           <TextInput label="First Name" value={editForm.firstName} onChangeText={t => setEditForm({ ...editForm, firstName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
           <TextInput label="Last Name" value={editForm.lastName} onChangeText={t => setEditForm({ ...editForm, lastName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
-          
           <TextInput label="Email" value={editForm.email} onChangeText={t => setEditForm({ ...editForm, email: t })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
           <TextInput label="Contact Number" value={editForm.contact} onChangeText={t => setEditForm({ ...editForm, contact: t })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} keyboardType="phone-pad" />
 
           <Button mode="contained" onPress={saveProfile} loading={saving} style={{ marginTop: 15, backgroundColor: colors.primary }} textColor='white'>Save Changes</Button>
           <Button onPress={() => setEditModalVisible(false)} style={{ marginTop: 5 }} textColor="grey">Cancel</Button>
         </Modal>
+
+      
+        <Modal visible={settingsModalVisible} onDismiss={() => setSettingsModalVisible(false)} contentContainerStyle={styles.modalContent}>
+          {settingsStep === 'menu' && (
+            <View>
+              <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 20, color: colors.textDark }}>Settings</Text>
+              
+              <TouchableOpacity onPress={() => setSettingsStep('changePassword')} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#eee' }}>
+                <Icon name="lock-reset" size={24} color={colors.primary} style={{ marginRight: 15 }} />
+                <Text style={{ fontSize: 16 }}>Change Security Code (MPIN)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => {
+                  Alert.alert("Deactivate Account", "Are you sure? Your stalls will remain, but you cannot log in until you reactivate via email.", [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Deactivate", style: "destructive", onPress: async () => {
+                        setSaving(true);
+                        try {
+                          await fetch(`${API_URL}/auth/deactivate`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: user.email }) });
+                          await AsyncStorage.multiRemove(['ibt_user', 'token']);
+                          setUser(null);
+                          setSettingsModalVisible(false);
+                          router.replace('/');
+                        } catch(e) { Alert.alert("Error", "Could not deactivate"); }
+                        setSaving(false);
+                    }}
+                  ])
+                }} 
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 15 }}
+              >
+                <Icon name="account-cancel" size={24} color="red" style={{ marginRight: 15 }} />
+                <Text style={{ fontSize: 16, color: 'red' }}>Deactivate Account</Text>
+              </TouchableOpacity>
+              
+              <Button mode="text" onPress={() => setSettingsModalVisible(false)} style={{ marginTop: 20 }}>Close</Button>
+            </View>
+          )}
+
+          {settingsStep === 'changePassword' && (
+            <View>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 20 }}>Change Security Code</Text>
+              <TextInput label="Current MPIN" value={passForm.oldPass} onChangeText={t => setPassForm({...passForm, oldPass: t.replace(/[^0-9]/g, '')})} mode="outlined" secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
+              <TextInput label="New 4-Digit MPIN" value={passForm.newPass} onChangeText={t => setPassForm({...passForm, newPass: t.replace(/[^0-9]/g, '')})} mode="outlined" secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
+              <TextInput label="Confirm New MPIN" value={passForm.confirmPass} onChangeText={t => setPassForm({...passForm, confirmPass: t.replace(/[^0-9]/g, '')})} mode="outlined" secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
+              
+              <Button mode="contained" loading={saving} onPress={async () => {
+                 if (passForm.newPass !== passForm.confirmPass) return Alert.alert("Error", "Codes do not match.");
+                 if (passForm.newPass.length !== 4) return Alert.alert("Error", "MPIN must be exactly 4 digits.");
+                 
+                 setSaving(true);
+                 try {
+                   const res = await fetch(`${API_URL}/auth/change-password`, { 
+                     method: 'POST', 
+                     headers: {'Content-Type':'application/json'}, 
+                     body: JSON.stringify({ email: user.email, oldPassword: passForm.oldPass, newPassword: passForm.newPass }) 
+                   });
+                   const data = await res.json();
+                   if (!res.ok) throw new Error(data.error || "Update failed.");
+                   
+                   Alert.alert("Success", "Security Code updated!");
+                   setSettingsModalVisible(false);
+                   setPassForm({oldPass: '', newPass: '', confirmPass: ''});
+                   setSettingsStep('menu');
+                 } catch(e: any) { Alert.alert("Error", e.message || "Could not update code."); }
+                 setSaving(false);
+              }} style={{ marginTop: 10, backgroundColor: colors.primary }} textColor="white">Save</Button>
+              <Button mode="text" onPress={() => setSettingsStep('menu')} style={{ marginTop: 5 }} textColor="grey">Back</Button>
+            </View>
+          )}
+        </Modal>
       </Portal>
 
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Text variant="headlineMedium" style={styles.headerTitle}>My Profile</Text>
-          <TouchableOpacity onPress={openEditModal} style={{ padding: 5 }}>
-            <Icon name="pencil" size={24} color={colors.primary} />
+       
+          <TouchableOpacity onPress={() => { setSettingsStep('menu'); setSettingsModalVisible(true); }} style={{ padding: 5 }}>
+            <Icon name="cog" size={26} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -340,9 +411,8 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadProfileData(); }} colors={[colors.primary]} />}
       >
-
         <View style={styles.profileSection}>
-          <View style={{ position: 'relative' }}>
+          <TouchableOpacity onPress={openEditModal} style={{ position: 'relative' }}>
             {user.avatarUrl ? (
               <>
                 <Avatar.Image
@@ -368,9 +438,13 @@ export default function ProfileScreen() {
                 style={{ backgroundColor: colors.primary }}
               />
             )}
-          </View>
+            
+         
+            <View style={{ position: 'absolute', top: 0, right: -5, backgroundColor: colors.primary, borderRadius: 15, padding: 5, elevation: 3, borderWidth: 2, borderColor: 'white' }}>
+               <Icon name="pencil" size={14} color="white" />
+            </View>
+          </TouchableOpacity>
           
-          {/* Display Full Name safely */}
           <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: colors.black }}>
              {user.firstName ? `${user.firstName} ${user.lastName}` : 'New Vendor'}
           </Text>
@@ -492,7 +566,6 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
     borderWidth: 1
   },
-
   modalContent: {
     backgroundColor: 'white',
     padding: 25,

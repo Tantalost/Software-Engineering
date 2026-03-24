@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/auth.service';
-
 import { AuthMode, ResetStep, UserData } from '../types/auth.types';
 
 export type RegisterStep = 'landing' | 'email_entry' | 'otp_verify' | 'personal_info' | 'create_mpin';
@@ -28,7 +27,6 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     agreedToTerms: false
   });
 
-
   useEffect(() => {
     const checkSavedDevice = async () => {
       const savedEmail = await AsyncStorage.getItem('linked_email');
@@ -52,7 +50,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
   const resetFormState = () => {
     setForm({ 
-        email: isDeviceLinked ? form.email : '', // Preserve email if linked
+        email: isDeviceLinked ? form.email : '', 
         mpin: '', confirmMpin: '', 
         firstName: '', middleName: '', lastName: '', suffix: '', 
         contactNo: '', otp: '', agreedToTerms: false 
@@ -91,7 +89,31 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             
             onLoginSuccess(userData);
         } catch (error: any) {
-            Alert.alert("Error", error.message);
+          
+            if (error.message?.toLowerCase().includes("deactivated") || error.isDeactivated) {
+               Alert.alert(
+                 "Account Deactivated", 
+                 "Your account is currently deactivated. Would you like to reactivate it?",
+                 [
+                   { text: "Cancel", style: "cancel" },
+                   { text: "Reactivate", onPress: async () => {
+                       setLoading(true);
+                       try {
+                         await authService.reactivateRequest({ email: form.email });
+                         setResetStep('verify-otp');
+                         setAuthMode('forgot-password'); 
+                         Alert.alert("Sent", "A reactivation code has been sent to your email.");
+                       } catch(e: any) { 
+                         Alert.alert("Error", e.message); 
+                       } finally {
+                         setLoading(false);
+                       }
+                   }}
+                 ]
+               );
+            } else {
+               Alert.alert("Error", error.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -132,15 +154,12 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
                 contactNo: `+63${pureNumber}`
             };
 
-            const data = await authService.register(payload);
+            await authService.register(payload);
             
-            if (data.token) await AsyncStorage.setItem('token', data.token);
-            const userData = { ...data.user, token: data.token };
-            
-            await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
             await AsyncStorage.setItem('linked_email', form.email); 
+            setIsDeviceLinked(true); 
             
-            Alert.alert("Success", "Account created successfully!");
+            Alert.alert("Success", "Account created successfully! Please log in with your new MPIN.");
             
             setAuthMode('login');
             setRegisterStep('landing');
@@ -186,6 +205,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
     setLoading(true);
     try {
+        
         await authService.resetPassword({ email: form.email, otp: form.otp, newMpin: form.mpin });
         Alert.alert("Success", "MPIN reset successfully! Please login.");
         

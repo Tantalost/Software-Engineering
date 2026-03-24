@@ -13,7 +13,8 @@ const UserSchema = new mongoose.Schema({
   
   otp: { type: String, default: null },
   otpExpires: { type: Date, default: null },
-  isVerified: { type: Boolean, default: false } 
+  isVerified: { type: Boolean, default: false },
+  status: { type: String, enum: ['active', 'deactivated'], default: 'active' } 
 }, { timestamps: true });
 
 export default mongoose.model("User", UserSchema);

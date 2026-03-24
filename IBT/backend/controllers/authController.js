@@ -9,8 +9,8 @@ export const sendRegistrationOtp = async (req, res) => {
     const { email } = req.body;
     let user = await User.findOne({ email });
 
-    if (user && user.password) {
-        return res.status(400).json({ error: "Email already registered. Please login or reset your password." });
+   if (user && (user.password || user.mpin)) {
+        return res.status(400).json({ error: "Email already registered. Please login or reset your MPIN." });
     }
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -67,7 +67,6 @@ export const requestPasswordReset = async (req, res) => {
   }
 };
 
-
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newMpin } = req.body;
@@ -97,10 +96,8 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-
 export const updateProfile = async (req, res) => {
   try {
-    
     const { userId, firstName, lastName, email, contact } = req.body;
     const user = await User.findById(userId);
 
@@ -210,7 +207,6 @@ export const register = async (req, res) => {
   }
 };
 
-
 export const login = async (req, res) => {
   try {
     const { email, mpin } = req.body;
@@ -218,6 +214,10 @@ export const login = async (req, res) => {
 
     if (!user || !(await bcrypt.compare(mpin, user.mpin))) {
         return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    if (user.status === 'deactivated') {
+        return res.status(403).json({ error: "Your account is deactivated.", isDeactivated: true });
     }
     
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -238,5 +238,116 @@ export const login = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const { email, oldPassword, newPassword } = req.body;
+    const user = await User.findOne({ email });
+    
+    const isMatch = user && (user.mpin ? await bcrypt.compare(oldPassword, user.mpin) : (user.password ? await bcrypt.compare(oldPassword, user.password) : false));
+    
+    if (!user || !isMatch) {
+       return res.status(400).json({ error: "Incorrect current security code." });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const newHash = await bcrypt.hash(newPassword, salt);
+    
+    if (user.password) user.password = newHash;
+    if (user.mpin) user.mpin = newHash; 
+    if (!user.mpin && !user.password) user.mpin = newHash; 
+
+    await user.save();
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Security Code Changed - IBT Stalls",
+        message: `Hi ${user.firstName || 'Vendor'},\n\nYour account security code (MPIN) was successfully updated.\n\nIf you did not make this change, please contact administration immediately.\n\nThank you,\nIBT Management`
+      });
+    } catch (emailError) {
+      console.error("Change MPIN email failed:", emailError.message);
+    }
+
+    res.status(200).json({ message: "Security code updated successfully." });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+};
+
+export const deactivateAccount = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOneAndUpdate({ email }, { status: 'deactivated' }, { new: true });
+    
+    if (user) {
+      try {
+        await sendEmail({
+          email: user.email,
+          subject: "Account Deactivated - IBT Stalls",
+          message: `Hi ${user.firstName || 'Vendor'},\n\nYour account has been deactivated as requested. You will no longer be able to log in.\n\nTo reactivate your account, simply attempt to log in with your email/MPIN and follow the reactivation prompts.\n\nThank you,\nIBT Management`
+        });
+      } catch (emailError) {
+        console.error("Deactivation email failed:", emailError.message);
+      }
+    }
+
+    res.status(200).json({ message: "Account deactivated." });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+};
+
+export const reactivateRequest = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "Account not found." });
+    if (user.status !== 'deactivated') return res.status(400).json({ error: "Account is already active." });
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    await sendEmail({
+      email: user.email,
+      subject: "Account Reactivation Code",
+      message: `Your account reactivation code is: ${otp}\n\nThis code will expire in 10 minutes.`
+    });
+    res.status(200).json({ message: "Reactivation OTP sent to email." });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+};
+
+export const reactivateConfirm = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (!user.otp || user.otp !== otp) return res.status(400).json({ error: "Invalid verification code." });
+    if (user.otpExpires < Date.now()) return res.status(400).json({ error: "Verification code has expired." });
+
+    user.status = 'active';
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Account Reactivated - IBT Stalls",
+        message: `Hi ${user.firstName || 'Vendor'},\n\nWelcome back! Your account has been successfully reactivated.\n\nYou can now log in using your MPIN.\n\nThank you,\nIBT Management`
+      });
+    } catch (emailError) {
+      console.error("Reactivation email failed:", emailError.message);
+    }
+
+    res.status(200).json({ message: "Account reactivated successfully. You can now log in." });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
   }
 };

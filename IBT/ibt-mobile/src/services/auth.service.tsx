@@ -94,5 +94,31 @@ export const authService = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to reset MPIN");
     return data;
+  },
+
+  changePassword: async (payload: any) => {
+    const res = await fetch(`${API_URL}/auth/change-password`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to change code");
+    return data;
+  },
+
+  deactivateAccount: async (payload: any) => {
+    const res = await fetch(`${API_URL}/auth/deactivate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to deactivate");
+    return data;
+  },
+  reactivateRequest: async (payload: any) => {
+    const res = await fetch(`${API_URL}/auth/reactivate-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to request reactivation");
+    return data;
+  },
+  reactivateConfirm: async (payload: any) => {
+    const res = await fetch(`${API_URL}/auth/reactivate-confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to reactivate");
+    return data;
   }
 };

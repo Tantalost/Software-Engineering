@@ -7,10 +7,16 @@ import {
     requestPasswordReset, 
     resetPassword,
     updateProfile,
-    getAvatar 
+    getAvatar,
+
+    changePassword,
+    deactivateAccount,
+    reactivateRequest,
+    reactivateConfirm
 } from "../controllers/authController.js";
 
 const router = express.Router();
+
 
 router.post("/send-registration-otp", sendRegistrationOtp);
 router.post("/register", register);
@@ -19,7 +25,12 @@ router.post("/forgot-password-request", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
 router.put("/update-profile", upload.single('avatar'), updateProfile);
-
 router.get("/avatar/:filename", getAvatar);
+
+
+router.post("/change-password", changePassword);
+router.post("/deactivate", deactivateAccount);
+router.post("/reactivate-request", reactivateRequest);
+router.post("/reactivate-confirm", reactivateConfirm);
 
 export default router;
