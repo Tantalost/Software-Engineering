@@ -2,9 +2,8 @@ import API_URL from '../config';
 
 interface LoginPayload { 
     email: string; 
-    password: string; 
+    mpin: string; 
 }
-
 
 interface SendOtpPayload { 
     email: string; 
@@ -13,7 +12,7 @@ interface SendOtpPayload {
 interface RegisterPayload { 
     email: string; 
     otp: string;
-    password: string; 
+    mpin: string; 
     firstName: string; 
     middleName: string; 
     lastName: string; 
@@ -28,7 +27,7 @@ interface ResetRequestPayload {
 interface ResetConfirmPayload { 
     email: string; 
     otp: string; 
-    newPassword: string; 
+    newMpin: string; 
 }
 
 export const authService = {
@@ -44,7 +43,6 @@ export const authService = {
     return data;
   },
 
-  
   sendRegistrationOtp: async (payload: SendOtpPayload) => {
     const res = await fetch(`${API_URL}/auth/send-registration-otp`, {
       method: 'POST',
@@ -55,7 +53,6 @@ export const authService = {
     if (!res.ok) throw new Error(data.error || "Failed to send OTP");
     return data;
   },
-
 
   register: async (payload: RegisterPayload) => {
     const res = await fetch(`${API_URL}/auth/register`, {
@@ -95,7 +92,7 @@ export const authService = {
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to reset password");
+    if (!res.ok) throw new Error(data.error || "Failed to reset MPIN");
     return data;
   }
 };

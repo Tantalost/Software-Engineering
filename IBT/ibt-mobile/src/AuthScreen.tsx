@@ -1,13 +1,47 @@
-import React, { useState } from 'react';
-import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { Card, Text, TextInput, Button, HelperText, Checkbox } from 'react-native-paper';
+import React from 'react';
+import { View, ScrollView, KeyboardAvoidingView, Platform, TextInput as NativeTextInput, Pressable } from 'react-native';
+import { Card, Text, TextInput, Button, Checkbox } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useAuthForm } from './hooks/AuthForm';
-import { getPasswordStrength, sanitizePhoneNumber } from './utils/validation';
+import { sanitizePhoneNumber } from './utils/validation';
 import { UserData } from './types/auth.types';
 import styles from './styles/LogForm';
-import { black } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
+
+const PinPad = ({ mpin, setMpin, label, isError, errorMessage }: { mpin: string, setMpin: (val: string) => void, label: string, isError?: boolean, errorMessage?: string }) => {
+  const inputRef = React.useRef<NativeTextInput>(null);
+
+  return (
+    <View style={{ alignItems: 'center', marginVertical: 15, width: '100%' }}>
+      <Text style={{ fontSize: 14, color: isError ? '#B00020' : 'grey', fontWeight: 'bold', marginBottom: 10 }}>{label}</Text>
+      
+      <Pressable style={{ flexDirection: 'row', gap: 20, padding: 10 }} onPress={() => inputRef.current?.focus()}>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={{
+            width: 20, height: 20, borderRadius: 10,
+            backgroundColor: mpin.length > i ? '#1B5E20' : 'transparent',
+            borderWidth: 2,
+            borderColor: isError ? '#B00020' : '#1B5E20'
+          }} />
+        ))}
+      </Pressable>
+      
+      {isError && errorMessage && <Text style={{ color: '#B00020', fontSize: 12, marginTop: 5 }}>{errorMessage}</Text>}
+      
+      <NativeTextInput
+        ref={inputRef}
+        value={mpin}
+        onChangeText={(t) => setMpin(t.replace(/[^0-9]/g, ''))}
+        keyboardType="number-pad"
+        maxLength={4}
+        style={{ width: 0, height: 0, opacity: 0 }} 
+        caretHidden={true}
+        autoFocus={false}
+      />
+    </View>
+  );
+};
+
 
 interface AuthScreenProps {
   onLoginSuccess: (user: UserData) => void;
@@ -23,17 +57,13 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     handleRequestReset, handleVerifyOtpLocal, handleFinalReset 
   } = useAuthForm(onLoginSuccess);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const strength = getPasswordStrength(form.password);
-  const isMatch = form.password === form.confirmPassword;
+  const isMatch = form.mpin === form.confirmMpin;
 
   const getCardTitle = () => {
       if (authMode === 'login') return "Login to Apply";
       if (authMode === 'register') return "Create Account"; 
       if (authMode === 'forgot-password') {
-          return resetStep === 'request' ? "Reset Password" : resetStep === 'verify-otp' ? "Enter Code" : "New Password";
+          return resetStep === 'request' ? "Reset MPIN" : resetStep === 'verify-otp' ? "Enter Code" : "New MPIN";
       }
   };
 
@@ -91,8 +121,8 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       case 'otp_verify':
         return (
           <View>
-            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black" }}>Enter One-Time-Password</Text>
-            <Text style={{ color: 'grey', marginBottom: 20 }}>Please enter the one-time Password (OTP) that we sent to {form.email}</Text>
+            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black" }}>Enter Verification Code</Text>
+            <Text style={{ color: 'grey', marginBottom: 20 }}>Please enter the one-time code that we sent to {form.email}</Text>
             
             <TextInput label="OTP" value={form.otp} onChangeText={(t) => updateForm('otp', t)} mode="outlined" style={styles.input} keyboardType="number-pad" activeOutlineColor="#1B5E20" textColor='#000000' maxLength={6} />
             
@@ -123,7 +153,6 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                     label="Mobile Number" 
                     value={form.contactNo} 
                      onChangeText={(t) => { 
-        
                         let cleaned = t.startsWith('0') ? t.substring(1) : t;
                         updateForm('contactNo', sanitizePhoneNumber(cleaned)); 
                     }} 
@@ -137,7 +166,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                 />
             </View>
 
-            <Button mode="contained" onPress={() => setRegisterStep('create_password')} style={styles.button} textColor="#ffffff">
+            <Button mode="contained" onPress={() => setRegisterStep('create_mpin')} style={styles.button} textColor="#ffffff">
               Next
             </Button>
             <Button mode="text" onPress={() => setRegisterStep('otp_verify')} style={styles.switchButton} textColor="grey">
@@ -146,22 +175,15 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           </View>
         );
 
-      case 'create_password':
+      case 'create_mpin':
         return (
           <View>
-            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black"}}>Create your Password</Text>
-            <Text style={{ color: 'grey', marginBottom: 20 }}>Secure your account with a strong password.</Text>
+            <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black"}}>Set your MPIN</Text>
+            <Text style={{ color: 'grey', marginBottom: 20 }}>Secure your account with a 4-digit code.</Text>
 
-            <TextInput label="Password" value={form.password} onChangeText={(t) => updateForm('password', t)} mode="outlined" style={[styles.input, { marginBottom: 0 }]} secureTextEntry={!showPassword} activeOutlineColor={strength.color} outlineColor={strength.color === 'transparent' ? '#79747E' : strength.color} textColor='#000000' right={form.password.length > 0 ? (<TextInput.Icon icon={showPassword ? "eye-off" : "eye"} onPress={() => setShowPassword(!showPassword)} /> ) : null} />
-            {form.password.length > 0 && (
-                <View style={styles.strengthContainer}>
-                    <Icon name={strength.icon as any} size={16} color={strength.color} style={{ marginRight: 5 }} />
-                    <Text style={{ color: strength.color, fontSize: 12 }}>{strength.text}</Text>
-                </View>
-            )}
+            <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="Enter 4-Digit MPIN" />
             
-            <TextInput label="Confirm Password" value={form.confirmPassword} onChangeText={(t) => updateForm('confirmPassword', t)} mode="outlined" style={styles.input} secureTextEntry={!showConfirmPassword} activeOutlineColor={!isMatch && form.confirmPassword.length > 0 ? "red" : "#1B5E20"} textColor='#000000' right={form.confirmPassword.length > 0 ? (<TextInput.Icon icon={showConfirmPassword ? "eye-off" : "eye"} onPress={() => setShowConfirmPassword(!showConfirmPassword)} /> ) : null } />
-            {form.confirmPassword.length > 0 && !isMatch && <HelperText type="error" visible={!isMatch}>Passwords do not match!</HelperText>}
+            <PinPad mpin={form.confirmMpin} setMpin={(val) => updateForm('confirmMpin', val)} label="Confirm MPIN" isError={form.confirmMpin.length > 0 && !isMatch} errorMessage="MPINs do not match" />
 
             <Button mode="contained" onPress={handleAuth} loading={loading} style={styles.button} textColor="#ffffff">
               Complete Sign Up
@@ -211,22 +233,11 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                         )}
                         {resetStep === 'reset-password' && (
                             <>
-                                <TextInput label="New Password" value={form.password} onChangeText={(t) => updateForm('password', t)} mode="outlined" style={[styles.input, { marginBottom: 0 }]} secureTextEntry={!showPassword} activeOutlineColor={strength.color} outlineColor={strength.color === 'transparent' ? '#79747E' : strength.color} textColor='#000000'
-                                    right={
-                                        form.password.length > 0 ? (<TextInput.Icon icon={showPassword ? "eye-off" : "eye"} onPress={() => setShowPassword(!showPassword)} /> ) : null
-                                    } />
-                                {form.password.length > 0 && (
-                                    <View style={styles.strengthContainer}>
-                                        <Icon name={strength.icon as any} size={16} color={strength.color} style={{ marginRight: 5 }} />
-                                        <Text style={{ color: strength.color, fontSize: 12 }}>{strength.text}</Text>
-                                    </View>
-                                )}
-                                <TextInput label="Confirm New Password" value={form.confirmPassword} onChangeText={(t) => updateForm('confirmPassword', t)} mode="outlined" style={styles.input} secureTextEntry={!showConfirmPassword} activeOutlineColor={!isMatch && form.confirmPassword.length > 0 ? "red" : "#1B5E20"} textColor='#000000'
-                                    right={
-                                        form.confirmPassword.length > 0 ? (<TextInput.Icon icon={showConfirmPassword ? "eye-off" : "eye"} onPress={() => setShowConfirmPassword(!showConfirmPassword)} /> ) : null
-                                    } />
-                                {form.confirmPassword.length > 0 && !isMatch && <HelperText type="error" visible={!isMatch}>Passwords do not match!</HelperText>}
-                                <Button mode="contained" onPress={handleFinalReset} loading={loading} style={styles.button} textColor="#ffffff">Reset Password</Button>
+                                <Text style={styles.desc}>Create a new 4-digit security code.</Text>
+                                <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="New 4-Digit MPIN" />
+                                <PinPad mpin={form.confirmMpin} setMpin={(val) => updateForm('confirmMpin', val)} label="Confirm New MPIN" isError={form.confirmMpin.length > 0 && !isMatch} errorMessage="MPINs do not match" />
+
+                                <Button mode="contained" onPress={handleFinalReset} loading={loading} style={styles.button} textColor="#ffffff">Reset MPIN</Button>
                             </>
                         )}
                         <Button mode="text" onPress={() => { setAuthMode('login'); setResetStep('request'); resetFormState(); }} style={[styles.switchButton, {marginTop: 20}]} textColor="#1B5E20">Back to Login</Button>
@@ -240,14 +251,13 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                  
                     <View>
                         <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
-                        <TextInput label="Password" value={form.password} onChangeText={(t) => updateForm('password', t)} mode="outlined" style={[styles.input, { marginBottom: 0 }]} secureTextEntry={!showPassword} activeOutlineColor="#1B5E20" outlineColor="#79747E" textColor='#000000'
-                            right={
-                                form.password.length > 0 ? (<TextInput.Icon icon={showPassword ? "eye-off" : "eye"} onPress={() => setShowPassword(!showPassword)} /> ) : null
-                            } />
-                        <View style={{marginBottom: 10}} />
                         
-                        <View style={{alignItems: 'flex-end'}}>
-                            <Button mode="text" compact onPress={() => setAuthMode('forgot-password')} textColor="#1B5E20" labelStyle={{ fontSize: 12, marginVertical: 0 }}>Forgot Password?</Button>
+                        <View style={{ marginTop: 10 }}>
+                          <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="Tap to enter MPIN" />
+                        </View>
+                        
+                        <View style={{alignItems: 'center', marginBottom: 15}}>
+                            <Button mode="text" compact onPress={() => setAuthMode('forgot-password')} textColor="#1B5E20" labelStyle={{ fontSize: 13, marginVertical: 0 }}>Forgot MPIN?</Button>
                         </View>
                         
                         <Button mode="contained" onPress={handleAuth} loading={loading} style={styles.button} textColor="#ffffff">

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/auth.service';
-import { getPasswordStrength } from '../utils/validation';
+
 import { AuthMode, ResetStep, UserData } from '../types/auth.types';
 
-export type RegisterStep = 'landing' | 'email_entry' | 'otp_verify' | 'personal_info' | 'create_password';
+export type RegisterStep = 'landing' | 'email_entry' | 'otp_verify' | 'personal_info' | 'create_mpin';
 
 export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
@@ -16,8 +16,8 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
   const [form, setForm] = useState({ 
     email: '', 
-    password: '', 
-    confirmPassword: '', 
+    mpin: '', 
+    confirmMpin: '', 
     firstName: '',
     middleName: '',
     lastName: '',
@@ -33,13 +33,12 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
   const resetFormState = () => {
     setForm({ 
-        email: '', password: '', confirmPassword: '', 
+        email: '', mpin: '', confirmMpin: '', 
         firstName: '', middleName: '', lastName: '', suffix: '', 
         contactNo: '', otp: '', agreedToTerms: false 
     });
   };
 
- 
   const handleSendRegistrationOtp = async () => {
     if (!form.email) return Alert.alert("Error", "Please enter your email address.");
     if (!form.agreedToTerms) return Alert.alert("Error", "You must agree to the Terms and Conditions.");
@@ -47,7 +46,6 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     setLoading(true);
     try {
         await authService.sendRegistrationOtp({ email: form.email });
-      
         setRegisterStep('otp_verify'); 
     } catch (error: any) {
         Alert.alert("Error", error.message);
@@ -59,11 +57,12 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   const handleAuth = async () => {
     
     if (authMode === 'login') {
-        if (!form.email || !form.password) return Alert.alert("Error", "Please fill all fields");
+        if (!form.email || !form.mpin) return Alert.alert("Error", "Please fill all fields");
+        if (form.mpin.length !== 4) return Alert.alert("Error", "MPIN must be exactly 4 digits");
         
         setLoading(true);
         try {
-            const data = await authService.login({ email: form.email, password: form.password });
+            const data = await authService.login({ email: form.email, mpin: form.mpin });
             if (data.token) await AsyncStorage.setItem('token', data.token);
             const userData = { ...data.user, token: data.token };
             await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
@@ -77,9 +76,8 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     }
 
     if (authMode === 'register') {
-        const strength = getPasswordStrength(form.password);
-        const isPasswordValid = strength.text === 'Strong Password';
-        const isMatch = form.password === form.confirmPassword;
+        const isMpinValid = /^\d{4}$/.test(form.mpin);
+        const isMatch = form.mpin === form.confirmMpin;
 
         if (!form.firstName || !form.lastName || !form.contactNo) {
             return Alert.alert("Error", "Please fill all required personal information fields.");
@@ -90,12 +88,12 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             return Alert.alert("Invalid Number", "Please enter a valid 10-digit mobile number (e.g., 912 345 6789).");
         }
 
-        if (!isPasswordValid) {
-            return Alert.alert("Weak Password", "Password must be at least 8 characters and include special characters.");
+        if (!isMpinValid) {
+            return Alert.alert("Invalid MPIN", "Your MPIN must be exactly 4 digits.");
         }
         
         if (!isMatch) {
-            return Alert.alert("Error", "Passwords do not match.");
+            return Alert.alert("Error", "MPINs do not match.");
         }
 
         setLoading(true);
@@ -103,7 +101,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             const payload = {
                 email: form.email,
                 otp: form.otp, 
-                password: form.password,
+                mpin: form.mpin,
                 firstName: form.firstName,
                 middleName: form.middleName,
                 lastName: form.lastName,
@@ -151,18 +149,17 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   };
 
   const handleFinalReset = async () => {
-    const strength = getPasswordStrength(form.password);
-    const isPasswordValid = strength.text === 'Strong Password';
-    const isMatch = form.password === form.confirmPassword;
+    const isMpinValid = /^\d{4}$/.test(form.mpin);
+    const isMatch = form.mpin === form.confirmMpin;
 
-    if (!form.password || !form.confirmPassword) return Alert.alert("Error", "Please fill in the new password fields.");
-    if (!isPasswordValid) return Alert.alert("Weak Password", "Password must be at least 8 characters and include special characters.");
-    if (!isMatch) return Alert.alert("Error", "Passwords do not match.");
+    if (!form.mpin || !form.confirmMpin) return Alert.alert("Error", "Please fill in the new MPIN fields.");
+    if (!isMpinValid) return Alert.alert("Invalid MPIN", "Your MPIN must be exactly 4 digits.");
+    if (!isMatch) return Alert.alert("Error", "MPINs do not match.");
 
     setLoading(true);
     try {
-        await authService.resetPassword({ email: form.email, otp: form.otp, newPassword: form.password });
-        Alert.alert("Success", "Password reset successfully! Please login.");
+        await authService.resetPassword({ email: form.email, otp: form.otp, newMpin: form.mpin });
+        Alert.alert("Success", "MPIN reset successfully! Please login.");
         
         setAuthMode('login');
         setResetStep('request');

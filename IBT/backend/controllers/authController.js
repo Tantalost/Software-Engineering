@@ -70,9 +70,9 @@ export const requestPasswordReset = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
-
+    const { email, otp, newMpin } = req.body;
     const user = await User.findOne({ email });
+
     if (!user) return res.status(404).json({ error: "User not found" });
 
     if (!user.otp || user.otp !== otp) {
@@ -84,9 +84,9 @@ export const resetPassword = async (req, res) => {
     }
 
     const salt = await bcrypt.genSalt(10);
-    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+    const hashedNewMpin = await bcrypt.hash(newMpin, salt);
 
-    user.password = hashedNewPassword; 
+    user.mpin = hashedNewMpin;
     user.otp = null;
     user.otpExpires = null;
     await user.save();
@@ -151,7 +151,7 @@ export const getAvatar = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const { email, otp, password, firstName, middleName, lastName, suffix, contactNo } = req.body;
+   const { email, otp, mpin, firstName, middleName, lastName, suffix, contactNo } = req.body;
     
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: "Registration session not found. Please try signing up again." });
@@ -164,9 +164,9 @@ export const register = async (req, res) => {
     }
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedMpin = await bcrypt.hash(mpin, salt);
 
-    user.password = hashedPassword;
+    user.mpin = hashedMpin;
     user.firstName = firstName;
     user.middleName = middleName;
     user.lastName = lastName;
@@ -203,14 +203,13 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    
+    const { email, mpin } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || !(await bcrypt.compare(mpin, user.mpin))) {
         return res.status(400).json({ error: "Invalid credentials" });
     }
-
+    
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(200).json({ 
