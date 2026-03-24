@@ -25,27 +25,6 @@ Mobile
 - set MPIN (4 digits) instead of email in loggin in an account in stall application
 - add push notifications
 
-🔴 **To be Fixed**
-**PRIORITY**
-Major Adjustment (Priority)
-(Lloyd)
-- add broadcast template message for overdue tenants
-- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 
-**Report Module**
-- Reports accessibility 
-- Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🔴 **To be Fixed**
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 Reports
@@ -263,3 +242,13 @@ Reports
 Major Adjustment (Priority)
 (Lloyd)
 - broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 🟢 **Done** 
+
+🟢 **Done**
+**PRIORITY**
+Major Adjustment (Priority)
+(Lloyd)
+- add broadcast template message for overdue tenants
+- broadcast button sa tenants set a due date (within 1st 5 days of the month) to announce to all tenants in the permanent slot 
+**Report Module**
+- Reports accessibility 
+- Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🟢 **Done**
