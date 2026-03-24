@@ -90,6 +90,7 @@ const TenantLease = () => {
         title: "",
         message: "",
         targetGroup: "All",
+        dueDate: "",
         scheduleTime: "",
         isScheduled: false,
         attachment: null,
@@ -793,7 +794,7 @@ const TenantLease = () => {
 
             setShowNotify(false);
             setNotifyDraft({
-                title: "", message: "", targetGroup: "All", scheduleTime: "", isScheduled: false, attachment: null, templateApplied: false
+                title: "", message: "", targetGroup: "All", dueDate: "", scheduleTime: "", isScheduled: false, attachment: null, templateApplied: false
             });
 
             setNotificationState({

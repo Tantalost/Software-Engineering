@@ -285,12 +285,34 @@ export const updateTenant = async (req, res) => {
     
     if (oldTenant && oldTenant.status !== 'Overdue' && updatedTenant.status === 'Overdue' && updatedTenant.email) {
       try {
+        // Calculate overdue information
         const rent = updatedTenant.rentAmount || 0;
-        const subject = "Your lease is now overdue";
-        const message = `Dear ${updatedTenant.tenantName || updatedTenant.name},\n\n` +
-          `Our records indicate that your lease payment for slot ${updatedTenant.slotNo} is now overdue. ` +
-          `Please remit payment as soon as possible to avoid further penalties.\n\n` +
-          `Thank you.\nIBT Management`;
+        const totalAmount = updatedTenant.totalAmount || rent;
+        const dueDate = updatedTenant.DueDateTime ? new Date(updatedTenant.DueDateTime) : new Date();
+        const computationDate = new Date();
+        
+        // Get last payment info
+        const lastPayment = updatedTenant.paymentHistory && updatedTenant.paymentHistory.length > 0 
+          ? updatedTenant.paymentHistory.sort((a, b) => new Date(b.datePaid) - new Date(a.datePaid))[0]
+          : null;
+        
+        const lastPaymentMonth = lastPayment ? new Date(lastPayment.datePaid).toLocaleString('en-US', { month: 'long', year: 'numeric' }) : 'N/A';
+        const lastPaymentAmount = lastPayment ? lastPayment.amount : 0;
+        
+        // Calculate period (simplified - from due date to current month)
+        const dueMonth = dueDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const currentMonth = computationDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const periodText = dueMonth === currentMonth ? dueMonth : `${dueMonth} to ${currentMonth}`;
+        
+        const subject = "Final Notice: Overdue Rent Payment";
+        const message = `Sir/Ma'am ${updatedTenant.tenantName || updatedTenant.name},
+
+This serves as our final notice for your settle your unpaid rent for the space you occupy at Integrated Bus Terminal which now amounts to ₱${totalAmount.toLocaleString()}, inclusive of surcharge and interests, covering the period of ${periodText}, computed as of ${computationDate.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. The last payment you made was on ${lastPaymentMonth} amounting to ₱${lastPaymentAmount.toLocaleString()}. No payment has been made thereafter, thus this bill.
+
+Kindly settle your account within five (5) days from receipt hereof. Otherwise, we will forward this matter to the Office of the City Legal for appropriate legal action to the effect collection of the same.
+
+Thank you`;
+
         await sendEmail({ email: updatedTenant.email, subject, message });
       } catch (emailErr) {
         console.error("Overdue email failed:", emailErr.message);

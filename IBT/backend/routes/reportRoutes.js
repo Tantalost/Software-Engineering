@@ -16,7 +16,7 @@ router.post('/', createReport);
 router.get('/', getAllReports);
 router.get('/:id', getReportById);
 
-// New Soft Delete Routes
+// Soft Delete Routes
 router.get('/archived', getArchivedReports);
 router.patch('/:id/archive', archiveReport);
 router.patch('/:id/restore', restoreReport);

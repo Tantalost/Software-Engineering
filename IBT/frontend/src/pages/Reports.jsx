@@ -240,14 +240,68 @@ const Reports = () => {
 
       let matchesTimeRange = true;
       if (timeRange !== "All") {
-        if (timeRange === "This Week") {
-          const weekAgo = new Date();
-          weekAgo.setDate(now.getDate() - 7);
-          matchesTimeRange = reportDate >= weekAgo;
-        } else if (timeRange === "This Month")
-          matchesTimeRange = reportDate.getMonth() === now.getMonth();
-        else if (timeRange === "This Year")
-          matchesTimeRange = reportDate.getFullYear() === now.getFullYear();
+        const reportTime = new Date(report.createdAt || report.date);
+        
+        // Helper function to get date at start of day
+        const getStartOfDay = (date) => {
+          const d = new Date(date);
+          d.setHours(0, 0, 0, 0);
+          return d;
+        };
+        
+        // Helper function to get date at end of day
+        const getEndOfDay = (date) => {
+          const d = new Date(date);
+          d.setHours(23, 59, 59, 999);
+          return d;
+        };
+
+        switch (timeRange) {
+          case "This Week": {
+            const weekAgo = new Date();
+            weekAgo.setDate(now.getDate() - 7);
+            matchesTimeRange = reportDate >= weekAgo;
+            break;
+          }
+          case "This Month": {
+            matchesTimeRange = 
+              reportTime.getMonth() === now.getMonth() && 
+              reportTime.getFullYear() === now.getFullYear();
+            break;
+          }
+          case "Last Month": {
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+            matchesTimeRange = 
+              reportTime >= lastMonth && reportTime <= lastMonthEnd;
+            break;
+          }
+          case "Last Month & This Month": {
+            // Show records from last month and current month
+            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const thisMonthEnd = getEndOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+            matchesTimeRange = reportTime >= lastMonthStart && reportTime <= thisMonthEnd;
+            break;
+          }
+          case "Last 3 Months": {
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(now.getMonth() - 3);
+            matchesTimeRange = reportDate >= threeMonthsAgo;
+            break;
+          }
+          case "Last 6 Months": {
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(now.getMonth() - 6);
+            matchesTimeRange = reportDate >= sixMonthsAgo;
+            break;
+          }
+          case "This Year": {
+            matchesTimeRange = reportDate.getFullYear() === now.getFullYear();
+            break;
+          }
+          default:
+            matchesTimeRange = true;
+        }
       }
 
       return (
@@ -755,6 +809,10 @@ const Reports = () => {
             <option value="All">All Time</option>
             <option value="This Week">This Week</option>
             <option value="This Month">This Month</option>
+            <option value="Last Month">Last Month</option>
+            <option value="Last Month & This Month">Last Month & This Month</option>
+            <option value="Last 3 Months">Last 3 Months</option>
+            <option value="Last 6 Months">Last 6 Months</option>
             <option value="This Year">This Year</option>
           </select>
           <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -1014,6 +1072,14 @@ const Reports = () => {
           </div>
         </div>
       )}
+
+      <DeleteModal
+        isOpen={!!deleteRow}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Record"
+        message="Are you sure you want to remove this report? This action cannot be undone."
+      />
 
       <DeleteModal
         isOpen={!!deleteRow}

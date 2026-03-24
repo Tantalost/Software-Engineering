@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Download, FileText, Trash2 } from "lucide-react";
+import { X, Download, FileText, Trash2, AlertCircle } from "lucide-react";
 
 const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft }) => {
     if (!isOpen) return null;
@@ -14,12 +14,48 @@ const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft }) => {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
+    const getNextValidDueDate = () => {
+        // Get the current date or next occurrence of 1st-5th of the month
+        const now = new Date();
+        const currentDay = now.getDate();
+        
+        if (currentDay <= 5) {
+          // Use the 1st of current month
+          const dueDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          const year = dueDate.getFullYear();
+          const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+          const day = String(dueDate.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } else {
+          // Use the 1st of next month
+          const dueDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          const year = dueDate.getFullYear();
+          const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+          const day = String(dueDate.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+    };
+
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) setDraft(prev => ({ ...prev, attachment: file }));
     };
 
     const removeFile = () => setDraft(prev => ({ ...prev, attachment: null }));
+
+    const isDueDateValid = (dateStr) => {
+        if (!dateStr) return true;
+        const date = new Date(dateStr);
+        const day = date.getDate();
+        return day >= 1 && day <= 5;
+    };
+
+    const handleDueDateChange = (e) => {
+        const value = e.target.value;
+        if (isDueDateValid(value)) {
+          setDraft(prev => ({ ...prev, dueDate: value }));
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -55,6 +91,42 @@ const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft }) => {
                             rows={3}
                             className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none resize-none transition-all text-sm"
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Target Group</label>
+                        <select
+                            value={draft.targetGroup || "All"}
+                            onChange={(e) => setDraft({ ...draft, targetGroup: e.target.value })}
+                            className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-medium text-slate-700"
+                        >
+                            <option value="All">All Tenants</option>
+                            <option value="Permanent Tenants">Permanent Tenants</option>
+                            <option value="Night Market">Night Market</option>
+                        </select>
+                        <p className="text-[10px] text-slate-500 mt-1.5">Select which tenant group will receive this announcement</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Due Date (Optional)</label>
+                        <div className="relative">
+                            <input
+                                type="date"
+                                value={draft.dueDate || ""}
+                                onChange={handleDueDateChange}
+                                min={new Date().toISOString().split('T')[0]}
+                                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm"
+                            />
+                        </div>
+                        {draft.dueDate && !isDueDateValid(draft.dueDate) && (
+                            <div className="flex items-center gap-2 mt-2 p-2.5 rounded-lg bg-red-50 border border-red-200">
+                                <AlertCircle size={14} className="text-red-600 flex-shrink-0" />
+                                <p className="text-[10px] text-red-700 font-medium">Due date must be within 1st-5th day of the month</p>
+                            </div>
+                        )}
+                        {!draft.dueDate && (
+                            <p className="text-[10px] text-slate-500 mt-1.5">Date must fall within days 1-5 of any month. Leave blank if not needed.</p>
+                        )}
                     </div>
 
                     <div>
@@ -101,7 +173,7 @@ const BroadcastModal = ({ isOpen, onClose, onBroadcast, draft, setDraft }) => {
 
                 <div className="p-6 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50/30 rounded-b-2xl">
                     <button onClick={onClose} className="flex-1 py-3 px-4 rounded-xl text-slate-600 text-sm font-bold border border-slate-200 bg-white hover:bg-slate-50 transition-colors">Cancel</button>
-                    <button onClick={onBroadcast} disabled={!draft.title || !draft.message || (draft.isScheduled && !draft.scheduleTime)} className="flex-1 py-3 px-4 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-black shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={onBroadcast} disabled={!draft.title || !draft.message || (draft.isScheduled && !draft.scheduleTime) || (draft.dueDate && !isDueDateValid(draft.dueDate))} className="flex-1 py-3 px-4 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-black shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         {draft.isScheduled ? "Schedule" : "Send Broadcast"}
                     </button>
                 </div>

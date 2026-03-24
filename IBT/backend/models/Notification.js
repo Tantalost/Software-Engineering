@@ -31,6 +31,11 @@ const notificationSchema = new mongoose.Schema({
   date: { 
     type: String, 
     default: () => new Date().toISOString().split('T')[0] 
+  },
+  // Due date for broadcast announcements (must be within days 1-5 of month)
+  dueDate: {
+    type: Date,
+    required: false
   }
 }, { 
   timestamps: true // Adds createdAt and updatedAt for better sorting

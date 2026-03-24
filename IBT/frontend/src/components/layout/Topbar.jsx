@@ -25,6 +25,7 @@ const Topbar = ({ title, onMenuClick }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
+  const [dueDate, setDueDate] = useState("");
 
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -139,9 +140,17 @@ const Topbar = ({ title, onMenuClick }) => {
     setExistingAttachments([]);
     setScheduledDate("");
     setScheduledTime("");
+    setDueDate("");
     setPostTiming("now");
     setEditMode(false);
     setEditId(null);
+  };
+
+  const isDueDateValid = (dateStr) => {
+    if (!dateStr) return true;
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    return day >= 1 && day <= 5;
   };
 
   const applyRentReminderTemplate = () => {
@@ -187,10 +196,19 @@ const Topbar = ({ title, onMenuClick }) => {
       return showToast("error", "Please provide a subject and a message.");
     }
 
+    // Validate due date if provided
+    if (dueDate && !isDueDateValid(dueDate)) {
+      return showToast("error", "Due date must be within the first 5 days of the month.");
+    }
+
     const formData = new FormData();
     formData.append('title', broadcastData.title);
     formData.append('message', broadcastData.message);
     formData.append('targetGroup', broadcastData.targetGroup);
+
+    if (dueDate) {
+      formData.append('dueDate', dueDate);
+    }
 
     if (postTiming === "schedule" && !editMode) {
       if (!scheduledDate || !scheduledTime) {
@@ -469,6 +487,24 @@ const Topbar = ({ title, onMenuClick }) => {
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Due Date <span className="text-xs text-slate-500">(Optional - for rent reminders)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${dueDate && !isDueDateValid(dueDate) ? 'border-red-300 focus:ring-red-500/20' : 'border-gray-200'}`}
+                    />
+                    {dueDate && !isDueDateValid(dueDate) && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertTriangle size={12} />
+                        Due date must be within the first 5 days of the month
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                       Subject / Title
                     </label>
                     <input
@@ -590,7 +626,7 @@ const Topbar = ({ title, onMenuClick }) => {
 
                 <div className="p-6 border-t border-gray-50 flex space-x-4">
                   <button onClick={() => { setShowBroadcastModal(false); resetForm(); }} className="flex-1 py-3.5 rounded-xl border border-gray-200 text-slate-600 font-semibold hover:bg-gray-50 transition-all cursor-pointer">Cancel</button>
-                  <button onClick={handleBroadcastSubmit} disabled={isSubmitting} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold hover:opacity-90 transition-all shadow-md shadow-emerald-100 cursor-pointer disabled:opacity-50">
+                  <button onClick={handleBroadcastSubmit} disabled={isSubmitting || (dueDate && !isDueDateValid(dueDate))} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold hover:opacity-90 transition-all shadow-md shadow-emerald-100 cursor-pointer disabled:opacity-50">
                     {isSubmitting ? "Saving..." : (editMode ? "Save Changes" : (postTiming === "schedule" ? "Schedule Post" : "Send Broadcast"))}
                   </button>
                 </div>

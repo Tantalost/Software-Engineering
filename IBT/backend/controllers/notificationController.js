@@ -58,8 +58,21 @@ export const deleteNotification = async (req, res) => {
 
 export const broadcastNotification = async (req, res) => {
     try {
-        const { title, message, targetGroup, recipientIds, scheduleTime } = req.body;
+        const { title, message, targetGroup, recipientIds, scheduleTime, dueDate } = req.body;
         let attachments = [];
+
+        // Validate dueDate if provided
+        if (dueDate) {
+            const dueDateObj = new Date(dueDate);
+            const dayOfMonth = dueDateObj.getDate();
+            
+            if (dayOfMonth < 1 || dayOfMonth > 5) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Due date must be within the first 5 days of the month' 
+                });
+            }
+        }
 
         if (req.files && req.files.length > 0) {
             attachments = req.files.map(file => {
@@ -83,6 +96,7 @@ export const broadcastNotification = async (req, res) => {
             targetRole: "tenant",
             targetUserId: recipientId,
             attachments,
+            dueDate: dueDate ? new Date(dueDate) : null,
             date: scheduleTime ? new Date(scheduleTime).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         }));
 

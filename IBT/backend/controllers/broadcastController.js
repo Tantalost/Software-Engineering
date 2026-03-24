@@ -2,8 +2,21 @@ import Broadcast from '../models/Broadcast.js';
 
 export const createBroadcast = async (req, res) => {
   try {
-    const { title, message, scheduledFor, targetGroup } = req.body;
+    const { title, message, scheduledFor, targetGroup, dueDate } = req.body;
     let attachments = [];
+
+    // Validate dueDate if provided
+    if (dueDate) {
+      const dueDateObj = new Date(dueDate);
+      const dayOfMonth = dueDateObj.getDate();
+      
+      if (dayOfMonth < 1 || dayOfMonth > 5) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Due date must be within the first 5 days of the month' 
+        });
+      }
+    }
 
     if (req.files && req.files.length > 0) {
       attachments = req.files.map(file => {
@@ -22,6 +35,7 @@ export const createBroadcast = async (req, res) => {
       title, 
       message, 
       targetGroup: targetGroup || 'All',
+      dueDate: dueDate ? new Date(dueDate) : null,
       attachments,
       scheduledFor: scheduledFor ? new Date(scheduledFor) : Date.now()
     });
@@ -31,7 +45,7 @@ export const createBroadcast = async (req, res) => {
     res.status(201).json({ success: true, data: savedBroadcast });
   } catch (error) {
     console.error("Error creating broadcast:", error);
-    res.status(500).json({ success: false, message: 'Failed to create broadcast' });
+    res.status(500).json({ success: false, message: error.message || 'Failed to create broadcast' });
   }
 };
 

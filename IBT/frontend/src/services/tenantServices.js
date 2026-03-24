@@ -5,6 +5,10 @@ export const sendBroadcast = async (apiUrl, notifyDraft, targetTenants) => {
     formData.append("targetGroup", notifyDraft.targetGroup);
     formData.append("source", "Tenant Lease");
 
+    if (notifyDraft.dueDate) {
+        formData.append("dueDate", notifyDraft.dueDate);
+    }
+
     if (notifyDraft.isScheduled && notifyDraft.scheduleTime) {
         formData.append("scheduleTime", notifyDraft.scheduleTime);
     }
