@@ -23,7 +23,21 @@ Permanent
 Mobile
 - add settings  (change password, deactivate account and reactivate account using email as verification)
 - set MPIN (4 digits) instead of email in loggin in an account in stall application
-- add push notifications
+
+- add push notifications (LLoyd)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
