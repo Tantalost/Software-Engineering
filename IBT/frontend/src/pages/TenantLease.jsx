@@ -375,6 +375,8 @@ const TenantLease = () => {
                 "Total Due": calculateDueAmount(t)
             }));
 
+            const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
+
             const reportPayload = {
                 screen: "Tenant Lease Management",
                 generatedDate: new Date().toLocaleString(),
@@ -388,12 +390,12 @@ const TenantLease = () => {
                     totalRecords: records.length,
                     displayedRecords: filtered.length,
                     totalRevenue: mapStats.totalRevenue,
-                    occupancy: `${mapStats.nonAvailableSlots}/${mapStats.totalSlots}`
+                    occupancy: `${mapStats.nonAvailableSlots}/${mapStats.totalSlots}`,
+                    collector: adminName 
                 },
                 data: formattedData
             };
 
-            const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
             await submitPageReport("Tenant Lease", reportPayload, adminName);
             await sendNotification(
                 "Report Submitted: Tenant Lease",
@@ -903,7 +905,7 @@ const TenantLease = () => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Operator: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
+        doc.text(`Collector: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
 
        
         const feeBreakdown = typeof t.feeBreakdown === 'string' 
@@ -972,19 +974,22 @@ const TenantLease = () => {
             await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:G4');
 
            
-           // Changed merge from G to M to accommodate 13 columns
+          
             worksheet.mergeCells('A6:M6');
             const titleCell = worksheet.getCell('A6');
             titleCell.value = 'TENANTS AND LEASE REPORTS';
             titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
             titleCell.alignment = { horizontal: 'center' };
 
+            const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
+
             worksheet.addRow([]); 
             worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
+            worksheet.addRow([`Collector: ${adminName}`, '', '', '', '', '', '', '', '', '', '', '', '']); 
             worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '']);
-            worksheet.addRow([]); 
+            worksheet.addRow([]);
 
-            // Expanded Headers
+           
             const headerRow = worksheet.addRow([
                 "Slot No.", "Name", "Email", "Contact No.", "Rent", 
                 "Garbage", "Permit", "Taxes", "Electricity", "Water", "Other Fees",
@@ -1059,12 +1064,14 @@ const TenantLease = () => {
         doc.setFont("helvetica", "bold");
         doc.text("TENANTS AND LEASE REPORTS", pageWidth / 2, 45, { align: "center" });
 
+        const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
+
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
 
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+        doc.text(`Collector: ${adminName}`, 15, 61); // <-- NEW
 
-        
         doc.text(`No. of Payments: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
         doc.text(
             `Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,

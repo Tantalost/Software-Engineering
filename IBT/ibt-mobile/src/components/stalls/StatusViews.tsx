@@ -233,44 +233,53 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                 <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{utilityAmount}</Text>
               </View>
               
-              <View style={{ paddingLeft: 10, marginTop: 4 }}>
-                {garbageFee > 0 && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>↳ Garbage Fee:</Text>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>₱{garbageFee.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                    </View>
-                )}
-                {permitFee > 0 && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>↳ Permit Fee:</Text>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>₱{permitFee.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                    </View>
-                )}
-                {businessTaxes > 0 && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>↳ Business Taxes:</Text>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>₱{businessTaxes.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                    </View>
-                )}
-                {electricity > 0 && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>↳ Electricity:</Text>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>₱{electricity.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                    </View>
-                )}
-                {water > 0 && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>↳ Water:</Text>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>₱{water.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                    </View>
-                )}
-                {otherAmount > 0 && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>↳ {otherSpecify}:</Text>
-                      <Text style={{ color: '#166534', fontSize: 12 }}>₱{otherAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                    </View>
-                )}
+             {(currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent") && (
+              <View style={{ marginBottom: 5 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: '#166534' }}>Additional Fees:</Text>
+                  <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{utilityAmount}</Text>
+                </View>
+                
+                <View style={{ paddingLeft: 10, marginTop: 4 }}>
+                  {garbageFee > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>↳ Garbage Fee:</Text>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>₱{garbageFee.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                      </View>
+                  )}
+                  {permitFee > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>↳ Permit Fee:</Text>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>₱{permitFee.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                      </View>
+                  )}
+                  {businessTaxes > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>↳ Business Taxes:</Text>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>₱{businessTaxes.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                      </View>
+                  )}
+                  {electricity > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>↳ Electricity:</Text>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>₱{electricity.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                      </View>
+                  )}
+                  {water > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>↳ Water:</Text>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>₱{water.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                      </View>
+                  )}
+                  {otherAmount > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>↳ {otherSpecify}:</Text>
+                        <Text style={{ color: '#166534', fontSize: 12 }}>₱{otherAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                      </View>
+                  )}
+                </View>
               </View>
+            )}
             </View>
             
             <Divider style={{ marginVertical: 8, backgroundColor: '#bbf7d0' }} />

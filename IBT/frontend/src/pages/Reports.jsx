@@ -335,7 +335,6 @@ const Reports = () => {
     }
   };
 
-  // MAIN EXPORT excel FUNCTIONS (List)
   const handleExportExcel = async () => {
     if (filtered.length === 0) return alert("No records to export.");
 
@@ -343,11 +342,9 @@ const Reports = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Overall Terminal Report");
 
-      // 1. BRANDED HEADER (-1/8 height adjustment)
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:D4');
 
-      // 2. Metadata Section (Positioned after branding)
       worksheet.mergeCells('A6:D6');
       const titleCell = worksheet.getCell('A6');
       titleCell.value = 'OVERALL TERMINAL REPORTS';
@@ -357,11 +354,13 @@ const Reports = () => {
       const getRevenue = (item) => item.data?.statistics?.totalRevenue || item.data?.statistics?.revenue || 0;
       const overallTotalRevenue = filtered.reduce((sum, item) => sum + getRevenue(item), 0);
 
+      const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin";
+
       worksheet.addRow([]);
       worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', `Overall Total Revenue: Php ${overallTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
+      worksheet.addRow([`Collector: ${adminName}`, '', '', '']); 
       worksheet.addRow([]);
 
-      // 3. Styled Table Headers
       const headerRow = worksheet.addRow(["Report ID", "Department", "Operator", "Revenue"]);
       headerRow.eachCell((cell) => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
@@ -369,7 +368,7 @@ const Reports = () => {
         cell.alignment = { horizontal: 'center' };
       });
 
-      // 4. Data Population
+      
       filtered.forEach((item) => {
         worksheet.addRow([
           item.id ? item.id.substring(0, 8).toUpperCase() : "-",
@@ -379,12 +378,10 @@ const Reports = () => {
         ]);
       });
 
-      // 5. BRANDED FOOTER (-1/8 height adjustment)
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
       await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:D${lastRowNumber + 3}`);
 
-      // 6. Formatting
       worksheet.columns = [{ width: 20 }, { width: 25 }, { width: 25 }, { width: 25 }];
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -412,10 +409,8 @@ const Reports = () => {
       0,
     );
 
-    // 1. Header Branding
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-    // 2. Report Title & Metadata (Source 6 & 7)
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("OVERALL REPORTS", pageWidth / 2, 45, { align: "center" });
@@ -424,7 +419,7 @@ const Reports = () => {
     doc.setFont("helvetica", "normal");
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
     doc.text(
-      `Operator: ${localStorage.getItem("authName") || "Admin"}`,
+      `Collector: ${localStorage.getItem("authName") || "Admin"}`,
       15,
       61,
     );
@@ -439,7 +434,6 @@ const Reports = () => {
       { align: "right" },
     );
 
-    // 3. Data Table (Source 6)
     autoTable(doc, {
       startY: 70,
       margin: { bottom: 35 },
@@ -450,15 +444,15 @@ const Reports = () => {
         item.author || "-",
         `₱${getRevenue(item).toFixed(2)}`,
       ]),
-      headStyles: { fillColor: [16, 185, 129] }, // Zamboanga IBT Red
+      headStyles: { fillColor: [16, 185, 129] }, 
       styles: { fontSize: 9, halign: "center" },
       columnStyles: {
-        0: { halign: "left" }, // Report ID
-        1: { halign: "left" }, // Department
-        2: { halign: "left" }, // Operator
+        0: { halign: "left" }, 
+        1: { halign: "left" }, 
+        2: { halign: "left" }, 
       },
       didDrawPage: (data) => {
-        // 4. Footer Branding
+      
         doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
       },
     });
@@ -474,19 +468,19 @@ const Reports = () => {
     );
   };
 
-  // SINGLE REPORT EXPORT
+ 
   const handleSingleExportExcel = async (report) => {
     try {
       const workbook = new ExcelJS.Workbook();
 
-      // --- SHEET 1: Summary & Statistics ---
+    
       const wsSummary = workbook.addWorksheet("Summary");
 
-      // 1. Add Branded Header (-1/8 height)
+     
       wsSummary.getRow(1).height = 35;
       await addImageToWorksheet(workbook, wsSummary, headerImg, 'A1:B4');
 
-      wsSummary.addRow([]); // Spacer
+      wsSummary.addRow([]); 
       wsSummary.addRow(["REPORT DETAILS"]).font = { bold: true, size: 12 };
       wsSummary.addRow(["ID", report.id]);
       wsSummary.addRow(["Type", report.type]);
