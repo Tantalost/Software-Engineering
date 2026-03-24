@@ -13,9 +13,8 @@ Color Coding
 **REQUEST NI SIR DERICK**
 **Bus Module** 🟡 **In Progress**
 - use Bus Number instead of plate number (Justin )🟡 **In Progress**
-- add a feature where you can display arrival and departure  (Justin )🟡 **In Progress**
-- Add name of collector (Justin )🟡 **In Progress**
-- Add collector name sa export excel and pdf 🟡 **In Progress**
+- Add name of collector (Justin )🟢 **Done**
+- Add collector name sa export excel and pdf , add collector para maka export🟢 **Done**
 
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
