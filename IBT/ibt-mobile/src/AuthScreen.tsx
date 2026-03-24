@@ -248,21 +248,10 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                
                     renderRegisterFlow()
 
-                ) : (
+               ) : (
                  
                     <View>
-                        {isDeviceLinked ? (
-                            <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                                <Text style={{ color: 'grey', fontSize: 14 }}>Welcome back,</Text>
-                                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#1B5E20', marginBottom: 5 }}>{form.email}</Text>
-                                <Button mode="text" compact onPress={handleUnlinkDevice} textColor="grey" labelStyle={{ fontSize: 12 }}>
-                                    Not you? Switch account
-                                </Button>
-                            </View>
-                        ) : (
-                            <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
-                        )}
-                        
+                      
                         <View style={{ marginTop: 10 }}>
                           <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="Tap to enter MPIN" />
                         </View>
@@ -274,6 +263,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                         <Button mode="contained" onPress={handleAuth} loading={loading} style={styles.button} textColor="#ffffff">
                             Login
                         </Button>
+                        
                         <Button mode="text" onPress={() => {
                             setAuthMode('register');
                             setRegisterStep('landing'); 

@@ -138,10 +138,13 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             const userData = { ...data.user, token: data.token };
             
             await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
-            await AsyncStorage.setItem('linked_email', form.email); // Remember device
+            await AsyncStorage.setItem('linked_email', form.email); 
             
             Alert.alert("Success", "Account created successfully!");
-            onLoginSuccess(userData); 
+            
+            setAuthMode('login');
+            setRegisterStep('landing');
+            resetFormState();
             
         } catch (error: any) {
             Alert.alert("Registration Failed", error.message);

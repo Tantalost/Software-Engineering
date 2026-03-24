@@ -178,6 +178,16 @@ export const register = async (req, res) => {
 
     await user.save();
 
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Registration Successful - IBT Stalls",
+        message: `Hi ${user.firstName},\n\nYour account has been successfully created and your 4-digit MPIN is set up.\n\nYou can now open the app and log in.\n\nThank you,\nIBT Management`
+      });
+    } catch (emailError) {
+      console.error("Welcome email failed to send, but registration succeeded:", emailError);
+    }
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(201).json({ 
