@@ -11,11 +11,6 @@ Color Coding
 5. Ticket upon arrival then issued ticket upon exit pero exceeding ₱100 OR na ibibigay
 
 **REQUEST NI SIR DERICK**
-**Bus Module** 🟡 **In Progress**
-- use Bus Number instead of plate number (Justin )🟡 **In Progress**
-- Add name of collector (Justin )🟢 **Done**
-- Add collector name sa export excel and pdf , add collector para maka export🟢 **Done**
-
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
 
@@ -33,15 +28,10 @@ Permanent
 
 
 
-
-
-
-
-
-
-
-
-
+Bus Module
+- use Bus Number instead of plate number (Justin )🟢 **Done**
+- Add name of collector (Justin )🟢 **Done**
+- Add collector name sa export excel and pdf , add collector para maka export🟢 **Done**
 
 Mobile
 - add settings  (change password, deactivate account and reactivate account using email as verification) 🟢 **Done**

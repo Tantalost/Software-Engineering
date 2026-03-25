@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
-  if (!imageSrc) return; 
+  if (!imageSrc) return;
   try {
     const response = await fetch(imageSrc);
     if (!response.ok)
@@ -51,19 +51,17 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
       extension: "png",
     });
 
-  
-    const [start, end] = range.split(':');
+    const [start, end] = range.split(":");
     const startCol = start.charCodeAt(0) - 65;
-    const startRow = parseInt(start.slice(1)) - 1; 
+    const startRow = parseInt(start.slice(1)) - 1;
     const endCol = end.charCodeAt(0) - 65;
     const endRow = parseInt(end.slice(1)) - 1;
 
     worksheet.addImage(imageId, {
       tl: { col: startCol, row: startRow },
-      br: { col: endCol, row: endRow }
+      br: { col: endCol, row: endRow },
     });
   } catch (error) {
-    
     console.error("Branding image error:", error);
   }
 };
@@ -84,7 +82,7 @@ const ManageCompaniesModal = ({
   const [newBusFrom, setNewBusFrom] = useState("");
   const [newBusTo, setNewBusTo] = useState("");
   const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [editCompanyTarget, setEditCompanyTarget] = useState(null);
   const [editBusTarget, setEditBusTarget] = useState(null);
@@ -102,8 +100,8 @@ const ManageCompaniesModal = ({
     setEditCompanyTarget(null);
     setNewCompanyName("");
     setNewBusPlate("");
-    setNewBusFrom(""); 
-    setNewBusTo("");  
+    setNewBusFrom("");
+    setNewBusTo("");
     setNewBusType("Regular");
     setEditBusTarget(null);
   };
@@ -212,9 +210,11 @@ const ManageCompaniesModal = ({
   const handleSaveCompany = async () => {
     if (!newCompanyName.trim()) return;
     setIsProcessing(true);
-    
+
     const method = editCompanyTarget ? "PUT" : "POST";
-    const url = editCompanyTarget ? `${API_URL}/${editCompanyTarget._id}` : API_URL;
+    const url = editCompanyTarget
+      ? `${API_URL}/${editCompanyTarget._id}`
+      : API_URL;
 
     try {
       const res = await fetch(url, {
@@ -226,12 +226,12 @@ const ManageCompaniesModal = ({
         await fetchCompanies();
         setNewCompanyName("");
         setIsEditingCompany(false);
-        setEditCompanyTarget(null); 
+        setEditCompanyTarget(null);
 
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Company "${newCompanyName}" ${editCompanyTarget ? 'updated' : 'added'} successfully!`,
+          message: `Company "${newCompanyName}" ${editCompanyTarget ? "updated" : "added"} successfully!`,
           autoClose: true,
           duration: 3000,
         });
@@ -239,7 +239,7 @@ const ManageCompaniesModal = ({
         setNotificationState({
           isOpen: true,
           type: "error",
-          message: `Failed to ${editCompanyTarget ? 'update' : 'create'} company`,
+          message: `Failed to ${editCompanyTarget ? "update" : "create"} company`,
           autoClose: true,
           duration: 3000,
         });
@@ -249,7 +249,7 @@ const ManageCompaniesModal = ({
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: `Error ${editCompanyTarget ? 'updating' : 'creating'} company`,
+        message: `Error ${editCompanyTarget ? "updating" : "creating"} company`,
         autoClose: true,
         duration: 3000,
       });
@@ -259,16 +259,26 @@ const ManageCompaniesModal = ({
   };
 
   const handleSaveBus = async () => {
-   if (!newBusPlate.trim() || !newBusFrom.trim() || !newBusTo.trim() || !activeCompany) return;
+    if (
+      !newBusPlate.trim() ||
+      !newBusFrom.trim() ||
+      !newBusTo.trim() ||
+      !activeCompany
+    )
+      return;
 
-    const routeString = `${newBusFrom} - ${newBusTo}`; 
+    const routeString = `${newBusFrom} - ${newBusTo}`;
 
     let updatedBuses;
     if (editBusTarget) {
-      updatedBuses = activeCompany.buses.map(b => 
-        b.plateNumber === editBusTarget.plateNumber 
-          ? { plateNumber: newBusPlate, route: routeString, busType: newBusType } 
-          : b
+      updatedBuses = activeCompany.buses.map((b) =>
+        b.plateNumber === editBusTarget.plateNumber
+          ? {
+              plateNumber: newBusPlate,
+              route: routeString,
+              busType: newBusType,
+            }
+          : b,
       );
     } else {
       updatedBuses = [
@@ -290,8 +300,9 @@ const ManageCompaniesModal = ({
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Bus ${editBusTarget ? 'updated' : 'added'} successfully!`,
-          autoClose: true, duration: 3000,
+          message: `Bus ${editBusTarget ? "updated" : "added"} successfully!`,
+          autoClose: true,
+          duration: 3000,
         });
       }
     } catch (err) {
@@ -369,7 +380,7 @@ const ManageCompaniesModal = ({
                     </span>
                   </div>
                 </div>
-               {role === "superadmin" && (
+                {role === "superadmin" && (
                   <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
@@ -380,7 +391,7 @@ const ManageCompaniesModal = ({
                       }}
                       className="p-1.5 text-slate-400 hover:text-blue-500"
                     >
-                      <Settings size={16} /> 
+                      <Settings size={16} />
                     </button>
                     <button
                       onClick={(e) => {
@@ -401,21 +412,26 @@ const ManageCompaniesModal = ({
         <div className="w-2/3 flex flex-col bg-white">
           <div className="p-4 border-b border-slate-200 flex justify-between items-center">
             <h3 className="font-bold text-slate-800">
-              {activeCompany ? `Manage ${activeCompany.name} Buses` : "Select a Company"}
+              {activeCompany
+                ? `Manage ${activeCompany.name} Buses`
+                : "Select a Company"}
             </h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600"
+            >
               <X size={24} />
             </button>
           </div>
 
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-             
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Type</label>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      Type
+                    </label>
                     <select
                       className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusType}
@@ -425,12 +441,14 @@ const ManageCompaniesModal = ({
                       <option value="Aircon">Aircon</option>
                     </select>
                   </div>
-                  
+
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Plate Number</label>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      Bus Number
+                    </label>
                     <input
                       type="text"
-                      placeholder="ex. ABC-1234"
+                      placeholder="ex. Bus-1"
                       className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusPlate}
                       onChange={(e) => setNewBusPlate(e.target.value)}
@@ -440,7 +458,9 @@ const ManageCompaniesModal = ({
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">From</label>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      From
+                    </label>
                     <input
                       type="text"
                       placeholder="ex. Zamboanga"
@@ -451,7 +471,9 @@ const ManageCompaniesModal = ({
                   </div>
 
                   <div className="col-span-5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">To</label>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      To
+                    </label>
                     <input
                       type="text"
                       placeholder="ex. Pagadian"
@@ -462,11 +484,18 @@ const ManageCompaniesModal = ({
                   </div>
 
                   <div className="col-span-2 flex gap-1">
-                    <button onClick={handleSaveBus} className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
-                      {editBusTarget ? 'Save' : 'Add'}
+                    <button
+                      onClick={handleSaveBus}
+                      className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                    >
+                      {editBusTarget ? "Save" : "Add"}
                     </button>
                     {editBusTarget && (
-                      <button onClick={resetForms} className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors" title="Cancel Edit">
+                      <button
+                        onClick={resetForms}
+                        className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
+                        title="Cancel Edit"
+                      >
                         <X size={16} />
                       </button>
                     )}
@@ -475,16 +504,18 @@ const ManageCompaniesModal = ({
               </div>
 
               <div className="p-3 bg-white border-b border-slate-100 flex justify-between items-center">
-                 <h4 className="text-sm font-semibold text-slate-700">Registered Buses</h4>
-                 <select 
-                    value={tableBusTypeFilter} 
-                    onChange={(e) => setTableBusTypeFilter(e.target.value)}
-                    className="p-1.5 text-sm border border-slate-300 rounded-lg outline-none bg-slate-50"
-                 >
-                    <option value="All">All Types</option>
-                    <option value="Regular">Regular Only</option>
-                    <option value="Aircon">Aircon Only</option>
-                 </select>
+                <h4 className="text-sm font-semibold text-slate-700">
+                  Registered Buses
+                </h4>
+                <select
+                  value={tableBusTypeFilter}
+                  onChange={(e) => setTableBusTypeFilter(e.target.value)}
+                  className="p-1.5 text-sm border border-slate-300 rounded-lg outline-none bg-slate-50"
+                >
+                  <option value="All">All Types</option>
+                  <option value="Regular">Regular Only</option>
+                  <option value="Aircon">Aircon Only</option>
+                </select>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
@@ -493,43 +524,64 @@ const ManageCompaniesModal = ({
                     <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
                       <tr>
                         <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Plate No.</th>
+                        <th className="px-4 py-3">Bus No.</th>
                         <th className="px-4 py-3">Route</th>
                         <th className="px-4 py-3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {activeCompany.buses
-                        .filter(bus => tableBusTypeFilter === "All" || bus.busType === tableBusTypeFilter) // Filter logic
+                        .filter(
+                          (bus) =>
+                            tableBusTypeFilter === "All" ||
+                            bus.busType === tableBusTypeFilter,
+                        ) // Filter logic
                         .map((bus, idx) => (
-                        <tr key={`${bus.plateNumber}-${idx}`} className="hover:bg-slate-50 group">
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs rounded-full ${bus.busType === 'Aircon' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                              {bus.busType || 'Regular'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-medium text-slate-900">{bus.plateNumber}</td>
-                          <td className="px-4 py-3 text-slate-600">{bus.route}</td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => {
-                                setEditBusTarget(bus);
-                                setNewBusPlate(bus.plateNumber);
-                                const [fromRoute, toRoute] = bus.route.split(" - "); // Split it back into two inputs when editing
-                                setNewBusFrom(fromRoute ? fromRoute.trim() : bus.route || "");
-                                setNewBusTo(toRoute ? toRoute.trim() : "");
-                                setNewBusType(bus.busType || "Regular");
-                              }}
-                              className="text-slate-400 hover:text-blue-500 p-1 mr-1 rounded-md"
-                            >
-                              <Settings size={16} />
-                            </button>
-                            <button onClick={() => setDeleteBusTarget(bus)} className="text-slate-400 hover:text-red-500 p-1 rounded-md">
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                          <tr
+                            key={`${bus.plateNumber}-${idx}`}
+                            className="hover:bg-slate-50 group"
+                          >
+                            <td className="px-4 py-3">
+                              <span
+                                className={`px-2 py-1 text-xs rounded-full ${bus.busType === "Aircon" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}
+                              >
+                                {bus.busType || "Regular"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-medium text-slate-900">
+                              {bus.plateNumber}
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">
+                              {bus.route}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => {
+                                  setEditBusTarget(bus);
+                                  setNewBusPlate(bus.plateNumber);
+                                  const [fromRoute, toRoute] =
+                                    bus.route.split(" - "); // Split it back into two inputs when editing
+                                  setNewBusFrom(
+                                    fromRoute
+                                      ? fromRoute.trim()
+                                      : bus.route || "",
+                                  );
+                                  setNewBusTo(toRoute ? toRoute.trim() : "");
+                                  setNewBusType(bus.busType || "Regular");
+                                }}
+                                className="text-slate-400 hover:text-blue-500 p-1 mr-1 rounded-md"
+                              >
+                                <Settings size={16} />
+                              </button>
+                              <button
+                                onClick={() => setDeleteBusTarget(bus)}
+                                className="text-slate-400 hover:text-red-500 p-1 rounded-md"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 ) : (
@@ -553,7 +605,6 @@ const ManageCompaniesModal = ({
             </div>
           )}
 
-          
           {deleteCompanyTarget && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -612,7 +663,7 @@ const ManageCompaniesModal = ({
                   </h3>
 
                   <p className="text-sm text-slate-600 mt-2">
-                    Remove bus
+                    Remove Bus Number
                     <span className="font-semibold">
                       {" "}
                       {deleteBusTarget.plateNumber}
@@ -646,6 +697,7 @@ const ManageCompaniesModal = ({
 };
 
 const BusTrips = () => {
+  const [collectorName, setCollectorName] = useState("");
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -733,13 +785,25 @@ const BusTrips = () => {
 
   const handleSetPrice = async () => {
     if (!newPrice || isNaN(newPrice)) {
-      alert("Please enter a valid price.");
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter a valid price.",
+        autoClose: true,
+        duration: 3000,
+      });
       return;
     }
 
     const priceValue = Number(newPrice);
     if (priceValue <= 0) {
-      alert("Please enter a valid price greater than 0.");
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter a valid price greater than 0.",
+        autoClose: true,
+        duration: 3000,
+      });
       return;
     }
 
@@ -799,29 +863,35 @@ const BusTrips = () => {
     templateNo: "",
     route: "",
     company: "",
-    busType: "", 
+    busType: "",
     time: "",
     date: new Date().toISOString().split("T")[0],
-    status: "Scheduled", 
+    status: "Scheduled",
     price: 75,
     parkingEstimation: "10 minutes",
-    expectedDeparture: ""
+    expectedDeparture: "",
   });
 
   useEffect(() => {
     if (newBusData.time && newBusData.parkingEstimation) {
-      const expected = calculateExpectedDeparture(newBusData.time, newBusData.parkingEstimation);
+      const expected = calculateExpectedDeparture(
+        newBusData.time,
+        newBusData.parkingEstimation,
+      );
       if (expected !== newBusData.expectedDeparture) {
-         setNewBusData(prev => ({ ...prev, expectedDeparture: expected }));
+        setNewBusData((prev) => ({ ...prev, expectedDeparture: expected }));
       }
     }
   }, [newBusData.time, newBusData.parkingEstimation]);
 
   useEffect(() => {
     if (editRow && editRow.time && editRow.parkingEstimation) {
-      const expected = calculateExpectedDeparture(editRow.time, editRow.parkingEstimation);
+      const expected = calculateExpectedDeparture(
+        editRow.time,
+        editRow.parkingEstimation,
+      );
       if (expected !== editRow.expectedDeparture) {
-         setEditRow(prev => ({ ...prev, expectedDeparture: expected }));
+        setEditRow((prev) => ({ ...prev, expectedDeparture: expected }));
       }
     }
   }, [editRow?.time, editRow?.parkingEstimation]);
@@ -874,15 +944,17 @@ const BusTrips = () => {
       !selectedDate ||
       new Date(bus.date).toDateString() ===
         new Date(selectedDate).toDateString();
-    
-    const matchesBusType = 
+
+    const matchesBusType =
       selectedBusType === "" || bus.busType === selectedBusType;
 
     return matchesSearch && matchesCompany && matchesDate && matchesBusType;
   });
 
   const totalTrips = filtered.length;
-  const scheduledTrips = filtered.filter((t) => t.status === "Scheduled").length;
+  const scheduledTrips = filtered.filter(
+    (t) => t.status === "Scheduled",
+  ).length;
   const pendingTrips = filtered.filter((t) => t.status === "Pending").length;
   const arrivedTrips = filtered.filter((t) => t.status === "Arrived").length;
   const paidTrips = filtered.filter((t) => t.status === "Paid").length;
@@ -897,19 +969,22 @@ const BusTrips = () => {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
- const handleAddClick = () => {
-    const currentTime = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const handleAddClick = () => {
+    const currentTime = new Date().toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     setNewBusData({
       templateNo: "",
       route: "",
       company: "",
-      busType: "", 
+      busType: "",
       time: currentTime,
       date: new Date().toISOString().split("T")[0],
-      status: "Scheduled", 
+      status: "Scheduled",
       price: defaultPrice,
       parkingEstimation: "10 minutes",
-      expectedDeparture: calculateExpectedDeparture(currentTime, "10 minutes")
+      expectedDeparture: calculateExpectedDeparture(currentTime, "10 minutes"),
     });
     setShowAddModal(true);
   };
@@ -985,6 +1060,17 @@ const BusTrips = () => {
   };
 
   const handleEditSubmit = async (updatedData) => {
+    if (updatedData.status === "Paid") {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Paid trips cannot be edited.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/${updatedData.id}`, {
         method: "PUT",
@@ -999,6 +1085,7 @@ const BusTrips = () => {
           `Updated Bus Trip: ${updatedData.templateNo}`,
           "BusTrips",
         );
+
         fetchBusTrips();
         setEditRow(null);
 
@@ -1020,6 +1107,7 @@ const BusTrips = () => {
       }
     } catch (error) {
       console.error("Error updating:", error);
+
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -1032,38 +1120,58 @@ const BusTrips = () => {
 
   const calculateExpectedDeparture = (arrivalTime, estimationString) => {
     if (!arrivalTime || !estimationString) return "";
-    
+
     let minutesToAdd = 0;
     if (estimationString === "1 hr") minutesToAdd = 60;
-    else minutesToAdd = parseInt(estimationString.split(" ")[0]); 
+    else minutesToAdd = parseInt(estimationString.split(" ")[0]);
 
     const [hours, minutes] = arrivalTime.split(":").map(Number);
     const date = new Date();
     date.setHours(hours, minutes + minutesToAdd, 0, 0);
 
-    return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-};
+    return date.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-  
   const handleExportExcel = async () => {
-    if (filtered.length === 0) return alert("No records to export.");
+    if (!collectorName.trim()) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter Collector Name before exporting.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (filtered.length === 0) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No records to export.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
 
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Bus Parking Report");
 
-     
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, "A1:H4");
 
-     
       worksheet.mergeCells("A6:H6");
       const titleCell = worksheet.getCell("A6");
       titleCell.value = "BUS PARKING REPORTS";
       titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
       titleCell.alignment = { horizontal: "center" };
 
-      worksheet.addRow([]); 
+      worksheet.addRow([]);
       worksheet.addRow([
         `Date: ${new Date().toLocaleDateString()}`,
         "",
@@ -1084,11 +1192,11 @@ const BusTrips = () => {
         "",
         `Total Revenue: Php ${totalRevenue.toFixed(2)}`,
       ]);
-      worksheet.addRow([]); // Spacer
 
-     
+      worksheet.addRow([`Collector: ${collectorName || "-"}`]);
+
       const headerRow = worksheet.addRow([
-        "Plate No.",
+        "Bus No.",
         "Type",
         "Ticket Ref.",
         "Route",
@@ -1109,7 +1217,6 @@ const BusTrips = () => {
         cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
-      
       filtered.forEach((item) => {
         worksheet.addRow([
           item.templateNo || item.templateno || "-",
@@ -1124,7 +1231,6 @@ const BusTrips = () => {
         ]);
       });
 
-     
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
       await addImageToWorksheet(
@@ -1136,16 +1242,15 @@ const BusTrips = () => {
 
       worksheet.columns = [
         { width: 15 },
-        { width: 18 }, 
-        { width: 25 }, 
-        { width: 12 }, 
-        { width: 12 }, 
-        { width: 12 }, 
-        { width: 20 }, 
-        { width: 15 }, 
+        { width: 18 },
+        { width: 25 },
+        { width: 12 },
+        { width: 12 },
+        { width: 12 },
+        { width: 20 },
+        { width: 15 },
       ];
 
-      
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1163,18 +1268,43 @@ const BusTrips = () => {
       );
     } catch (err) {
       console.error("Bus Trips ExcelJS Export Failed:", err);
-      alert("Failed to export Excel. Please try again.");
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to export Excel. Please try again.",
+        autoClose: true,
+        duration: 3000,
+      });
     }
   };
 
-  
   const handleExportPDF = () => {
-    if (filtered.length === 0) return alert("No records to export.");
+    if (!collectorName.trim()) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter Collector Name before exporting.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (filtered.length === 0) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No records to export.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
 
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15; 
+    const margin = 15;
 
     // Header Image
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
@@ -1186,7 +1316,6 @@ const BusTrips = () => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
 
-    
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
     doc.text(
       `Operator: ${localStorage.getItem("authName") || "Admin"}`,
@@ -1194,7 +1323,8 @@ const BusTrips = () => {
       61,
     );
 
-    
+    doc.text(`Collector: ${collectorName || "-"}`, margin, 67);
+
     doc.text(`No. of Bus: ${filtered.length}`, pageWidth - margin, 55, {
       align: "right",
     });
@@ -1207,7 +1337,7 @@ const BusTrips = () => {
 
     autoTable(doc, {
       startY: 70,
-      margin: { left: margin, right: margin, bottom: 35 }, 
+      margin: { left: margin, right: margin, bottom: 35 },
       head: [
         [
           "Plate No.",
@@ -1226,7 +1356,7 @@ const BusTrips = () => {
         item.busType || "Regular",
         item.ticketReferenceNo || "-",
         item.route || "-",
-        `Php ${(item.price || 75).toFixed(2)}`, 
+        `Php ${(item.price || 75).toFixed(2)}`,
         item.time || "-",
         item.departureTime || "-",
         item.company || "-",
@@ -1245,101 +1375,99 @@ const BusTrips = () => {
   };
 
   const handleBulkDelete = async () => {
-  if (selectedIds.length === 0) {
-    setNotificationState({
-      isOpen: true,
-      type: "warning",
-      message: "Please select at least one record.",
-      autoClose: true,
-      duration: 3000,
-    });
-    return;
-  }
-
-  setIsLoading(true);
-
-  const GLOBAL_API_URL = `${
-    import.meta.env.VITE_API_URL || "http://localhost:10000"
-  }/api`;
-
-  try {
-    if (role === "bus") {
-     
-      const requestPromises = selectedIds.map(async (id) => {
-        const item = records.find((r) => r.id === id);
-        if (!item) return;
-
-        return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            itemType: "Bus Trip",
-            itemDescription: `Plate No: ${
-              item.templateNo || item.templateno
-            } - ${item.company}`,
-            requestedBy: localStorage.getItem("authName") || "Bus Admin",
-            originalData: item,
-            reason: "Bulk deletion request",
-          }),
-        });
-      });
-
-      await Promise.all(requestPromises);
-
-      await logActivity(
-        role,
-        "REQUEST_BULK_DELETE",
-        `Requested deletion for ${selectedIds.length} bus trips`,
-        "BusTrips",
-      );
-
+    if (selectedIds.length === 0) {
       setNotificationState({
         isOpen: true,
-        type: "success",
-        message: `Sent deletion requests for ${selectedIds.length} records.`,
+        type: "warning",
+        message: "Please select at least one record.",
         autoClose: true,
         duration: 3000,
       });
-    } else {
-      
-      await Promise.all(
-        selectedIds.map((id) =>
-          fetch(`${API_URL}/${id}`, { method: "DELETE" }),
-        ),
-      );
-
-      await logActivity(
-        role,
-        "BULK_DELETE",
-        `Deleted ${selectedIds.length} items`,
-        "BusTrips",
-      );
-
-      await fetchBusTrips();
-
-      setNotificationState({
-        isOpen: true,
-        type: "success",
-        message: `Successfully deleted ${selectedIds.length} records!`,
-        autoClose: true,
-        duration: 3000,
-      });
+      return;
     }
 
-    setSelectedIds([]);
-    setIsSelectionMode(false);
-  } catch (e) {
-    setNotificationState({
-      isOpen: true,
-      type: "error",
-      message: "Failed to process some records.",
-      autoClose: true,
-      duration: 3000,
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setIsLoading(true);
+
+    const GLOBAL_API_URL = `${
+      import.meta.env.VITE_API_URL || "http://localhost:10000"
+    }/api`;
+
+    try {
+      if (role === "bus") {
+        const requestPromises = selectedIds.map(async (id) => {
+          const item = records.find((r) => r.id === id);
+          if (!item) return;
+
+          return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              itemType: "Bus Trip",
+              itemDescription: `Plate No: ${
+                item.templateNo || item.templateno
+              } - ${item.company}`,
+              requestedBy: localStorage.getItem("authName") || "Bus Admin",
+              originalData: item,
+              reason: "Bulk deletion request",
+            }),
+          });
+        });
+
+        await Promise.all(requestPromises);
+
+        await logActivity(
+          role,
+          "REQUEST_BULK_DELETE",
+          `Requested deletion for ${selectedIds.length} bus trips`,
+          "BusTrips",
+        );
+
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: `Sent deletion requests for ${selectedIds.length} records.`,
+          autoClose: true,
+          duration: 3000,
+        });
+      } else {
+        await Promise.all(
+          selectedIds.map((id) =>
+            fetch(`${API_URL}/${id}`, { method: "DELETE" }),
+          ),
+        );
+
+        await logActivity(
+          role,
+          "BULK_DELETE",
+          `Deleted ${selectedIds.length} items`,
+          "BusTrips",
+        );
+
+        await fetchBusTrips();
+
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: `Successfully deleted ${selectedIds.length} records!`,
+          autoClose: true,
+          duration: 3000,
+        });
+      }
+
+      setSelectedIds([]);
+      setIsSelectionMode(false);
+    } catch (e) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to process some records.",
+        autoClose: true,
+        duration: 3000,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmitReport = async () => {
     setIsReporting(true);
@@ -1352,7 +1480,9 @@ const BusTrips = () => {
       await submitPageReport(
         "Bus Trips",
         reportPayload,
-        localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin",
+        localStorage.getItem("authName") ||
+          localStorage.getItem("authEmail") ||
+          "Admin",
       );
       await Promise.all(
         filtered.map((item) =>
@@ -1398,127 +1528,122 @@ const BusTrips = () => {
   };
 
   const confirmLogout = async () => {
-  if (!logoutRow || !ticketRefInput) {
-    setNotificationState({
-      isOpen: true,
-      type: "warning",
-      message: "Please enter the ticket reference number.",
-      autoClose: true,
-      duration: 3000,
-    });
-    return;
-  }
-
-  const isDuplicate = records.some(
-    (record) =>
-      record.ticketReferenceNo &&
-      record.ticketReferenceNo.toString().trim() ===
-        ticketRefInput.toString().trim(),
-  );
-
-  if (isDuplicate) {
-    setNotificationState({
-      isOpen: true,
-      type: "error",
-      message: `Ticket Reference No. "${ticketRefInput}" already exists.`,
-      autoClose: true,
-      duration: 3000,
-    });
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/${logoutRow.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ticketReferenceNo: ticketRefInput,
-        status: "Paid",
-        departureTime: new Date().toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      }),
-    });
-
-    if (response.ok) {
-      await fetchBusTrips();
-
-      setLogoutRow(null);
-      setTicketRefInput("");
-
+    if (!logoutRow || !ticketRefInput) {
       setNotificationState({
         isOpen: true,
-        type: "success",
-        message: "Bus departure confirmed successfully.",
+        type: "warning",
+        message: "Please enter the ticket reference number.",
         autoClose: true,
         duration: 3000,
       });
-    } else {
+      return;
+    }
+
+    const isDuplicate = records.some(
+      (record) =>
+        record.ticketReferenceNo &&
+        record.ticketReferenceNo.toString().trim() ===
+          ticketRefInput.toString().trim(),
+    );
+
+    if (isDuplicate) {
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Failed to confirm departure.",
+        message: `Ticket Reference No. "${ticketRefInput}" already exists.`,
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/${logoutRow.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticketReferenceNo: ticketRefInput,
+          status: "Paid",
+          departureTime: new Date().toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }),
+      });
+
+      if (response.ok) {
+        await fetchBusTrips();
+
+        setLogoutRow(null);
+        setTicketRefInput("");
+
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: "Bus departure confirmed successfully.",
+          autoClose: true,
+          duration: 3000,
+        });
+      } else {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: "Failed to confirm departure.",
+          autoClose: true,
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Error confirming departure.",
         autoClose: true,
         duration: 3000,
       });
     }
-  } catch (error) {
-    setNotificationState({
-      isOpen: true,
-      type: "error",
-      message: "Error confirming departure.",
-      autoClose: true,
-      duration: 3000,
-    });
-  }
-};
+  };
 
- const handleMarkArrived = async (row) => {
+  const handleMarkArrived = async (row) => {
     try {
-   
-      const fullRecord = records.find(r => r.id === row.id) || row;
-  
+      const fullRecord = records.find((r) => r.id === row.id) || row;
+
       const now = new Date();
       const currentHours = String(now.getHours()).padStart(2, "0");
       const currentMinutes = String(now.getMinutes()).padStart(2, "0");
       const actualArrivalTime = `${currentHours}:${currentMinutes}`;
 
-     
       const estimationStr = fullRecord.parkingEstimation || "10 minutes";
-      let minutesToAdd = 10; 
+      let minutesToAdd = 10;
       if (estimationStr === "1 hr") {
-         minutesToAdd = 60;
+        minutesToAdd = 60;
       } else {
-         
-         minutesToAdd = parseInt(estimationStr.replace(/[^0-9]/g, "")) || 10;
+        minutesToAdd = parseInt(estimationStr.replace(/[^0-9]/g, "")) || 10;
       }
 
-      
       const departureDate = new Date(now.getTime());
       departureDate.setMinutes(departureDate.getMinutes() + minutesToAdd);
-      
+
       const expHours = String(departureDate.getHours()).padStart(2, "0");
       const expMinutes = String(departureDate.getMinutes()).padStart(2, "0");
       const newExpectedDeparture = `${expHours}:${expMinutes}`;
 
-      
       const response = await fetch(`${API_URL}/${row.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          status: "Arrived", 
+        body: JSON.stringify({
+          status: "Arrived",
           time: actualArrivalTime,
-          expectedDeparture: newExpectedDeparture 
+          expectedDeparture: newExpectedDeparture,
         }),
       });
-      
+
       if (response.ok) {
         fetchBusTrips();
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Arrived! Expected Departure updated to ${newExpectedDeparture}.`, 
+          message: `Arrived! Expected Departure updated to ${newExpectedDeparture}.`,
           autoClose: true,
           duration: 4000,
         });
@@ -1622,8 +1747,29 @@ const BusTrips = () => {
             className="h-4 w-4 rounded border-slate-300"
           />
         </div>,
-        "Plate No", "Type", "Ticket Ref", "Route", "Price", "Time", "Departure", "Date", "Company", "Status"]
-    : ["Plate No", "Type", "Ticket Ref", "Route", "Price", "Time", "Departure", "Date", "Company", "Status"];
+        "Bus No",
+        "Type",
+        "Ticket Ref",
+        "Route",
+        "Price",
+        "Time",
+        "Departure",
+        "Date",
+        "Company",
+        "Status",
+      ]
+    : [
+        "Bus No",
+        "Type",
+        "Ticket Ref",
+        "Route",
+        "Price",
+        "Time",
+        "Departure",
+        "Date",
+        "Company",
+        "Status",
+      ];
 
   return (
     <Layout title="Bus Trips Management">
@@ -1648,7 +1794,7 @@ const BusTrips = () => {
             selectedCompany={selectedCompany}
             setSelectedCompany={setSelectedCompany}
             uniqueCompanies={availableCompanies}
-            selectedBusType={selectedBusType}       
+            selectedBusType={selectedBusType}
             setSelectedBusType={setSelectedBusType}
           />
 
@@ -1673,6 +1819,23 @@ const BusTrips = () => {
             <div
               className={`flex flex-wrap items-center justify-end gap-3 ${isSelectionMode ? "ml-auto" : "w-full"}`}
             >
+              <div className="flex items-center gap-3 w-full lg:w-auto">
+                <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+                  Name of Collector:
+                </label>
+
+                <input
+                  type="text"
+                  value={collectorName}
+                  maxLength={100}
+                  onChange={(e) =>
+                    setCollectorName(e.target.value.slice(0, 100))
+                  }
+                  placeholder="Enter collector name"
+                  className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                />
+              </div>
+
               {role === "bus" && (
                 <button
                   onClick={() => setShowSubmitModal(true)}
@@ -1739,7 +1902,6 @@ const BusTrips = () => {
         </div>
       </div>
 
-      
       <div className="p-4 lg:p-8">
         {isLoading ? (
           <div className="flex justify-center p-10">
@@ -1751,8 +1913,8 @@ const BusTrips = () => {
             data={paginatedData.map((bus) => {
               const rowData = {
                 id: bus.id,
-                plateno: bus.templateNo || bus.templateno || "-",
-                type: bus.busType || "Regular", 
+                busno: bus.templateNo || bus.templateno || "-",
+                type: bus.busType || "Regular",
                 ticketref: bus.ticketReferenceNo || "-",
                 route: bus.route,
                 price: `₱${(bus.price || 75).toFixed(2)}`,
@@ -1780,15 +1942,15 @@ const BusTrips = () => {
               return rowData;
             })}
             actions={(row) => {
-              
               const selectedRecord = records.find((r) => r.id === row.id);
 
               return (
                 <div className="flex justify-end items-center space-x-2">
-                 
                   <TableActions
                     onView={() => setViewRow(selectedRecord)}
-                    onEdit={() => setEditRow(selectedRecord)}
+                    {...(row.status !== "Paid" && {
+                      onEdit: () => setEditRow(selectedRecord),
+                    })}
                   />
 
                   {row.status === "Pending" && (
@@ -1845,7 +2007,6 @@ const BusTrips = () => {
         />
       </div>
 
-      
       <ManageCompaniesModal
         isOpen={showManageCompaniesModal}
         onClose={() => setShowManageCompaniesModal(false)}
@@ -1854,11 +2015,9 @@ const BusTrips = () => {
         role={role}
       />
 
-      
       {showSetPriceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
-          
             <div className="flex items-center justify-between mb-5 border-b pb-3">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <Settings size={20} className="text-emerald-600" /> Bus Fee
@@ -1878,7 +2037,6 @@ const BusTrips = () => {
               saving.
             </p>
 
-            
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
@@ -1902,7 +2060,6 @@ const BusTrips = () => {
               </div>
             </div>
 
-           
             <div className="mt-8 flex justify-end gap-3 border-t pt-4">
               <button
                 onClick={() => setShowSetPriceModal(false)}
@@ -1926,7 +2083,7 @@ const BusTrips = () => {
           </div>
         </div>
       )}
-      
+
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
@@ -1944,27 +2101,48 @@ const BusTrips = () => {
 
             <form onSubmit={handleCreateRecord}>
               <div className="space-y-4">
-               <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Company
+                  </label>
                   <select
                     required
                     value={newBusData.company}
-                    onChange={(e) => setNewBusData(prev => ({ ...prev, company: e.target.value, busType: "", templateNo: "", route: "" }))}
+                    onChange={(e) =>
+                      setNewBusData((prev) => ({
+                        ...prev,
+                        company: e.target.value,
+                        busType: "",
+                        templateNo: "",
+                        route: "",
+                      }))
+                    }
                     className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none"
                   >
                     <option value="">Select Company</option>
                     {companyData.map((c) => (
-                      <option key={c._id} value={c.name}>{c.name}</option>
+                      <option key={c._id} value={c.name}>
+                        {c.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Bus Type</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Bus Type
+                  </label>
                   <select
                     required
                     value={newBusData.busType}
-                    onChange={(e) => setNewBusData(prev => ({ ...prev, busType: e.target.value, templateNo: "", route: "" }))}
+                    onChange={(e) =>
+                      setNewBusData((prev) => ({
+                        ...prev,
+                        busType: e.target.value,
+                        templateNo: "",
+                        route: "",
+                      }))
+                    }
                     disabled={!newBusData.company}
                     className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none disabled:bg-slate-100"
                   >
@@ -1975,7 +2153,9 @@ const BusTrips = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Bus Plate Number</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Bus Number
+                  </label>
                   <select
                     required
                     value={newBusData.templateNo}
@@ -1983,28 +2163,43 @@ const BusTrips = () => {
                     disabled={!newBusData.busType}
                     className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none disabled:bg-slate-100"
                   >
-                  <option value="">Select Plate Number</option>
-                  {newBusData.company && newBusData.busType &&
-                    companyData
-                    .find((c) => c.name === newBusData.company)
-                    ?.buses.filter(bus => bus.busType === newBusData.busType)
-                    .map((bus) => {
-                      const isCurrentlyActive = records.some(r => 
-                        (r.templateNo === bus.plateNumber || r.templateno === bus.plateNumber) && 
-                        r.date?.substring(0, 10) === newBusData.date && 
-                        ["Scheduled", "Pending", "Arrived"].includes(r.status)
-                      );
-                      return (
-                        <option key={bus.plateNumber} value={bus.plateNumber} disabled={isCurrentlyActive}>
-                          {bus.plateNumber} {isCurrentlyActive ? "(Active Today)" : ""}
-                        </option>
-                      );
-                    })}
+                    <option value="">Select Bus Number</option>
+                    {newBusData.company &&
+                      newBusData.busType &&
+                      companyData
+                        .find((c) => c.name === newBusData.company)
+                        ?.buses.filter(
+                          (bus) => bus.busType === newBusData.busType,
+                        )
+                        .map((bus) => {
+                          const isCurrentlyActive = records.some(
+                            (r) =>
+                              (r.templateNo === bus.plateNumber ||
+                                r.templateno === bus.plateNumber) &&
+                              r.company === newBusData.company &&
+                              r.date?.substring(0, 10) === newBusData.date &&
+                              ["Scheduled", "Pending", "Arrived"].includes(
+                                r.status,
+                              ),
+                          );
+                          return (
+                            <option
+                              key={bus.plateNumber}
+                              value={bus.plateNumber}
+                              disabled={isCurrentlyActive}
+                            >
+                              {bus.plateNumber}{" "}
+                              {isCurrentlyActive ? "(Active Today)" : ""}
+                            </option>
+                          );
+                        })}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Route</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Route
+                  </label>
                   <input
                     type="text"
                     value={newBusData.route}
@@ -2050,7 +2245,12 @@ const BusTrips = () => {
                     </label>
                     <select
                       value={newBusData.parkingEstimation}
-                      onChange={(e) => setNewBusData({ ...newBusData, parkingEstimation: e.target.value })}
+                      onChange={(e) =>
+                        setNewBusData({
+                          ...newBusData,
+                          parkingEstimation: e.target.value,
+                        })
+                      }
                       className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 bg-white"
                     >
                       <option value="10 minutes">10 minutes</option>
@@ -2076,7 +2276,7 @@ const BusTrips = () => {
 
                 <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-100 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  Status will be set to <strong>Scheduled</strong> 
+                  Status will be set to <strong>Scheduled</strong>
                 </div>
               </div>
 
@@ -2100,7 +2300,6 @@ const BusTrips = () => {
         </div>
       )}
 
-     
       <LogModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} />
 
       {logoutRow && (
@@ -2250,39 +2449,55 @@ const BusTrips = () => {
           })
         }
       />
- 
+
       {viewRow && (
         <ViewModal
           title="View Bus Trip Details"
           fields={[
-            { label: "Plate No.", value: viewRow.templateNo || viewRow.templateno || "-" },
+            {
+              label: "Plate No.",
+              value: viewRow.templateNo || viewRow.templateno || "-",
+            },
             { label: "Company", value: viewRow.company || "-" },
             { label: "Route", value: viewRow.route || "-" },
             { label: "Bus Type", value: viewRow.busType || "Regular" },
             { label: "Status", value: viewRow.status || "-" },
             { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
-            
+
             { label: "Arrival Time", value: formatTime(viewRow.time) },
             { label: "Parking Est.", value: viewRow.parkingEstimation || "-" },
-            { label: "Exp. Departure", value: formatTime(viewRow.expectedDeparture) },
-            { label: "Actual Departure", value: formatTime(viewRow.departureTime) },
-            
-            { label: "Ticket Reference", value: viewRow.ticketReferenceNo || "-" },
-            { label: "Date", value: viewRow.date ? new Date(viewRow.date).toLocaleDateString() : "-" },
+            {
+              label: "Exp. Departure",
+              value: formatTime(viewRow.expectedDeparture),
+            },
+            {
+              label: "Actual Departure",
+              value: formatTime(viewRow.departureTime),
+            },
+
+            {
+              label: "Ticket Reference",
+              value: viewRow.ticketReferenceNo || "-",
+            },
+            {
+              label: "Date",
+              value: viewRow.date
+                ? new Date(viewRow.date).toLocaleDateString()
+                : "-",
+            },
           ]}
           onClose={() => setViewRow(null)}
         />
       )}
 
-     {editRow && (
-        <EditBusTrip 
-          row={editRow} 
-          onClose={() => setEditRow(null)} 
-          onSave={handleEditSubmit} 
-          companyData={companyData} 
+      {editRow && (
+        <EditBusTrip
+          row={editRow}
+          onClose={() => setEditRow(null)}
+          onSave={handleEditSubmit}
+          companyData={companyData}
         />
       )}
-
     </Layout>
   );
 };

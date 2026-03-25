@@ -24,13 +24,14 @@ export const createBusTrip = async (req, res) => {
 
     const activeTrip = await BusTrip.findOne({
       templateNo,
+      company,
       date: { $gte: startOfDay, $lte: endOfDay },
       status: { $in: ["Scheduled", "Pending", "Arrived"] }, 
       isArchived: false
     });
 
     if (activeTrip) {
-      return res.status(400).json({ message: `Bus ${templateNo} already has an active trip today.` });
+      return res.status(400).json({ message: `Bus Number ${templateNo} already has an active trip for this company today.` });
     }
 
     let defaultPrice = 75;
