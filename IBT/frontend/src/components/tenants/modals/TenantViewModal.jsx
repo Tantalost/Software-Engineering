@@ -12,15 +12,31 @@ const DecryptedDocument = ({ url, label }) => {
   const [docData, setDocData] = useState(null);
   const [isPDF, setIsPDF] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const loadAndDecrypt = async () => {
       if (!url) return;
 
       try {
+        setErrorMessage("");
       
         const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch");
+        if (!response.ok) {
+          let serverMessage = "";
+          try {
+            serverMessage = await response.text();
+          } catch (_) {}
+
+          const lower = (serverMessage || "").toLowerCase();
+          if (response.status === 422 || lower.includes('unable to decrypt') || lower.includes('decryption')) {
+            throw new Error("This uploaded file can't be decrypted. Please ask the applicant to re-upload the document.");
+          }
+          if (response.status === 404) {
+            throw new Error("Document not found in storage.");
+          }
+          throw new Error("Failed to load document.");
+        }
         
         const blob = await response.blob();
         const encryptedText = await blob.text();
@@ -49,6 +65,7 @@ const DecryptedDocument = ({ url, label }) => {
         }
       } catch (err) {
         console.error("Error loading document:", err);
+        setErrorMessage(err.message || "Unable to load this document.");
       } finally {
         setLoading(false);
       }
@@ -85,7 +102,7 @@ const DecryptedDocument = ({ url, label }) => {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 text-slate-400">
          <X size={24} className="mb-2 opacity-50" />
-         <span className="text-[10px] font-bold uppercase">Load Failed</span>
+         <span className="text-[10px] font-bold uppercase text-center px-2">{errorMessage || "Load Failed"}</span>
       </div>
     );
   }
@@ -137,15 +154,16 @@ const TenantViewModal = ({ viewRow, onClose }) => {
   ].filter(doc => doc.url);
 
   const parseFeeBreakdown = (data) => {
-    if (!data) return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" };
+    if (!data) return { electricity: 0, otherAmount: 0, otherSpecify: "" };
     if (typeof data === 'string') {
         try { return JSON.parse(data); } 
-        catch (e) { return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" }; }
+        catch (e) { return { electricity: 0, otherAmount: 0, otherSpecify: "" }; }
     }
     return data;
   };
 
   const feeBreakdown = parseFeeBreakdown(viewRow.feeBreakdown);
+  const isPermanentTenant = (viewRow.tenantType || viewRow.floor || "Permanent") === "Permanent";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -190,11 +208,7 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             </h4>
             <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
               <Field label="Monthly Rent" value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString()}` : "₱0.00"} />
-              <Field label="Garbage Fee" value={`₱${Number(feeBreakdown.garbageFee || 0).toLocaleString()}`} />
-              <Field label="Permit Fee" value={`₱${Number(feeBreakdown.permitFee || 0).toLocaleString()}`} />
-              <Field label="Business Taxes" value={`₱${Number(feeBreakdown.businessTaxes || 0).toLocaleString()}`} />
-              <Field label="Electricity" value={`₱${Number(feeBreakdown.electricity || 0).toLocaleString()}`} />
-              <Field label="Water" value={`₱${Number(feeBreakdown.water || 0).toLocaleString()}`} />
+              {isPermanentTenant && <Field label="Electricity" value={`₱${Number(feeBreakdown.electricity || 0).toLocaleString()}`} />}
               <Field label="Others (Amount)" value={`₱${Number(feeBreakdown.otherAmount || 0).toLocaleString()}`} />
       
               <div className="md:col-span-2">

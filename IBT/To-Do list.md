@@ -16,7 +16,7 @@ Permanent
 
 
 - add push notifications (LLoyd)
-- fix docs and image view for stall application process di sya maview if ibang devices magsubmit
+
 
 
 
@@ -262,3 +262,5 @@ Major Adjustment (Priority)
 **Report Module**
 - Reports accessibility 
 - Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🟢 **Done**
+
+- fix docs and image view for stall application process di sya maview if ibang devices magsubmit 🟢 **Done**

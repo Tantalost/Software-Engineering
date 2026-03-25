@@ -8,6 +8,26 @@ import path from 'path';
 
 const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
 
+const detectMimeTypeFromBuffer = (buffer) => {
+    if (!buffer || buffer.length < 4) return null;
+
+    if (buffer.slice(0, 4).toString() === '%PDF') return 'application/pdf';
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'image/jpeg';
+    if (
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4E &&
+        buffer[3] === 0x47
+    ) return 'image/png';
+    if (buffer.slice(0, 3).toString() === 'GIF') return 'image/gif';
+    if (
+        buffer.slice(0, 4).toString() === 'RIFF' &&
+        buffer.slice(8, 12).toString() === 'WEBP'
+    ) return 'image/webp';
+
+    return null;
+};
+
 const createAdminNotification = async (title, message) => {
   try {
     const newNote = new Notification({
@@ -34,6 +54,7 @@ export const getSecureDocument = async (req, res) => {
         const cursor = bucket.find({ filename: filename });
         const files = await cursor.toArray();
         if (!files.length) return res.status(404).send("File not found");
+        const fileMeta = files[0] || {};
 
         const downloadStream = bucket.openDownloadStreamByName(filename);
         const chunks = [];
@@ -50,21 +71,50 @@ export const getSecureDocument = async (req, res) => {
             let finalBuffer;
             if (isEncrypted) {
                 try {
-                    const bytes = CryptoJS.AES.decrypt(fileBufferRaw.toString('utf8'), SECRET_KEY);
-                    const originalBase64 = bytes.toString(CryptoJS.enc.Utf8);
-                    finalBuffer = Buffer.from(originalBase64, 'base64');
-                } catch (e) { return res.status(500).send("Decryption Failed"); }
+                                        const encryptedPayload = fileBufferRaw.toString('utf8');
+                                        const candidateKeys = [
+                                            SECRET_KEY,
+                                            process.env.LEGACY_ENCRYPTION_KEY,
+                                            " "
+                                        ].filter((value, index, arr) => value && arr.indexOf(value) === index);
+
+                                        let originalBase64 = "";
+
+                                        for (const key of candidateKeys) {
+                                            try {
+                                                const bytes = CryptoJS.AES.decrypt(encryptedPayload, key);
+                                                const attempt = bytes.toString(CryptoJS.enc.Utf8);
+                                                if (attempt) {
+                                                    originalBase64 = attempt;
+                                                    break;
+                                                }
+                                            } catch (_) {
+                                                continue;
+                                            }
+                                        }
+
+                                        if (!originalBase64) {
+                                            return res.status(422).send("Unable to decrypt file");
+                                        }
+
+                                        finalBuffer = Buffer.from(originalBase64, 'base64');
+                                } catch (e) { return res.status(500).send("Decryption Failed"); }
             } else {
                 finalBuffer = fileBufferRaw;
             }
 
-            const ext = path.extname(filename).toLowerCase();
-            let contentType = 'application/octet-stream';
-            if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
-            if (['.png'].includes(ext)) contentType = 'image/png';
-            if (['.pdf'].includes(ext)) contentType = 'application/pdf';
+                        const ext = path.extname(filename).toLowerCase();
+                        let contentType = detectMimeTypeFromBuffer(finalBuffer) || fileMeta.contentType || 'application/octet-stream';
+                        if (contentType === 'application/octet-stream') {
+                            if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
+                            if (['.png'].includes(ext)) contentType = 'image/png';
+                            if (['.pdf'].includes(ext)) contentType = 'application/pdf';
+                            if (['.webp'].includes(ext)) contentType = 'image/webp';
+                            if (['.gif'].includes(ext)) contentType = 'image/gif';
+                        }
 
             res.setHeader('Content-Type', contentType);
+                        res.setHeader('Content-Disposition', 'inline');
             res.send(finalBuffer);
         });
     } catch (error) {

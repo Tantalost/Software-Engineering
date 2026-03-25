@@ -911,12 +911,8 @@ const TenantLease = () => {
         const feeBreakdown = typeof t.feeBreakdown === 'string' 
             ? JSON.parse(t.feeBreakdown || '{}') 
             : (t.feeBreakdown || {});
-
-        const garbageFee = Number(feeBreakdown.garbageFee || 0);
-        const permitFee = Number(feeBreakdown.permitFee || 0);
-        const businessTaxes = Number(feeBreakdown.businessTaxes || 0);
-        const electricity = Number(feeBreakdown.electricity || 0);
-        const water = Number(feeBreakdown.water || 0);
+        const isPermanentTenant = (t.tenantType || t.floor || "Permanent") === "Permanent";
+        const electricity = isPermanentTenant ? Number(feeBreakdown.electricity || 0) : 0;
         const otherAmount = Number(feeBreakdown.otherAmount || 0);
         const otherSpecify = feeBreakdown.otherSpecify || "Other Fees";
 
@@ -931,11 +927,7 @@ const TenantLease = () => {
             ["Additional Fees (Total)", `PHP ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`]
         ];
 
-        if (garbageFee > 0) tableBody.push(["    Garbage Fee", `PHP ${garbageFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
-        if (permitFee > 0) tableBody.push(["   Permit Fee", `PHP ${permitFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
-        if (businessTaxes > 0) tableBody.push(["    Business Taxes", `PHP ${businessTaxes.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
         if (electricity > 0) tableBody.push(["    Electricity", `PHP ${electricity.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
-        if (water > 0) tableBody.push(["   Water", `PHP ${water.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
         if (otherAmount > 0) tableBody.push([`    ${otherSpecify}`, `PHP ${otherAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
 
         tableBody.push(["Total Due", `PHP ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
@@ -975,7 +967,7 @@ const TenantLease = () => {
 
            
           
-            worksheet.mergeCells('A6:M6');
+            worksheet.mergeCells('A6:J6');
             const titleCell = worksheet.getCell('A6');
             titleCell.value = 'TENANTS AND LEASE REPORTS';
             titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
@@ -984,15 +976,15 @@ const TenantLease = () => {
             const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
 
             worksheet.addRow([]); 
-            worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
-            worksheet.addRow([`Collector: ${adminName}`, '', '', '', '', '', '', '', '', '', '', '', '']); 
-            worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '']);
+            worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
+            worksheet.addRow([`Collector: ${adminName}`, '', '', '', '', '', '', '', '', '']); 
+            worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '']);
             worksheet.addRow([]);
 
            
             const headerRow = worksheet.addRow([
                 "Slot No.", "Name", "Email", "Contact No.", "Rent", 
-                "Garbage", "Permit", "Taxes", "Electricity", "Water", "Other Fees",
+                "Electricity", "Other Fees",
                 "Total Utility", "Total Due"
             ]);
             
@@ -1007,6 +999,8 @@ const TenantLease = () => {
                 const feeBreakdown = typeof t.feeBreakdown === 'string' 
                     ? JSON.parse(t.feeBreakdown || '{}') 
                     : (t.feeBreakdown || {});
+                const isPermanentTenant = (t.tenantType || t.floor || "Permanent") === "Permanent";
+                const electricity = isPermanentTenant ? Number(feeBreakdown.electricity || 0) : 0;
 
                 worksheet.addRow([
                     t.slotNo || "-",
@@ -1014,11 +1008,7 @@ const TenantLease = () => {
                     t.email || "-",
                     t.contactNo || "-",
                     `Php ${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `Php ${(Number(feeBreakdown.garbageFee || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `Php ${(Number(feeBreakdown.permitFee || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `Php ${(Number(feeBreakdown.businessTaxes || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `Php ${(Number(feeBreakdown.electricity || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `Php ${(Number(feeBreakdown.water || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    `Php ${electricity.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${(Number(feeBreakdown.otherAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${calculateDueAmount(t).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -1027,14 +1017,14 @@ const TenantLease = () => {
 
             const lastRowNumber = worksheet.lastRow.number + 2;
             worksheet.getRow(lastRowNumber).height = 52.5;
-            // Spanned footer image across all 13 columns (A to M)
-            await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:M${lastRowNumber + 3}`);
+            // Spanned footer image across all 10 columns (A to J)
+            await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:J${lastRowNumber + 3}`);
 
             // Expanded Column widths
             worksheet.columns = [
                 { width: 12 }, { width: 30 }, { width: 25 }, { width: 15 }, // Slot, Name, Email, Contact
                 { width: 15 }, // Rent
-                { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, // Breakdown
+                { width: 12 }, { width: 12 }, // Electricity, Other Fees
                 { width: 15 }, { width: 15 } // Total Utility, Total Due
             ];
 
@@ -1083,11 +1073,13 @@ const TenantLease = () => {
        autoTable(doc, {
             startY: 70,
             margin: { bottom: 35, left: 10, right: 10 }, 
-            head: [["Slot", "Name", "Email", "Contact", "Rent", "Garbage", "Permit", "Tax", "Elec", "Water", "Other", "Util Total", "Total Due"]],
+            head: [["Slot", "Name", "Email", "Contact", "Rent", "Elec", "Other", "Util Total", "Total Due"]],
             body: filtered.map((t) => {
                 const feeBreakdown = typeof t.feeBreakdown === 'string' 
                     ? JSON.parse(t.feeBreakdown || '{}') 
                     : (t.feeBreakdown || {});
+                const isPermanentTenant = (t.tenantType || t.floor || "Permanent") === "Permanent";
+                const electricity = isPermanentTenant ? Number(feeBreakdown.electricity || 0) : 0;
                     
                 return [
                     t.slotNo || "-",
@@ -1095,11 +1087,7 @@ const TenantLease = () => {
                     t.email || "-",
                     t.contactNo || "-",
                     `${(t.rentAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `${(Number(feeBreakdown.garbageFee || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `${(Number(feeBreakdown.permitFee || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `${(Number(feeBreakdown.businessTaxes || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `${(Number(feeBreakdown.electricity || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `${(Number(feeBreakdown.water || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    `${electricity.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `${(Number(feeBreakdown.otherAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`

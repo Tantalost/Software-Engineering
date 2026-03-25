@@ -43,10 +43,10 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   const [otherProductDetails, setOtherProductDetails] = useState(initialOther || "");
 
   const parseFeeBreakdown = (data) => {
-    if (!data) return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" };
+    if (!data) return { electricity: 0, otherAmount: 0, otherSpecify: "" };
     if (typeof data === 'string') {
         try { return JSON.parse(data); } 
-        catch (e) { return { garbageFee: 0, permitFee: 0, businessTaxes: 0, electricity: 0, water: 0, otherAmount: 0, otherSpecify: "" }; }
+        catch (e) { return { electricity: 0, otherAmount: 0, otherSpecify: "" }; }
     }
     return data;
   };
@@ -129,14 +129,9 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
 
     useEffect(() => {
     const isNightMarket = formData.tenantType === "Night Market";
-    const calculatedUtils = isNightMarket ? 0 : (
-                  (parseFloat(feeBreakdown.garbageFee) || 0) +
-                  (parseFloat(feeBreakdown.permitFee) || 0) +
-                  (parseFloat(feeBreakdown.businessTaxes) || 0) +
-                  (parseFloat(feeBreakdown.electricity) || 0) +
-                  (parseFloat(feeBreakdown.water) || 0) +
-                  (parseFloat(feeBreakdown.otherAmount) || 0)
-    );
+    const electricityFee = isNightMarket ? 0 : (parseFloat(feeBreakdown.electricity) || 0);
+    const otherFee = parseFloat(feeBreakdown.otherAmount) || 0;
+    const calculatedUtils = electricityFee + otherFee;
 
     const rent = parseFloat(formData.rentAmount) || 0;
 
@@ -314,18 +309,15 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                 
                 {formData.tenantType === "Permanent" && (
                   <>
-                    <FormInput label="Garbage Fee" type="number" value={feeBreakdown.garbageFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, garbageFee: e.target.value})} />
-                    <FormInput label="Permit Fee" type="number" value={feeBreakdown.permitFee} onChange={(e) => setFeeBreakdown({...feeBreakdown, permitFee: e.target.value})} />
-                    <FormInput label="Business Taxes" type="number" value={feeBreakdown.businessTaxes} onChange={(e) => setFeeBreakdown({...feeBreakdown, businessTaxes: e.target.value})} />
                     <FormInput label="Electricity" type="number" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} />
-                    <FormInput label="Water" type="number" value={feeBreakdown.water} onChange={(e) => setFeeBreakdown({...feeBreakdown, water: e.target.value})} />
-                    <FormInput label="Others (Amount)" type="number" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} />
-                    
-                    <div className="md:col-span-2">
-                        <FormInput label="Others (Please specify)" type="text" value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} placeholder="Specify what the other fee is for..." />
-                    </div>
                   </>
                 )}
+
+                <FormInput label="Others (Amount)" type="number" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} />
+                
+                <div className="md:col-span-2">
+                    <FormInput label="Others (Please specify)" type="text" value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} placeholder="Specify what the other fee is for..." />
+                </div>
 
                  <div className="flex flex-col gap-1 md:col-start-3">
                     <label className="text-sm font-medium text-slate-700">Total Amount Due</label>

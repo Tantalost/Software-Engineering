@@ -540,16 +540,33 @@ const modalBilling = useMemo(() => {
     }
   };
 
+ const resolveMimeType = (fileName: string, fallbackType?: string) => {
+  if (fallbackType && fallbackType !== 'application/octet-stream') {
+    return fallbackType;
+  }
+
+  const lowerName = (fileName || '').toLowerCase();
+  if (lowerName.endsWith('.pdf')) return 'application/pdf';
+  if (lowerName.endsWith('.png')) return 'image/png';
+  if (lowerName.endsWith('.webp')) return 'image/webp';
+  if (lowerName.endsWith('.gif')) return 'image/gif';
+  if (lowerName.endsWith('.heic')) return 'image/heic';
+  if (lowerName.endsWith('.heif')) return 'image/heif';
+  if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return 'image/jpeg';
+  return 'application/octet-stream';
+ };
+
  const appendFile = (form: FormData, key: string, fileObj: any, encryptedUri: string | null = null) => {
   if (fileObj) {
     let finalUri = encryptedUri ? encryptedUri : fileObj.uri;
 
-    if (!finalUri.startsWith('file://')) {
+    if (!finalUri.startsWith('file://') && !finalUri.startsWith('content://')) {
         finalUri = `file://${finalUri}`;
     }
 
-    const name = fileObj.name || `${key}.jpg`;
-    const type = fileObj.mimeType || 'application/octet-stream';
+    const encryptedName = encryptedUri ? encryptedUri.split('/').pop() : null;
+    const name = encryptedName || fileObj.name || `${key}.jpg`;
+    const type = resolveMimeType(name, fileObj.mimeType || fileObj.type);
 
     form.append(key, {
       uri: finalUri,
