@@ -48,13 +48,13 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
-  const resetFormState = () => {
-    setForm({ 
-        email: isDeviceLinked ? form.email : '', 
+  const resetFormState = (clearEmail = false) => {
+    setForm(prev => ({ 
+        email: clearEmail ? '' : prev.email, 
         mpin: '', confirmMpin: '', 
         firstName: '', middleName: '', lastName: '', suffix: '', 
         contactNo: '', otp: '', agreedToTerms: false 
-    });
+    }));
   };
 
   const handleSendRegistrationOtp = async () => {
@@ -85,7 +85,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             const userData = { ...data.user, token: data.token };
             
             await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
-            await AsyncStorage.setItem('linked_email', form.email); // Remember device
+            await AsyncStorage.setItem('linked_email', form.email);
             
             onLoginSuccess(userData);
         } catch (error: any) {
@@ -163,7 +163,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             
             setAuthMode('login');
             setRegisterStep('landing');
-            resetFormState();
+            resetFormState(false); 
             
         } catch (error: any) {
             Alert.alert("Registration Failed", error.message);
@@ -205,13 +205,12 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
     setLoading(true);
     try {
-        
         await authService.resetPassword({ email: form.email, otp: form.otp, newMpin: form.mpin });
         Alert.alert("Success", "MPIN reset successfully! Please login.");
         
         setAuthMode('login');
         setResetStep('request');
-        resetFormState();
+        resetFormState(false);
     } catch (error: any) {
         Alert.alert("Error", error.message);
     } finally {

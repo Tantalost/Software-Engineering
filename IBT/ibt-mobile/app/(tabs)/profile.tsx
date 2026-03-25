@@ -359,7 +359,7 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 16, color: 'red' }}>Deactivate Account</Text>
               </TouchableOpacity>
               
-              <Button mode="text" onPress={() => setSettingsModalVisible(false)} style={{ marginTop: 20 }}>Close</Button>
+              <Button mode="text" onPress={() => setSettingsModalVisible(false)} style={{ marginTop: 20 }} textColor='black'>Close</Button>
             </View>
           )}
 

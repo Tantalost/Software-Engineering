@@ -8,6 +8,7 @@ import { sanitizePhoneNumber } from './utils/validation';
 import { UserData } from './types/auth.types';
 import styles from './styles/LogForm';
 
+
 const PinPad = ({ mpin, setMpin, label, isError, errorMessage }: { mpin: string, setMpin: (val: string) => void, label: string, isError?: boolean, errorMessage?: string }) => {
   const inputRef = React.useRef<NativeTextInput>(null);
 
@@ -34,7 +35,7 @@ const PinPad = ({ mpin, setMpin, label, isError, errorMessage }: { mpin: string,
         onChangeText={(t) => setMpin(t.replace(/[^0-9]/g, ''))}
         keyboardType="number-pad"
         maxLength={4}
-        style={{ width: 0, height: 0, opacity: 0 }} // Hidden securely
+        style={{ width: 0, height: 0, opacity: 0 }} 
         caretHidden={true}
         autoFocus={false}
       />
@@ -42,6 +43,53 @@ const PinPad = ({ mpin, setMpin, label, isError, errorMessage }: { mpin: string,
   );
 };
 
+
+const RegistrationBreadcrumbs = ({ currentStep }: { currentStep: string }) => {
+  const steps = [
+    { id: 'email_entry', label: 'Email' },
+    { id: 'otp_verify', label: 'Verify' },
+    { id: 'personal_info', label: 'Profile' },
+    { id: 'create_mpin', label: 'MPIN' },
+  ];
+
+  const currentIndex = steps.findIndex(s => s.id === currentStep);
+  if (currentIndex === -1) return null; 
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginBottom: 15 }}>
+      {steps.map((step, index) => {
+        const isCompleted = index < currentIndex;
+        const isActive = index === currentIndex;
+        const color = isActive || isCompleted ? '#1B5E20' : '#E0E0E0';
+
+        return (
+          <React.Fragment key={step.id}>
+            <View style={{ alignItems: 'center', width: 50 }}>
+              <View style={{
+                width: 26, height: 26, borderRadius: 13,
+                backgroundColor: isActive ? '#1B5E20' : (isCompleted ? '#E8F5E9' : '#F5F5F5'),
+                borderWidth: 2, borderColor: color,
+                justifyContent: 'center', alignItems: 'center', zIndex: 2
+              }}>
+                {isCompleted ? (
+                  <Icon name="check" size={14} color="#1B5E20" />
+                ) : (
+                  <Text style={{ color: isActive ? 'white' : '#9E9E9E', fontSize: 11, fontWeight: 'bold' }}>{index + 1}</Text>
+                )}
+              </View>
+              <Text style={{ fontSize: 10, color: isActive ? '#1B5E20' : (isCompleted ? '#1B5E20' : '#9E9E9E'), marginTop: 4, fontWeight: isActive ? 'bold' : 'normal', textAlign: 'center' }}>
+                {step.label}
+              </Text>
+            </View>
+            {index < steps.length - 1 && (
+              <View style={{ flex: 1, maxWidth: 30, height: 2, backgroundColor: isCompleted ? '#1B5E20' : '#E0E0E0', marginBottom: 16, marginHorizontal: -5, zIndex: 1 }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+};
 
 interface AuthScreenProps {
   onLoginSuccess: (user: UserData) => void;
@@ -84,7 +132,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
             </Button>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15 }}>
               <Text style={{ color: 'grey' }}>Already a Member? </Text>
-              <Button mode="text" compact onPress={() => { setAuthMode('login'); resetFormState(); }} textColor="#1B5E20" labelStyle={{ fontWeight: 'bold' }}>
+              <Button mode="text" compact onPress={() => { setAuthMode('login'); resetFormState(false); }} textColor="#1B5E20" labelStyle={{ fontWeight: 'bold' }}>
                 Login here
               </Button>
             </View>
@@ -114,7 +162,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
               Next
             </Button>
             <Button mode="text" onPress={() => setRegisterStep('landing')} style={styles.switchButton} textColor="grey">
-              Back
+              Cancel
             </Button>
           </View>
         );
@@ -241,23 +289,38 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                                 <Button mode="contained" onPress={handleFinalReset} loading={loading} style={styles.button} textColor="#ffffff">Reset MPIN</Button>
                             </>
                         )}
-                        <Button mode="text" onPress={() => { setAuthMode('login'); setResetStep('request'); resetFormState(); }} style={[styles.switchButton, {marginTop: 20}]} textColor="#1B5E20">Back to Login</Button>
+                        <Button mode="text" onPress={() => { setAuthMode('login'); setResetStep('request'); resetFormState(false); }} style={[styles.switchButton, {marginTop: 20}]} textColor="#1B5E20">Back to Login</Button>
                     </View>
 
                 ) : authMode === 'register' ? (
-               
-                    renderRegisterFlow()
-
+                    <View>
+                        <RegistrationBreadcrumbs currentStep={registerStep} />
+                        {renderRegisterFlow()}
+                    </View>
                ) : (
                  
                     <View>
-                      
+                        {isDeviceLinked ? (
+                            <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                                <Text style={{ color: 'grey', fontSize: 14 }}>Welcome back,</Text>
+                                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#1B5E20', marginBottom: 5 }}>{form.email}</Text>
+                                <Button mode="text" compact onPress={handleUnlinkDevice} textColor="grey" labelStyle={{ fontSize: 12 }}>
+                                    Not you? Switch account
+                                </Button>
+                            </View>
+                        ) : (
+                            <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
+                        )}
+
                         <View style={{ marginTop: 10 }}>
                           <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="Tap to enter MPIN" />
                         </View>
                         
                         <View style={{alignItems: 'center', marginBottom: 15}}>
-                            <Button mode="text" compact onPress={() => setAuthMode('forgot-password')} textColor="#1B5E20" labelStyle={{ fontSize: 13, marginVertical: 0 }}>Forgot MPIN?</Button>
+                            <Button mode="text" compact onPress={() => {
+                                setAuthMode('forgot-password');
+                                resetFormState(false); 
+                            }} textColor="#1B5E20" labelStyle={{ fontSize: 13, marginVertical: 0 }}>Forgot MPIN?</Button>
                         </View>
                         
                         <Button mode="contained" onPress={handleAuth} loading={loading} style={styles.button} textColor="#ffffff">
@@ -267,6 +330,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                         <Button mode="text" onPress={() => {
                             setAuthMode('register');
                             setRegisterStep('landing'); 
+                            resetFormState(true); 
                         }} style={styles.switchButton} textColor="#1B5E20">
                             New vendor? Register here
                         </Button>

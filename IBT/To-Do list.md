@@ -35,7 +35,7 @@ Bus Module
 
 Mobile
 - add settings  (change password, deactivate account and reactivate account using email as verification) 🟢 **Done**
-- set MPIN (4 digits) instead of email in loggin in an account in stall application 🟢 **Done**
+- set MPIN (4 digits) instead of email in login in an account in stall application 🟢 **Done**
 
 Reports
 - add date filter (daily), when clicking the da te (ex. Jan 1) specific record of that day should appear 🟢 **Done**
