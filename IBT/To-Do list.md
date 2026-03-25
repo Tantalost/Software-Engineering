@@ -17,12 +17,13 @@ Permanent
 
 Bus admin
 - should have an estimated trip per day based on the previous report
-- should be able to indicate how many rurals per day 
+- should be able to indicate how many buses per day 
 - should only approve departure (have a list of busses and passenger capacity then only indicate approval of departure to minimize work)
-- should indicate number of passengers per bus
+- should indicate number of capacity per bus
 
 Tenants
-- date of operation should be indicated (add a click or trigger when operation starts)
+- date of operation should be indicated (add a click or trigger when operation starts) 
+fix: When the tenant will operate, that's the time to count the days of operation.
 - should only be able to change the next months percent but not the currents and the previous months’ due balance
 - should be able to change value of percentage increase 
 - take note of today’s payable payment 
