@@ -1383,7 +1383,7 @@ const Parking = () => {
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Jeep Rate (per day)
+                  Jeep Rate (₱{modalPrices.jeep || 0} per day)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -1403,7 +1403,8 @@ const Parking = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  4 Wheels Rate (per hour)
+                  4 Wheels Rate (₱{modalPrices.car || 0} for the first 3 hours,
+                  +₱{modalPrices.car || 0} per additional hour)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -1424,7 +1425,8 @@ const Parking = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  2 Wheels Rate (per hour)
+                  2 Wheels Rate (₱{modalPrices.motorcycle || 0} for the first 3
+                  hours, +₱{modalPrices.motorcycle || 0} per additional hour)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -1482,38 +1484,42 @@ const Parking = () => {
             </h1>
             {step === 1 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 animate-in fade-in duration-300">
+                {/* 4 Wheels */}
                 <button
                   onClick={() => handleSelectType("FourWheels")}
                   className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
                   <Car size={80} className="mb-4" />
-
                   <span className="text-2xl font-bold mt-2">4 Wheels</span>
-
                   <span className="text-sm opacity-70 mt-2 font-medium">
-                    ₱{priceSettings.carRate}.00 / hr
+                    ₱{Number(priceSettings.carRate || 0).toFixed(2)} for 3 hrs,
+                    +₱{Number(priceSettings.carRate || 0).toFixed(2)}/hr
                   </span>
                 </button>
+
+                {/* 2 Wheels */}
                 <button
                   onClick={() => handleSelectType("TwoWheels")}
                   className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
-                  <Bike size={80} className="mb-4" />
-
+                  <Bike size={70} className="mb-4" />
                   <span className="text-2xl font-bold mt-2">2 Wheels</span>
-
                   <span className="text-sm opacity-70 mt-2 font-medium">
-                    ₱{priceSettings.motorcycleRate}.00 / hr
+                    ₱{Number(priceSettings.motorcycleRate || 0).toFixed(2)} for
+                    3 hrs, +₱
+                    {Number(priceSettings.motorcycleRate || 0).toFixed(2)}/hr
                   </span>
                 </button>
+
+                {/* Jeep */}
                 <button
                   onClick={() => handleSelectType("Jeep")}
                   className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-green-50 text-green-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
-                  <Bus size={80} className="mb-4 text-green-600" />
+                  <Bus size={70} className="mb-4 text-green-600" />
                   <span className="text-2xl font-bold mt-2">Jeep</span>
                   <span className="text-sm opacity-70 mt-2 font-medium">
-                    ₱{priceSettings.jeepRate}.00 / day
+                    ₱{Number(priceSettings.jeepRate || 0).toFixed(2)} / day
                   </span>
                 </button>
               </div>
