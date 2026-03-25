@@ -14,7 +14,6 @@ Color Coding
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
 
-
 - add push notifications (LLoyd)
 
 
