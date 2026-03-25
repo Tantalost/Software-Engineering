@@ -13,9 +13,26 @@ Color Coding
 **REQUEST NI SIR DERICK**
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
-
 - add push notifications (LLoyd)
 
+Bus admin
+- should have an estimated trip per day based on the previous report
+- should be able to indicate how many rurals per day 
+- should only approve departure (have a list of busses and passenger capacity then only indicate approval of departure to minimize work)
+- should indicate number of passengers per bus
+
+Tenants
+- date of operation should be indicated (add a click or trigger when operation starts)
+- should only be able to change the next months percent but not the currents and the previous months’ due balance
+- should be able to change value of percentage increase 
+- take note of today’s payable payment 
+
+mobile
+- payment history should be able to filter by date 
+
+
+lost and found
+- make a duration for previous data range
 
 
 
@@ -26,7 +43,7 @@ Permanent
 
 
 
-
+🟢 **Done TASKS**
 Bus Module
 - use Bus Number instead of plate number (Justin )🟢 **Done**
 - Add name of collector (Justin )🟢 **Done**
@@ -261,5 +278,4 @@ Major Adjustment (Priority)
 **Report Module**
 - Reports accessibility 
 - Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🟢 **Done**
-
 - fix docs and image view for stall application process di sya maview if ibang devices magsubmit 🟢 **Done**
