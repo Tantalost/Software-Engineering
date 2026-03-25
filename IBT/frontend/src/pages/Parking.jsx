@@ -522,21 +522,21 @@ const Parking = () => {
     }
   };
 
-const generateTicketNumber = () => {
-  const today = new Date();
-  const dateKey = today.toISOString().slice(0, 10); 
+  const generateTicketNumber = () => {
+    const today = new Date();
+    const dateKey = today.toISOString().slice(0, 10);
 
-  let counterData = JSON.parse(localStorage.getItem("ticketCounter")) || {};
-  let count = counterData[dateKey] || 0;
+    let counterData = JSON.parse(localStorage.getItem("ticketCounter")) || {};
+    let count = counterData[dateKey] || 0;
 
-  count += 1;
-  counterData[dateKey] = count;
-  localStorage.setItem("ticketCounter", JSON.stringify(counterData));
+    count += 1;
+    counterData[dateKey] = count;
+    localStorage.setItem("ticketCounter", JSON.stringify(counterData));
 
-  const ticketNum = count.toString().padStart(2, "0"); 
+    const ticketNum = count.toString().padStart(2, "0");
 
-  return `T-${ticketNum}`;
-};
+    return `T-${ticketNum}`;
+  };
 
   const handleAddClick = () => {
     const now = new Date();
@@ -825,8 +825,12 @@ const generateTicketNumber = () => {
         };
       });
 
-      const carCount = filtered.filter(item => item.type && item.type.toLowerCase() === 'fourwheels').length;
-      const motoCount = filtered.filter(item => item.type && item.type.toLowerCase() === 'twowheels').length;
+      const carCount = filtered.filter(
+        (item) => item.type && item.type.toLowerCase() === "fourwheels",
+      ).length;
+      const motoCount = filtered.filter(
+        (item) => item.type && item.type.toLowerCase() === "twowheels",
+      ).length;
 
       const reportPayload = {
         screen: "Parking Management",
@@ -847,7 +851,10 @@ const generateTicketNumber = () => {
         data: formattedData,
       };
 
-      const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Parking Admin";
+      const adminName =
+        localStorage.getItem("authName") ||
+        localStorage.getItem("authEmail") ||
+        "Parking Admin";
       await submitPageReport("Parking", reportPayload, adminName);
 
       await fetch(
@@ -1162,12 +1169,14 @@ const generateTicketNumber = () => {
           <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
             Name of Collector:
           </label>
+
           <input
             type="text"
-            placeholder="Collector Name"
             value={collectorName}
-            onChange={(e) => setCollectorName(e.target.value)}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-[180px]"
+            maxLength={100}
+            onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
+            placeholder="Enter collector name"
+            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
           />
           <button
             onClick={() => setShowLogModal(true)}
@@ -1458,10 +1467,10 @@ const generateTicketNumber = () => {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div
-              className={`bg-white w-full ${
+            className={`bg-white w-full ${
               step === 1 ? "max-w-4xl p-8" : "max-w-md p-6"
-              } rounded-2xl shadow-2xl text-center transition-all duration-300 relative`}
-              >           
+            } rounded-2xl shadow-2xl text-center transition-all duration-300 relative`}
+          >
             <button
               onClick={() => setShowAddModal(false)}
               className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
