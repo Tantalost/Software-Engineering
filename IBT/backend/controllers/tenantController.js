@@ -3,6 +3,22 @@ import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
 import Settings from "../models/Settings.js";
 
+const normalizeFeeBreakdown = (rawBreakdown = {}, tenantType = "Permanent") => {
+  const isNightMarket = tenantType === "Night Market";
+  const electricity = isNightMarket ? 0 : Number(rawBreakdown.electricity || 0);
+  const otherAmount = Number(rawBreakdown.otherAmount || 0);
+
+  return {
+    garbageFee: 0,
+    permitFee: 0,
+    businessTaxes: 0,
+    water: 0,
+    electricity,
+    otherAmount,
+    otherSpecify: rawBreakdown.otherSpecify || ""
+  };
+};
+
 export const getTenants = async (req, res) => {
   try {
     const tenants = await Tenant.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
@@ -141,17 +157,12 @@ export const createTenant = async (req, res) => {
         }
     }
 
-    if (req.body.tenantType === "Night Market") {
-        parsedFeeBreakdown = {
-            garbageFee: 0, permitFee: 0, businessTaxes: 0, 
-            electricity: 0, water: 0, otherAmount: 0, otherSpecify: ""
-        };
-        req.body.utilityAmount = 0; 
-    }
+    const normalizedFeeBreakdown = normalizeFeeBreakdown(parsedFeeBreakdown, req.body.tenantType);
+    req.body.utilityAmount = Number(normalizedFeeBreakdown.electricity || 0) + Number(normalizedFeeBreakdown.otherAmount || 0);
 
     const tenantData = {
         ...req.body,
-        feeBreakdown: parsedFeeBreakdown,
+      feeBreakdown: normalizedFeeBreakdown,
         paymentHistory: [{
             referenceNo: req.body.referenceNo || "Initial Payment",
             amount: req.body.totalAmount || req.body.rentAmount || 0,
@@ -258,14 +269,10 @@ export const updateTenant = async (req, res) => {
         }
     }
 
-    const isNightMarket = (updateData.tenantType || oldTenant.tenantType) === "Night Market";
-    if (isNightMarket) {
-        updateData.feeBreakdown = {
-            garbageFee: 0, permitFee: 0, businessTaxes: 0, 
-            electricity: 0, water: 0, otherAmount: 0, otherSpecify: ""
-        };
-        updateData.utilityAmount = 0;
-    }
+    const effectiveTenantType = updateData.tenantType || oldTenant.tenantType;
+    const normalizedFeeBreakdown = normalizeFeeBreakdown(updateData.feeBreakdown || oldTenant.feeBreakdown || {}, effectiveTenantType);
+    updateData.feeBreakdown = normalizedFeeBreakdown;
+    updateData.utilityAmount = Number(normalizedFeeBreakdown.electricity || 0) + Number(normalizedFeeBreakdown.otherAmount || 0);
 
     const getFile = (fieldName) => {
         if (req.files && req.files[fieldName] && req.files[fieldName][0]) {

@@ -45,13 +45,15 @@ export const generateRentStatementPDF = (mockTenant) => {
   const rent = mockTenant.rentAmount || 0;
   const util = mockTenant.utilityAmount || 0;
   const total = calculateDueAmount(mockTenant);
+  const isPermanentTenant = (mockTenant.tenantType || mockTenant.floor || "Permanent") === "Permanent";
+  const utilityLabel = isPermanentTenant ? "Utility - Electricity" : "Additional Fees";
   
   autoTable(doc, {
     startY: 70,
     head: [['Description', 'Reference', 'Amount']],
     body: [
       ['Rent Fee', `Slot ${mockTenant.slotNo}`, rent.toLocaleString('en-PH')],
-      ['Utility - Electricity', 'Fixed Rate', util.toLocaleString('en-PH')],
+      [utilityLabel, 'Fixed Rate', util.toLocaleString('en-PH')],
     ],
     theme: 'grid',
     headStyles: { fillColor: themeColor, textColor: 255, fontStyle: 'bold' },

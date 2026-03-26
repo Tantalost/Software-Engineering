@@ -15,6 +15,7 @@ const ApplicationReviewModal = ({
   onApproveRenewal 
 }) => {
   const [previewImage, setPreviewImage] = useState(null);
+  const [documentError, setDocumentError] = useState("");
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, action: null, title: "", message: "", isReject: false });
   const [rejectionReason, setRejectionReason] = useState("");
 
@@ -25,7 +26,39 @@ const ApplicationReviewModal = ({
     return `${baseUrl}/api/stalls/doc/${pathOrString}`; 
   };
 
-  const openPdf = (url) => window.open(url, '_blank');
+  const parseDocumentError = async (response) => {
+    let errorText = "";
+    try {
+      errorText = await response.text();
+    } catch (_) {}
+
+    const lower = (errorText || "").toLowerCase();
+    if (response.status === 422 || lower.includes('unable to decrypt') || lower.includes('decryption')) {
+      return "This uploaded file can't be decrypted. Please ask the applicant to re-upload the document.";
+    }
+    if (response.status === 404) {
+      return "Document file was not found in storage.";
+    }
+    return "Unable to open this document right now. Please try again.";
+  };
+
+  const ensureDocumentAccessible = async (url) => {
+    const response = await fetch(url, { method: 'GET', cache: 'no-store' });
+    if (!response.ok) {
+      const parsedError = await parseDocumentError(response);
+      throw new Error(parsedError);
+    }
+  };
+
+  const openPdf = async (url) => {
+    try {
+      setDocumentError("");
+      await ensureDocumentAccessible(url);
+      window.open(url, '_blank');
+    } catch (error) {
+      setDocumentError(error.message || "Unable to open this PDF.");
+    }
+  };
 
   const safeData = reviewData || {};
   const isPermanent = (safeData.floor === "Permanent" || safeData.tenantType === "Permanent");
@@ -66,15 +99,32 @@ const ApplicationReviewModal = ({
   const showAddTenantBtn = !isTenantRenewal && ((isPaymentReview && !isPermanent) || isContractReview);
   const showApproveRenewalBtn = isTenantRenewal && isPaymentReview;
 
-  const handleDownload = (e, url, label) => {
+  const handleDownload = async (e, url, label) => {
     e.stopPropagation();
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = "_blank";
-    link.download = `${label.replace(/\s+/g, '_')}_${(reviewData.tenantName || reviewData.name).replace(/\s+/g, '_')}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      setDocumentError("");
+      await ensureDocumentAccessible(url);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = "_blank";
+      link.download = `${label.replace(/\s+/g, '_')}_${(reviewData.tenantName || reviewData.name).replace(/\s+/g, '_')}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      setDocumentError(error.message || "Unable to download this file.");
+    }
+  };
+
+  const handleImagePreview = async (url) => {
+    try {
+      setDocumentError("");
+      await ensureDocumentAccessible(url);
+      setPreviewImage(url);
+    } catch (error) {
+      setDocumentError(error.message || "Unable to preview this image.");
+    }
   };
 
   const handleActionClick = (actionType) => {
@@ -177,6 +227,11 @@ const ApplicationReviewModal = ({
 
             <section>
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100"><FileText size={18} className="text-emerald-600" /> Submitted Documents</h4>
+              {documentError && (
+                <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  {documentError}
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {documents.map((doc, idx) => (
                   <div key={idx} className="group relative aspect-[4/3] bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer">
@@ -184,13 +239,13 @@ const ApplicationReviewModal = ({
                       <>
                         <button onClick={(e) => handleDownload(e, doc.url, doc.label)} className="absolute top-2 right-2 z-20 p-1.5 bg-black/50 hover:bg-emerald-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all" title="Download File"><Download size={14} /></button>
                         {(doc.url.toLowerCase().endsWith(".pdf") || doc.url.startsWith("data:application/pdf")) ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 transition-colors" onClick={() => openPdf(doc.url)}>
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 hover:bg-red-100 transition-colors" onClick={() => openPdf(doc.url)}>
                                 <FileText size={40} className="text-red-500 mb-2" />
                                 <span className="text-xs font-bold text-red-700">PDF Document</span>
                                 <span className="text-[10px] text-red-500">Click to View</span>
                             </div>
                         ) : (
-                            <div className="w-full h-full" onClick={() => setPreviewImage(doc.url)}>
+                          <div className="w-full h-full" onClick={() => handleImagePreview(doc.url)}>
                                 <img src={doc.url} alt={doc.label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                                     <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" size={28} />
