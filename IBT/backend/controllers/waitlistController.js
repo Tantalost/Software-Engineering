@@ -4,6 +4,10 @@ import CryptoJS from 'crypto-js';
 import mongoose from 'mongoose'; 
 import path from 'path';
 
+import User from "../models/User.js"; 
+import sendPushNotification from "../utils/sendPushNotification.js";
+
+
 const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
 
 export const getSecureDocument = async (req, res) => {
@@ -117,36 +121,48 @@ export const updateWaitlistEntry = async (req, res) => {
 
     let message = "";
     let subject = "";
+    let pushTitle = ""; 
 
     if (status === "PAYMENT_UNLOCKED") {
         subject = "Application Approved - Payment Unlocked";
+        pushTitle = "Payment Ready 💳";
         message = `Dear ${applicant.name},\n\nYour application has been approved!\n\nPlease open the app to view the "Stall Order of Payment".`;
     } 
     else if (status === "CONTRACT_PENDING") {
         subject = "Action Required: Upload Contract";
+        pushTitle = "Action Required: Upload Contract 📄";
         message = `Dear ${applicant.name},\n\nWe have verified your payment. Please upload your Signed Contract.`;
     }
    
     if (status === "REJECTED") {
         subject = "Stall Application Update: Rejected";
+        pushTitle = "Application Rejected ❌";
         message = `Dear ${applicant.name},\n\nWe regret to inform you that your application for slot ${applicant.targetSlot} has been rejected.\n\nReason: ${rejectionReason || "Did not meet required criteria or incomplete documentation."}\n\nIf you have any questions, please contact administration.`;
-        console.log("Rejection block triggered! Subject set."); 
     }
-
-    console.log("Applicant Email exists?:", applicant.email); 
 
     if (subject && applicant.email) {
+     
         try { 
-            console.log("Attempting to send email to:", applicant.email); 
             await sendEmail({ email: applicant.email, subject: subject, message: message }); 
-            console.log("Email function completed without crashing."); 
-        } 
-        catch (emailError) { 
+        } catch (emailError) { 
             console.error("Email failed:", emailError.message); 
         }
-    } else {
-        console.log("Skipped sending email. Missing subject or applicant email.");
-    }
+
+        try {
+            const user = await User.findOne({ email: applicant.email });
+            if (user && user.expoPushToken) {
+                
+                let pushBody = message.replace(`Dear ${applicant.name},\n\n`, ""); 
+                
+                await sendPushNotification(user.expoPushToken, pushTitle, pushBody, {
+                    route: 'stalls',
+                    applicationId: applicant._id
+                });
+            }
+        } catch (pushError) {
+            console.error("Push Notification failed:", pushError.message);
+        }
+    } 
     
     res.status(200).json(applicant);
   } catch (error) {

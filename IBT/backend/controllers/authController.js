@@ -356,7 +356,6 @@ export const requestEmailChangeOtp = async (req, res) => {
   try {
     const { userId, newEmail } = req.body;
     
-    // Check if the new email is already taken by another user
     const existingUser = await User.findOne({ email: newEmail });
     if (existingUser) {
         return res.status(400).json({ error: "This email is already in use by another account." });
@@ -398,6 +397,19 @@ export const verifyAndChangeEmail = async (req, res) => {
     await user.save();
 
     res.status(200).json({ message: "Email changed successfully.", newEmail: user.email });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+};
+
+export const savePushToken = async (req, res) => {
+  try {
+    const { userId, expoPushToken } = req.body;
+    const user = await User.findByIdAndUpdate(userId, { expoPushToken }, { new: true });
+    
+    if (!user) return res.status(404).json({ error: "User not found." });
+    
+    res.status(200).json({ message: "Push token saved successfully." });
   } catch (err) { 
       res.status(500).json({ error: err.message }); 
   }

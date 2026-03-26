@@ -109,12 +109,14 @@ export const authService = {
     if (!res.ok) throw new Error(data.error || "Failed to deactivate");
     return data;
   },
+  
   reactivateRequest: async (payload: any) => {
     const res = await fetch(`${API_URL}/auth/reactivate-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to request reactivation");
     return data;
   },
+  
   reactivateConfirm: async (payload: any) => {
     const res = await fetch(`${API_URL}/auth/reactivate-confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
@@ -142,6 +144,17 @@ export const authService = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to verify new email");
     return data;
-  }
-};
+  },
 
+  
+  savePushToken: async (payload: { userId: string; expoPushToken: string }) => {
+    const res = await fetch(`${API_URL}/auth/save-push-token`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload) 
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to save push token");
+    return data;
+  }
+}; 

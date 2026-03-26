@@ -48,6 +48,13 @@
             "enableJetifier": true
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/ibt SC.png",
+          "color": "#1B5E20"
+        }
       ]
     ],
     "experiments": {

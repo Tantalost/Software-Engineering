@@ -10,9 +10,9 @@ const UserSchema = new mongoose.Schema({
   lastName: { type: String },
   suffix: { type: String },
   contactNo: { type: String },
-  
- 
   avatarUrl: { type: String, default: null },
+  
+  expoPushToken: { type: String, default: null },
   
   otp: { type: String, default: null },
   otpExpires: { type: Date, default: null },

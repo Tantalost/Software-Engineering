@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
+
 import { authService } from '../services/auth.service';
 import { AuthMode, ResetStep, UserData } from '../types/auth.types';
 
@@ -12,8 +16,6 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   const [resetStep, setResetStep] = useState<ResetStep>('request');
   const [registerStep, setRegisterStep] = useState<RegisterStep>('landing');
   const [loginStep, setLoginStep] = useState<LoginStep>('email');
-  
-  // NEW: State to track if the user is in the Reactivation flow
   const [isReactivating, setIsReactivating] = useState(false);
   
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     await AsyncStorage.removeItem('linked_email');
     setForm(prev => ({ ...prev, email: '', mpin: '' }));
     setIsDeviceLinked(false);
-    setLoginStep('email'); 
+    setLoginStep('email');
   };
 
   const updateForm = (key: keyof typeof form, value: string | boolean) => {
@@ -69,14 +71,43 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     if (!form.email) return Alert.alert("Error", "Please enter your email address.");
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) return Alert.alert("Error", "Please enter a valid email address.");
-    
     setLoginStep('mpin');
+  };
+
+  const registerForPushNotificationsAsync = async (userId: string) => {
+    let token;
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#1B5E20',
+      });
+    }
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('Failed to get push token for push notification!');
+        return;
+      }
+      try {
+        const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+        token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+        await authService.savePushToken({ userId, expoPushToken: token });
+      } catch (e) {
+        console.log("Error getting push token:", e);
+      }
+    }
   };
 
   const handleSendRegistrationOtp = async () => {
     if (!form.email) return Alert.alert("Error", "Please enter your email address.");
     if (!form.agreedToTerms) return Alert.alert("Error", "You must agree to the Terms and Conditions.");
-    
     setLoading(true);
     try {
         await authService.sendRegistrationOtp({ email: form.email });
@@ -109,6 +140,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
             await AsyncStorage.setItem('linked_email', form.email); 
             
+            await registerForPushNotificationsAsync(userData.id);
             onLoginSuccess(userData);
         } catch (error: any) {
             if (error.message?.toLowerCase().includes("deactivated") || error.isDeactivated) {
@@ -121,7 +153,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
                        setLoading(true);
                        try {
                          await authService.reactivateRequest({ email: form.email });
-                         setIsReactivating(true); // <-- Tell the app we are reactivating
+                         setIsReactivating(true);
                          setResetStep('verify-otp');
                          setAuthMode('forgot-password'); 
                          Alert.alert("Sent", "A reactivation code has been sent to your email.");
@@ -146,15 +178,10 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
         const isMpinValid = /^\d{4}$/.test(form.mpin);
         const isMatch = form.mpin === form.confirmMpin;
 
-        if (!form.firstName || !form.lastName || !form.contactNo) {
-            return Alert.alert("Error", "Please fill all required personal information fields.");
-        }
-
+        if (!form.firstName || !form.lastName || !form.contactNo) return Alert.alert("Error", "Please fill all required personal information fields.");
+        
         const pureNumber = form.contactNo.replace(/\D/g, '');
-        if (pureNumber.length !== 10) {
-            return Alert.alert("Invalid Number", "Please enter a valid 10-digit mobile number.");
-        }
-
+        if (pureNumber.length !== 10) return Alert.alert("Invalid Number", "Please enter a valid 10-digit mobile number.");
         if (!isMpinValid) return Alert.alert("Invalid MPIN", "Your MPIN must be exactly 4 digits.");
         if (!isMatch) return Alert.alert("Error", "MPINs do not match.");
 
@@ -172,17 +199,14 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             };
 
             await authService.register(payload);
-            
             await AsyncStorage.setItem('linked_email', form.email); 
             setIsDeviceLinked(true); 
             
             Alert.alert("Success", "Account created successfully! Please log in with your new MPIN.");
-            
             setAuthMode('login');
             setRegisterStep('landing');
-            setLoginStep('mpin'); 
+            setLoginStep('mpin');
             resetFormState(false); 
-            
         } catch (error: any) {
             Alert.alert("Registration Failed", error.message);
         } finally {
@@ -193,11 +217,10 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
   const handleRequestReset = async () => {
     if (!form.email) return Alert.alert("Error", "Please enter your email address.");
-
     setLoading(true);
     try {
         await authService.requestPasswordReset({ email: form.email });
-        setIsReactivating(false); // Ensure this is a normal password reset
+        setIsReactivating(false);
         Alert.alert("Success", "A verification code has been sent to your email.");
         setResetStep('verify-otp');
     } catch (error: any) {
@@ -207,11 +230,8 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     }
   };
 
-  // NEW: Updated to handle both Reactivation and Forgot MPIN flows properly
   const handleVerifyOtp = async () => {
-      if (!form.otp || form.otp.length !== 4) {
-          return Alert.alert("Error", "Please enter the 4-digit verification code sent to your email.");
-      }
+      if (!form.otp || form.otp.length !== 4) return Alert.alert("Error", "Please enter the 4-digit verification code sent to your email.");
       
       if (isReactivating) {
           setLoading(true);
@@ -229,7 +249,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
               setLoading(false);
           }
       } else {
-          setResetStep('reset-password'); // Move to new MPIN step
+          setResetStep('reset-password');
       }
   };
 
@@ -262,15 +282,11 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     registerStep, setRegisterStep,
     resetStep, setResetStep,
     loginStep, setLoginStep, handleNextLoginStep, 
-    isReactivating, setIsReactivating, // <-- Exported new state
+    isReactivating, setIsReactivating,
     loading, setLoading,
     form, updateForm, resetFormState,
     isDeviceLinked, handleUnlinkDevice,
-    handleAuth,
-    handleSendRegistrationOtp, 
-    handleVerifyRegistrationOtp, 
-    handleRequestReset,
-    handleVerifyOtp, // <-- Exported updated function
-    handleFinalReset
+    handleAuth, handleSendRegistrationOtp, handleVerifyRegistrationOtp, 
+    handleRequestReset, handleVerifyOtp, handleFinalReset
   };
 };

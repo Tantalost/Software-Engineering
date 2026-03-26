@@ -3,6 +3,9 @@ import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
 import Settings from "../models/Settings.js";
 
+import User from "../models/User.js"; 
+import sendPushNotification from "../utils/sendPushNotification.js";
+
 const normalizeFeeBreakdown = (rawBreakdown = {}, tenantType = "Permanent") => {
   const isNightMarket = tenantType === "Night Market";
   const electricity = isNightMarket ? 0 : Number(rawBreakdown.electricity || 0);
@@ -204,7 +207,7 @@ Tenant Type:  ${savedTenant.tenantType}
 Rent Amount:  ₱${savedTenant.rentAmount}
 
 RULES AND REGULATIONS:
-1. Operating hours are from 8:00 AM to 10:00 PM.
+1. Operating hours are from 5:00 PM to 12:00 AM.
 2. Keep your area clean at all times.
 3. No sub-leasing of stalls is allowed.
 4. Monthly rent is due on the ${new Date(savedTenant.StartDateTime).getDate()}th of every month.
@@ -233,6 +236,25 @@ IBT Management
     console.error("Create Tenant Error:", error);
     res.status(500).json({ error: error.message });
   }
+
+  if (savedTenant.email) {
+        try {
+            await sendEmail({ email: savedTenant.email, subject: subject, message: message });
+            
+            const user = await User.findOne({ email: savedTenant.email });
+            if (user && user.expoPushToken) {
+                await sendPushNotification(
+                    user.expoPushToken, 
+                    "Welcome to IBT Stalls! ", 
+                    `Congratulations! You are officially the tenant of Slot ${savedTenant.slotNo}.`,
+                    { route: 'stalls' }
+                );
+            }
+        } catch (emailError) {
+            console.error("Welcome email/push failed:", emailError.message);
+        }
+    }
+    res.status(201).json(savedTenant);
 };
 
 export const updateTenant = async (req, res) => {
@@ -309,13 +331,13 @@ export const updateTenant = async (req, res) => {
     
     if (oldTenant && oldTenant.status !== 'Overdue' && updatedTenant.status === 'Overdue' && updatedTenant.email) {
       try {
-        // Calculate overdue information
+       
         const rent = updatedTenant.rentAmount || 0;
         const totalAmount = updatedTenant.totalAmount || rent;
         const dueDate = updatedTenant.DueDateTime ? new Date(updatedTenant.DueDateTime) : new Date();
         const computationDate = new Date();
         
-        // Get last payment info
+        
         const lastPayment = updatedTenant.paymentHistory && updatedTenant.paymentHistory.length > 0 
           ? updatedTenant.paymentHistory.sort((a, b) => new Date(b.datePaid) - new Date(a.datePaid))[0]
           : null;
@@ -323,7 +345,7 @@ export const updateTenant = async (req, res) => {
         const lastPaymentMonth = lastPayment ? new Date(lastPayment.datePaid).toLocaleString('en-US', { month: 'long', year: 'numeric' }) : 'N/A';
         const lastPaymentAmount = lastPayment ? lastPayment.amount : 0;
         
-        // Calculate period (simplified - from due date to current month)
+      
         const dueMonth = dueDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
         const currentMonth = computationDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
         const periodText = dueMonth === currentMonth ? dueMonth : `${dueMonth} to ${currentMonth}`;
@@ -348,6 +370,25 @@ Thank you`;
     console.error("Update Tenant Error:", error);
     res.status(500).json({ error: error.message });
   }
+
+  if (Tenant && Tenant.status !== 'Overdue' && updateTenant.status === 'Overdue' && updateTenant.email) {
+      try {
+       
+        await sendEmail({ email: updatedTenant.email, subject, message });
+
+        const user = await User.findOne({ email: updateTenant.email });
+        if (user && user.expoPushToken) {
+            await sendPushNotification(
+                user.expoPushToken, 
+                "Rent Overdue! ⚠️", 
+                `Your rent for Slot ${updateTenant.slotNo} is now overdue. Please settle your account immediately to avoid penalties.`,
+                { route: 'stalls' }
+            );
+        }
+      } catch (emailErr) {
+        console.error("Overdue email/push failed:", emailErr.message);
+      }
+    }
 };
 
 
@@ -547,6 +588,53 @@ IBT Management
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Approve Renewal Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+
+  try {
+          await sendEmail({ email: updatedTenant.email, subject: subject, message: message });
+
+          const user = await User.findOne({ email: updatedTenant.email });
+          if (user && user.expoPushToken) {
+              await sendPushNotification(
+                  user.expoPushToken, 
+                  "Payment Approved ✅", 
+                  `Your renewal payment of ₱${paymentRecord.amount} for Slot ${updateTenant.slotNo} was approved!`,
+                  { route: 'stalls' }
+              );
+          }
+      } catch (emailError) {
+          console.error("Renewal approval email/push failed:", emailError.message);
+      }
+};
+
+export const sendRentReminder = async (req, res) => {
+  try {
+    const { tenantId, isOverdue } = req.body;
+
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const user = await User.findOne({ email: tenant.email });
+    if (!user || !user.expoPushToken) {
+      return res.status(400).json({ error: "Tenant does not have app notifications enabled." });
+    }
+
+    const amountDue = tenant.totalAmount || tenant.rentAmount || 0;
+    
+    const title = isOverdue ? "Rent Overdue! ⚠️" : "Rent Reminder 📅";
+    const body = isOverdue 
+      ? `Hi ${tenant.tenantName}, your rent of ₱${amountDue.toLocaleString()} for Slot ${tenant.slotNo} is now OVERDUE. Please pay immediately.`
+      : `Hi ${tenant.tenantName}, your rent of ₱${amountDue.toLocaleString()} for Slot ${tenant.slotNo} is due soon.`;
+
+    await sendPushNotification(user.expoPushToken, title, body, { 
+        route: 'stalls', 
+        targetSlot: tenant.slotNo 
+    });
+
+    res.status(200).json({ message: "Push notification reminder sent successfully!" });
+  } catch (error) {
+    console.error("Rent Reminder Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
