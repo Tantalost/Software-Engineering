@@ -289,7 +289,6 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
 
       <Portal>
-        {/* EDIT PROFILE MODAL */}
         <Modal visible={editModalVisible} onDismiss={() => setEditModalVisible(false)} contentContainerStyle={styles.modalContent}>
           <Text variant="headlineSmall" style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: 20, color: colors.textDark }}>Edit Profile</Text>
 
@@ -326,7 +325,7 @@ export default function ProfileScreen() {
           <Button onPress={() => setEditModalVisible(false)} style={{ marginTop: 5 }} textColor="grey">Cancel</Button>
         </Modal>
 
-        {/* SETTINGS MODAL */}
+
         <Modal visible={settingsModalVisible} onDismiss={() => setSettingsModalVisible(false)} contentContainerStyle={styles.modalContent}>
           {settingsStep === 'menu' && (
             <View>
@@ -337,7 +336,7 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 16 }}>Change Security Code (MPIN)</Text>
               </TouchableOpacity>
 
-              {/* NEW CHANGE EMAIL BUTTON */}
+      
               <TouchableOpacity onPress={() => setSettingsStep('changeEmail')} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#eee' }}>
                 <Icon name="email-edit" size={24} color={colors.primary} style={{ marginRight: 15 }} />
                 <Text style={{ fontSize: 16 }}>Change Account Email</Text>
@@ -366,17 +365,16 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 16, color: 'red' }}>Deactivate Account</Text>
               </TouchableOpacity>
               
-              <Button mode="text" onPress={() => setSettingsModalVisible(false)} style={{ marginTop: 20 }}>Close</Button>
+              <Button mode="text" onPress={() => setSettingsModalVisible(false)} style={{ marginTop: 20 }} textColor='black'>Close</Button>
             </View>
           )}
 
-          {/* CHANGE MPIN VIEW */}
           {settingsStep === 'changePassword' && (
             <View>
-              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 20 }}>Change Security Code</Text>
-              <TextInput label="Current MPIN" value={passForm.oldPass} onChangeText={t => setPassForm({...passForm, oldPass: t.replace(/[^0-9]/g, '')})} mode="outlined" secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
-              <TextInput label="New 4-Digit MPIN" value={passForm.newPass} onChangeText={t => setPassForm({...passForm, newPass: t.replace(/[^0-9]/g, '')})} mode="outlined" secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
-              <TextInput label="Confirm New MPIN" value={passForm.confirmPass} onChangeText={t => setPassForm({...passForm, confirmPass: t.replace(/[^0-9]/g, '')})} mode="outlined" secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 20, color: 'black'}}>Change Security Code</Text>
+              <TextInput label="Current MPIN" value={passForm.oldPass} onChangeText={t => setPassForm({...passForm, oldPass: t.replace(/[^0-9]/g, '')})} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
+              <TextInput label="New 4-Digit MPIN" value={passForm.newPass} onChangeText={t => setPassForm({...passForm, newPass: t.replace(/[^0-9]/g, '')})} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
+              <TextInput label="Confirm New MPIN" value={passForm.confirmPass} onChangeText={t => setPassForm({...passForm, confirmPass: t.replace(/[^0-9]/g, '')})} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} secureTextEntry style={styles.input} keyboardType="number-pad" maxLength={4} />
               
               <Button mode="contained" loading={saving} onPress={async () => {
                  if (passForm.newPass !== passForm.confirmPass) return Alert.alert("Error", "Codes do not match.");
@@ -403,13 +401,12 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* CHANGE EMAIL VIEW (STEP 1: Request OTP) */}
           {settingsStep === 'changeEmail' && (
             <View>
-              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 10 }}>Change Email</Text>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 10, color: 'black' }} >Change Email</Text>
               <Text style={{ color: 'grey', marginBottom: 20 }}>Please enter your new email address. We will send a verification code to confirm it's yours.</Text>
               
-              <TextInput label="New Email Address" value={emailForm.newEmail} onChangeText={t => setEmailForm({...emailForm, newEmail: t})} mode="outlined" autoCapitalize="none" keyboardType="email-address" style={styles.input} />
+              <TextInput label="New Email Address" value={emailForm.newEmail} onChangeText={t => setEmailForm({...emailForm, newEmail: t})} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} autoCapitalize="none" keyboardType="email-address" style={styles.input} />
               
               <Button mode="contained" loading={saving} onPress={async () => {
                  if (!emailForm.newEmail) return Alert.alert("Error", "Please enter a new email.");
@@ -428,13 +425,12 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* VERIFY EMAIL VIEW (STEP 2: Enter OTP) */}
           {settingsStep === 'verifyEmail' && (
             <View>
-              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 10 }}>Verify New Email</Text>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 10, color: 'black' }}>Verify New Email</Text>
               <Text style={{ color: 'grey', marginBottom: 20 }}>Enter the 4-digit code sent to {emailForm.newEmail}.</Text>
               
-              <TextInput label="Verification Code" value={emailForm.otp} onChangeText={t => setEmailForm({...emailForm, otp: t.replace(/[^0-9]/g, '')})} mode="outlined" keyboardType="number-pad" maxLength={4} style={styles.input} />
+              <TextInput label="Verification Code" value={emailForm.otp} onChangeText={t => setEmailForm({...emailForm, otp: t.replace(/[^0-9]/g, '')})} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} keyboardType="number-pad" maxLength={4} style={styles.input} />
               
               <Button mode="contained" loading={saving} onPress={async () => {
                  if (emailForm.otp.length !== 4) return Alert.alert("Error", "Please enter the 4-digit code.");
@@ -443,10 +439,9 @@ export default function ProfileScreen() {
                  try {
                    const data = await authService.verifyAndChangeEmail({ userId: user.id, newEmail: emailForm.newEmail, otp: emailForm.otp });
                    
-                   // Update local state and memory so the app & login screen immediately uses the new email
                    const updatedUser = { ...user, email: data.newEmail };
                    await AsyncStorage.setItem('ibt_user', JSON.stringify(updatedUser));
-                   await AsyncStorage.setItem('linked_email', data.newEmail); // <-- CRUCIAL FOR LOGIN SCREEN
+                   await AsyncStorage.setItem('linked_email', data.newEmail); 
                    setUser(updatedUser);
                    
                    Alert.alert("Success", "Your email has been successfully updated!");
