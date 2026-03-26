@@ -5,11 +5,15 @@ import { authService } from '../services/auth.service';
 import { AuthMode, ResetStep, UserData } from '../types/auth.types';
 
 export type RegisterStep = 'landing' | 'email_entry' | 'otp_verify' | 'personal_info' | 'create_mpin';
+export type LoginStep = 'email' | 'mpin';
 
 export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [resetStep, setResetStep] = useState<ResetStep>('request');
   const [registerStep, setRegisterStep] = useState<RegisterStep>('landing');
+  
+ 
+  const [loginStep, setLoginStep] = useState<LoginStep>('email');
   
   const [loading, setLoading] = useState(false);
   const [isDeviceLinked, setIsDeviceLinked] = useState(false);
@@ -33,6 +37,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
       if (savedEmail) {
         setForm(prev => ({ ...prev, email: savedEmail }));
         setIsDeviceLinked(true);
+        setLoginStep('mpin'); // Skip email step if device is known
       }
     };
     checkSavedDevice();
@@ -42,6 +47,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     await AsyncStorage.removeItem('linked_email');
     setForm(prev => ({ ...prev, email: '', mpin: '' }));
     setIsDeviceLinked(false);
+    setLoginStep('email'); // Send them back to step 1
   };
 
   const updateForm = (key: keyof typeof form, value: string | boolean) => {
@@ -55,6 +61,16 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
         firstName: '', middleName: '', lastName: '', suffix: '', 
         contactNo: '', otp: '', agreedToTerms: false 
     }));
+    if (clearEmail) setLoginStep('email');
+  };
+
+  // NEW: Verify the email format before moving to MPIN pad
+  const handleNextLoginStep = () => {
+    if (!form.email) return Alert.alert("Error", "Please enter your email address.");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) return Alert.alert("Error", "Please enter a valid email address.");
+    
+    setLoginStep('mpin');
   };
 
   const handleSendRegistrationOtp = async () => {
@@ -72,6 +88,13 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     }
   };
 
+  const handleVerifyRegistrationOtp = () => {
+    if (!form.otp || form.otp.length !== 4) {
+        return Alert.alert("Error", "Please enter the 4-digit verification code sent to your email.");
+    }
+    setRegisterStep('personal_info');
+  };
+
   const handleAuth = async () => {
     
     if (authMode === 'login') {
@@ -85,11 +108,10 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             const userData = { ...data.user, token: data.token };
             
             await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
-            await AsyncStorage.setItem('linked_email', form.email);
+            await AsyncStorage.setItem('linked_email', form.email); 
             
             onLoginSuccess(userData);
         } catch (error: any) {
-          
             if (error.message?.toLowerCase().includes("deactivated") || error.isDeactivated) {
                Alert.alert(
                  "Account Deactivated", 
@@ -163,6 +185,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
             
             setAuthMode('login');
             setRegisterStep('landing');
+            setLoginStep('mpin'); 
             resetFormState(false); 
             
         } catch (error: any) {
@@ -210,6 +233,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
         
         setAuthMode('login');
         setResetStep('request');
+        setLoginStep('mpin');
         resetFormState(false);
     } catch (error: any) {
         Alert.alert("Error", error.message);
@@ -222,11 +246,13 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     authMode, setAuthMode,
     registerStep, setRegisterStep,
     resetStep, setResetStep,
+    loginStep, setLoginStep, handleNextLoginStep, 
     loading, setLoading,
     form, updateForm, resetFormState,
     isDeviceLinked, handleUnlinkDevice,
     handleAuth,
     handleSendRegistrationOtp, 
+    handleVerifyRegistrationOtp, 
     handleRequestReset,
     handleVerifyOtpLocal,
     handleFinalReset

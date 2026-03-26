@@ -351,3 +351,54 @@ export const reactivateConfirm = async (req, res) => {
       res.status(500).json({ error: err.message }); 
   }
 };
+
+export const requestEmailChangeOtp = async (req, res) => {
+  try {
+    const { userId, newEmail } = req.body;
+    
+    // Check if the new email is already taken by another user
+    const existingUser = await User.findOne({ email: newEmail });
+    if (existingUser) {
+        return res.status(400).json({ error: "This email is already in use by another account." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    await sendEmail({
+      email: newEmail, 
+      subject: "Change Email Verification - IBT Stalls",
+      message: `Hi ${user.firstName || 'Vendor'},\n\nYour verification code to change your account email is: ${otp}\n\nThis code will expire in 10 minutes.`
+    });
+
+    res.status(200).json({ message: "Verification code sent to your new email." });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+};
+
+export const verifyAndChangeEmail = async (req, res) => {
+  try {
+    const { userId, newEmail, otp } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    if (!user.otp || user.otp !== otp) return res.status(400).json({ error: "Invalid verification code." });
+    if (user.otpExpires < Date.now()) return res.status(400).json({ error: "Verification code has expired." });
+
+    
+    user.email = newEmail;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: "Email changed successfully.", newEmail: user.email });
+  } catch (err) { 
+      res.status(500).json({ error: err.message }); 
+  }
+};

@@ -15,6 +15,8 @@ import {
     reactivateConfirm
 } from "../controllers/authController.js";
 
+import { requestEmailChangeOtp, verifyAndChangeEmail } from "../controllers/authController.js";
+
 const router = express.Router();
 
 
@@ -32,5 +34,8 @@ router.post("/change-password", changePassword);
 router.post("/deactivate", deactivateAccount);
 router.post("/reactivate-request", reactivateRequest);
 router.post("/reactivate-confirm", reactivateConfirm);
+
+router.post("/request-email-change", requestEmailChangeOtp);
+router.post("/verify-email-change", verifyAndChangeEmail);
 
 export default router;

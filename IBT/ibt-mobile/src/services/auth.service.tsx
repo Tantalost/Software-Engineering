@@ -120,5 +120,28 @@ export const authService = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to reactivate");
     return data;
+  },
+
+  requestEmailChange: async (payload: { userId: string; newEmail: string }) => {
+    const res = await fetch(`${API_URL}/auth/request-email-change`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload) 
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to request email change");
+    return data;
+  },
+
+  verifyAndChangeEmail: async (payload: { userId: string; newEmail: string; otp: string }) => {
+    const res = await fetch(`${API_URL}/auth/verify-email-change`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload) 
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to verify new email");
+    return data;
   }
 };
+

@@ -8,7 +8,6 @@ import { sanitizePhoneNumber } from './utils/validation';
 import { UserData } from './types/auth.types';
 import styles from './styles/LogForm';
 
-
 const PinPad = ({ mpin, setMpin, label, isError, errorMessage }: { mpin: string, setMpin: (val: string) => void, label: string, isError?: boolean, errorMessage?: string }) => {
   const inputRef = React.useRef<NativeTextInput>(null);
 
@@ -42,7 +41,6 @@ const PinPad = ({ mpin, setMpin, label, isError, errorMessage }: { mpin: string,
     </View>
   );
 };
-
 
 const RegistrationBreadcrumbs = ({ currentStep }: { currentStep: string }) => {
   const steps = [
@@ -100,9 +98,10 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   const { 
     authMode, setAuthMode, resetStep, setResetStep, 
     registerStep, setRegisterStep, 
+    loginStep, setLoginStep, handleNextLoginStep, 
     loading, form, updateForm, resetFormState,
     isDeviceLinked, handleUnlinkDevice,
-    handleAuth, handleSendRegistrationOtp,
+    handleAuth, handleSendRegistrationOtp, handleVerifyRegistrationOtp,
     handleRequestReset, handleVerifyOtpLocal, handleFinalReset 
   } = useAuthForm(onLoginSuccess);
 
@@ -173,11 +172,12 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
             <Text variant="headlineSmall" style={{ fontWeight: 'bold', marginBottom: 5, color: "black" }}>Enter Verification Code</Text>
             <Text style={{ color: 'grey', marginBottom: 20 }}>Please enter the one-time code that we sent to {form.email}</Text>
             
-            <TextInput label="OTP" value={form.otp} onChangeText={(t) => updateForm('otp', t)} mode="outlined" style={styles.input} keyboardType="number-pad" activeOutlineColor="#1B5E20" textColor='#000000' maxLength={6} />
+            <TextInput label="OTP" value={form.otp} onChangeText={(t) => updateForm('otp', t)} mode="outlined" style={styles.input} keyboardType="number-pad" activeOutlineColor="#1B5E20" textColor='#000000' maxLength={4} />
             
-            <Button mode="contained" onPress={() => setRegisterStep('personal_info')} style={styles.button} textColor="#ffffff">
+            <Button mode="contained" onPress={handleVerifyRegistrationOtp} style={styles.button} textColor="#ffffff">
               Done
             </Button>
+            
             <Button mode="text" onPress={() => setRegisterStep('email_entry')} style={styles.switchButton} textColor="grey">
               Back
             </Button>
@@ -300,40 +300,50 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                ) : (
                  
                     <View>
-                        {isDeviceLinked ? (
-                            <View style={{ alignItems: 'center', marginBottom: 15 }}>
-                                <Text style={{ color: 'grey', fontSize: 14 }}>Welcome back,</Text>
-                                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#1B5E20', marginBottom: 5 }}>{form.email}</Text>
-                                <Button mode="text" compact onPress={handleUnlinkDevice} textColor="grey" labelStyle={{ fontSize: 12 }}>
-                                    Not you? Switch account
+                        
+                        {loginStep === 'email' ? (
+                            <View>
+                                <Text style={{ color: 'grey', marginBottom: 15 }}>Please enter your email to continue.</Text>
+                                <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
+                                
+                                <Button mode="contained" onPress={handleNextLoginStep} style={styles.button} textColor="#ffffff">
+                                    Next
+                                </Button>
+                                
+                                <Button mode="text" onPress={() => {
+                                    setAuthMode('register');
+                                    setRegisterStep('landing'); 
+                                    resetFormState(true); 
+                                }} style={styles.switchButton} textColor="#1B5E20">
+                                    New vendor? Register here
                                 </Button>
                             </View>
                         ) : (
-                            <TextInput label="Email Address" value={form.email} onChangeText={(t) => updateForm('email', t)} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="email-address" activeOutlineColor="#1B5E20" textColor='#000000' />
-                        )}
+                            <View>
+                                <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                                    <Text style={{ color: 'grey', fontSize: 14 }}>Welcome back,</Text>
+                                    <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#1B5E20', marginBottom: 5 }}>{form.email}</Text>
+                                    <Button mode="text" compact onPress={handleUnlinkDevice} textColor="grey" labelStyle={{ fontSize: 12 }}>
+                                        Not you? Switch account
+                                    </Button>
+                                </View>
 
-                        <View style={{ marginTop: 10 }}>
-                          <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="Tap to enter MPIN" />
-                        </View>
-                        
-                        <View style={{alignItems: 'center', marginBottom: 15}}>
-                            <Button mode="text" compact onPress={() => {
-                                setAuthMode('forgot-password');
-                                resetFormState(false); 
-                            }} textColor="#1B5E20" labelStyle={{ fontSize: 13, marginVertical: 0 }}>Forgot MPIN?</Button>
-                        </View>
-                        
-                        <Button mode="contained" onPress={handleAuth} loading={loading} style={styles.button} textColor="#ffffff">
-                            Login
-                        </Button>
-                        
-                        <Button mode="text" onPress={() => {
-                            setAuthMode('register');
-                            setRegisterStep('landing'); 
-                            resetFormState(true); 
-                        }} style={styles.switchButton} textColor="#1B5E20">
-                            New vendor? Register here
-                        </Button>
+                                <View style={{ marginTop: 10 }}>
+                                  <PinPad mpin={form.mpin} setMpin={(val) => updateForm('mpin', val)} label="Tap to enter MPIN" />
+                                </View>
+                                
+                                <View style={{alignItems: 'center', marginBottom: 15}}>
+                                    <Button mode="text" compact onPress={() => {
+                                        setAuthMode('forgot-password');
+                                        resetFormState(false); 
+                                    }} textColor="#1B5E20" labelStyle={{ fontSize: 13, marginVertical: 0 }}>Forgot MPIN?</Button>
+                                </View>
+                                
+                                <Button mode="contained" onPress={handleAuth} loading={loading} style={styles.button} textColor="#ffffff">
+                                    Login
+                                </Button>
+                            </View>
+                        )}
                     </View>
                 )}
 

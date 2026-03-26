@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, Alert, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, ScrollView, StyleSheet, Alert, RefreshControl, TouchableOpacity, Platform } from 'react-native';
 import { Text, Card, Avatar, Divider, Button, ActivityIndicator, Portal, Modal, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import AuthScreen from '@/src/AuthScreen';
 import API_URL from '@/src/config';
+import { authService } from '@/src/services/auth.service'; // Added for the new email endpoints
 import { colors } from '@/src/themes/stallsColors';
 
 type UserData = {
@@ -41,15 +42,17 @@ export default function ProfileScreen() {
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
-
+  
+  // Settings State
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
-  const [settingsStep, setSettingsStep] = useState<'menu' | 'changePassword'>('menu');
+  const [settingsStep, setSettingsStep] = useState<'menu' | 'changePassword' | 'changeEmail' | 'verifyEmail'>('menu');
   const [passForm, setPassForm] = useState({ oldPass: '', newPass: '', confirmPass: '' });
+  const [emailForm, setEmailForm] = useState({ newEmail: '', otp: '' });
 
+  // Removed email from EditForm as requested
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
-    email: '',
     contact: '',
     avatar: null as string | null
   });
@@ -120,7 +123,6 @@ export default function ProfileScreen() {
     setEditForm({
       firstName: user.firstName || '',
       lastName: user.lastName || '',
-      email: user.email || '',
       contact: user.contact || '',
       avatar: user.avatarUrl || null
     });
@@ -154,8 +156,10 @@ export default function ProfileScreen() {
       formData.append('userId', user.id);
       formData.append('firstName', editForm.firstName);
       formData.append('lastName', editForm.lastName);
-      formData.append('email', editForm.email);
       formData.append('contact', editForm.contact);
+      
+      // Keep existing email to satisfy backend validation
+      formData.append('email', user.email); 
 
       if (editForm.avatar && !editForm.avatar.startsWith('http')) {
         const uri = editForm.avatar;
@@ -185,7 +189,6 @@ export default function ProfileScreen() {
         ...user,
         firstName: data.user.firstName,
         lastName: data.user.lastName,
-        email: data.user.email,
         contact: data.user.contact,
         avatarUrl: newAvatarUrl
       };
@@ -209,7 +212,6 @@ export default function ProfileScreen() {
   const handleLoginSuccess = (userData: any) => {
     setUser(userData);
     setShowLogin(false);
-    
     if (userData && userData.id) {
         fetchApplications(userData.id);
     }
@@ -287,7 +289,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
 
       <Portal>
-    
+        {/* EDIT PROFILE MODAL */}
         <Modal visible={editModalVisible} onDismiss={() => setEditModalVisible(false)} contentContainerStyle={styles.modalContent}>
           <Text variant="headlineSmall" style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: 20, color: colors.textDark }}>Edit Profile</Text>
 
@@ -318,14 +320,13 @@ export default function ProfileScreen() {
 
           <TextInput label="First Name" value={editForm.firstName} onChangeText={t => setEditForm({ ...editForm, firstName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
           <TextInput label="Last Name" value={editForm.lastName} onChangeText={t => setEditForm({ ...editForm, lastName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
-          <TextInput label="Email" value={editForm.email} onChangeText={t => setEditForm({ ...editForm, email: t })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} />
           <TextInput label="Contact Number" value={editForm.contact} onChangeText={t => setEditForm({ ...editForm, contact: t })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} keyboardType="phone-pad" />
 
           <Button mode="contained" onPress={saveProfile} loading={saving} style={{ marginTop: 15, backgroundColor: colors.primary }} textColor='white'>Save Changes</Button>
           <Button onPress={() => setEditModalVisible(false)} style={{ marginTop: 5 }} textColor="grey">Cancel</Button>
         </Modal>
 
-      
+        {/* SETTINGS MODAL */}
         <Modal visible={settingsModalVisible} onDismiss={() => setSettingsModalVisible(false)} contentContainerStyle={styles.modalContent}>
           {settingsStep === 'menu' && (
             <View>
@@ -334,6 +335,12 @@ export default function ProfileScreen() {
               <TouchableOpacity onPress={() => setSettingsStep('changePassword')} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#eee' }}>
                 <Icon name="lock-reset" size={24} color={colors.primary} style={{ marginRight: 15 }} />
                 <Text style={{ fontSize: 16 }}>Change Security Code (MPIN)</Text>
+              </TouchableOpacity>
+
+              {/* NEW CHANGE EMAIL BUTTON */}
+              <TouchableOpacity onPress={() => setSettingsStep('changeEmail')} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#eee' }}>
+                <Icon name="email-edit" size={24} color={colors.primary} style={{ marginRight: 15 }} />
+                <Text style={{ fontSize: 16 }}>Change Account Email</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -359,10 +366,11 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 16, color: 'red' }}>Deactivate Account</Text>
               </TouchableOpacity>
               
-              <Button mode="text" onPress={() => setSettingsModalVisible(false)} style={{ marginTop: 20 }} textColor='black'>Close</Button>
+              <Button mode="text" onPress={() => setSettingsModalVisible(false)} style={{ marginTop: 20 }}>Close</Button>
             </View>
           )}
 
+          {/* CHANGE MPIN VIEW */}
           {settingsStep === 'changePassword' && (
             <View>
               <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 20 }}>Change Security Code</Text>
@@ -394,13 +402,72 @@ export default function ProfileScreen() {
               <Button mode="text" onPress={() => setSettingsStep('menu')} style={{ marginTop: 5 }} textColor="grey">Back</Button>
             </View>
           )}
+
+          {/* CHANGE EMAIL VIEW (STEP 1: Request OTP) */}
+          {settingsStep === 'changeEmail' && (
+            <View>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 10 }}>Change Email</Text>
+              <Text style={{ color: 'grey', marginBottom: 20 }}>Please enter your new email address. We will send a verification code to confirm it's yours.</Text>
+              
+              <TextInput label="New Email Address" value={emailForm.newEmail} onChangeText={t => setEmailForm({...emailForm, newEmail: t})} mode="outlined" autoCapitalize="none" keyboardType="email-address" style={styles.input} />
+              
+              <Button mode="contained" loading={saving} onPress={async () => {
+                 if (!emailForm.newEmail) return Alert.alert("Error", "Please enter a new email.");
+                 
+                 setSaving(true);
+                 try {
+                   await authService.requestEmailChange({ userId: user.id, newEmail: emailForm.newEmail });
+                   Alert.alert("Code Sent", "Please check your new email for the verification code.");
+                   setSettingsStep('verifyEmail');
+                 } catch(e: any) { 
+                   Alert.alert("Error", e.message || "Could not request change."); 
+                 }
+                 setSaving(false);
+              }} style={{ marginTop: 10, backgroundColor: colors.primary }} textColor="white">Send Code</Button>
+              <Button mode="text" onPress={() => setSettingsStep('menu')} style={{ marginTop: 5 }} textColor="grey">Back</Button>
+            </View>
+          )}
+
+          {/* VERIFY EMAIL VIEW (STEP 2: Enter OTP) */}
+          {settingsStep === 'verifyEmail' && (
+            <View>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 10 }}>Verify New Email</Text>
+              <Text style={{ color: 'grey', marginBottom: 20 }}>Enter the 4-digit code sent to {emailForm.newEmail}.</Text>
+              
+              <TextInput label="Verification Code" value={emailForm.otp} onChangeText={t => setEmailForm({...emailForm, otp: t.replace(/[^0-9]/g, '')})} mode="outlined" keyboardType="number-pad" maxLength={4} style={styles.input} />
+              
+              <Button mode="contained" loading={saving} onPress={async () => {
+                 if (emailForm.otp.length !== 4) return Alert.alert("Error", "Please enter the 4-digit code.");
+                 
+                 setSaving(true);
+                 try {
+                   const data = await authService.verifyAndChangeEmail({ userId: user.id, newEmail: emailForm.newEmail, otp: emailForm.otp });
+                   
+                   // Update local state and memory so the app & login screen immediately uses the new email
+                   const updatedUser = { ...user, email: data.newEmail };
+                   await AsyncStorage.setItem('ibt_user', JSON.stringify(updatedUser));
+                   await AsyncStorage.setItem('linked_email', data.newEmail); // <-- CRUCIAL FOR LOGIN SCREEN
+                   setUser(updatedUser);
+                   
+                   Alert.alert("Success", "Your email has been successfully updated!");
+                   setSettingsModalVisible(false);
+                   setEmailForm({ newEmail: '', otp: '' });
+                   setSettingsStep('menu');
+                 } catch(e: any) { 
+                   Alert.alert("Error", e.message || "Could not verify code."); 
+                 }
+                 setSaving(false);
+              }} style={{ marginTop: 10, backgroundColor: colors.primary }} textColor="white">Verify & Save</Button>
+              <Button mode="text" onPress={() => setSettingsStep('changeEmail')} style={{ marginTop: 5 }} textColor="grey">Change Email Address</Button>
+            </View>
+          )}
+
         </Modal>
       </Portal>
 
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Text variant="headlineMedium" style={styles.headerTitle}>My Profile</Text>
-       
           <TouchableOpacity onPress={() => { setSettingsStep('menu'); setSettingsModalVisible(true); }} style={{ padding: 5 }}>
             <Icon name="cog" size={26} color={colors.primary} />
           </TouchableOpacity>
@@ -439,7 +506,6 @@ export default function ProfileScreen() {
               />
             )}
             
-         
             <View style={{ position: 'absolute', top: 0, right: -5, backgroundColor: colors.primary, borderRadius: 15, padding: 5, elevation: 3, borderWidth: 2, borderColor: 'white' }}>
                <Icon name="pencil" size={14} color="white" />
             </View>
@@ -501,80 +567,19 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    alignItems: 'flex-start',
-  },
-  headerTitle: {
-    fontWeight: '700',
-    color: colors.textDark,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 10,
-    marginTop: 10
-  },
-  divider: {
-    marginVertical: 20,
-    height: 1,
-    backgroundColor: '#e0e0e0'
-  },
-  sectionTitle: {
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#333'
-  },
-  card: {
-    marginBottom: 10,
-    backgroundColor: 'white',
-    borderColor: '#eee'
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  emptyText: {
-    fontStyle: 'italic',
-    color: 'grey',
-    fontSize: 13,
-    marginBottom: 10
-  },
-  historyCard: {
-    backgroundColor: '#fff',
-    marginBottom: 20
-  },
-  logoutBtn: {
-    marginTop: 20,
-    borderColor: colors.error,
-    borderWidth: 1
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 25,
-    margin: 20,
-    borderRadius: 15,
-  },
-  input: {
-    marginBottom: 12,
-    backgroundColor: 'white',
-    fontSize: 14
-  }
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: { padding: 20, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#eee', alignItems: 'flex-start' },
+  headerTitle: { fontWeight: '700', color: colors.textDark },
+  scrollContent: { padding: 20, paddingBottom: 100 },
+  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  profileSection: { alignItems: 'center', marginBottom: 10, marginTop: 10 },
+  divider: { marginVertical: 20, height: 1, backgroundColor: '#e0e0e0' },
+  sectionTitle: { fontWeight: 'bold', marginBottom: 15, color: '#333' },
+  card: { marginBottom: 10, backgroundColor: 'white', borderColor: '#eee' },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  emptyText: { fontStyle: 'italic', color: 'grey', fontSize: 13, marginBottom: 10 },
+  historyCard: { backgroundColor: '#fff', marginBottom: 20 },
+  logoutBtn: { marginTop: 20, borderColor: colors.error, borderWidth: 1 },
+  modalContent: { backgroundColor: 'white', padding: 25, margin: 20, borderRadius: 15 },
+  input: { marginBottom: 12, backgroundColor: 'white', fontSize: 14 }
 });
