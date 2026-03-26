@@ -11,9 +11,10 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [resetStep, setResetStep] = useState<ResetStep>('request');
   const [registerStep, setRegisterStep] = useState<RegisterStep>('landing');
-  
- 
   const [loginStep, setLoginStep] = useState<LoginStep>('email');
+  
+  // NEW: State to track if the user is in the Reactivation flow
+  const [isReactivating, setIsReactivating] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [isDeviceLinked, setIsDeviceLinked] = useState(false);
@@ -37,7 +38,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
       if (savedEmail) {
         setForm(prev => ({ ...prev, email: savedEmail }));
         setIsDeviceLinked(true);
-        setLoginStep('mpin'); // Skip email step if device is known
+        setLoginStep('mpin');
       }
     };
     checkSavedDevice();
@@ -47,7 +48,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     await AsyncStorage.removeItem('linked_email');
     setForm(prev => ({ ...prev, email: '', mpin: '' }));
     setIsDeviceLinked(false);
-    setLoginStep('email'); // Send them back to step 1
+    setLoginStep('email'); 
   };
 
   const updateForm = (key: keyof typeof form, value: string | boolean) => {
@@ -64,7 +65,6 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     if (clearEmail) setLoginStep('email');
   };
 
-  // NEW: Verify the email format before moving to MPIN pad
   const handleNextLoginStep = () => {
     if (!form.email) return Alert.alert("Error", "Please enter your email address.");
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -96,7 +96,6 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
   };
 
   const handleAuth = async () => {
-    
     if (authMode === 'login') {
         if (!form.email || !form.mpin) return Alert.alert("Error", "Please fill all fields");
         if (form.mpin.length !== 4) return Alert.alert("Error", "MPIN must be exactly 4 digits");
@@ -122,6 +121,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
                        setLoading(true);
                        try {
                          await authService.reactivateRequest({ email: form.email });
+                         setIsReactivating(true); // <-- Tell the app we are reactivating
                          setResetStep('verify-otp');
                          setAuthMode('forgot-password'); 
                          Alert.alert("Sent", "A reactivation code has been sent to your email.");
@@ -152,16 +152,11 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
 
         const pureNumber = form.contactNo.replace(/\D/g, '');
         if (pureNumber.length !== 10) {
-            return Alert.alert("Invalid Number", "Please enter a valid 10-digit mobile number (e.g., 912 345 6789).");
+            return Alert.alert("Invalid Number", "Please enter a valid 10-digit mobile number.");
         }
 
-        if (!isMpinValid) {
-            return Alert.alert("Invalid MPIN", "Your MPIN must be exactly 4 digits.");
-        }
-        
-        if (!isMatch) {
-            return Alert.alert("Error", "MPINs do not match.");
-        }
+        if (!isMpinValid) return Alert.alert("Invalid MPIN", "Your MPIN must be exactly 4 digits.");
+        if (!isMatch) return Alert.alert("Error", "MPINs do not match.");
 
         setLoading(true);
         try {
@@ -202,6 +197,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     setLoading(true);
     try {
         await authService.requestPasswordReset({ email: form.email });
+        setIsReactivating(false); // Ensure this is a normal password reset
         Alert.alert("Success", "A verification code has been sent to your email.");
         setResetStep('verify-otp');
     } catch (error: any) {
@@ -211,11 +207,30 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     }
   };
 
-  const handleVerifyOtpLocal = () => {
-      if (!form.otp || form.otp.length < 4) {
-          return Alert.alert("Error", "Please enter the verification code sent to your email.");
+  // NEW: Updated to handle both Reactivation and Forgot MPIN flows properly
+  const handleVerifyOtp = async () => {
+      if (!form.otp || form.otp.length !== 4) {
+          return Alert.alert("Error", "Please enter the 4-digit verification code sent to your email.");
       }
-      setResetStep('reset-password');
+      
+      if (isReactivating) {
+          setLoading(true);
+          try {
+              await authService.reactivateConfirm({ email: form.email, otp: form.otp });
+              Alert.alert("Success", "Account reactivated! You can now log in.");
+              setIsReactivating(false);
+              setAuthMode('login');
+              setResetStep('request');
+              setLoginStep('mpin');
+              resetFormState(false);
+          } catch (error: any) {
+              Alert.alert("Error", error.message);
+          } finally {
+              setLoading(false);
+          }
+      } else {
+          setResetStep('reset-password'); // Move to new MPIN step
+      }
   };
 
   const handleFinalReset = async () => {
@@ -247,6 +262,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     registerStep, setRegisterStep,
     resetStep, setResetStep,
     loginStep, setLoginStep, handleNextLoginStep, 
+    isReactivating, setIsReactivating, // <-- Exported new state
     loading, setLoading,
     form, updateForm, resetFormState,
     isDeviceLinked, handleUnlinkDevice,
@@ -254,7 +270,7 @@ export const useAuthForm = (onLoginSuccess: (user: UserData) => void) => {
     handleSendRegistrationOtp, 
     handleVerifyRegistrationOtp, 
     handleRequestReset,
-    handleVerifyOtpLocal,
+    handleVerifyOtp, // <-- Exported updated function
     handleFinalReset
   };
 };

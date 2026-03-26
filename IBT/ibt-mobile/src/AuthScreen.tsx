@@ -99,10 +99,11 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     authMode, setAuthMode, resetStep, setResetStep, 
     registerStep, setRegisterStep, 
     loginStep, setLoginStep, handleNextLoginStep, 
+    isReactivating, setIsReactivating, // <-- Hooked up new state
     loading, form, updateForm, resetFormState,
     isDeviceLinked, handleUnlinkDevice,
     handleAuth, handleSendRegistrationOtp, handleVerifyRegistrationOtp,
-    handleRequestReset, handleVerifyOtpLocal, handleFinalReset 
+    handleRequestReset, handleVerifyOtp, handleFinalReset 
   } = useAuthForm(onLoginSuccess);
 
   const isMatch = form.mpin === form.confirmMpin;
@@ -272,12 +273,19 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                                 <Button mode="contained" onPress={handleRequestReset} loading={loading} style={styles.button} textColor="#ffffff">Send Code</Button>
                             </>
                         )}
+                        {/* NEW: Updated Verify OTP view to conditionally handle Reactivation UI */}
                         {resetStep === 'verify-otp' && (
                             <>
                                 <Text style={styles.desc}>Enter the code sent to {form.email}.</Text>
-                                <TextInput label="Verification Code (OTP)" value={form.otp} onChangeText={(t) => updateForm('otp', t)} mode="outlined" style={styles.input} keyboardType="number-pad" activeOutlineColor="#1B5E20" textColor='#000000' />
-                                <Button mode="contained" onPress={handleVerifyOtpLocal} style={styles.button} textColor="#ffffff">Verify Code</Button>
-                                <Button mode="text" onPress={() => setResetStep('request')} style={styles.switchButton} textColor="#666">Change Email</Button>
+                                <TextInput label="Verification Code (OTP)" value={form.otp} onChangeText={(t) => updateForm('otp', t)} mode="outlined" style={styles.input} keyboardType="number-pad" activeOutlineColor="#1B5E20" textColor='#000000' maxLength={4} />
+                                
+                                <Button mode="contained" onPress={handleVerifyOtp} loading={loading} style={styles.button} textColor="#ffffff">
+                                    {isReactivating ? "Reactivate Account" : "Verify Code"}
+                                </Button>
+                                
+                                {!isReactivating && (
+                                    <Button mode="text" onPress={() => setResetStep('request')} style={styles.switchButton} textColor="#666">Change Email</Button>
+                                )}
                             </>
                         )}
                         {resetStep === 'reset-password' && (
@@ -289,7 +297,13 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                                 <Button mode="contained" onPress={handleFinalReset} loading={loading} style={styles.button} textColor="#ffffff">Reset MPIN</Button>
                             </>
                         )}
-                        <Button mode="text" onPress={() => { setAuthMode('login'); setResetStep('request'); resetFormState(false); }} style={[styles.switchButton, {marginTop: 20}]} textColor="#1B5E20">Back to Login</Button>
+                        
+                        <Button mode="text" onPress={() => { 
+                            setAuthMode('login'); 
+                            setResetStep('request'); 
+                            setIsReactivating(false); // Reset Reactivation flag on back
+                            resetFormState(false); 
+                        }} style={[styles.switchButton, {marginTop: 20}]} textColor="#1B5E20">Back to Login</Button>
                     </View>
 
                 ) : authMode === 'register' ? (
@@ -300,7 +314,6 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                ) : (
                  
                     <View>
-                        
                         {loginStep === 'email' ? (
                             <View>
                                 <Text style={{ color: 'grey', marginBottom: 15 }}>Please enter your email to continue.</Text>

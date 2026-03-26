@@ -9,8 +9,9 @@ import * as ImagePicker from 'expo-image-picker';
 
 import AuthScreen from '@/src/AuthScreen';
 import API_URL from '@/src/config';
-import { authService } from '@/src/services/auth.service'; // Added for the new email endpoints
+import { authService } from '@/src/services/auth.service'; 
 import { colors } from '@/src/themes/stallsColors';
+import { sanitizePhoneNumber } from '@/src/utils/validation'; 
 
 type UserData = {
   id: string;
@@ -120,10 +121,16 @@ export default function ProfileScreen() {
 
   const openEditModal = () => {
     if (!user) return;
+
+    // Format contact for UI
+    let rawContact = user.contact || '';
+    if (rawContact.startsWith('+63')) rawContact = rawContact.substring(3);
+    else if (rawContact.startsWith('0')) rawContact = rawContact.substring(1);
+
     setEditForm({
       firstName: user.firstName || '',
       lastName: user.lastName || '',
-      contact: user.contact || '',
+      contact: sanitizePhoneNumber(rawContact),
       avatar: user.avatarUrl || null
     });
     setEditModalVisible(true);
@@ -149,6 +156,12 @@ export default function ProfileScreen() {
 
   const saveProfile = async () => {
     if (!user) return;
+
+    const pureNumber = editForm.contact.replace(/\D/g, '');
+    if (pureNumber.length !== 10) {
+        return Alert.alert("Invalid Number", "Please enter a valid 10-digit mobile number.");
+    }
+
     setSaving(true);
 
     try {
@@ -156,7 +169,7 @@ export default function ProfileScreen() {
       formData.append('userId', user.id);
       formData.append('firstName', editForm.firstName);
       formData.append('lastName', editForm.lastName);
-      formData.append('contact', editForm.contact);
+      formData.append('contact', `+63${pureNumber}`);
       
       // Keep existing email to satisfy backend validation
       formData.append('email', user.email); 
@@ -319,7 +332,28 @@ export default function ProfileScreen() {
 
           <TextInput label="First Name" value={editForm.firstName} onChangeText={t => setEditForm({ ...editForm, firstName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
           <TextInput label="Last Name" value={editForm.lastName} onChangeText={t => setEditForm({ ...editForm, lastName: t })} mode="outlined" textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} />
-          <TextInput label="Contact Number" value={editForm.contact} onChangeText={t => setEditForm({ ...editForm, contact: t })} mode="outlined" style={styles.input} textColor='black' outlineColor={colors.textMedium} activeOutlineColor={colors.primary} keyboardType="phone-pad" />
+          
+          <View style={styles.phoneRow}>
+              <View style={styles.prefixContainer}>
+                  <Text style={styles.prefixText}>+63</Text>
+              </View>
+              <TextInput 
+                  label="Mobile Number" 
+                  value={editForm.contact} 
+                  onChangeText={(t) => { 
+                      let cleaned = t.startsWith('0') ? t.substring(1) : t;
+                      setEditForm({ ...editForm, contact: sanitizePhoneNumber(cleaned) }); 
+                  }} 
+                  mode="outlined" 
+                  style={[styles.input, styles.phoneInput]} 
+                  textColor='#000000' 
+                  outlineColor={colors.textMedium} 
+                  activeOutlineColor={colors.primary}
+                  keyboardType="numeric" 
+                  maxLength={10} 
+                  placeholder="9XX XXX XXXX" 
+              />
+          </View>
 
           <Button mode="contained" onPress={saveProfile} loading={saving} style={{ marginTop: 15, backgroundColor: colors.primary }} textColor='white'>Save Changes</Button>
           <Button onPress={() => setEditModalVisible(false)} style={{ marginTop: 5 }} textColor="grey">Cancel</Button>
@@ -333,13 +367,13 @@ export default function ProfileScreen() {
               
               <TouchableOpacity onPress={() => setSettingsStep('changePassword')} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#eee' }}>
                 <Icon name="lock-reset" size={24} color={colors.primary} style={{ marginRight: 15 }} />
-                <Text style={{ fontSize: 16 }}>Change Security Code (MPIN)</Text>
+                <Text style={{ fontSize: 16 , color: 'black'}}>Change Security Code (MPIN)</Text>
               </TouchableOpacity>
 
       
               <TouchableOpacity onPress={() => setSettingsStep('changeEmail')} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderColor: '#eee' }}>
                 <Icon name="email-edit" size={24} color={colors.primary} style={{ marginRight: 15 }} />
-                <Text style={{ fontSize: 16 }}>Change Account Email</Text>
+                <Text style={{ fontSize: 16 , color: 'black'}}>Change Account Email</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -576,5 +610,10 @@ const styles = StyleSheet.create({
   historyCard: { backgroundColor: '#fff', marginBottom: 20 },
   logoutBtn: { marginTop: 20, borderColor: colors.error, borderWidth: 1 },
   modalContent: { backgroundColor: 'white', padding: 25, margin: 20, borderRadius: 15 },
-  input: { marginBottom: 12, backgroundColor: 'white', fontSize: 14 }
+  input: { marginBottom: 12, backgroundColor: 'white', fontSize: 14 },
+  // Phone Input Styles
+  phoneRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  prefixContainer: { backgroundColor: '#f1f5f9', paddingHorizontal: 15, height: 50, justifyContent: 'center', borderTopLeftRadius: 5, borderBottomLeftRadius: 5, borderWidth: 1, borderColor: '#cbd5e1', borderRightWidth: 0, marginTop: 6 },
+  prefixText: { fontWeight: 'bold', color: '#475569', fontSize: 16 },
+  phoneInput: { flex: 1, marginBottom: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }
 });
