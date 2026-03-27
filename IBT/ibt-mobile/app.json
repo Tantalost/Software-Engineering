@@ -4,7 +4,7 @@
     "slug": "IBT",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/mobileLOGO.png",
+    "icon": "./assets/images/newLogo.png",
     "scheme": "ibtmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,7 +12,7 @@
       "supportsTablet": true
     },
     "splash": {
-      "image": "./assets/images/mobileLOGO.png",
+      "image": "./assets/images/newLogo.png",
       "resizeMode": "contain",
       "backgroundColor": "#053827"
     },
@@ -33,8 +33,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/mobileLOGO.png",
-          "imageWidth": 400,
+          "image": "./assets/images/newLogo.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#053827"
         }
@@ -52,7 +52,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/mobileLOGO.png",
+          "icon": "./assets/images/newLogo.png",
           "color": "#1B5E20"
         }
       ]
