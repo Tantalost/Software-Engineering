@@ -112,10 +112,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', 
     borderTopColor: '#eee',
     borderTopWidth: 1,
-   
-    height: Platform.OS === 'ios' ? 85 : 75,
-   
-    paddingBottom: Platform.OS === 'ios' ? 20 : 18,
+    
+    height: Platform.OS === 'ios' ? 85 : 90,
+    
+    paddingBottom: Platform.OS === 'ios' ? 20 : 35,
     paddingTop: 5,
   },
   centerButtonContainer: {
