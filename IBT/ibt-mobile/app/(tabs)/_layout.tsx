@@ -99,8 +99,6 @@ export default function TabLayout() {
       />
 
     </Tabs>
-
-    
   );
 }
 
@@ -114,8 +112,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'white', 
     borderTopColor: '#eee',
     borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 85 : 65,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+   
+    height: Platform.OS === 'ios' ? 85 : 75,
+   
+    paddingBottom: Platform.OS === 'ios' ? 20 : 18,
     paddingTop: 5,
   },
   centerButtonContainer: {
