@@ -5,21 +5,24 @@ import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
-import * as Notifications from 'expo-notifications';
 
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 
 
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
+let Notifications: any = null;
+try {
+  Notifications = require('expo-notifications');
+  if (Platform.OS !== 'web' && Notifications) {
+    Notifications.setNotificationHandler({
+      handleNotification: async (): Promise<any> => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  }
+} catch (e) {
+  console.warn("Push notifications safely disabled (Expo Go Limitation)");
 }
 
 export const unstable_settings = {
@@ -31,14 +34,18 @@ export default function RootLayout() {
 
   useEffect(() => {
     let isMounted = true;
-    
-    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data;
+    let responseListener: any = null;
+
+    if (Notifications) {
+      responseListener = Notifications.addNotificationResponseReceivedListener((response: any) => {
+        const data = response.notification.request.content.data;
+        
       
-      if (data?.route === 'stalls' && isMounted) {
-        router.push('/stalls'); 
-      }
-    });
+        if (data?.route && isMounted) {
+          router.push(`/${data.route}` as any); 
+        }
+      });
+    }
 
     return () => {
       isMounted = false;

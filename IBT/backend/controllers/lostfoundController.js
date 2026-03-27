@@ -1,7 +1,23 @@
 import mongoose from 'mongoose';
 import LostFound from '../models/LostFound.js';
+import User from '../models/User.js'; 
+import sendPushNotification from '../utils/sendPushNotification.js'; 
 
-// GET ALL ACTIVE (Includes older documents missing the flag)
+
+const broadcastNotification = async (title, body, data) => {
+  try {
+    const users = await User.find({ expoPushToken: { $ne: null } });
+    users.forEach(user => {
+      if (user.expoPushToken && user.expoPushToken.startsWith('ExponentPushToken')) {
+        sendPushNotification(user.expoPushToken, title, body, data).catch(err => console.error(err));
+      }
+    });
+  } catch (error) {
+    console.error("Broadcast error:", error);
+  }
+};
+
+
 export const getLostFound = async (req, res) => {
   try {
     const items = await LostFound.find({ isArchived: { $ne: true } }).sort({ dateTime: -1 });
@@ -11,7 +27,7 @@ export const getLostFound = async (req, res) => {
   }
 };
 
-// CREATE
+
 export const createLostFound = async (req, res) => {
   try {
     const body = req.body || {};
@@ -27,23 +43,30 @@ export const createLostFound = async (req, res) => {
     });
 
     await newItem.save();
+
+   
+    broadcastNotification(
+      "Lost Item Found 🔍",
+      `A ${body.itemType || 'missing item'} was found at ${body.location || 'the terminal'}. Check the app to see if it's yours!`,
+      { route: 'lost-found' } 
+    );
+
     res.status(201).json(newItem);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// UPDATE
 export const updateLostFound = async (req, res) => {
   try {
     const update = { ...req.body };
 
-    // NEW: If an evidence photo was uploaded, save its filename
+
     if (req.file) {
       update.claimEvidence = req.file.filename;
     }
 
-    // If status moved to Claimed and no claimedAt provided, stamp it
+   
     if (update.status === 'Claimed' && !update.claimedAt) {
       update.claimedAt = new Date();
     }
@@ -61,7 +84,6 @@ export const updateLostFound = async (req, res) => {
   }
 };
 
-// --- SOFT DELETE FUNCTIONS (Archive & Restore) ---
 
 export const archiveLostFound = async (req, res) => {
   try {
@@ -115,7 +137,7 @@ export const getLostFoundPhoto = async (req, res) => {
   }
 };
 
-// --- HARD DELETE ---
+
 export const deleteLostFound = async (req, res) => {
   try {
     const deletedItem = await LostFound.findByIdAndDelete(req.params.id);

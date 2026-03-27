@@ -1,11 +1,25 @@
 import Broadcast from '../models/Broadcast.js';
+import User from '../models/User.js'; 
+import sendPushNotification from '../utils/sendPushNotification.js'; 
+
+const broadcastNotification = async (title, body, data) => {
+  try {
+    const users = await User.find({ expoPushToken: { $ne: null } });
+    users.forEach(user => {
+      if (user.expoPushToken && user.expoPushToken.startsWith('ExponentPushToken')) {
+        sendPushNotification(user.expoPushToken, title, body, data).catch(err => console.error(err));
+      }
+    });
+  } catch (error) {
+    console.error("Broadcast error:", error);
+  }
+};
 
 export const createBroadcast = async (req, res) => {
   try {
     const { title, message, scheduledFor, targetGroup, dueDate } = req.body;
     let attachments = [];
 
-    // Validate dueDate if provided
     if (dueDate) {
       const dueDateObj = new Date(dueDate);
       const dayOfMonth = dueDateObj.getDate();
@@ -42,6 +56,15 @@ export const createBroadcast = async (req, res) => {
 
     const savedBroadcast = await newBroadcast.save();
     
+    const isFuture = scheduledFor && new Date(scheduledFor) > new Date();
+    if (!isFuture) {
+      broadcastNotification(
+        `📢 Announcement: ${title}`,
+        message,
+        { route: 'index' } 
+      );
+    }
+
     res.status(201).json({ success: true, data: savedBroadcast });
   } catch (error) {
     console.error("Error creating broadcast:", error);
@@ -53,12 +76,10 @@ export const getBroadcasts = async (req, res) => {
   try {
     const now = new Date();
     
-    
     const broadcasts = await Broadcast.find({ scheduledFor: { $lte: now } })
                                       .sort({ scheduledFor: -1 }); 
     
     const formattedBroadcasts = broadcasts.map(b => {
-    
       const formattedDate = new Date(b.scheduledFor || b.createdAt).toLocaleString('en-US', { 
         month: 'short', day: '2-digit', year: 'numeric', 
         hour: '2-digit', minute: '2-digit', hour12: true 
@@ -83,7 +104,6 @@ export const getBroadcasts = async (req, res) => {
 
 export const getAdminBroadcasts = async (req, res) => {
   try {
-  
     const broadcasts = await Broadcast.find().sort({ scheduledFor: -1 });
     
     const formattedBroadcasts = broadcasts.map(b => {
@@ -92,7 +112,6 @@ export const getAdminBroadcasts = async (req, res) => {
         hour: '2-digit', minute: '2-digit', hour12: true 
       }).replace(',', ' •');
 
-   
       const isScheduled = new Date(b.scheduledFor) > new Date();
 
       return {

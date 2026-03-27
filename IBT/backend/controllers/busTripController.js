@@ -1,5 +1,34 @@
 import BusTrip from "../models/BusTrips.js";
 import Settings from "../models/Settings.js";
+import User from "../models/User.js";
+import sendPushNotification from "../utils/sendPushNotification.js"; 
+
+
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) return timeStr;
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  let hour = parseInt(parts[0], 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  hour = hour ? hour : 12;
+  return `${hour}:${parts[1]} ${ampm}`;
+};
+
+
+const broadcastNotification = async (title, body, data) => {
+  try {
+    const users = await User.find({ expoPushToken: { $ne: null } });
+    users.forEach(user => {
+      if (user.expoPushToken && user.expoPushToken.startsWith('ExponentPushToken')) {
+        sendPushNotification(user.expoPushToken, title, body, data).catch(err => console.error(err));
+      }
+    });
+  } catch (error) {
+    console.error("Broadcast error:", error);
+  }
+};
 
 export const getBusTrips = async (req, res) => {
   try {
@@ -57,6 +86,14 @@ export const createBusTrip = async (req, res) => {
     });
 
     const savedTrip = await newTrip.save();
+
+    
+    broadcastNotification(
+      "New Bus Scheduled 🚌",
+      `${company} bus to ${route} is scheduled at ${formatTime(time)}.`,
+      { route: 'routes' }
+    );
+
     res.status(201).json(savedTrip);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -67,14 +104,33 @@ export const updateBusTrip = async (req, res) => {
   try {
     const { id } = req.params;
 
+  
+    const oldTrip = await BusTrip.findById(id);
+    if (!oldTrip) {
+      return res.status(404).json({ message: "Bus trip not found" });
+    }
+
     const updatedTrip = await BusTrip.findByIdAndUpdate(
       id,
       req.body,
       { new: true }
     );
 
-    if (!updatedTrip) {
-      return res.status(404).json({ message: "Bus trip not found" });
+   
+    if (oldTrip.status !== 'Arrived' && updatedTrip.status === 'Arrived') {
+      broadcastNotification(
+        "Bus Arrived 📍",
+        `${updatedTrip.company} bus to/from ${updatedTrip.route} has arrived at the terminal.`,
+        { route: 'routes' }
+      );
+    } 
+  
+    else if (req.body.expectedDeparture && req.body.expectedDeparture !== oldTrip.expectedDeparture) {
+      broadcastNotification(
+        "Bus Delayed ⏳",
+        `${updatedTrip.company} bus for ${updatedTrip.route} is delayed. New departure: ${formatTime(updatedTrip.expectedDeparture)}.`,
+        { route: 'routes' }
+      );
     }
 
     res.status(200).json(updatedTrip);
@@ -155,14 +211,12 @@ export const updateAllBusTripPrices = async (req, res) => {
 
     const priceValue = parseFloat(newPrice);
 
-   
     await Settings.findOneAndUpdate(
       { key: "defaultBusPrice" },
       { key: "defaultBusPrice", value: priceValue },
       { upsert: true, new: true }
     );
 
-   
     const result = await BusTrip.updateMany(
       { status: "Pending" },
       { price: priceValue }
@@ -176,7 +230,6 @@ export const updateAllBusTripPrices = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 export const getDefaultBusPrice = async (req, res) => {
   try {
