@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import mongoose from 'mongoose';
 import Tenant from '../models/Tenant.js';
-import SetPriceSettings from '../models/SetPriceSettings.js';
+import SetPriceSettings from '../models/Settings.js';
 import sendEmail from './sendEmail.js'; 
 
 export const startOverdueCheck = () => {
