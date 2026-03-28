@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import mongoose from 'mongoose';
 import Tenant from '../models/Tenant.js';
-import SetPriceSettings from '../models/Settings.js';
+import Settings from '../models/Settings.js';
 import sendEmail from './sendEmail.js'; 
 
 export const startOverdueCheck = () => {
@@ -16,8 +16,8 @@ export const startOverdueCheck = () => {
 
         try {
           
-            const chargeSetting = await SetPriceSettings.findOne({ key: "defaultChargePercentage" });
-            const interestSetting = await SetPriceSettings.findOne({ key: "defaultInterestPercentage" });
+            const chargeSetting = await Settings.findOne({ key: "defaultChargePercentage" });
+            const interestSetting = await Settings.findOne({ key: "defaultInterestPercentage" });
 
             const cPct = chargeSetting ? Number(chargeSetting.value) : 25; 
             const iPct = interestSetting ? Number(interestSetting.value) : 2;  

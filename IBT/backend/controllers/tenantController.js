@@ -639,16 +639,10 @@ export const sendRentReminder = async (req, res) => {
   }
 };
 
-// Add this import at the top of tenantController.js
-import SetPriceSettings from "../models/SetPriceSettings.js";
-
-// --- NEW FUNCTIONS TO ADD AT THE BOTTOM ---
-
-// Fetch the current global penalty percentages
 export const getOverdueSettings = async (req, res) => {
   try {
-    const chargeSetting = await SetPriceSettings.findOne({ key: "defaultChargePercentage" });
-    const interestSetting = await SetPriceSettings.findOne({ key: "defaultInterestPercentage" });
+    const chargeSetting = await Settings.findOne({ key: "defaultChargePercentage" });
+    const interestSetting = await Settings.findOne({ key: "defaultInterestPercentage" });
 
     res.status(200).json({
       chargePercentage: chargeSetting ? Number(chargeSetting.value) : 25,
@@ -666,7 +660,7 @@ export const updateOverdueSettings = async (req, res) => {
 
 
     if (chargePercentage !== undefined) {
-      await SetPriceSettings.findOneAndUpdate(
+      await Settings.findOneAndUpdate(
         { key: "defaultChargePercentage" },
         { value: Number(chargePercentage) },
         { upsert: true }
@@ -674,7 +668,7 @@ export const updateOverdueSettings = async (req, res) => {
     }
 
     if (interestPercentage !== undefined) {
-      await SetPriceSettings.findOneAndUpdate(
+      await Settings.findOneAndUpdate(
         { key: "defaultInterestPercentage" },
         { value: Number(interestPercentage) },
         { upsert: true }
