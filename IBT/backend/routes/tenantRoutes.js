@@ -15,7 +15,9 @@ import {
   sendTenantEmail,
   getDefaultPermanentPrice,
   updateAllPermanentPrices,
-  approveRenewalPayment
+  approveRenewalPayment,
+  getOverdueSettings,      
+  updateOverdueSettings
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
