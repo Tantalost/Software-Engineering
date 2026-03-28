@@ -1,76 +1,114 @@
 import cron from 'node-cron';
 import mongoose from 'mongoose';
-import Tenant from '../models/Tenant.js';
-import Settings from '../models/Settings.js';
-import sendEmail from './sendEmail.js'; 
+import TenantApplication from '../models/TenantApplication.js';
 
-export const startOverdueCheck = () => {
-   
-    cron.schedule('1 0 * * *', async () => {
-        console.log(`[${new Date().toLocaleString()}] Starting nightly Overdue Check...`);
 
+const ApplicationSchema = new mongoose.Schema({
+    targetSlot: String,
+    userId: mongoose.Schema.Types.ObjectId,
+}, { strict: false });
+
+const Application = mongoose.model('Application', ApplicationSchema, 'applications');
+
+const deleteGridFSFiles = async (bucket, filenames) => {
+    const validFilenames = filenames.filter(Boolean);
+    if (validFilenames.length === 0) return;
+
+    for (const filename of validFilenames) {
+        try {
+            const files = await bucket.find({ filename }).toArray();
+            for (const file of files) {
+                await bucket.delete(file._id);
+            }
+        } catch (err) {
+            console.error(`Failed to delete GridFS file ${filename}:`, err);
+        }
+    }
+};
+
+export const startCleanUP = () => {
+  
+    cron.schedule('0 0 * * *', async () => {
+        console.log(`[${new Date().toLocaleString()}] Starting nightly database cleanup...`);
+
+     
         if (mongoose.connection.readyState !== 1) {
-            console.log("Database not connected. Skipping overdue check.");
+            console.log("Database not fully connected. Skipping cleanup.");
             return;
         }
 
+        const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { 
+            bucketName: 'uploads' 
+        });
+
         try {
-          
-            const chargeSetting = await Settings.findOne({ key: "defaultChargePercentage" });
-            const interestSetting = await Settings.findOne({ key: "defaultInterestPercentage" });
+           
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-            const cPct = chargeSetting ? Number(chargeSetting.value) : 25; 
-            const iPct = interestSetting ? Number(interestSetting.value) : 2;  
-
-          
-            const now = new Date();
-            const pendingOverdue = await Tenant.find({
-                status: { $ne: "Overdue" }, 
-                DueDateTime: { $lt: now },
-                isArchived: { $ne: true }
+            const oldRejections = await TenantApplication.find({
+                status: 'REJECTED',
+                updatedAt: { $lt: thirtyDaysAgo } 
             });
 
-            let markedCount = 0;
+            let rejectedDeletedCount = 0;
 
-            for (const tenant of pendingOverdue) {
+            for (const app of oldRejections) {
                
-                const rent = tenant.rentAmount || 0;
-                const chargeAmt = rent * (cPct / 100);
-                const dueBalance = rent + chargeAmt;
-                const interestAmt = dueBalance * (iPct / 100);
-                const totalAmt = rent + (tenant.utilityAmount || 0) + chargeAmt + interestAmt;
+                await deleteGridFSFiles(bucket, [
+                    app.permitUrl, 
+                    app.validIdUrl, 
+                    app.clearanceUrl, 
+                    app.receiptUrl, 
+                    app.contractUrl,
+                    app.communityTaxUrl,
+                    app.policeClearanceUrl
+                ]);
 
-                tenant.status = "Overdue";
-                tenant.chargeAmount = chargeAmt;
-                tenant.interestAmount = interestAmt;
-                tenant.totalAmount = totalAmt;
-
-                await tenant.save();
-                markedCount++;
-
-                if (tenant.email) {
-                    try {
-                        await sendEmail({
-                            email: tenant.email,
-                            subject: "Notice: Rent Overdue",
-                            message: `Dear ${tenant.tenantName || tenant.name},\n\nYour rent for Slot ${tenant.slotNo} is now overdue. A penalty charge of ${cPct}% and an interest fee of ${iPct}% have been applied to your account. Your new total due is ₱${totalAmt.toLocaleString()}.\n\nPlease settle this account immediately.\n\nThank you.`
-                        });
-                    } catch (e) {
-                        console.error(`Failed to send overdue email to ${tenant.email}`);
-                    }
-                }
+                await TenantApplication.findByIdAndDelete(app._id);
+                rejectedDeletedCount++;
             }
 
-            if (markedCount > 0) {
-                console.log(`[OVERDUE CHECK] Success: Marked ${markedCount} tenants as Overdue and applied penalties.`);
+            if (rejectedDeletedCount > 0) {
+                console.log(`[CLEANUP] Success: Removed ${rejectedDeletedCount} old rejected applications and their files.`);
+            }
+
+            const ghostEntries = await Application.find({
+                $or: [
+                    { targetSlot: { $exists: false } },
+                    { targetSlot: "" },
+                    { userId: { $exists: false } }
+                ]
+            });
+
+            let ghostDeletedCount = 0;
+
+            for (const ghost of ghostEntries) {
+               
+                await deleteGridFSFiles(bucket, [
+                    ghost.permitUrl, 
+                    ghost.validIdUrl, 
+                    ghost.clearanceUrl, 
+                    ghost.receiptUrl, 
+                    ghost.contractUrl,
+                    ghost.communityTaxUrl,
+                    ghost.policeClearanceUrl
+                ]);
+
+                await Application.findByIdAndDelete(ghost._id);
+                ghostDeletedCount++;
+            }
+
+            if (ghostDeletedCount > 0) {
+                console.log(`[CLEANUP] Success: Removed ${ghostDeletedCount} ghost entries and their orphaned files.`);
             } else {
-                console.log(`[OVERDUE CHECK] Database is healthy. No new overdue tenants today.`);
+                console.log(`[CLEANUP] Database is healthy. No ghost entries found.`);
             }
 
         } catch (error) {
-            console.error("[OVERDUE CHECK ERROR]:", error);
+            console.error("[CLEANUP ERROR]:", error);
         }
     });
 
-    console.log("Cron Job initialized: Overdue check scheduled for 12:01 AM daily.");
+    console.log("Cron Job initialized: Database cleanup scheduled for midnight daily.");
 };
