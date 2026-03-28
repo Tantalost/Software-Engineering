@@ -996,14 +996,37 @@ const Reports = () => {
               </button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {/* WE CHANGED md:grid-cols-3 TO md:grid-cols-4 TO MAKE ROOM FOR MORE DATA */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
                 <Field label="Source Module" value={viewRow.type} />
                 <Field label="Submitted By" value={viewRow.author} />
                 <Field
                   label="Submission Date"
                   value={formatReportDate(viewRow.createdAt || viewRow.date)}
                 />
+                
+                {/* --- NEW DYNAMIC FIELDS (Only show if they exist in the report payload) --- */}
+                {viewRow.data?.collectorName && (
+                  <Field label="Name of Collector" value={viewRow.data.collectorName} />
+                )}
+                
+                {viewRow.data?.shift && (
+                  <Field label="Shift Block" value={`${viewRow.data.shift} Hours`} />
+                )}
+                
+                {viewRow.data?.submittedLate !== undefined && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-500 uppercase">
+                      Punctuality
+                    </label>
+                    <div className={`text-sm font-bold ${viewRow.data.submittedLate ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {viewRow.data.submittedLate ? "⚠️ Late Submission" : "✅ On Time"}
+                    </div>
+                  </div>
+                )}
+                {/* ------------------------------------------------------------------------ */}
               </div>
+              
               <hr className="border-slate-100 mb-6" />
               <DataRenderer reportPayload={viewRow.data} />
             </div>

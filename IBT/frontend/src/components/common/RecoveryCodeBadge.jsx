@@ -9,7 +9,6 @@ export default function RecoveryCodeBadge() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Only fetch if the logged-in user is a superadmin
     const role = localStorage.getItem("authRole");
     if (role !== "superadmin") return;
 
@@ -18,15 +17,18 @@ export default function RecoveryCodeBadge() {
         const token = localStorage.getItem("authToken");
         if (!token) return;
 
-        const res = await fetch(`${API_BASE_URL}/api/admins/recovery-codes/count`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
+        if (role === "superadmin") {
+          // THIS WAS MANGLED - It's now properly formatted
+          const res = await fetch(`${API_BASE_URL}/api/admins/recovery-codes/count`, {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          setCount(data.count);
+          if (res.ok) {
+            const data = await res.json();
+            setCount(data.count);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch recovery code count", err);

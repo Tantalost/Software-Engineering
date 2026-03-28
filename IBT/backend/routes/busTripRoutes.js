@@ -8,7 +8,8 @@ import {
   getArchivedBusTrips,
   deleteBusTrip,
   updateAllBusTripPrices,
-  getDefaultBusPrice
+  getDefaultBusPrice,
+  approveDeparture
 } from "../controllers/busTripController.js"; 
 
 const router = express.Router();
@@ -24,6 +25,6 @@ router.delete("/:id", deleteBusTrip);
 
 router.get("/default-price", getDefaultBusPrice);
 router.put("/update-prices/all", updateAllBusTripPrices);
-
+router.put("/:id/approve",approveDeparture);
 
 export default router;

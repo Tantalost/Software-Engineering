@@ -240,3 +240,27 @@ export const getDefaultBusPrice = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const approveDeparture = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ticketReferenceNo } = req.body;
+
+    const trip = await BusTrip.findById(id);
+    if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+    const updatedTrip = await BusTrip.findByIdAndUpdate(
+      id,
+      {
+        status: "Departed",
+        ticketReferenceNo: ticketReferenceNo || `AUTO-${Date.now().toString().slice(-6)}`,
+        departureTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      },
+      { new: true }
+    );
+
+    res.status(200).json(updatedTrip);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
