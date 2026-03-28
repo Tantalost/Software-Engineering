@@ -85,22 +85,25 @@ export default function EmployeeManage() {
   // Load admins
   useEffect(() => {
     const fetchAdmins = async () => {
+      const role = localStorage.getItem("authRole");
       setIsLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/admins`);
-        if (!res.ok) throw new Error("Failed to load admins");
-        let data = {};
-        try {
-          data = await res.json();
-        } catch {
-          data = {};
-        }
-        setAdmins(
-          data.map((a) => ({
-            ...a,
-            name: a.name || roleLabels[a.role] || "Admin",
-          })),
-        );
+        if (role === "superadmin") {
+          const res = await fetch(`${API_BASE_URL}/api/admins`);
+          if (!res.ok) throw new Error("Failed to load admins");
+          let data = {};
+          try {
+            data = await res.json();
+          } catch {
+            data = {};
+          }
+          setAdmins(
+            data.map((a) => ({
+              ...a,
+              name: a.name || roleLabels[a.role] || "Admin",
+            })),
+          );
+        } // <--- THIS WAS THE MISSING BRACE!
       } catch (error) {
         console.error("Error fetching admins:", error);
         setNotificationState({

@@ -10,8 +10,9 @@ import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
 import EditBusTrip from "../components/busTrips/EditBusTrip.jsx";
-
+import DailyTripsDashboard from "../components/busTrips/DailyTripsDashboard.jsx";
 import Pagination from "../components/common/Pagination";
+import CommonBusesView from "../components/busTrips/CommonBusesView.jsx";
 
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
@@ -34,6 +35,7 @@ import {
   Bus,
   Plus,
   Settings,
+  TrendingUp
 } from "lucide-react";
 
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -701,15 +703,24 @@ const BusTrips = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const getTodayFormatted = () => {
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    return today.toISOString().split('T')[0];
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getTodayFormatted());
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedBusType, setSelectedBusType] = useState("");
   const [companyData, setCompanyData] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
-  const [showManageCompaniesModal, setShowManageCompaniesModal] =
-    useState(false);
+  const [showManageCompaniesModal, setShowManageCompaniesModal] = useState(false);
+  const [showCommonModal, setShowCommonModal] = useState(false);
+  const [shiftInterval, setShiftInterval] = useState(6);
+  const [selectedShift, setSelectedShift] = useState("");
+  const [isLateSubmit, setIsLateSubmit] = useState(false);
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -957,9 +968,9 @@ const BusTrips = () => {
   ).length;
   const pendingTrips = filtered.filter((t) => t.status === "Pending").length;
   const arrivedTrips = filtered.filter((t) => t.status === "Arrived").length;
-  const paidTrips = filtered.filter((t) => t.status === "Paid").length;
+  const paidTrips = filtered.filter((t) => t.status === "Departed").length;
   const totalRevenue = filtered
-    .filter((t) => t.status === "Paid")
+    .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
   const paginatedData = useMemo(() => {
@@ -1057,6 +1068,28 @@ const BusTrips = () => {
         duration: 3000,
       });
     }
+  };
+
+  const handleMarkOnFix = async (tripId) => {
+    try {
+      const response = await fetch(`${API_URL}/${tripId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "On Fix" }),
+      });
+      if (response.ok) {
+        await fetchBusTrips();
+        setNotificationState({ isOpen: true, type: "warning", message: "Bus marked as On Fix.", autoClose: true, duration: 3000 });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // 2. The One-Click Approve Departure Action
+  const handleApproveDeparture = (trip) => {
+    setLogoutRow(trip); // Uses your existing modal state
+    setTicketRefInput(""); // Clears the input field
   };
 
   const handleEditSubmit = async (updatedData) => {
@@ -1470,13 +1503,30 @@ const BusTrips = () => {
   };
 
   const handleSubmitReport = async () => {
+    // 1. NEW VALIDATION: Ensure Collector Name is filled out
+    if (!collectorName.trim()) {
+      setNotificationState({
+        isOpen: true,
+        type: "warning",
+        message: "Please enter the Name of Collector before submitting.",
+        autoClose: true,
+        duration: 3000,
+      });
+      setShowSubmitModal(false); // Close modal so they can type the name
+      return;
+    }
+
     setIsReporting(true);
     try {
       const reportPayload = {
         screen: "Bus Trips Management",
         generatedDate: new Date().toLocaleString(),
-        data: filtered,
+        shift: selectedShift,
+        submittedLate: isLateSubmit,
+        collectorName: collectorName.trim(), // 2. NEW: Attach the Collector Name here
+        data: filtered, // Submits ALL data (Scheduled, Departed, On Fix)
       };
+      
       await submitPageReport(
         "Bus Trips",
         reportPayload,
@@ -1484,15 +1534,27 @@ const BusTrips = () => {
           localStorage.getItem("authEmail") ||
           "Admin",
       );
-      await Promise.all(
-        filtered.map((item) =>
-          fetch(`${API_URL}/${item.id}`, { method: "DELETE" }),
-        ),
-      );
+      
       setShowSubmitModal(false);
-      fetchBusTrips();
+      setCollectorName(""); 
+      
+      setNotificationState({ 
+        isOpen: true, 
+        type: "success", 
+        message: "Shift Handoff Report Submitted!", 
+        autoClose: true, 
+        duration: 3000 
+      });
+      
     } catch (e) {
       console.error(e);
+      setNotificationState({ 
+        isOpen: true, 
+        type: "error", 
+        message: "Failed to submit report.", 
+        autoClose: true, 
+        duration: 3000 
+      });
     } finally {
       setIsReporting(false);
     }
@@ -1528,7 +1590,7 @@ const BusTrips = () => {
   };
 
   const confirmLogout = async () => {
-    if (!logoutRow || !ticketRefInput) {
+    if (!ticketRefInput) {
       setNotificationState({
         isOpen: true,
         type: "warning",
@@ -1539,31 +1601,32 @@ const BusTrips = () => {
       return;
     }
 
+    // DUPLICATE CHECK: Look through all records to see if this ticket number already exists
     const isDuplicate = records.some(
       (record) =>
         record.ticketReferenceNo &&
-        record.ticketReferenceNo.toString().trim() ===
-          ticketRefInput.toString().trim(),
+        record.ticketReferenceNo.toString().trim() === ticketRefInput.toString().trim()
     );
 
     if (isDuplicate) {
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: `Ticket Reference No. "${ticketRefInput}" already exists.`,
+        message: `Ticket Reference No. "${ticketRefInput}" already exists!`,
         autoClose: true,
-        duration: 3000,
+        duration: 4000,
       });
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/${logoutRow.id}`, {
+      const tripId = logoutRow.id || logoutRow._id;
+      const response = await fetch(`${API_URL}/${tripId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ticketReferenceNo: ticketRefInput,
-          status: "Paid",
+          status: "Departed", // <--- Updated to use "Departed" instead of "Paid"
           departureTime: new Date().toLocaleTimeString("en-GB", {
             hour: "2-digit",
             minute: "2-digit",
@@ -1573,7 +1636,6 @@ const BusTrips = () => {
 
       if (response.ok) {
         await fetchBusTrips();
-
         setLogoutRow(null);
         setTicketRefInput("");
 
@@ -1584,23 +1646,13 @@ const BusTrips = () => {
           autoClose: true,
           duration: 3000,
         });
+        
+        await logActivity(role, "APPROVE_DEPARTURE", `Approved departure for trip ${tripId} with ticket ${ticketRefInput}`, "BusTrips");
       } else {
-        setNotificationState({
-          isOpen: true,
-          type: "error",
-          message: "Failed to confirm departure.",
-          autoClose: true,
-          duration: 3000,
-        });
+        setNotificationState({ isOpen: true, type: "error", message: "Failed to confirm departure.", autoClose: true, duration: 3000 });
       }
     } catch (error) {
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Error confirming departure.",
-        autoClose: true,
-        duration: 3000,
-      });
+      setNotificationState({ isOpen: true, type: "error", message: "Error confirming departure.", autoClose: true, duration: 3000 });
     }
   };
 
@@ -1819,21 +1871,29 @@ const BusTrips = () => {
             <div
               className={`flex flex-wrap items-center justify-end gap-3 ${isSelectionMode ? "ml-auto" : "w-full"}`}
             >
-              <div className="flex items-center gap-3 w-full lg:w-auto">
-                <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-                  Name of Collector:
-                </label>
-
-                <input
-                  type="text"
-                  value={collectorName}
-                  maxLength={100}
-                  onChange={(e) =>
-                    setCollectorName(e.target.value.slice(0, 100))
-                  }
-                  placeholder="Enter collector name"
-                  className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                />
+             <div className="flex items-center gap-3 w-full lg:w-auto mr-auto">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+                    Name of Collector:
+                  </label>
+                  <input
+                    type="text"
+                    value={collectorName}
+                    maxLength={100}
+                    onChange={(e) =>
+                      setCollectorName(e.target.value.slice(0, 100))
+                    }
+                    placeholder="Enter collector name"
+                    className="w-full sm:w-56 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowCommonModal(true)}
+                  className="flex items-center cursor-pointer justify-center space-x-2 border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-100 transition-all"
+                >
+                  <TrendingUp size={18} />
+                  <span className="hidden sm:inline">Common Buses</span>
+                </button>
               </div>
 
               {role === "bus" && (
@@ -1908,103 +1968,23 @@ const BusTrips = () => {
             <Loader2 className="animate-spin text-emerald-500" />
           </div>
         ) : (
-          <Table
-            columns={tableColumns}
-            data={paginatedData.map((bus) => {
-              const rowData = {
-                id: bus.id,
-                busno: bus.templateNo || bus.templateno || "-",
-                type: bus.busType || "Regular",
-                ticketref: bus.ticketReferenceNo || "-",
-                route: bus.route,
-                price: `₱${(bus.price || 75).toFixed(2)}`,
-                time: formatTime(bus.time),
-                departure: formatTime(bus.departureTime),
-                date: bus.date ? new Date(bus.date).toLocaleDateString() : "",
-                company: bus.company,
-                status: bus.status,
-              };
-              if (isSelectionMode) {
-                return {
-                  select: (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(bus.id)}
-                        onChange={() => toggleSelect(bus.id)}
-                        className="h-4 w-4 rounded border-slate-300"
-                      />
-                    </div>
-                  ),
-                  ...rowData,
-                };
-              }
-              return rowData;
-            })}
-            actions={(row) => {
-              const selectedRecord = records.find((r) => r.id === row.id);
-
-              return (
-                <div className="flex justify-end items-center space-x-2">
-                  <TableActions
-                    onView={() => setViewRow(selectedRecord)}
-                    {...(row.status !== "Paid" && {
-                      onEdit: () => setEditRow(selectedRecord),
-                    })}
-                  />
-
-                  {row.status === "Pending" && (
-                    <button
-                      onClick={() => handleMarkArrived(selectedRecord)}
-                      className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 flex items-center gap-1 px-2"
-                      title="Mark as Arrived"
-                    >
-                      <CheckCircle size={16} />
-                      <span className="text-xs">Arrive</span>
-                    </button>
-                  )}
-
-                  {row.status === "Arrived" && (
-                    <button
-                      onClick={() => handleLogoutClick(row)}
-                      className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 flex items-center gap-1 px-2"
-                      title="Depart"
-                    >
-                      <LogOut size={16} />
-                      <span className="text-xs">Depart</span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setArchiveRow(selectedRecord)}
-                    className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
-                    title="Archive"
-                  >
-                    <Archive size={16} />
-                  </button>
-
-                  {role === "superadmin" && (
-                    <button
-                      onClick={() => setDeleteRow(selectedRecord)}
-                      className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
-                      title="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              );
-            }}
-          />
+          <>
+            <DailyTripsDashboard 
+              trips={paginatedData} 
+              onApproveDeparture={handleApproveDeparture}
+              onMarkOnFix={handleMarkOnFix}
+            />
+            
+            <Pagination 
+              currentPage={currentPage} 
+              totalPages={totalPages} 
+              onPageChange={setCurrentPage} 
+              itemsPerPage={itemsPerPage} 
+              totalItems={filtered.length} 
+              onItemsPerPageChange={setItemsPerPage} 
+            />
+          </>
         )}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          totalItems={filtered.length}
-          onItemsPerPageChange={setItemsPerPage}
-        />
       </div>
 
       <ManageCompaniesModal
@@ -2326,7 +2306,10 @@ const BusTrips = () => {
                 autoFocus
                 placeholder="Enter reference number..."
                 value={ticketRefInput}
-                onChange={(e) => setTicketRefInput(e.target.value)}
+                onChange={(e) => {
+                  const numericValue = e.target.value.replace(/[^0-9]/g, "");
+                  setTicketRefInput(numericValue);
+                }}
                 className="w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
               />
             </div>
@@ -2360,36 +2343,89 @@ const BusTrips = () => {
 
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md cursor-pointer rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
-            <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to capture and submit the current bus trips
-              report?{" "}
-              <span className="text-red-500 font-semibold text-xs">
-                Note: This will clear the current table.
-              </span>
-            </p>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all">
+            <h3 className="text-xl font-bold text-slate-800 border-b pb-3 mb-4">Shift Hand-off Report</h3>
+            
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                You are submitting the operational report for your shift. 
+                <strong className="text-emerald-600 ml-1">Data will remain on the board</strong> for the next shift to continue.
+              </p>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Select Your Shift ({shiftInterval}-hour intervals):
+                </label>
+                <select 
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500"
+                  onChange={(e) => {
+                    const shiftStr = e.target.value;
+                    setSelectedShift(shiftStr);
+                    
+                    if (!shiftStr) {
+                      setIsLateSubmit(false);
+                      return;
+                    }
+
+                    // Dynamic Late Check Logic
+                    const currentHour = new Date().getHours();
+                    const [startHour, endHourStr] = shiftStr.split("-").map(s => parseInt(s));
+                    const endHour = endHourStr === 24 ? 0 : endHourStr;
+                    
+                    let isLate = false;
+                    // If current hour is totally outside the shift window
+                    if (startHour < endHour) {
+                       if (currentHour < startHour || currentHour >= endHour) isLate = true;
+                    } else { // Overnight shift (e.g. 18:00 - 00:00)
+                       if (currentHour >= endHour && currentHour < startHour) isLate = true;
+                    }
+
+                    setIsLateSubmit(isLate);
+                  }}
+                >
+                  <option value="">-- Select Shift --</option>
+                  {/* Dynamically generate shift blocks based on the shiftInterval state */}
+                  {Array.from({ length: 24 / shiftInterval }).map((_, i) => {
+                     const start = i * shiftInterval;
+                     const end = start + shiftInterval;
+                     const label = `${start.toString().padStart(2, '0')}:00 - ${end === 24 ? '00' : end.toString().padStart(2, '0')}:00`;
+                     return <option key={label} value={`${start}-${end}`}>{label}</option>
+                  })}
+                </select>
+                
+                {isLateSubmit && selectedShift && (
+                  <div className="mt-2 p-2 bg-red-50 text-red-600 text-xs rounded-md border border-red-100 font-semibold animate-in fade-in">
+                    ⚠️ Warning: You are submitting this report outside of your designated {shiftInterval}-hour shift. This will be logged as Submitted Late.
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
+                <FileText className="text-blue-500 shrink-0" size={20} />
+                <div className="text-xs text-blue-800">
+                  <strong>Total Records Included:</strong> {filtered.length} Buses<br/>
+                  (Includes Scheduled, Departed, and On Fix)
+                  <div className="mt-2 pt-2 border-t border-blue-200">
+                    <strong>Collector:</strong> {collectorName}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setShowSubmitModal(false)}
-                disabled={isReporting}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitReport}
-                disabled={isReporting}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-70"
+                disabled={isReporting || !selectedShift}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-md disabled:opacity-70"
               >
-                {isReporting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <span>Confirm Submit</span>
-                )}
+                {isReporting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                Confirm Hand-off
               </button>
             </div>
           </div>
@@ -2498,6 +2534,15 @@ const BusTrips = () => {
           companyData={companyData}
         />
       )}
+
+      {showCommonModal && (
+         <CommonBusesView 
+            records={records} 
+            companyData={companyData} 
+            onClose={() => setShowCommonModal(false)}
+         />
+      )}
+      
     </Layout>
   );
 };

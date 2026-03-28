@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const BusSchema = new mongoose.Schema({
   plateNumber: { type: String, required: true },
   route: { type: String, required: true },
-  
-  busType: { type: String, enum: ['Aircon', 'Regular'], required: true, default: 'Regular' } 
+  busType: { type: String, enum: ['Aircon', 'Regular'], required: true, default: 'Regular' },
+  totalSeats: { type: Number, required: true, default: 50 }
 });
 
 const CompanySchema = new mongoose.Schema({
