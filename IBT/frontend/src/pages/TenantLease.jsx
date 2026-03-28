@@ -60,6 +60,11 @@ const TenantLease = () => {
     const [defaultPermanentPrice, setDefaultPermanentPrice] = useState(6000);
     const [newPermanentPrice, setNewPermanentPrice] = useState("");
 
+    const [defaultChargePct, setDefaultChargePct] = useState(25);
+    const [defaultInterestPct, setDefaultInterestPct] = useState(2);
+    const [newChargePct, setNewChargePct] = useState("");
+    const [newInterestPct, setNewInterestPct] = useState("");
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [showNotify, setShowNotify] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
@@ -136,8 +141,22 @@ const TenantLease = () => {
             }
         };
 
+        const fetchOverdueSettings = async () => {
+            try {
+                const response = await fetch(`${API_URL}/tenants/overdue-settings`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setDefaultChargePct(data.chargePercentage);
+                    setDefaultInterestPct(data.interestPercentage);
+                }
+            } catch (error) {
+                console.error("Error fetching overdue settings:", error);
+            }
+        };
+
         fetchDefaultNightPrice();
         fetchDefaultPermanentPrice();
+        fetchOverdueSettings(); 
     }, []);
 
     const handleSetPrice = async () => {
@@ -158,19 +177,27 @@ const TenantLease = () => {
         setIsSettingPrice(true);
 
         try {
+            
             const endpoint = isNightMarket ? '/tenants/update-night-market-prices' : '/tenants/update-permanent-prices';
-
             const response = await fetch(`${API_URL}${endpoint}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ newPrice: priceValue }),
             });
 
-            if (!response.ok) {
-                throw new Error("Failed to update prices in database");
-            }
-
+            if (!response.ok) throw new Error("Failed to update rent prices");
             const result = await response.json();
+
+            const overdueResponse = await fetch(`${API_URL}/tenants/update-overdue-settings`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    chargePercentage: newChargePct ? Number(newChargePct) : defaultChargePct, 
+                    interestPercentage: newInterestPct ? Number(newInterestPct) : defaultInterestPct 
+                }),
+            });
+
+            if (!overdueResponse.ok) throw new Error("Failed to update overdue settings");
 
             if (isNightMarket) {
                 setDefaultNightPrice(priceValue);
@@ -180,26 +207,24 @@ const TenantLease = () => {
                 localStorage.setItem("defaultPermanentPrice", priceValue.toString());
             }
 
-            await fetchTenants();
+            setDefaultChargePct(newChargePct ? Number(newChargePct) : defaultChargePct);
+            setDefaultInterestPct(newInterestPct ? Number(newInterestPct) : defaultInterestPct);
 
-            const actionName = isNightMarket ? "SET_NIGHT_MARKET_PRICE" : "SET_PERMANENT_PRICE";
-            const slotName = isNightMarket ? "night market" : "permanent";
+            await fetchTenants();
 
             await logActivity(
                 role,
-                actionName,
-                `Set default ${slotName} fee to ₱${priceValue} (Updated ${result.modifiedCount || 0} tenants)`,
+                "SET_FEES_AND_PENALTIES",
+                `Updated rent to ₱${priceValue} and adjusted overdue settings.`,
                 "Tenants",
             );
 
             setShowSetPriceModal(false);
-            setNewNightPrice("");
-            setNewPermanentPrice("");
 
             setNotificationState({
                 isOpen: true,
                 type: 'success',
-                message: `Price updated successfully! ${result.modifiedCount || 0} tenants updated.`,
+                message: `Prices and Overdue Settings updated successfully!`,
                 autoClose: true,
                 duration: 4000
             });
@@ -1158,6 +1183,9 @@ const TenantLease = () => {
                                 } else {
                                     setNewPermanentPrice(defaultPermanentPrice.toString());
                                 }
+                                setNewChargePct(defaultChargePct.toString());
+                                setNewInterestPct(defaultInterestPct.toString());
+                                
                                 setShowSetPriceModal(true);
                             }}
                             className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -1547,6 +1575,39 @@ const TenantLease = () => {
                                         placeholder="0.00"
                                     />
                                 </div>
+
+                            <div className="pt-4 mt-4 border-t border-slate-100">
+                                <h4 className="text-sm font-bold text-red-600 mb-3">Overdue Penalty Settings</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 mb-1">Charge (%)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={newChargePct}
+                                                onChange={(e) => setNewChargePct(e.target.value.replace(/[^0-9.]/g, ""))}
+                                                className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg font-semibold text-slate-800 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none"
+                                            />
+                                            <span className="absolute inset-y-0 right-0 flex items-center pr-3 font-bold text-slate-500">%</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 mb-1">Interest (%)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={newInterestPct}
+                                                onChange={(e) => setNewInterestPct(e.target.value.replace(/[^0-9.]/g, ""))}
+                                                className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg font-semibold text-slate-800 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none"
+                                            />
+                                            <span className="absolute inset-y-0 right-0 flex items-center pr-3 font-bold text-slate-500">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-2 leading-tight">
+                                    Updating these percentages will immediately recalculate the total due for all currently overdue tenants.
+                                </p>
+                            </div>
                             </div>
                         </div>
 

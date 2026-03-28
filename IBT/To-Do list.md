@@ -31,9 +31,38 @@ fix: When the tenant will operate, that's the time to count the days of operatio
 mobile
 - payment history should be able to filter by date 
 
-
 lost and found
 - make a duration for previous data range
+
+New todo (Lloyd)
+
+date button 
+-it should not be automatically indicates the current date. this only for searching when choosing specific date in viewing data records.
+
+Add filter for status 
+-departed 
+-scheduled
+-on fix
+
+Add types of bus stops
+-regular trip
+-1 -stop 
+-2 -stop
+-3 -stop 
+-5 -stop
+-10 -stop 
+-other (indicates how many stop that bus needs for dynamic purposes)
+Note: this is also be shown in the table, in the add tenant modal and also in the report and common bus trips.
+
+-Fix the actions, the admin can update or archive/delete data and fix the "on fix" status to turn back into scheduled status if the bus is already ok.
+
+
+
+
+
+
+
+
 
 
 

@@ -216,12 +216,11 @@ const TenantViewModal = ({ viewRow, onClose }) => {
               </div>
 
               <div className="md:col-start-3 bg-emerald-50 p-2 rounded border border-emerald-100">
-                <Field label="Total Amount Due" value={`₱${calculateDueAmount(viewRow).toLocaleString()}`} />
+                <Field label="Total Amount Due" value={`₱${(viewRow.totalAmount || calculateDueAmount(viewRow)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                 {viewRow.status === "Overdue" && (
                   <>
-                    <Field label="25% Interest (rent)" value={`₱${((viewRow.rentAmount || 0) * 0.25).toFixed(2)}`} />
-                    <Field label="Balance (rent + 25%)" value={`₱${((viewRow.rentAmount || 0) * 1.25).toFixed(2)}`} />
-                    <Field label="2% Interest on Balance" value={`₱${(((viewRow.rentAmount || 0) * 1.25) * 0.02).toFixed(2)}`} />
+                    <Field label="Penalty Charge" value={`₱${(viewRow.chargeAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                    <Field label="Interest Fee" value={`₱${(viewRow.interestAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                   </>
                 )}
               </div>

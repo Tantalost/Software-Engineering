@@ -51,6 +51,8 @@ router.get('/permanent/default-price', getDefaultPermanentPrice);
 router.put('/update-permanent-prices', updateAllPermanentPrices);
 router.put('/:id/approve-renewal', approveRenewalPayment);
 router.post('/send-email', sendTenantEmail);
+router.get('/overdue-settings', getOverdueSettings);
+router.put('/update-overdue-settings', updateOverdueSettings);
 
 router.post('/', 
   upload.fields([
@@ -64,7 +66,6 @@ router.post('/',
   ]), 
   createTenant
 );
-
 
 router.patch('/:id/archive', archiveTenant);
 router.patch('/:id/restore', restoreTenant);

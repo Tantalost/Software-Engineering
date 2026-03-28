@@ -638,3 +638,75 @@ export const sendRentReminder = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Add this import at the top of tenantController.js
+import SetPriceSettings from "../models/SetPriceSettings.js";
+
+// --- NEW FUNCTIONS TO ADD AT THE BOTTOM ---
+
+// Fetch the current global penalty percentages
+export const getOverdueSettings = async (req, res) => {
+  try {
+    const chargeSetting = await SetPriceSettings.findOne({ key: "defaultChargePercentage" });
+    const interestSetting = await SetPriceSettings.findOne({ key: "defaultInterestPercentage" });
+
+    res.status(200).json({
+      chargePercentage: chargeSetting ? Number(chargeSetting.value) : 25,
+      interestPercentage: interestSetting ? Number(interestSetting.value) : 2
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const updateOverdueSettings = async (req, res) => {
+  try {
+    const { chargePercentage, interestPercentage } = req.body;
+
+
+    if (chargePercentage !== undefined) {
+      await SetPriceSettings.findOneAndUpdate(
+        { key: "defaultChargePercentage" },
+        { value: Number(chargePercentage) },
+        { upsert: true }
+      );
+    }
+
+    if (interestPercentage !== undefined) {
+      await SetPriceSettings.findOneAndUpdate(
+        { key: "defaultInterestPercentage" },
+        { value: Number(interestPercentage) },
+        { upsert: true }
+      );
+    }
+
+    const overdueTenants = await Tenant.find({ status: "Overdue", isArchived: { $ne: true } });
+    let updatedCount = 0;
+
+    const cPct = chargePercentage !== undefined ? Number(chargePercentage) : 25;
+    const iPct = interestPercentage !== undefined ? Number(interestPercentage) : 2;
+
+    for (const tenant of overdueTenants) {
+      const rent = tenant.rentAmount || 0;
+      const chargeAmt = rent * (cPct / 100);
+      const dueBalance = rent + chargeAmt;
+      const interestAmt = dueBalance * (iPct / 100);
+      const totalAmt = rent + (tenant.utilityAmount || 0) + chargeAmt + interestAmt;
+
+      tenant.chargeAmount = chargeAmt;
+      tenant.interestAmount = interestAmt;
+      tenant.totalAmount = totalAmt;
+      
+      await tenant.save();
+      updatedCount++;
+    }
+
+    res.status(200).json({
+      message: "Overdue settings updated successfully.",
+      updatedTenants: updatedCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
