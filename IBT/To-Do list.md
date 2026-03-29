@@ -26,7 +26,7 @@ Add types of bus stops
 -5 -stop
 -10 -stop 
 -other (indicates how many stop that bus needs for dynamic purposes)
-Note: this is also be shown in the table, in the add tenant modal and also in the report and common bus trips.
+Note: this is also be shown in the table, in the add bus modal and also in the report and common bus trips.
 
 -Fix the actions, the admin can update or archive/delete data and fix the "on fix" status to turn back into scheduled status if the bus is already ok.
 
