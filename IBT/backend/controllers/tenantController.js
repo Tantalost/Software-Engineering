@@ -718,9 +718,27 @@ export const updateOverdueSettings = async (req, res) => {
         { value: Number(permanentDueDate) }, 
         { upsert: true }
       );
+
+      const targetDay = Number(permanentDueDate);
+      const permanentTenants = await Tenant.find({
+        $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }],
+        isArchived: { $ne: true }
+      });
+
+      for (const t of permanentTenants) {
+        if (t.DueDateTime) {
+          const currentDue = new Date(t.DueDateTime);
+          
+          const daysInMonth = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+          
+          currentDue.setDate(Math.min(targetDay, daysInMonth));
+          t.DueDateTime = currentDue.toISOString();
+          
+          await t.save();
+        }
+      }
     }
 
-    
     const targetQuery = isNightMarket 
       ? { status: "Overdue", tenantType: "Night Market", isArchived: { $ne: true } }
       : { status: "Overdue", $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }], isArchived: { $ne: true } };
