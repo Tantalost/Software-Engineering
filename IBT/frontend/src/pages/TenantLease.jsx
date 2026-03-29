@@ -68,6 +68,9 @@ const TenantLease = () => {
     const [newChargePct, setNewChargePct] = useState("");
     const [newInterestPct, setNewInterestPct] = useState("");
 
+    const [defaultDueDate, setDefaultDueDate] = useState("5");
+    const [newDueDate, setNewDueDate] = useState("");
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [showNotify, setShowNotify] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
@@ -155,6 +158,7 @@ const TenantLease = () => {
                     setPermInterestPct(data.permanentInterest);
                     setNightChargePct(data.nightMarketCharge);
                     setNightInterestPct(data.nightMarketInterest);
+                    if (data.permanentDueDate !== undefined) setDefaultDueDate(data.permanentDueDate.toString());
                 }
             } catch (error) {
                 console.error("Error fetching overdue settings:", error);
@@ -201,7 +205,8 @@ const TenantLease = () => {
                 body: JSON.stringify({ 
                     tenantType: isNightMarket ? "Night Market" : "Permanent",
                     chargePercentage: newChargePct ? Number(newChargePct) : (isNightMarket ? nightChargePct : permChargePct), 
-                    interestPercentage: newInterestPct ? Number(newInterestPct) : (isNightMarket ? nightInterestPct : permInterestPct) 
+                    interestPercentage: newInterestPct ? Number(newInterestPct) : (isNightMarket ? nightInterestPct : permInterestPct),
+                    permanentDueDate: (!isNightMarket && newDueDate) ? Number(newDueDate) : Number(defaultDueDate)
                 }),
             });
 
@@ -216,6 +221,7 @@ const TenantLease = () => {
                 setDefaultPermanentPrice(priceValue);
                 setPermChargePct(newChargePct ? Number(newChargePct) : permChargePct);
                 setPermInterestPct(newInterestPct ? Number(newInterestPct) : permInterestPct);
+                setDefaultDueDate(newDueDate ? newDueDate : defaultDueDate);
                 localStorage.setItem("defaultPermanentPrice", priceValue.toString());
             }
 
@@ -1248,6 +1254,7 @@ const TenantLease = () => {
                                     setNewPermanentPrice(defaultPermanentPrice.toString());
                                     setNewChargePct(permChargePct.toString());
                                     setNewInterestPct(permInterestPct.toString());
+                                    setNewDueDate(defaultDueDate.toString());
                                 }
                                 setShowSetPriceModal(true);
                             }}
@@ -1518,6 +1525,7 @@ const TenantLease = () => {
                 activeTab={activeTab}
                 defaultNightPrice={defaultNightPrice}
                 defaultPermanentPrice={defaultPermanentPrice}
+                defaultDueDate={defaultDueDate}
                 initialData={transferApplicant ? {
                     name: transferApplicant.name,
                     contactNo: transferApplicant.contact,
@@ -1819,6 +1827,34 @@ const TenantLease = () => {
                                     Updating these percentages will immediately recalculate the total due for all currently overdue tenants.
                                 </p>
                             </div>
+
+                            {activeTab !== "night" && (
+                                <div className="pt-4 mt-4 border-t border-slate-100">
+                                    <h4 className="text-sm font-bold text-blue-600 mb-3">Billing Cycle Settings</h4>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 mb-1">Fixed Due Date (Day of the Month)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="31"
+                                                value={newDueDate}
+                                                onChange={(e) => {
+                                                    let val = parseInt(e.target.value);
+                                                    if (val > 31) val = 31;
+                                                    if (val < 1) val = 1;
+                                                    setNewDueDate(e.target.value === "" ? "" : val.toString());
+                                                }}
+                                                className="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg font-semibold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                                placeholder="e.g., 5"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 mt-2 leading-tight">
+                                            This establishes the precise day of the month that rent becomes due for all Permanent tenants (e.g., setting "5" ensures rent is always set due on the 5th of the following month upon renewal).
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                             </div>
                         </div>
 

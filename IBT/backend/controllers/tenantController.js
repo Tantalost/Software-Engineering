@@ -550,6 +550,12 @@ export const approveRenewalPayment = async (req, res) => {
         currentDue.setDate(currentDue.getDate() + 7);
     } else {
         currentDue.setMonth(currentDue.getMonth() + 1);
+
+        const dueDateSetting = await Settings.findOne({ key: "permanentDueDate" });
+        const targetDay = dueDateSetting ? Number(dueDateSetting.value) : 5;
+        
+        const daysInNextMonth = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+        currentDue.setDate(Math.min(targetDay, daysInNextMonth));
     }
 
     const paymentRecord = {
@@ -666,12 +672,14 @@ export const getOverdueSettings = async (req, res) => {
     const pInterest = await Settings.findOne({ key: "permanentInterestPercentage" });
     const nCharge = await Settings.findOne({ key: "nightMarketChargePercentage" });
     const nInterest = await Settings.findOne({ key: "nightMarketInterestPercentage" });
+    const pDueDate = await Settings.findOne({ key: "permanentDueDate" }); 
 
     res.status(200).json({
       permanentCharge: pCharge ? Number(pCharge.value) : 25,
       permanentInterest: pInterest ? Number(pInterest.value) : 2,
       nightMarketCharge: nCharge ? Number(nCharge.value) : 25,
-      nightMarketInterest: nInterest ? Number(nInterest.value) : 2
+      nightMarketInterest: nInterest ? Number(nInterest.value) : 2,
+      permanentDueDate: pDueDate ? Number(pDueDate.value) : 5
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -701,6 +709,14 @@ export const updateOverdueSettings = async (req, res) => {
       await Settings.findOneAndUpdate(
         { key: interestKey },
         { value: Number(interestPercentage) },
+        { upsert: true }
+      );
+    }
+
+    if (!isNightMarket && permanentDueDate !== undefined) {
+      await Settings.findOneAndUpdate(
+        { key: "permanentDueDate" }, 
+        { value: Number(permanentDueDate) }, 
         { upsert: true }
       );
     }

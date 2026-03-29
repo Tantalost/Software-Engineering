@@ -6,7 +6,7 @@ import CryptoJS from "crypto-js";
 
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
 
-const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 1120, defaultPermanentPrice = 6000 }) => {
+const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 1120, defaultPermanentPrice = 6000, defaultDueDate = 5 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
@@ -172,6 +172,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
       if (startDate) {
         const d = new Date(startDate);
         d.setMonth(d.getMonth() + 1); 
+
+        const targetDay = Number(defaultDueDate) || 5;
+        const daysInNextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        d.setDate(Math.min(targetDay, daysInNextMonth));
+
         calculatedDueDate = formatDateTimeForInput(d);
       }
     } else {
