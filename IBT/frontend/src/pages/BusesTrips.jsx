@@ -12,7 +12,7 @@ import BusTripFilters from "../components/common/BusTripFilters";
 import EditBusTrip from "../components/busTrips/EditBusTrip.jsx";
 import DailyTripsDashboard from "../components/busTrips/DailyTripsDashboard.jsx";
 import Pagination from "../components/common/Pagination";
-import CommonBusesView from "../components/busTrips/CommonBusesView.jsx";
+import PredictiveArrivalsBoard from "../components/busTrips/CommonBusesView.jsx";
 
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
@@ -35,7 +35,6 @@ import {
   Bus,
   Plus,
   Settings,
-  TrendingUp
 } from "lucide-react";
 
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -836,8 +835,6 @@ const BusTrips = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showManageCompaniesModal, setShowManageCompaniesModal] = useState(false);
-  const [showCommonModal, setShowCommonModal] = useState(false);
-
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -2027,6 +2024,150 @@ const BusTrips = () => {
     }
   };
 
+  const handlePredictedArrival = async (suggestion) => {
+    const todayKey = getDateKey(new Date());
+    const plate = suggestion.templateNo;
+    const company = suggestion.company;
+    const activeStatuses = [
+      "Scheduled",
+      "Pending",
+      "Arrived",
+      "On Fix",
+      "Not Departed",
+    ];
+
+    const existing = records.find((r) => {
+      if (getDateKey(r.date) !== todayKey) return false;
+      const p = r.templateNo || r.templateno;
+      if (p !== plate || r.company !== company) return false;
+      return activeStatuses.includes(r.status);
+    });
+
+    if (existing) {
+      if (
+        ["Arrived", "On Fix", "Not Departed", "Departed", "Paid"].includes(
+          existing.status,
+        )
+      ) {
+        setNotificationState({
+          isOpen: true,
+          type: "warning",
+          message: `Bus ${plate} is already logged today (${existing.status}).`,
+          autoClose: true,
+          duration: 4000,
+        });
+        return;
+      }
+      await handleMarkArrived({ ...existing, id: existing.id || existing._id });
+      return;
+    }
+
+    const comp = companyData.find((c) => c.name === company);
+    const busDef = comp?.buses?.find((b) => b.plateNumber === plate);
+    const stopType = busDef?.stopType || suggestion.stopType || "Regular Trip";
+    const customStopCount =
+      stopType === "Other"
+        ? Number(busDef?.customStopCount ?? suggestion.customStopCount)
+        : null;
+
+    if (stopType === "Other" && (!customStopCount || customStopCount < 1)) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message:
+          "This bus needs a valid stop type in Manage Companies before quick arrival.",
+        autoClose: true,
+        duration: 5000,
+      });
+      return;
+    }
+
+    const now = new Date();
+    const currentHours = String(now.getHours()).padStart(2, "0");
+    const currentMinutes = String(now.getMinutes()).padStart(2, "0");
+    const actualArrivalTime = `${currentHours}:${currentMinutes}`;
+    const estimationStr = "10 minutes";
+    const newExpectedDeparture = calculateExpectedDeparture(
+      actualArrivalTime,
+      estimationStr,
+    );
+
+    const tripData = {
+      templateNo: plate,
+      company,
+      route: suggestion.route,
+      busType: busDef?.busType || suggestion.busType || "Regular",
+      stopType,
+      customStopCount: stopType === "Other" ? customStopCount : null,
+      time: actualArrivalTime,
+      date: todayKey,
+      status: "Arrived",
+      price: defaultPrice,
+      parkingEstimation: estimationStr,
+      expectedDeparture: newExpectedDeparture,
+    };
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tripData),
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        await fetchBusTrips();
+        await logActivity(
+          role,
+          "CREATE_TRIP",
+          `Predictive arrival: ${payload.templateNo || plate} — ${suggestion.route}`,
+          "BusTrips",
+        );
+        setNotificationState({
+          isOpen: true,
+          type: "success",
+          message: `Recorded arrival for ${plate}.`,
+          autoClose: true,
+          duration: 3000,
+        });
+        return;
+      }
+
+      if (
+        payload.message &&
+        String(payload.message).includes("already has an active trip")
+      ) {
+        await fetchBusTrips();
+        setNotificationState({
+          isOpen: true,
+          type: "warning",
+          message:
+            "Trip was created elsewhere; refreshing. Try Arrived again if needed.",
+          autoClose: true,
+          duration: 4000,
+        });
+        return;
+      }
+
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: payload.message || "Could not record arrival.",
+        autoClose: true,
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error(error);
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Error recording arrival.",
+        autoClose: true,
+        duration: 4000,
+      });
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
@@ -2174,6 +2315,13 @@ const BusTrips = () => {
             setSelectedStatus={setSelectedStatus}
           />
 
+          <PredictiveArrivalsBoard
+            records={records}
+            companyData={companyData}
+            getDateKey={getDateKey}
+            onConfirmArrival={handlePredictedArrival}
+          />
+
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
             {isSelectionMode && selectedIds.length > 0 && role === "bus" && (
               <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
@@ -2211,13 +2359,6 @@ const BusTrips = () => {
                     className="w-full sm:w-56 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                   />
                 </div>
-                <button
-                  onClick={() => setShowCommonModal(true)}
-                  className="flex items-center cursor-pointer justify-center space-x-2 border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold px-4 py-2 rounded-lg shadow-sm hover:bg-emerald-100 transition-all"
-                >
-                  <TrendingUp size={18} />
-                  <span className="hidden sm:inline">Common Buses</span>
-                </button>
               </div>
 
               {role === "bus" && (
@@ -2854,14 +2995,6 @@ const BusTrips = () => {
         />
       )}
 
-      {showCommonModal && (
-         <CommonBusesView 
-            records={records} 
-            companyData={companyData} 
-            onClose={() => setShowCommonModal(false)}
-         />
-      )}
-      
     </Layout>
   );
 };
