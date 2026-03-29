@@ -248,7 +248,8 @@ export const loginAdmin = async (req, res) => {
 
     return res.json({ message: "OTP sent to your email.", requiresOtp: true });
   } catch (error) {
-    return res.status(500).json({ message: "Login failed." });
+    console.error("🚨 CRASH IN LOGIN ROUTE:", error); // <-- Add this line!
+    return res.status(500).json({ message: "Login failed.", error: error.message });
   }
 };
 
