@@ -217,9 +217,6 @@ const TenantLease = () => {
                 localStorage.setItem("defaultPermanentPrice", priceValue.toString());
             }
 
-            setDefaultChargePct(newChargePct ? Number(newChargePct) : defaultChargePct);
-            setDefaultInterestPct(newInterestPct ? Number(newInterestPct) : defaultInterestPct);
-
             await fetchTenants();
 
             await logActivity(
