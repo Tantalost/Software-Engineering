@@ -36,7 +36,10 @@ const TenantSchema = new mongoose.Schema({
   
   StartDateTime: Date,
   DueDateTime: Date,
-  operationStartDate: Date,
+  operationStartDate: Date, 
+  isOperationPaused: { type: Boolean, default: false }, 
+  lastPausedDate: Date,                               
+  totalPausedDays: { type: Number, default: 0 },
   status: { type: String, default: "Paid" }, 
 
   paymentHistory: [{

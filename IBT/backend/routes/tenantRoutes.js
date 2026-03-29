@@ -18,7 +18,8 @@ import {
   approveRenewalPayment,
   getOverdueSettings,      
   updateOverdueSettings,
-  startOperation
+  startOperation,
+  toggleOperationStatus
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -71,6 +72,7 @@ router.post('/',
 );
 
 router.patch('/:id/start-operation', startOperation);
+router.patch('/:id/toggle-operation', toggleOperationStatus);
 router.patch('/:id/archive', archiveTenant);
 router.patch('/:id/restore', restoreTenant);
 

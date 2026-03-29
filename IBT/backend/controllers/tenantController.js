@@ -753,3 +753,30 @@ export const startOperation = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const toggleOperationStatus = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    if (tenant.isOperationPaused) {
+        
+        const now = new Date();
+        const pauseDurationMs = now - new Date(tenant.lastPausedDate);
+        const pauseDurationDays = pauseDurationMs / (1000 * 60 * 60 * 24);
+
+        tenant.totalPausedDays += pauseDurationDays;
+        tenant.isOperationPaused = false;
+        tenant.lastPausedDate = null;
+    } else {
+      
+        tenant.isOperationPaused = true;
+        tenant.lastPausedDate = new Date();
+    }
+
+    await tenant.save();
+    res.status(200).json({ message: "Operation status toggled", tenant });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
