@@ -12,7 +12,7 @@ import BusTripFilters from "../components/common/BusTripFilters";
 import EditBusTrip from "../components/busTrips/EditBusTrip.jsx";
 import DailyTripsDashboard from "../components/busTrips/DailyTripsDashboard.jsx";
 import Pagination from "../components/common/Pagination";
-import PredictiveArrivalsBoard from "../components/busTrips/CommonBusesView.jsx";
+import PredefinedArrivalsBoard from "../components/busTrips/CommonBusesView.jsx";
 
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
@@ -88,6 +88,29 @@ const normalizeShiftValue = (rawShift) => {
   return `${start}-${end}`;
 };
 
+const parseScheduleParts = (str) => {
+  if (!str || typeof str !== "string") {
+    return { hour: 8, minute: "00", period: "AM" };
+  }
+  const m = str.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) {
+    return { hour: 8, minute: "00", period: "AM" };
+  }
+  let h = parseInt(m[1], 10);
+  const min = m[2].padStart(2, "0");
+  const p = m[3].toUpperCase() === "PM" ? "PM" : "AM";
+  if (Number.isNaN(h) || h < 1 || h > 12) h = 8;
+  return { hour: h, minute: min, period: p };
+};
+
+const buildScheduleTime = (hour, minute, period) => {
+  const raw = String(minute ?? "0").replace(/\D/g, "");
+  const bounded = Math.min(59, Math.max(0, parseInt(raw, 10) || 0));
+  const mm = String(bounded).padStart(2, "0");
+  const h = Math.min(12, Math.max(1, Number(hour) || 8));
+  return `${h}:${mm} ${period}`;
+};
+
 const ManageCompaniesModal = ({
   isOpen,
   onClose,
@@ -103,8 +126,10 @@ const ManageCompaniesModal = ({
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusFrom, setNewBusFrom] = useState("");
   const [newBusTo, setNewBusTo] = useState("");
-  const [newBusStopType, setNewBusStopType] = useState("Regular Trip");
-  const [newBusCustomStopCount, setNewBusCustomStopCount] = useState("");
+  const [newBusSeatingCapacity, setNewBusSeatingCapacity] = useState("");
+  const [scheduleHour, setScheduleHour] = useState(8);
+  const [scheduleMinute, setScheduleMinute] = useState("00");
+  const [schedulePeriod, setSchedulePeriod] = useState("AM");
   const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -127,8 +152,10 @@ const ManageCompaniesModal = ({
     setNewBusFrom("");
     setNewBusTo("");
     setNewBusType("Regular");
-    setNewBusStopType("Regular Trip");
-    setNewBusCustomStopCount("");
+    setNewBusSeatingCapacity("");
+    setScheduleHour(8);
+    setScheduleMinute("00");
+    setSchedulePeriod("AM");
     setEditBusTarget(null);
   };
 
@@ -293,32 +320,38 @@ const ManageCompaniesModal = ({
     )
       return;
 
-    if (newBusStopType === "Other" && (!newBusCustomStopCount || Number(newBusCustomStopCount) < 1)) {
+    const cap = Number(newBusSeatingCapacity);
+    if (!newBusSeatingCapacity.trim() || Number.isNaN(cap) || cap < 1) {
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Please enter a valid custom stop count.",
+        message: "Please enter a valid seating capacity (at least 1).",
         autoClose: true,
         duration: 3000,
       });
       return;
     }
 
-    const routeString = `${newBusFrom} - ${newBusTo}`;
+    const routeString = `${newBusFrom.trim()} - ${newBusTo.trim()}`;
+    const scheduleStr = buildScheduleTime(
+      scheduleHour,
+      scheduleMinute,
+      schedulePeriod,
+    );
 
     let updatedBuses;
     if (editBusTarget) {
       updatedBuses = activeCompany.buses.map((b) =>
         b.plateNumber === editBusTarget.plateNumber
           ? {
-              plateNumber: newBusPlate,
+              plateNumber: newBusPlate.trim(),
               route: routeString,
               busType: newBusType,
-              stopType: newBusStopType,
+              seatingCapacity: cap,
+              scheduleTime: scheduleStr,
+              stopType: b.stopType || "Regular Trip",
               customStopCount:
-                newBusStopType === "Other"
-                  ? Number(newBusCustomStopCount)
-                  : null,
+                b.stopType === "Other" ? b.customStopCount : null,
             }
           : b,
       );
@@ -326,12 +359,13 @@ const ManageCompaniesModal = ({
       updatedBuses = [
         ...activeCompany.buses,
         {
-          plateNumber: newBusPlate,
+          plateNumber: newBusPlate.trim(),
           route: routeString,
           busType: newBusType,
-          stopType: newBusStopType,
-          customStopCount:
-            newBusStopType === "Other" ? Number(newBusCustomStopCount) : null,
+          seatingCapacity: cap,
+          scheduleTime: scheduleStr,
+          stopType: "Regular Trip",
+          customStopCount: null,
         },
       ];
     }
@@ -476,13 +510,25 @@ const ManageCompaniesModal = ({
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
-                      Type
+                      Bus Number
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ABC-1234"
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusPlate}
+                      onChange={(e) => setNewBusPlate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      Bus Type
                     </label>
                     <select
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
                       value={newBusType}
                       onChange={(e) => setNewBusType(e.target.value)}
                     >
@@ -490,95 +536,104 @@ const ManageCompaniesModal = ({
                       <option value="Aircon">Aircon</option>
                     </select>
                   </div>
-
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
-                      Stop Type
-                    </label>
-                    <select
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
-                      value={newBusStopType}
-                      onChange={(e) => {
-                        setNewBusStopType(e.target.value);
-                        if (e.target.value !== "Other") {
-                          setNewBusCustomStopCount("");
-                        }
-                      }}
-                    >
-                      <option value="Regular Trip">Regular Trip</option>
-                      <option value="1-stop">1-stop</option>
-                      <option value="2-stop">2-stop</option>
-                      <option value="3-stop">3-stop</option>
-                      <option value="5-stop">5-stop</option>
-                      <option value="10-stop">10-stop</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
-                      Bus Number
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="ex. Bus-1"
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
-                      value={newBusPlate}
-                      onChange={(e) => setNewBusPlate(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {newBusStopType === "Other" && (
-                  <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
-                      Custom Stops
+                      Seating Capacity
                     </label>
                     <input
                       type="number"
                       min="1"
                       step="1"
-                      placeholder="ex. 4"
+                      placeholder="e.g. 49"
                       className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
-                      value={newBusCustomStopCount}
+                      value={newBusSeatingCapacity}
                       onChange={(e) =>
-                        setNewBusCustomStopCount(
+                        setNewBusSeatingCapacity(
                           e.target.value.replace(/[^0-9]/g, ""),
                         )
                       }
                     />
                   </div>
-                )}
+                </div>
 
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-5">
+                <div>
+                  <label className="text-xs font-semibold text-slate-500 uppercase">
+                    Schedule Time (AM/PM)
+                  </label>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <select
+                      className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[4.5rem]"
+                      value={scheduleHour}
+                      onChange={(e) =>
+                        setScheduleHour(Number(e.target.value))
+                      }
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-slate-400 font-medium">:</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={2}
+                      placeholder="00"
+                      className="w-14 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 text-center"
+                      value={scheduleMinute}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                        setScheduleMinute(v);
+                      }}
+                      onBlur={() => {
+                        const n = parseInt(scheduleMinute, 10);
+                        if (Number.isNaN(n) || n < 0) setScheduleMinute("00");
+                        else if (n > 59) setScheduleMinute("59");
+                        else setScheduleMinute(String(n).padStart(2, "0"));
+                      }}
+                    />
+                    <select
+                      className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[5.5rem]"
+                      value={schedulePeriod}
+                      onChange={(e) => setSchedulePeriod(e.target.value)}
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                  <div className="sm:col-span-5">
                     <label className="text-xs font-semibold text-slate-500 uppercase">
-                      From
+                      Route — From
                     </label>
                     <input
                       type="text"
-                      placeholder="ex. Zamboanga"
+                      placeholder="e.g. Zamboanga"
                       className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusFrom}
                       onChange={(e) => setNewBusFrom(e.target.value)}
                     />
                   </div>
 
-                  <div className="col-span-5">
+                  <div className="sm:col-span-5">
                     <label className="text-xs font-semibold text-slate-500 uppercase">
-                      To
+                      Route — To
                     </label>
                     <input
                       type="text"
-                      placeholder="ex. Pagadian"
+                      placeholder="e.g. Manila"
                       className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusTo}
                       onChange={(e) => setNewBusTo(e.target.value)}
                     />
                   </div>
 
-                  <div className="col-span-2 flex gap-1">
+                  <div className="sm:col-span-2 flex gap-1">
                     <button
+                      type="button"
                       onClick={handleSaveBus}
                       className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                     >
@@ -586,6 +641,7 @@ const ManageCompaniesModal = ({
                     </button>
                     {editBusTarget && (
                       <button
+                        type="button"
                         onClick={resetForms}
                         className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
                         title="Cancel Edit"
@@ -617,9 +673,10 @@ const ManageCompaniesModal = ({
                   <table className="w-full text-sm text-left">
                     <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
                       <tr>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Stops</th>
                         <th className="px-4 py-3">Bus No.</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Capacity</th>
+                        <th className="px-4 py-3">Schedule</th>
                         <th className="px-4 py-3">Route</th>
                         <th className="px-4 py-3 text-right">Action</th>
                       </tr>
@@ -636,6 +693,9 @@ const ManageCompaniesModal = ({
                             key={`${bus.plateNumber}-${idx}`}
                             className="hover:bg-slate-50 group"
                           >
+                            <td className="px-4 py-3 font-medium text-slate-900">
+                              {bus.plateNumber}
+                            </td>
                             <td className="px-4 py-3">
                               <span
                                 className={`px-2 py-1 text-xs rounded-full ${bus.busType === "Aircon" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}
@@ -643,11 +703,15 @@ const ManageCompaniesModal = ({
                                 {bus.busType || "Regular"}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-slate-600">
-                              {formatStopType(bus.stopType, bus.customStopCount)}
+                            <td className="px-4 py-3 text-slate-600 tabular-nums">
+                              {bus.seatingCapacity != null
+                                ? bus.seatingCapacity
+                                : "—"}
                             </td>
-                            <td className="px-4 py-3 font-medium text-slate-900">
-                              {bus.plateNumber}
+                            <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                              {bus.scheduleTime?.trim()
+                                ? bus.scheduleTime
+                                : "—"}
                             </td>
                             <td className="px-4 py-3 text-slate-600">
                               {bus.route}
@@ -658,7 +722,7 @@ const ManageCompaniesModal = ({
                                   setEditBusTarget(bus);
                                   setNewBusPlate(bus.plateNumber);
                                   const [fromRoute, toRoute] =
-                                    bus.route.split(" - "); // Split it back into two inputs when editing
+                                    bus.route.split(" - ");
                                   setNewBusFrom(
                                     fromRoute
                                       ? fromRoute.trim()
@@ -666,14 +730,17 @@ const ManageCompaniesModal = ({
                                   );
                                   setNewBusTo(toRoute ? toRoute.trim() : "");
                                   setNewBusType(bus.busType || "Regular");
-                                  setNewBusStopType(
-                                    bus.stopType || "Regular Trip",
-                                  );
-                                  setNewBusCustomStopCount(
-                                    bus.customStopCount
-                                      ? String(bus.customStopCount)
+                                  setNewBusSeatingCapacity(
+                                    bus.seatingCapacity != null
+                                      ? String(bus.seatingCapacity)
                                       : "",
                                   );
+                                  const parts = parseScheduleParts(
+                                    bus.scheduleTime,
+                                  );
+                                  setScheduleHour(parts.hour);
+                                  setScheduleMinute(parts.minute);
+                                  setSchedulePeriod(parts.period);
                                 }}
                                 className="text-slate-400 hover:text-blue-500 p-1 mr-1 rounded-md"
                               >
@@ -2024,7 +2091,7 @@ const BusTrips = () => {
     }
   };
 
-  const handlePredictedArrival = async (suggestion) => {
+  const handlePredefinedArrival = async (suggestion) => {
     const todayKey = getDateKey(new Date());
     const plate = suggestion.templateNo;
     const company = suggestion.company;
@@ -2120,7 +2187,7 @@ const BusTrips = () => {
         await logActivity(
           role,
           "CREATE_TRIP",
-          `Predictive arrival: ${payload.templateNo || plate} — ${suggestion.route}`,
+          `Predefined schedule arrival: ${payload.templateNo || plate} — ${suggestion.route}`,
           "BusTrips",
         );
         setNotificationState({
@@ -2315,11 +2382,20 @@ const BusTrips = () => {
             setSelectedStatus={setSelectedStatus}
           />
 
-          <PredictiveArrivalsBoard
+          <PredefinedArrivalsBoard
             records={records}
             companyData={companyData}
             getDateKey={getDateKey}
-            onConfirmArrival={handlePredictedArrival}
+            onConfirmArrival={handlePredefinedArrival}
+            onNotify={(type, message) =>
+              setNotificationState({
+                isOpen: true,
+                type,
+                message,
+                autoClose: true,
+                duration: 4500,
+              })
+            }
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">

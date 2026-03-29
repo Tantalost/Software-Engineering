@@ -1,193 +1,117 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Bus, Clock, Sparkles, Info } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Bus, Clock, Info, ListOrdered, X } from "lucide-react";
 
-const formatStopType = (stopType, customStopCount) => {
-  if (stopType === "Other") {
-    if (customStopCount && Number(customStopCount) > 0) {
-      return `${customStopCount}-stop`;
-    }
-    return "Other";
-  }
-  return stopType || "Regular Trip";
-};
-
-/** Parse stored trip time to hour 0–23 (supports 24h and AM/PM). */
-function parseTimeToHour(timeStr) {
-  if (!timeStr) return null;
-  const s = String(timeStr).trim();
-  const m = s.match(/(\d{1,2})\s*:\s*(\d{2})/);
+function parseScheduleToMinutesMidnight(str) {
+  if (!str || typeof str !== "string") return null;
+  const m = str.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (!m) return null;
   let h = parseInt(m[1], 10);
-  if (Number.isNaN(h)) return null;
-  const hasAm = /\bam\b/i.test(s);
-  const hasPm = /\bpm\b/i.test(s);
-  if (hasPm) {
-    if (h !== 12) h += 12;
-  } else if (hasAm) {
-    if (h === 12) h = 0;
-  }
-  return ((h % 24) + 24) % 24;
+  const min = parseInt(m[2], 10);
+  const ap = m[3].toUpperCase();
+  if (ap === "PM" && h !== 12) h += 12;
+  if (ap === "AM" && h === 12) h = 0;
+  if (Number.isNaN(h) || h < 0 || h > 23) return null;
+  const mm = Number.isNaN(min) ? 0 : Math.min(59, Math.max(0, min));
+  return h * 60 + mm;
 }
 
-function formatHourRangeLabel(hour) {
-  const start = new Date();
-  start.setHours(hour, 0, 0, 0);
-  const end = new Date();
-  end.setHours(hour + 1, 0, 0, 0);
-  const opts = { hour: "numeric", minute: "2-digit" };
-  return `${start.toLocaleTimeString("en-US", opts)} – ${end.toLocaleTimeString("en-US", opts)}`;
+function minutesToHourBucket(minutesFromMidnight) {
+  if (minutesFromMidnight == null) return 0;
+  return Math.floor(minutesFromMidnight / 60) % 24;
 }
 
-const COMPLETED = ["Departed", "Paid", "Arrived"];
-
-function avgTimeForRecords(list) {
-  if (!list.length) return "—";
-  let totalMin = 0;
-  let n = 0;
-  for (const r of list) {
-    const h = parseTimeToHour(r.time);
-    if (h === null) continue;
-    const m = String(r.time).match(/:\s*(\d{2})/);
-    const mins = m ? parseInt(m[1], 10) : 0;
-    totalMin += h * 60 + mins;
-    n += 1;
-  }
-  if (!n) return "—";
-  const avg = Math.round(totalMin / n);
-  const hh = Math.floor(avg / 60) % 24;
-  const mm = avg % 60;
-  const d = new Date();
-  d.setHours(hh, mm, 0, 0);
-  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+function formatHourSlotLabel(hour24) {
+  const a = new Date();
+  a.setHours(hour24, 0, 0, 0);
+  const b = new Date(a.getTime() + 60 * 60 * 1000);
+  const o = { hour: "numeric", minute: "2-digit" };
+  return `${a.toLocaleTimeString("en-US", o)} – ${b.toLocaleTimeString("en-US", o)}`;
 }
 
-/**
- * Top 3 buses for route + hour from historical completed trips.
- * Fills from adjacent hours, then route-wide frequency, if needed.
- */
-function computePredictedBuses(records, route, hour, daysBack = 90) {
-  if (!route || hour === null || hour === undefined) return [];
+function makeRowKey(company, route, scheduleTime, plateNumber) {
+  return `${company}|||${route}|||${scheduleTime}|||${plateNumber}`;
+}
 
-  const cutoff = new Date();
-  cutoff.setHours(0, 0, 0, 0);
-  cutoff.setDate(cutoff.getDate() - daysBack);
-
-  const pool = records.filter((r) => {
-    if (r.isArchived) return false;
-    if (!COMPLETED.includes(r.status)) return false;
-    if ((r.route || "").trim() !== route.trim()) return false;
-    const d = new Date(r.date);
-    if (Number.isNaN(d.getTime()) || d < cutoff) return false;
-    return true;
-  });
-
-  const plateCompany = (r) => {
-    const plate = r.templateNo || r.templateno;
-    return plate ? `${plate}|||${r.company || ""}` : null;
-  };
-
-  const bump = (map, key, rec, weight) => {
-    if (!key) return;
-    if (!map.has(key)) {
-      map.set(key, {
-        key,
-        templateNo: rec.templateNo || rec.templateno,
-        company: rec.company,
-        route: rec.route,
-        busType: rec.busType,
-        stopType: rec.stopType,
-        customStopCount: rec.customStopCount,
-        score: 0,
-        samples: [],
-      });
-    }
-    const entry = map.get(key);
-    entry.score += weight;
-    entry.samples.push(rec);
-    // Prefer latest metadata
-    entry.busType = rec.busType || entry.busType;
-    entry.stopType = rec.stopType || entry.stopType;
-    entry.customStopCount =
-      rec.customStopCount != null ? rec.customStopCount : entry.customStopCount;
-  };
-
-  const scored = new Map();
-
-  for (const r of pool) {
-    const th = parseTimeToHour(r.time);
-    if (th === null) continue;
-    const key = plateCompany(r);
-    let w = 0;
-    if (th === hour) w = 4;
-    else if (Math.abs(th - hour) === 1) w = 1.5;
-    else if (Math.abs(th - hour) === 2) w = 0.4;
-    else w = 0.12;
-    bump(scored, key, r, w);
+function loadRemarksMap(dateKey) {
+  try {
+    const raw = sessionStorage.getItem(`ibt_predefined_not_arrived_${dateKey}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
   }
+}
 
-  const used = new Set();
-  const out = [];
-
-  const takeSorted = (sourceMap) =>
-    [...sourceMap.values()].sort((a, b) => b.score - a.score);
-
-  for (const row of takeSorted(scored)) {
-    if (out.length >= 3) break;
-    const id = row.key;
-    if (used.has(id)) continue;
-    used.add(id);
-    const hourSamples = row.samples.filter(
-      (s) => parseTimeToHour(s.time) === hour,
-    );
-    const basis = hourSamples.length ? hourSamples : row.samples;
-    out.push({
-      ...row,
-      typicalTime: avgTimeForRecords(basis.slice(0, 20)),
-      tripSamples: basis.length,
-    });
-  }
-
-  return out;
+function saveRemarksMap(dateKey, map) {
+  sessionStorage.setItem(
+    `ibt_predefined_not_arrived_${dateKey}`,
+    JSON.stringify(map),
+  );
 }
 
 /**
- * Inline predictive arrivals board: hourly windows, route, top 3 suggestions, one-click Arrived.
+ * All company buses with schedule + route, sorted so the next clock hour
+ * (current + 1) is listed first — prep window one hour ahead.
  */
-const PredictiveArrivalsBoard = ({
+const PredefinedArrivalsBoard = ({
   records,
   companyData,
   getDateKey,
   onConfirmArrival,
+  onNotify,
 }) => {
-  const [selectedRoute, setSelectedRoute] = useState("");
-  const [selectedHour, setSelectedHour] = useState(() => new Date().getHours());
+  const [now, setNow] = useState(() => new Date());
+  const [arriveRow, setArriveRow] = useState(null);
+  const [arrivePlateInput, setArrivePlateInput] = useState("");
+  const [notArriveRow, setNotArriveRow] = useState(null);
+  const [notArriveRemark, setNotArriveRemark] = useState("");
   const [confirmingKey, setConfirmingKey] = useState(null);
-
-  const routeOptions = useMemo(() => {
-    const set = new Set();
-    companyData.forEach((c) => {
-      c.buses?.forEach((b) => {
-        if (b.route?.trim()) set.add(b.route.trim());
-      });
-    });
-    records.forEach((r) => {
-      if (r.route?.trim()) set.add(String(r.route).trim());
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [companyData, records]);
-
-  useEffect(() => {
-    if (!selectedRoute && routeOptions.length) {
-      setSelectedRoute(routeOptions[0]);
-    }
-  }, [routeOptions, selectedRoute]);
-
-  const predictions = useMemo(
-    () => computePredictedBuses(records, selectedRoute, selectedHour),
-    [records, selectedRoute, selectedHour],
-  );
+  const [remarksMap, setRemarksMap] = useState({});
 
   const todayKey = getDateKey(new Date());
+
+  useEffect(() => {
+    setRemarksMap(loadRemarksMap(todayKey));
+  }, [todayKey]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const focusBucket = (now.getHours() + 1) % 24;
+
+  const scheduleRows = useMemo(() => {
+    const out = [];
+    companyData.forEach((c) => {
+      c.buses?.forEach((b) => {
+        if (!b?.route?.trim() || !b?.scheduleTime?.trim()) return;
+        const msm = parseScheduleToMinutesMidnight(b.scheduleTime);
+        if (msm === null) return;
+        const hourBucket = minutesToHourBucket(msm);
+        out.push({
+          rowKey: makeRowKey(c.name, b.route, b.scheduleTime, b.plateNumber),
+          company: c.name,
+          route: b.route.trim(),
+          scheduleTime: b.scheduleTime.trim(),
+          plateNumber: b.plateNumber,
+          busType: b.busType || "Regular",
+          stopType: b.stopType || "Regular Trip",
+          customStopCount: b.customStopCount,
+          minutesFromMidnight: msm,
+          hourBucket,
+        });
+      });
+    });
+
+    const dist = (h) => (h - focusBucket + 24) % 24;
+    out.sort((a, b) => {
+      const da = dist(a.hourBucket);
+      const db = dist(b.hourBucket);
+      if (da !== db) return da - db;
+      return a.minutesFromMidnight - b.minutesFromMidnight;
+    });
+    return out;
+  }, [companyData, focusBucket]);
 
   const todayStatusByPlate = useMemo(() => {
     const m = new Map();
@@ -209,172 +133,218 @@ const PredictiveArrivalsBoard = ({
     return m;
   }, [records, todayKey, getDateKey]);
 
-  const hourOptions = useMemo(() => {
-    return Array.from({ length: 24 }, (_, h) => ({
-      value: h,
-      label: formatHourRangeLabel(h),
-    }));
-  }, []);
+  const setRemark = useCallback(
+    (rowKey, text) => {
+      setRemarksMap((prev) => {
+        const next = { ...prev };
+        if (text.trim()) next[rowKey] = text.trim();
+        else delete next[rowKey];
+        saveRemarksMap(todayKey, next);
+        return next;
+      });
+    },
+    [todayKey],
+  );
 
-  const handleArrived = async (row) => {
-    const key = row.key;
-    if (confirmingKey) return;
-    setConfirmingKey(key);
+  const openArrive = (row) => {
+    setArriveRow(row);
+    setArrivePlateInput(row.plateNumber || "");
+  };
+
+  const arrivalBusy =
+    arriveRow && confirmingKey && confirmingKey === arriveRow.rowKey;
+
+  const submitArrive = async () => {
+    if (!arriveRow) return;
+    const plate = arrivePlateInput.trim();
+    if (!plate) return;
+
+    const companyBuses = companyData.find(
+      (c) => c.name === arriveRow.company,
+    )?.buses;
+    const validPlate = companyBuses?.some((b) => b.plateNumber === plate);
+    if (!validPlate) {
+      onNotify?.(
+        "error",
+        `Bus number "${plate}" is not registered under ${arriveRow.company}.`,
+      );
+      return;
+    }
+
+    const busMeta = companyBuses.find((b) => b.plateNumber === plate);
+    setConfirmingKey(arriveRow.rowKey);
     try {
       await onConfirmArrival({
-        templateNo: row.templateNo,
-        company: row.company,
-        route: row.route,
-        busType: row.busType,
-        stopType: row.stopType,
-        customStopCount: row.customStopCount,
+        templateNo: plate,
+        company: arriveRow.company,
+        route: busMeta?.route?.trim() || arriveRow.route,
+        busType: busMeta?.busType || arriveRow.busType,
+        stopType: busMeta?.stopType || arriveRow.stopType,
+        customStopCount: busMeta?.customStopCount ?? arriveRow.customStopCount,
       });
+      setArriveRow(null);
+      setArrivePlateInput("");
     } finally {
       setConfirmingKey(null);
     }
   };
 
+  const submitNotArrive = () => {
+    if (!notArriveRow) return;
+    setRemark(notArriveRow.rowKey, notArriveRemark);
+    setNotArriveRow(null);
+    setNotArriveRemark("");
+  };
+
+  const openNotArrive = (row) => {
+    setNotArriveRow(row);
+    setNotArriveRemark(remarksMap[row.rowKey] || "");
+  };
+
   return (
-    <div className="w-full rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 via-white to-slate-50/90 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-emerald-100/80 flex flex-wrap items-center gap-3 justify-between bg-white/60">
+    <div className="w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/90 via-white to-emerald-50/30 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-start gap-3 justify-between bg-white/80">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
-            <Sparkles size={20} />
+          <div className="p-2 rounded-xl bg-slate-800 text-white shrink-0">
+            <ListOrdered size={20} />
           </div>
           <div className="min-w-0">
             <h3 className="font-bold text-slate-800 text-sm sm:text-base leading-tight">
-              Predictive arrivals
+              Predefined schedule (all routes)
             </h3>
-            <p className="text-xs text-slate-500 hidden sm:block">
-              Hourly window + route → top 3 likely buses from past trips. Tap
-              Arrived when the bus shows up; skip the rest by doing nothing.
+            <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Clock size={12} className="inline shrink-0 text-emerald-600" />
+              <span>
+                Now{" "}
+                <strong className="text-slate-700">
+                  {now.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </strong>
+                — next hour{" "}
+                <strong className="text-emerald-700">
+                  {formatHourSlotLabel(focusBucket)}
+                </strong>{" "}
+                is pinned to the top (1 hr prep). Earlier slots follow in order
+                through end of day.
+              </span>
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <Clock size={14} className="text-emerald-600 shrink-0" />
-            <select
-              value={selectedHour}
-              onChange={(e) => setSelectedHour(Number(e.target.value))}
-              className="text-sm font-medium border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-800 max-w-[220px]"
-            >
-              {hourOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <select
-            value={selectedRoute}
-            onChange={(e) => setSelectedRoute(e.target.value)}
-            className="flex-1 min-w-[160px] text-sm font-medium border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-800"
-          >
-            {routeOptions.length === 0 ? (
-              <option value="">Add company routes first</option>
-            ) : (
-              routeOptions.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
       </div>
 
-      <div className="px-3 py-2 bg-slate-50/80 border-b border-slate-100 flex items-start gap-2">
-        <Info size={14} className="text-slate-400 mt-0.5 shrink-0" />
-        <p className="text-[11px] sm:text-xs text-slate-500 leading-snug">
-          Suggestions use completed trips from the last 90 days for this route
-          and time window. Delayed or missing buses need no action—only confirm
-          what actually arrives.
+      <div className="px-3 py-2 bg-amber-50/80 border-b border-amber-100 flex items-start gap-2">
+        <Info size={14} className="text-amber-600 mt-0.5 shrink-0" />
+        <p className="text-[11px] sm:text-xs text-amber-900/90 leading-snug">
+          <strong>Arrive</strong> asks for the bus number (defaults to the
+          fleet plate), then logs it on the Terminal Dispatch Board.
+          <strong className="ml-1">Not Arrive</strong> records a remark (e.g.
+          Maintenance) for this shift; it does not create a trip.
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[min(70vh,520px)] overflow-y-auto">
         <table className="w-full text-left text-sm">
-          <thead className="text-[10px] sm:text-xs uppercase tracking-wide text-slate-500 bg-slate-100/90 border-b border-slate-200">
+          <thead className="text-[10px] sm:text-xs uppercase tracking-wide text-slate-500 bg-slate-100/90 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th className="px-3 py-2.5 font-semibold">Bus No.</th>
+              <th className="px-3 py-2.5 font-semibold whitespace-nowrap">
+                Scheduled time
+              </th>
+              <th className="px-3 py-2.5 font-semibold min-w-[140px]">Route</th>
               <th className="px-3 py-2.5 font-semibold">Company</th>
-              <th className="px-3 py-2.5 font-semibold hidden sm:table-cell">
-                Type / Stop
-              </th>
-              <th className="px-3 py-2.5 font-semibold hidden md:table-cell">
-                Usual time
-              </th>
-              <th className="px-3 py-2.5 font-semibold text-right">Confirm</th>
+              <th className="px-3 py-2.5 font-semibold text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {predictions.length === 0 ? (
+            {scheduleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-slate-500 text-sm"
+                  colSpan={4}
+                  className="px-4 py-10 text-center text-slate-500 text-sm"
                 >
-                  No history for this route and hour yet. Once trips complete in
-                  this window, predictions appear here.
+                  No predefined buses yet. Add buses with{" "}
+                  <strong>Schedule time</strong> and <strong>route</strong> in{" "}
+                  <strong>Manage Companies</strong>.
                 </td>
               </tr>
             ) : (
-              predictions.map((row) => {
-                const st = todayStatusByPlate.get(row.key);
-                const arrivedToday =
+              scheduleRows.map((row) => {
+                const isPrepHour = row.hourBucket === focusBucket;
+                const plateKey = `${row.plateNumber}|||${row.company}`;
+                const st = todayStatusByPlate.get(plateKey);
+                const loggedToday =
                   st === "Arrived" ||
                   st === "On Fix" ||
                   st === "Not Departed" ||
                   st === "Departed" ||
                   st === "Paid";
-                const busy = confirmingKey === row.key;
+                const remark = remarksMap[row.rowKey];
+                const busy = confirmingKey === row.rowKey;
+
                 return (
-                  <tr key={row.key} className="hover:bg-emerald-50/40">
-                    <td className="px-3 py-3">
-                      <div className="font-bold text-slate-900 flex items-center gap-2">
+                  <tr
+                    key={row.rowKey}
+                    className={`transition-colors ${
+                      isPrepHour
+                        ? "bg-emerald-50/90 ring-1 ring-inset ring-emerald-200"
+                        : "hover:bg-slate-50/80"
+                    }`}
+                  >
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="font-semibold text-slate-900 flex items-center gap-2">
                         <span
                           className={`inline-flex p-1 rounded-md ${row.busType === "Aircon" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"}`}
                         >
                           <Bus size={14} />
                         </span>
-                        {row.templateNo}
+                        {row.scheduleTime}
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-1 sm:hidden">
-                        {formatStopType(row.stopType, row.customStopCount)} ·{" "}
-                        {row.typicalTime}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-slate-700 font-medium">
-                      {row.company}
-                    </td>
-                    <td className="px-3 py-3 text-slate-600 hidden sm:table-cell">
-                      <div>{row.busType || "Regular"}</div>
-                      <div className="text-xs text-slate-500">
-                        {formatStopType(row.stopType, row.customStopCount)}
+                      <div className="text-[10px] text-slate-500 mt-1 font-medium">
+                        Window: {formatHourSlotLabel(row.hourBucket)}
+                        {isPrepHour && (
+                          <span className="ml-1.5 text-emerald-700 font-semibold">
+                            · Next hour prep
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-slate-600 hidden md:table-cell">
-                      {row.typicalTime}
-                      <span className="text-slate-400 text-xs ml-1">
-                        ({row.tripSamples} trips)
-                      </span>
+                    <td className="px-3 py-3 text-slate-800 font-medium">
+                      {row.route}
                     </td>
-                    <td className="px-3 py-3 text-right">
-                      {arrivedToday ? (
-                        <span className="inline-flex text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">
-                          Logged today
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => handleArrived(row)}
-                          className="inline-flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-semibold px-3 py-2 min-w-[88px] transition-colors"
-                        >
-                          {busy ? "…" : "Arrived"}
-                        </button>
-                      )}
+                    <td className="px-3 py-3 text-slate-700">{row.company}</td>
+                    <td className="px-3 py-3 text-right align-top">
+                      <div className="flex flex-col sm:flex-row gap-2 justify-end items-stretch sm:items-center">
+                        {remark && (
+                          <span className="text-[10px] text-left sm:text-right text-amber-800 bg-amber-100 px-2 py-1 rounded-md max-w-[200px] sm:max-w-none">
+                            <span className="font-semibold">Remark:</span>{" "}
+                            {remark}
+                          </span>
+                        )}
+                        {loggedToday ? (
+                          <span className="inline-flex text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1.5 rounded-lg justify-center">
+                            On board today
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => openArrive(row)}
+                              className="inline-flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-semibold px-3 py-2 transition-colors"
+                            >
+                              {busy ? "…" : "Arrive"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openNotArrive(row)}
+                              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 transition-colors"
+                            >
+                              Not Arrive
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -383,8 +353,122 @@ const PredictiveArrivalsBoard = ({
           </tbody>
         </table>
       </div>
+
+      {arriveRow && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arrive-dialog-title"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <h4
+                id="arrive-dialog-title"
+                className="text-lg font-bold text-slate-800"
+              >
+                Confirm bus number
+              </h4>
+              <button
+                type="button"
+                onClick={() => setArriveRow(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 mb-3">
+              <strong>{arriveRow.company}</strong> · {arriveRow.route}
+              <br />
+              <span className="text-slate-500">
+                Scheduled {arriveRow.scheduleTime}
+              </span>
+            </p>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Bus number
+            </label>
+            <input
+              type="text"
+              autoFocus
+              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-mono font-semibold mb-4 focus:ring-2 focus:ring-emerald-500 outline-none"
+              value={arrivePlateInput}
+              onChange={(e) => setArrivePlateInput(e.target.value)}
+              placeholder="Plate / bus no."
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setArriveRow(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!arrivePlateInput.trim() || arrivalBusy}
+                onClick={submitArrive}
+                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50"
+              >
+                Log arrival
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notArriveRow && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <h4 className="text-lg font-bold text-slate-800">Not arriving</h4>
+              <button
+                type="button"
+                onClick={() => setNotArriveRow(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 mb-3">
+              {notArriveRow.company} · {notArriveRow.route} ·{" "}
+              {notArriveRow.scheduleTime}
+            </p>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Remarks
+            </label>
+            <textarea
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-h-[100px] mb-4 focus:ring-2 focus:ring-slate-400 outline-none resize-y"
+              placeholder="e.g. Maintenance, rerouted, cancelled"
+              value={notArriveRemark}
+              onChange={(e) => setNotArriveRemark(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setNotArriveRow(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitNotArrive}
+                className="px-4 py-2 text-sm font-semibold text-white bg-slate-700 hover:bg-slate-800 rounded-lg"
+              >
+                Save remark
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default PredictiveArrivalsBoard;
+export default PredefinedArrivalsBoard;

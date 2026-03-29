@@ -4,6 +4,8 @@ const BusSchema = new mongoose.Schema({
   plateNumber: { type: String, required: true },
   route: { type: String, required: true },
   busType: { type: String, enum: ['Aircon', 'Regular'], required: true, default: 'Regular' },
+  seatingCapacity: { type: Number, min: 1, default: null },
+  scheduleTime: { type: String, default: '' },
   stopType: {
     type: String,
     enum: ['Regular Trip', '1-stop', '2-stop', '3-stop', '5-stop', '10-stop', 'Other'],
