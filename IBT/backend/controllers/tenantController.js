@@ -740,6 +740,7 @@ export const updateOverdueSettings = async (req, res) => {
   }
 };
 
+
 export const startOperation = async (req, res) => {
   try {
     const tenant = await Tenant.findByIdAndUpdate(
@@ -747,17 +748,43 @@ export const startOperation = async (req, res) => {
       { operationStartDate: new Date() }, 
       { new: true }
     );
+    
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    if (tenant.email) {
+        try {
+            const subject = "Green Light: Official Start of Operations";
+            const message = `Dear ${tenant.tenantName || tenant.name},\n\nGreat news! Management has officially recorded today, ${new Date().toLocaleDateString()}, as your Day 1 of operations for Slot ${tenant.slotNo}.\n\nYour "Days of Operation" timeline is now active and ticking.\n\nWe wish you the best of luck and great success with your business!\n\nThank you,\nIBT Management`;
+
+            await sendEmail({ email: tenant.email, subject, message });
+
+            const user = await User.findOne({ email: tenant.email });
+            if (user && user.expoPushToken) {
+                await sendPushNotification(
+                    user.expoPushToken, 
+                    "Operations Started! ", 
+                    `Your official Day 1 for Slot ${tenant.slotNo} has been recorded. Good luck!`,
+                    { route: 'stalls' }
+                );
+            }
+        } catch (notifyErr) {
+            console.error("Failed to send start operation notifications:", notifyErr.message);
+        }
+    }
+   
     res.status(200).json({ message: "Operation started successfully", tenant });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+
 export const toggleOperationStatus = async (req, res) => {
   try {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    let actionTaken = "";
 
     if (tenant.isOperationPaused) {
         
@@ -768,13 +795,48 @@ export const toggleOperationStatus = async (req, res) => {
         tenant.totalPausedDays += pauseDurationDays;
         tenant.isOperationPaused = false;
         tenant.lastPausedDate = null;
+        actionTaken = "resumed";
     } else {
-      
+       
         tenant.isOperationPaused = true;
         tenant.lastPausedDate = new Date();
+        actionTaken = "paused";
     }
 
     await tenant.save();
+
+   
+    if (tenant.email) {
+        try {
+            const subject = actionTaken === "paused" 
+                ? "Notice: Lease Operations Paused" 
+                : "Notice: Lease Operations Resumed";
+                
+            const message = actionTaken === "paused"
+                ? `Dear ${tenant.tenantName || tenant.name},\n\nThis is to confirm that your operations for Slot ${tenant.slotNo} have been officially paused effective ${new Date().toLocaleDateString()}. Your "Days of Operation" counter will be frozen during this period.\n\nPlease contact management if you have any questions.\n\nThank you.`
+                : `Dear ${tenant.tenantName || tenant.name},\n\nThis is to confirm that your operations for Slot ${tenant.slotNo} have been officially resumed effective ${new Date().toLocaleDateString()}. Your "Days of Operation" counter is now active again.\n\nWelcome back!\n\nThank you.`;
+
+          
+            await sendEmail({ email: tenant.email, subject, message });
+
+           
+            const user = await User.findOne({ email: tenant.email });
+            if (user && user.expoPushToken) {
+                const title = actionTaken === "paused" ? "Operations Paused ⏸" : "Operations Resumed ▶";
+                const body = `Your operations for Slot ${tenant.slotNo} have been ${actionTaken}.`;
+                
+                await sendPushNotification(
+                    user.expoPushToken, 
+                    title, 
+                    body, 
+                    { route: 'stalls' }
+                );
+            }
+        } catch (notifyErr) {
+            console.error("Failed to send pause/resume notifications:", notifyErr.message);
+        }
+    }
+   
     res.status(200).json({ message: "Operation status toggled", tenant });
   } catch (error) {
     res.status(500).json({ error: error.message });
