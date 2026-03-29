@@ -377,8 +377,8 @@ export const updateTenant = async (req, res) => {
         const currentMonth = computationDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
         const periodText = dueMonth === currentMonth ? dueMonth : `${dueMonth} to ${currentMonth}`;
         
-        const subject = "Final Notice: Overdue Rent Payment";
-        const message = `Sir/Ma'am ${updatedTenant.tenantName || updatedTenant.name},
+       const subject = "Final Notice: Overdue Rent Payment";
+       const message = `Sir/Ma'am ${updatedTenant.tenantName || updatedTenant.name},
 
 This serves as our final notice for your settle your unpaid rent for the space you occupy at Integrated Bus Terminal which now amounts to ₱${totalAmount.toLocaleString()}, inclusive of surcharge and interests, covering the period of ${periodText}, computed as of ${computationDate.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. The last payment you made was on ${lastPaymentMonth} amounting to ₱${lastPaymentAmount.toLocaleString()}. No payment has been made thereafter, thus this bill.
 
@@ -387,10 +387,22 @@ Kindly settle your account within five (5) days from receipt hereof. Otherwise, 
 Thank you`;
 
         await sendEmail({ email: updatedTenant.email, subject, message });
-      } catch (emailErr) {
-        console.error("Overdue email failed:", emailErr.message);
+
+        const user = await User.findOne({ email: updatedTenant.email });
+        if (user && user.expoPushToken) {
+            await sendPushNotification(
+                user.expoPushToken, 
+                "Rent Overdue! ⚠️", 
+                `Your rent for Slot ${updatedTenant.slotNo} is now overdue. Please settle your account immediately to avoid penalties.`,
+                { route: 'stalls' }
+            );
+        }
+
+      } catch (err) {
+        console.error("Overdue email or push notification failed:", err.message);
       }
     }
+
 
     res.status(200).json(updatedTenant);
   } catch (error) {
@@ -398,24 +410,6 @@ Thank you`;
     res.status(500).json({ error: error.message });
   }
 
-  if (Tenant && Tenant.status !== 'Overdue' && updateTenant.status === 'Overdue' && updateTenant.email) {
-      try {
-       
-        await sendEmail({ email: updatedTenant.email, subject, message });
-
-        const user = await User.findOne({ email: updateTenant.email });
-        if (user && user.expoPushToken) {
-            await sendPushNotification(
-                user.expoPushToken, 
-                "Rent Overdue! ⚠️", 
-                `Your rent for Slot ${updateTenant.slotNo} is now overdue. Please settle your account immediately to avoid penalties.`,
-                { route: 'stalls' }
-            );
-        }
-      } catch (emailErr) {
-        console.error("Overdue email/push failed:", emailErr.message);
-      }
-    }
 };
 
 

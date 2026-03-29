@@ -1488,11 +1488,20 @@ const TenantLease = () => {
                                 const errorData = await response.json();
                                 throw new Error(errorData.error || "Update failed");
                             }
-                            setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
-                           
+                            
+                            let finalMessage = "Tenant updated successfully!";
                             if (editRow?.status !== 'Overdue' && updatedData.status === 'Overdue') {
-                                setNotificationState({ isOpen: true, type: 'info', message: "Tenant marked Overdue; notification email is being sent.", autoClose: true, duration: 4000 });
+                                finalMessage = "Tenant updated successfully! Marked Overdue & notification email sent.";
                             }
+                            
+                            setNotificationState({ 
+                                isOpen: true, 
+                                type: 'success', 
+                                message: finalMessage, 
+                                autoClose: true, 
+                                duration: 4000 
+                            });
+                            
                             await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
                             fetchTenants();
                             setEditRow(null);
