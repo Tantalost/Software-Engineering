@@ -21,6 +21,8 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
         templateNo: row.templateno || row.templateNo || "",
         route: row.route || "",
         busType: row.busType || "", 
+        stopType: row.stopType || "Regular Trip",
+        customStopCount: row.customStopCount || "",
         time: row.rawTime || row.time || "",
         date: formatDateForInput(row.rawDate || row.date),
         company: row.company || "",
@@ -116,6 +118,27 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                         </div>
 
                         <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Stop Type</label>
+                            <select
+                                value={form.stopType}
+                                onChange={(e) => setForm({
+                                    ...form,
+                                    stopType: e.target.value,
+                                    customStopCount: e.target.value === "Other" ? form.customStopCount : "",
+                                })}
+                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none"
+                            >
+                                <option value="Regular Trip">Regular Trip</option>
+                                <option value="1-stop">1-stop</option>
+                                <option value="2-stop">2-stop</option>
+                                <option value="3-stop">3-stop</option>
+                                <option value="5-stop">5-stop</option>
+                                <option value="10-stop">10-stop</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div>
                              <label className="block text-sm font-medium text-slate-700 mb-1">Scheduled Time</label>
                              <input 
                                 type="time"
@@ -124,6 +147,21 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                                 className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
                              />
                         </div>
+
+                        {form.stopType === "Other" && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Custom Stop Count</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={form.customStopCount}
+                                    onChange={(e) => setForm({ ...form, customStopCount: e.target.value.replace(/[^0-9]/g, "") })}
+                                    className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
+                                    placeholder="Enter number of stops"
+                                />
+                            </div>
+                        )}
 
                         <div>
                              <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
@@ -177,7 +215,7 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                                 label="Status" 
                                 value={form.status} 
                                 onChange={(e) => setForm({...form, status: e.target.value})} 
-                                options={["Scheduled", "Pending", "Arrived", "Paid", "Active", "Inactive"]} 
+                                          options={["Scheduled", "Arrived", "On Fix", "Not Departed", "Departed"]} 
                              />
                         </div>
                     </div>
@@ -187,7 +225,18 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                     <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                         Cancel
                     </button>
-                    <button onClick={() => onSave({ ...form })} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">
+                    <button
+                        onClick={() =>
+                            onSave({
+                                ...form,
+                                customStopCount:
+                                    form.stopType === "Other" && form.customStopCount
+                                        ? Number(form.customStopCount)
+                                        : null,
+                            })
+                        }
+                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+                    >
                         Save Changes
                     </button>
                 </div>

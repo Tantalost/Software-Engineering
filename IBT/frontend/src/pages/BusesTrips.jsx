@@ -68,6 +68,16 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
   }
 };
 
+const formatStopType = (stopType, customStopCount) => {
+  if (stopType === "Other") {
+    if (customStopCount && Number(customStopCount) > 0) {
+      return `${customStopCount}-stop`;
+    }
+    return "Other";
+  }
+  return stopType || "Regular Trip";
+};
+
 const ManageCompaniesModal = ({
   isOpen,
   onClose,
@@ -83,6 +93,8 @@ const ManageCompaniesModal = ({
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusFrom, setNewBusFrom] = useState("");
   const [newBusTo, setNewBusTo] = useState("");
+  const [newBusStopType, setNewBusStopType] = useState("Regular Trip");
+  const [newBusCustomStopCount, setNewBusCustomStopCount] = useState("");
   const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -105,6 +117,8 @@ const ManageCompaniesModal = ({
     setNewBusFrom("");
     setNewBusTo("");
     setNewBusType("Regular");
+    setNewBusStopType("Regular Trip");
+    setNewBusCustomStopCount("");
     setEditBusTarget(null);
   };
 
@@ -269,6 +283,17 @@ const ManageCompaniesModal = ({
     )
       return;
 
+    if (newBusStopType === "Other" && (!newBusCustomStopCount || Number(newBusCustomStopCount) < 1)) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter a valid custom stop count.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
     const routeString = `${newBusFrom} - ${newBusTo}`;
 
     let updatedBuses;
@@ -279,13 +304,25 @@ const ManageCompaniesModal = ({
               plateNumber: newBusPlate,
               route: routeString,
               busType: newBusType,
+              stopType: newBusStopType,
+              customStopCount:
+                newBusStopType === "Other"
+                  ? Number(newBusCustomStopCount)
+                  : null,
             }
           : b,
       );
     } else {
       updatedBuses = [
         ...activeCompany.buses,
-        { plateNumber: newBusPlate, route: routeString, busType: newBusType },
+        {
+          plateNumber: newBusPlate,
+          route: routeString,
+          busType: newBusType,
+          stopType: newBusStopType,
+          customStopCount:
+            newBusStopType === "Other" ? Number(newBusCustomStopCount) : null,
+        },
       ];
     }
 
@@ -429,7 +466,7 @@ const ManageCompaniesModal = ({
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
                       Type
@@ -446,6 +483,30 @@ const ManageCompaniesModal = ({
 
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
+                      Stop Type
+                    </label>
+                    <select
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusStopType}
+                      onChange={(e) => {
+                        setNewBusStopType(e.target.value);
+                        if (e.target.value !== "Other") {
+                          setNewBusCustomStopCount("");
+                        }
+                      }}
+                    >
+                      <option value="Regular Trip">Regular Trip</option>
+                      <option value="1-stop">1-stop</option>
+                      <option value="2-stop">2-stop</option>
+                      <option value="3-stop">3-stop</option>
+                      <option value="5-stop">5-stop</option>
+                      <option value="10-stop">10-stop</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
                       Bus Number
                     </label>
                     <input
@@ -457,6 +518,27 @@ const ManageCompaniesModal = ({
                     />
                   </div>
                 </div>
+
+                {newBusStopType === "Other" && (
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      Custom Stops
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="ex. 4"
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusCustomStopCount}
+                      onChange={(e) =>
+                        setNewBusCustomStopCount(
+                          e.target.value.replace(/[^0-9]/g, ""),
+                        )
+                      }
+                    />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-12 gap-3 items-end">
                   <div className="col-span-5">
@@ -526,6 +608,7 @@ const ManageCompaniesModal = ({
                     <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
                       <tr>
                         <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Stops</th>
                         <th className="px-4 py-3">Bus No.</th>
                         <th className="px-4 py-3">Route</th>
                         <th className="px-4 py-3 text-right">Action</th>
@@ -550,6 +633,9 @@ const ManageCompaniesModal = ({
                                 {bus.busType || "Regular"}
                               </span>
                             </td>
+                            <td className="px-4 py-3 text-slate-600">
+                              {formatStopType(bus.stopType, bus.customStopCount)}
+                            </td>
                             <td className="px-4 py-3 font-medium text-slate-900">
                               {bus.plateNumber}
                             </td>
@@ -570,6 +656,14 @@ const ManageCompaniesModal = ({
                                   );
                                   setNewBusTo(toRoute ? toRoute.trim() : "");
                                   setNewBusType(bus.busType || "Regular");
+                                  setNewBusStopType(
+                                    bus.stopType || "Regular Trip",
+                                  );
+                                  setNewBusCustomStopCount(
+                                    bus.customStopCount
+                                      ? String(bus.customStopCount)
+                                      : "",
+                                  );
                                 }}
                                 className="text-slate-400 hover:text-blue-500 p-1 mr-1 rounded-md"
                               >
@@ -709,9 +803,23 @@ const BusTrips = () => {
     return today.toISOString().split('T')[0];
   };
 
-  const [selectedDate, setSelectedDate] = useState(getTodayFormatted());
+  const getDateKey = (dateInput) => {
+    if (!dateInput) return "";
+
+    if (typeof dateInput === "string") {
+      const directMatch = dateInput.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (directMatch) return directMatch[1];
+    }
+
+    const d = new Date(dateInput);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toISOString().split("T")[0];
+  };
+
+  const [selectedDate, setSelectedDate] = useState("");
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedBusType, setSelectedBusType] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
   const [companyData, setCompanyData] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -875,6 +983,8 @@ const BusTrips = () => {
     route: "",
     company: "",
     busType: "",
+    stopType: "Regular Trip",
+    customStopCount: "",
     time: "",
     date: new Date().toISOString().split("T")[0],
     status: "Scheduled",
@@ -951,15 +1061,21 @@ const BusTrips = () => {
       (bus.route || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCompany =
       selectedCompany === "" || bus.company === selectedCompany;
-    const matchesDate =
-      !selectedDate ||
-      new Date(bus.date).toDateString() ===
-        new Date(selectedDate).toDateString();
+    const matchesDate = !selectedDate || getDateKey(bus.date) === selectedDate;
 
     const matchesBusType =
       selectedBusType === "" || bus.busType === selectedBusType;
 
-    return matchesSearch && matchesCompany && matchesDate && matchesBusType;
+    const matchesStatus =
+      selectedStatus === "" || bus.status === selectedStatus;
+
+    return (
+      matchesSearch &&
+      matchesCompany &&
+      matchesDate &&
+      matchesBusType &&
+      matchesStatus
+    );
   });
 
   const totalTrips = filtered.length;
@@ -973,12 +1089,43 @@ const BusTrips = () => {
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
+  // Dispatch board should only show trips that were created today.
+  const todayDispatchRecords = useMemo(() => {
+    // If user selected a specific date, dispatch board should follow that filter.
+    if (selectedDate) {
+      return filtered;
+    }
+
+    const todayKey = getDateKey(new Date());
+    return filtered.filter((trip) => {
+      const createdKey = getDateKey(trip.createdAt);
+      return createdKey === todayKey;
+    });
+  }, [filtered, selectedDate]);
+
+  const dashboardTotalTrips = todayDispatchRecords.length;
+  const dashboardScheduledTrips = todayDispatchRecords.filter(
+    (t) => t.status === "Scheduled",
+  ).length;
+  const dashboardPendingTrips = todayDispatchRecords.filter(
+    (t) => t.status === "Pending",
+  ).length;
+  const dashboardArrivedTrips = todayDispatchRecords.filter(
+    (t) => t.status === "Arrived",
+  ).length;
+  const dashboardPaidTrips = todayDispatchRecords.filter(
+    (t) => t.status === "Departed",
+  ).length;
+  const dashboardTotalRevenue = todayDispatchRecords
+    .filter((t) => t.status === "Departed")
+    .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
+    return todayDispatchRecords.slice(startIndex, startIndex + itemsPerPage);
+  }, [todayDispatchRecords, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const totalPages = Math.ceil(todayDispatchRecords.length / itemsPerPage);
 
   const handleAddClick = () => {
     const currentTime = new Date().toLocaleTimeString("en-GB", {
@@ -990,6 +1137,8 @@ const BusTrips = () => {
       route: "",
       company: "",
       busType: "",
+      stopType: "Regular Trip",
+      customStopCount: "",
       time: currentTime,
       date: new Date().toISOString().split("T")[0],
       status: "Scheduled",
@@ -1015,14 +1164,37 @@ const BusTrips = () => {
       ...prev,
       templateNo: plate,
       route: selectedBus ? selectedBus.route : "",
+      stopType: selectedBus?.stopType || "Regular Trip",
+      customStopCount: selectedBus?.customStopCount
+        ? String(selectedBus.customStopCount)
+        : "",
     }));
   };
 
   const handleCreateRecord = async (e) => {
     e.preventDefault();
+
+    if (
+      newBusData.stopType === "Other" &&
+      (!newBusData.customStopCount || Number(newBusData.customStopCount) < 1)
+    ) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter a valid custom stop count.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
       const tripData = {
         ...newBusData,
+        customStopCount:
+          newBusData.stopType === "Other"
+            ? Number(newBusData.customStopCount)
+            : null,
         price: newBusData.price || defaultPrice,
       };
 
@@ -1070,16 +1242,60 @@ const BusTrips = () => {
     }
   };
 
-  const handleMarkOnFix = async (tripId) => {
+  const handleToggleOnFixStatus = async (trip) => {
+    const tripId = trip?._id || trip?.id;
+    if (!tripId) return;
+
+    const nextStatus = trip.status === "On Fix" ? "Scheduled" : "On Fix";
+
+    // On Fix should only be toggled from Arrived or On Fix states.
+    if (!["Arrived", "On Fix"].includes(trip.status)) return;
+
     try {
       const response = await fetch(`${API_URL}/${tripId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "On Fix" }),
+        body: JSON.stringify({ status: nextStatus }),
       });
+
       if (response.ok) {
         await fetchBusTrips();
-        setNotificationState({ isOpen: true, type: "warning", message: "Bus marked as On Fix.", autoClose: true, duration: 3000 });
+        setNotificationState({
+          isOpen: true,
+          type: nextStatus === "On Fix" ? "warning" : "success",
+          message:
+            nextStatus === "On Fix"
+              ? "Bus marked as On Fix."
+              : "Bus returned to Scheduled status.",
+          autoClose: true,
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleMarkNotDeparted = async (trip) => {
+    const tripId = trip?._id || trip?.id;
+    if (!tripId || trip.status !== "Arrived") return;
+
+    try {
+      const response = await fetch(`${API_URL}/${tripId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Not Departed" }),
+      });
+
+      if (response.ok) {
+        await fetchBusTrips();
+        setNotificationState({
+          isOpen: true,
+          type: "warning",
+          message: "Bus marked as Not Departed.",
+          autoClose: true,
+          duration: 3000,
+        });
       }
     } catch (error) {
       console.error(error);
@@ -1196,9 +1412,9 @@ const BusTrips = () => {
       const worksheet = workbook.addWorksheet("Bus Parking Report");
 
       worksheet.getRow(1).height = 35;
-      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:H4");
+      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:J4");
 
-      worksheet.mergeCells("A6:H6");
+      worksheet.mergeCells("A6:J6");
       const titleCell = worksheet.getCell("A6");
       titleCell.value = "BUS PARKING REPORTS";
       titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
@@ -1231,6 +1447,7 @@ const BusTrips = () => {
       const headerRow = worksheet.addRow([
         "Bus No.",
         "Type",
+        "Stop Type",
         "Ticket Ref.",
         "Route",
         "Price",
@@ -1254,6 +1471,7 @@ const BusTrips = () => {
         worksheet.addRow([
           item.templateNo || item.templateno || "-",
           item.busType || "Regular",
+          formatStopType(item.stopType, item.customStopCount),
           item.ticketReferenceNo || "-",
           item.route || "-",
           `Php ${(item.price || 75).toFixed(2)}`,
@@ -1270,18 +1488,21 @@ const BusTrips = () => {
         workbook,
         worksheet,
         footerImg,
-        `A${lastRowNumber}:H${lastRowNumber + 3}`,
+        `A${lastRowNumber}:J${lastRowNumber + 3}`,
       );
 
       worksheet.columns = [
-        { width: 15 },
+        { width: 14 },
+        { width: 12 },
+        { width: 14 },
         { width: 18 },
-        { width: 25 },
+        { width: 22 },
         { width: 12 },
         { width: 12 },
         { width: 12 },
-        { width: 20 },
         { width: 15 },
+        { width: 16 },
+        { width: 14 },
       ];
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -1375,6 +1596,7 @@ const BusTrips = () => {
         [
           "Plate No.",
           "Type",
+          "Stop Type",
           "Ticket Ref.",
           "Route",
           "Price",
@@ -1387,6 +1609,7 @@ const BusTrips = () => {
       body: filtered.map((item) => [
         item.templateNo || "-",
         item.busType || "Regular",
+        formatStopType(item.stopType, item.customStopCount),
         item.ticketReferenceNo || "-",
         item.route || "-",
         `Php ${(item.price || 75).toFixed(2)}`,
@@ -1827,12 +2050,12 @@ const BusTrips = () => {
     <Layout title="Bus Trips Management">
       <div className="mb-6">
         <StatCardGroupBus
-          totalTrips={totalTrips}
-          scheduledTrips={scheduledTrips}
-          pendingTrips={pendingTrips}
-          arrivedTrips={arrivedTrips}
-          paidTrips={paidTrips}
-          totalRevenue={totalRevenue}
+          totalTrips={dashboardTotalTrips}
+          scheduledTrips={dashboardScheduledTrips}
+          pendingTrips={dashboardPendingTrips}
+          arrivedTrips={dashboardArrivedTrips}
+          paidTrips={dashboardPaidTrips}
+          totalRevenue={dashboardTotalRevenue}
         />
       </div>
 
@@ -1848,6 +2071,8 @@ const BusTrips = () => {
             uniqueCompanies={availableCompanies}
             selectedBusType={selectedBusType}
             setSelectedBusType={setSelectedBusType}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3 w-full mb-2">
@@ -1971,8 +2196,15 @@ const BusTrips = () => {
           <>
             <DailyTripsDashboard 
               trips={paginatedData} 
+              role={role}
               onApproveDeparture={handleApproveDeparture}
-              onMarkOnFix={handleMarkOnFix}
+              onToggleOnFixStatus={handleToggleOnFixStatus}
+              onMarkArrived={handleMarkArrived}
+              onMarkNotDeparted={handleMarkNotDeparted}
+              onViewTrip={setViewRow}
+              onEditTrip={setEditRow}
+              onArchiveTrip={setArchiveRow}
+              onDeleteTrip={setDeleteRow}
             />
             
             <Pagination 
@@ -1980,7 +2212,7 @@ const BusTrips = () => {
               totalPages={totalPages} 
               onPageChange={setCurrentPage} 
               itemsPerPage={itemsPerPage} 
-              totalItems={filtered.length} 
+              totalItems={todayDispatchRecords.length} 
               onItemsPerPageChange={setItemsPerPage} 
             />
           </>
@@ -1993,6 +2225,7 @@ const BusTrips = () => {
         companyData={companyData}
         fetchCompanies={fetchCompanies}
         role={role}
+        setNotificationState={setNotificationState}
       />
 
       {showSetPriceModal && (
@@ -2093,6 +2326,8 @@ const BusTrips = () => {
                         ...prev,
                         company: e.target.value,
                         busType: "",
+                        stopType: "Regular Trip",
+                        customStopCount: "",
                         templateNo: "",
                         route: "",
                       }))
@@ -2119,6 +2354,8 @@ const BusTrips = () => {
                       setNewBusData((prev) => ({
                         ...prev,
                         busType: e.target.value,
+                        stopType: "Regular Trip",
+                        customStopCount: "",
                         templateNo: "",
                         route: "",
                       }))
@@ -2158,7 +2395,7 @@ const BusTrips = () => {
                                 r.templateno === bus.plateNumber) &&
                               r.company === newBusData.company &&
                               r.date?.substring(0, 10) === newBusData.date &&
-                              ["Scheduled", "Pending", "Arrived"].includes(
+                              ["Scheduled", "Pending", "Arrived", "On Fix", "Not Departed"].includes(
                                 r.status,
                               ),
                           );
@@ -2219,6 +2456,21 @@ const BusTrips = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Stop Type
+                    </label>
+                    <input
+                      type="text"
+                      value={formatStopType(
+                        newBusData.stopType,
+                        newBusData.customStopCount,
+                      )}
+                      readOnly
+                      placeholder="Select bus number first"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-700 font-medium cursor-not-allowed"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Parking Est.
@@ -2497,6 +2749,10 @@ const BusTrips = () => {
             { label: "Company", value: viewRow.company || "-" },
             { label: "Route", value: viewRow.route || "-" },
             { label: "Bus Type", value: viewRow.busType || "Regular" },
+            {
+              label: "Stop Type",
+              value: formatStopType(viewRow.stopType, viewRow.customStopCount),
+            },
             { label: "Status", value: viewRow.status || "-" },
             { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
 

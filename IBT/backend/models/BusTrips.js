@@ -6,18 +6,20 @@ const BusTripSchema = new mongoose.Schema({
   company: { type: String, required: true },
   route: { type: String, required: true },
   busType: { type: String, enum: ['Aircon', 'Regular'], default: 'Regular' },
+  stopType: {
+    type: String,
+    enum: ['Regular Trip', '1-stop', '2-stop', '3-stop', '5-stop', '10-stop', 'Other'],
+    default: 'Regular Trip'
+  },
+  customStopCount: { type: Number, min: 1, default: null },
   
   time: { type: String, required: true },
   departureTime: { type: String },        
   date: { type: Date, required: true },
   
-  // <-- UPDATED SEAT TRACKING -->
-  totalSeats: { type: Number, required: true, default: 50 },
-  currentPassengers: { type: Number, default: 0 },
-  
   status: { 
     type: String, 
-    enum: ['Scheduled', 'Arrived', 'Departed', 'On Fix', 'Pending', 'Paid'],
+    enum: ['Scheduled', 'Arrived', 'Departed', 'On Fix', 'Not Departed', 'Pending', 'Paid'],
     default: "Scheduled" 
   },
   

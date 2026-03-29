@@ -1,6 +1,16 @@
 import React, { useState, useMemo } from "react";
 import { Calendar, TrendingUp, Bus, Filter, X } from "lucide-react";
 
+const formatStopType = (stopType, customStopCount) => {
+  if (stopType === "Other") {
+    if (customStopCount && Number(customStopCount) > 0) {
+      return `${customStopCount}-stop`;
+    }
+    return "Other";
+  }
+  return stopType || "Regular Trip";
+};
+
 const CommonBusesView = ({ records, companyData, onClose }) => {
   const [timeFilter, setTimeFilter] = useState("Weekly"); 
   const [typeFilter, setTypeFilter] = useState("All"); 
@@ -33,6 +43,8 @@ const CommonBusesView = ({ records, companyData, onClose }) => {
           busNo: plate,
           company: record.company,
           busType: record.busType,
+          stopType: record.stopType,
+          customStopCount: record.customStopCount,
           route: record.route,
           price: record.price || 75,
           tripCount: 0,
@@ -102,6 +114,7 @@ const CommonBusesView = ({ records, companyData, onClose }) => {
               <tr>
                 <th className="p-4">Bus No.</th>
                 <th className="p-4">Company & Type</th>
+                <th className="p-4">Stop Type</th>
                 <th className="p-4">Route</th>
                 <th className="p-4">Price</th>
                 <th className="p-4">Date Recorded</th>
@@ -112,7 +125,7 @@ const CommonBusesView = ({ records, companyData, onClose }) => {
             <tbody className="divide-y divide-slate-100 bg-white">
               {commonData.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-12 text-center text-slate-500 font-medium">
+                  <td colSpan="8" className="p-12 text-center text-slate-500 font-medium">
                     No common buses found matching these filters.
                   </td>
                 </tr>
@@ -134,6 +147,10 @@ const CommonBusesView = ({ records, companyData, onClose }) => {
                     <td className="p-4">
                       <div className="font-semibold text-sm text-slate-700">{bus.company}</div>
                       <div className="text-xs text-slate-500 mt-0.5">{bus.busType}</div>
+                    </td>
+
+                    <td className="p-4 text-sm text-slate-600">
+                      {formatStopType(bus.stopType, bus.customStopCount)}
                     </td>
 
                     <td className="p-4 text-sm font-medium text-slate-600">{bus.route}</td>

@@ -5,18 +5,34 @@ import "react-datepicker/dist/react-datepicker.css";
 const BusTripFilters = ({
     searchQuery, setSearchQuery,
     selectedCompany, selectedDate, setSelectedDate, setSelectedCompany, uniqueCompanies,
-    selectedBusType, setSelectedBusType 
+    selectedBusType, setSelectedBusType,
+    selectedStatus, setSelectedStatus
 }) => {
+    const formatLocalDate = (date) => {
+        if (!date) return "";
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
+
+    const parseDateStringToLocalDate = (dateString) => {
+        if (!dateString) return null;
+        const [year, month, day] = dateString.split("-").map(Number);
+        if (!year || !month || !day) return null;
+        return new Date(year, month - 1, day);
+    };
+
     const handleDateChange = (date) => {
         if (date) {
-            const formattedDate = date.toISOString().split('T')[0];
+            const formattedDate = formatLocalDate(date);
             setSelectedDate(formattedDate);
         } else {
             setSelectedDate("");
         }
     };
 
-    const selectedDateObj = selectedDate ? new Date(selectedDate) : null;
+    const selectedDateObj = parseDateStringToLocalDate(selectedDate);
 
     return (
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full">
@@ -69,6 +85,28 @@ const BusTripFilters = ({
                     <option value="">All</option>
                     <option value="Regular">Regular</option>
                     <option value="Aircon">Aircon</option>
+                </select>
+            </div>
+
+            <div className="cursor-pointer flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
+                <label
+                    htmlFor="status"
+                    className="text-gray-500 text-sm mr-2 whitespace-nowrap cursor-pointer "
+                >
+                    Status:
+                </label>
+                <select
+                    id="status"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="text-gray-700 text-sm outline-none bg-transparent w-full sm:w-auto"
+                >
+                    <option value="">All</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Arrived">Arrived</option>
+                    <option value="Departed">Departed</option>
+                    <option value="On Fix">On Fix</option>
+                    <option value="Not Departed">Not Departed</option>
                 </select>
             </div>
 

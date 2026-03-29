@@ -34,10 +34,10 @@ cron.schedule("1 0 * * *", async () => {
       company: trip.company,
       route: trip.route,
       busType: trip.busType,
+      stopType: trip.stopType || "Regular Trip",
+      customStopCount: trip.stopType === "Other" ? trip.customStopCount || null : null,
       time: trip.time, // Same expected arrival time
       date: today,
-      totalSeats: trip.totalSeats,
-      currentPassengers: 0, // Reset for the new day
       status: "Scheduled"
     }));
 

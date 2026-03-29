@@ -41,10 +41,27 @@ export const getBusTrips = async (req, res) => {
 
 export const createBusTrip = async (req, res) => {
   try {
-    const { templateNo, route, time, date, company, status, price, parkingEstimation, expectedDeparture, busType } = req.body;
+    const {
+      templateNo,
+      route,
+      time,
+      date,
+      company,
+      status,
+      price,
+      parkingEstimation,
+      expectedDeparture,
+      busType,
+      stopType,
+      customStopCount,
+    } = req.body;
 
-    if (!templateNo || !route || !company || !busType) {
-      return res.status(400).json({ message: "Template, Route, Company, and Bus Type are required." });
+    if (!templateNo || !route || !company || !busType || !stopType) {
+      return res.status(400).json({ message: "Template, Route, Company, Bus Type, and Stop Type are required." });
+    }
+
+    if (stopType === "Other" && (!customStopCount || Number(customStopCount) < 1)) {
+      return res.status(400).json({ message: "Custom stop count is required for 'Other' stop type." });
     }
 
     const tripDate = new Date(date);
@@ -55,7 +72,7 @@ export const createBusTrip = async (req, res) => {
       templateNo,
       company,
       date: { $gte: startOfDay, $lte: endOfDay },
-      status: { $in: ["Scheduled", "Pending", "Arrived"] }, 
+      status: { $in: ["Scheduled", "Pending", "Arrived", "On Fix", "Not Departed"] }, 
       isArchived: false
     });
 
@@ -75,6 +92,8 @@ export const createBusTrip = async (req, res) => {
       templateNo,
       route,
       busType, 
+      stopType,
+      customStopCount: stopType === "Other" ? Number(customStopCount) : null,
       time,
       date,
       company,

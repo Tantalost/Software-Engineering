@@ -10,14 +10,17 @@ Permanent
 
 New todo (Lloyd)
 
+🟢 **Done**
 date button 
 -it should not be automatically indicates the current date. this only for searching when choosing specific date in viewing data records.
 
+🟢 **Done**
 Add filter for status 
 -departed 
 -scheduled
 -on fix
 
+🟢 **Done**
 Add types of bus stops
 -regular trip
 -1 -stop 
@@ -27,7 +30,7 @@ Add types of bus stops
 -10 -stop 
 -other (indicates how many stop that bus needs for dynamic purposes)
 Note: this is also be shown in the table, in the add bus modal and also in the report and common bus trips.
-
+🟢 **Done**
 -Fix the actions, the admin can update or archive/delete data and fix the "on fix" status to turn back into scheduled status if the bus is already ok.
 
 
