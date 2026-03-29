@@ -15,14 +15,17 @@ export const startOverdueCheck = () => {
         }
 
         try {
-          
-            const chargeSetting = await SetPriceSettings.findOne({ key: "defaultChargePercentage" });
-            const interestSetting = await SetPriceSettings.findOne({ key: "defaultInterestPercentage" });
+            
+            const pCharge = await SetPriceSettings.findOne({ key: "permanentChargePercentage" });
+            const pInterest = await SetPriceSettings.findOne({ key: "permanentInterestPercentage" });
+            const nCharge = await SetPriceSettings.findOne({ key: "nightMarketChargePercentage" });
+            const nInterest = await SetPriceSettings.findOne({ key: "nightMarketInterestPercentage" });
 
-            const cPct = chargeSetting ? Number(chargeSetting.value) : 25; 
-            const iPct = interestSetting ? Number(interestSetting.value) : 2;  
+            const permChargePct = pCharge ? Number(pCharge.value) : 25;
+            const permInterestPct = pInterest ? Number(pInterest.value) : 2;
+            const nightChargePct = nCharge ? Number(nCharge.value) : 25;
+            const nightInterestPct = nInterest ? Number(nInterest.value) : 2;
 
-           
             const now = new Date();
             const pendingOverdue = await Tenant.find({
                 status: { $ne: "Overdue" }, 
@@ -33,14 +36,17 @@ export const startOverdueCheck = () => {
             let markedCount = 0;
 
             for (const tenant of pendingOverdue) {
-               
+                const isNightMarket = tenant.tenantType === "Night Market";
+                
+                const cPct = isNightMarket ? nightChargePct : permChargePct;
+                const iPct = isNightMarket ? nightInterestPct : permInterestPct;
+
                 const rent = tenant.rentAmount || 0;
                 const chargeAmt = rent * (cPct / 100);
                 const dueBalance = rent + chargeAmt;
                 const interestAmt = dueBalance * (iPct / 100);
                 const totalAmt = rent + (tenant.utilityAmount || 0) + chargeAmt + interestAmt;
 
-               
                 tenant.status = "Overdue";
                 tenant.chargeAmount = chargeAmt;
                 tenant.interestAmount = interestAmt;

@@ -60,8 +60,11 @@ const TenantLease = () => {
     const [defaultPermanentPrice, setDefaultPermanentPrice] = useState(6000);
     const [newPermanentPrice, setNewPermanentPrice] = useState("");
 
-    const [defaultChargePct, setDefaultChargePct] = useState(25);
-    const [defaultInterestPct, setDefaultInterestPct] = useState(2);
+    const [permChargePct, setPermChargePct] = useState(25);
+    const [permInterestPct, setPermInterestPct] = useState(2);
+    const [nightChargePct, setNightChargePct] = useState(25);
+    const [nightInterestPct, setNightInterestPct] = useState(2);
+    
     const [newChargePct, setNewChargePct] = useState("");
     const [newInterestPct, setNewInterestPct] = useState("");
 
@@ -146,8 +149,10 @@ const TenantLease = () => {
                 const response = await fetch(`${API_URL}/tenants/overdue-settings`);
                 if (response.ok) {
                     const data = await response.json();
-                    setDefaultChargePct(data.chargePercentage);
-                    setDefaultInterestPct(data.interestPercentage);
+                    setPermChargePct(data.permanentCharge);
+                    setPermInterestPct(data.permanentInterest);
+                    setNightChargePct(data.nightMarketCharge);
+                    setNightInterestPct(data.nightMarketInterest);
                 }
             } catch (error) {
                 console.error("Error fetching overdue settings:", error);
@@ -192,8 +197,9 @@ const TenantLease = () => {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    chargePercentage: newChargePct ? Number(newChargePct) : defaultChargePct, 
-                    interestPercentage: newInterestPct ? Number(newInterestPct) : defaultInterestPct 
+                    tenantType: isNightMarket ? "Night Market" : "Permanent",
+                    chargePercentage: newChargePct ? Number(newChargePct) : (isNightMarket ? nightChargePct : permChargePct), 
+                    interestPercentage: newInterestPct ? Number(newInterestPct) : (isNightMarket ? nightInterestPct : permInterestPct) 
                 }),
             });
 
@@ -201,9 +207,13 @@ const TenantLease = () => {
 
             if (isNightMarket) {
                 setDefaultNightPrice(priceValue);
+                setNightChargePct(newChargePct ? Number(newChargePct) : nightChargePct);
+                setNightInterestPct(newInterestPct ? Number(newInterestPct) : nightInterestPct);
                 localStorage.setItem("defaultNightPrice", priceValue.toString());
             } else {
                 setDefaultPermanentPrice(priceValue);
+                setPermChargePct(newChargePct ? Number(newChargePct) : permChargePct);
+                setPermInterestPct(newInterestPct ? Number(newInterestPct) : permInterestPct);
                 localStorage.setItem("defaultPermanentPrice", priceValue.toString());
             }
 
@@ -1180,14 +1190,16 @@ const TenantLease = () => {
                             onClick={() => {
                                 if (activeTab === "night") {
                                     setNewNightPrice(defaultNightPrice.toString());
+                                    setNewChargePct(nightChargePct.toString());
+                                    setNewInterestPct(nightInterestPct.toString());
                                 } else {
                                     setNewPermanentPrice(defaultPermanentPrice.toString());
+                                    setNewChargePct(permChargePct.toString());
+                                    setNewInterestPct(permInterestPct.toString());
                                 }
-                                setNewChargePct(defaultChargePct.toString());
-                                setNewInterestPct(defaultInterestPct.toString());
-                                
                                 setShowSetPriceModal(true);
                             }}
+                            
                             className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-2"
                             title='Set Default Price'
                         >

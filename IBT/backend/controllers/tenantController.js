@@ -641,41 +641,55 @@ export const sendRentReminder = async (req, res) => {
 
 export const getOverdueSettings = async (req, res) => {
   try {
-    const chargeSetting = await Settings.findOne({ key: "defaultChargePercentage" });
-    const interestSetting = await Settings.findOne({ key: "defaultInterestPercentage" });
+    const pCharge = await Settings.findOne({ key: "permanentChargePercentage" });
+    const pInterest = await Settings.findOne({ key: "permanentInterestPercentage" });
+    const nCharge = await Settings.findOne({ key: "nightMarketChargePercentage" });
+    const nInterest = await Settings.findOne({ key: "nightMarketInterestPercentage" });
 
     res.status(200).json({
-      chargePercentage: chargeSetting ? Number(chargeSetting.value) : 25,
-      interestPercentage: interestSetting ? Number(interestSetting.value) : 2
+      permanentCharge: pCharge ? Number(pCharge.value) : 25,
+      permanentInterest: pInterest ? Number(pInterest.value) : 2,
+      nightMarketCharge: nCharge ? Number(nCharge.value) : 25,
+      nightMarketInterest: nInterest ? Number(nInterest.value) : 2
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-
 export const updateOverdueSettings = async (req, res) => {
   try {
-    const { chargePercentage, interestPercentage } = req.body;
+    const { tenantType, chargePercentage, interestPercentage } = req.body;
 
+    
+    const isNightMarket = tenantType === "Night Market";
+    const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
+    const interestKey = isNightMarket ? "nightMarketInterestPercentage" : "permanentInterestPercentage";
 
+   
     if (chargePercentage !== undefined) {
       await Settings.findOneAndUpdate(
-        { key: "defaultChargePercentage" },
+        { key: chargeKey },
         { value: Number(chargePercentage) },
         { upsert: true }
       );
     }
 
+   
     if (interestPercentage !== undefined) {
       await Settings.findOneAndUpdate(
-        { key: "defaultInterestPercentage" },
+        { key: interestKey },
         { value: Number(interestPercentage) },
         { upsert: true }
       );
     }
 
-    const overdueTenants = await Tenant.find({ status: "Overdue", isArchived: { $ne: true } });
+    
+    const targetQuery = isNightMarket 
+      ? { status: "Overdue", tenantType: "Night Market", isArchived: { $ne: true } }
+      : { status: "Overdue", $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }], isArchived: { $ne: true } };
+
+    const overdueTenants = await Tenant.find(targetQuery);
     let updatedCount = 0;
 
     const cPct = chargePercentage !== undefined ? Number(chargePercentage) : 25;
@@ -697,7 +711,7 @@ export const updateOverdueSettings = async (req, res) => {
     }
 
     res.status(200).json({
-      message: "Overdue settings updated successfully.",
+      message: `Overdue settings for ${tenantType} updated successfully.`,
       updatedTenants: updatedCount
     });
   } catch (error) {
