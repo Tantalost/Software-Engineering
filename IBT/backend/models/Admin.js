@@ -34,7 +34,7 @@ const adminSchema = new mongoose.Schema(
     },
     assignedShift: {
       type: String,
-      enum: ["00-06", "06-12", "12-18", "18-24"],
+      enum: ["00-06", "06-12", "12-18", "18-24", null],
       default: null,
     },
     passwordHash: {
