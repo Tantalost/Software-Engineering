@@ -446,30 +446,31 @@ export const updateAllNightMarketPrices = async (req, res) => {
 
     for (const t of tenants) {
         
-        const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
-        const newRent = priceValue * slotCount;
-        
-        const newTotal = t.status === "Overdue" ? t.totalAmount : (newRent + (t.utilityAmount || 0));
+        if (t.status === "Paid") {
+            const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
+            const newRent = priceValue * slotCount;
+            const newTotal = newRent + (t.utilityAmount || 0);
 
-        await Tenant.updateOne(
-            { _id: t._id },
-            { $set: { rentAmount: newRent, totalAmount: newTotal } }
-        );
-        updatedCount++;
+            await Tenant.updateOne(
+                { _id: t._id },
+                { $set: { rentAmount: newRent, totalAmount: newTotal } }
+            );
+            updatedCount++;
 
-        if (t.email) {
-            try {
-                const user = await User.findOne({ email: t.email });
-                if (user && user.expoPushToken) {
-                    await sendPushNotification(
-                        user.expoPushToken,
-                        "Rent Price Updated 📢",
-                        `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
-                        { route: 'stalls' }
-                    );
+            if (t.email) {
+                try {
+                    const user = await User.findOne({ email: t.email });
+                    if (user && user.expoPushToken) {
+                        await sendPushNotification(
+                            user.expoPushToken,
+                            "Rent Price Updated!",
+                            `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
+                            { route: 'stalls' }
+                        );
+                    }
+                } catch (notifyErr) {
+                    console.error("Push failed:", notifyErr.message);
                 }
-            } catch (notifyErr) {
-                console.error("Push failed:", notifyErr.message);
             }
         }
     }
@@ -528,31 +529,31 @@ export const updateAllPermanentPrices = async (req, res) => {
     let updatedCount = 0;
 
     for (const t of tenants) {
-       
-        const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
-        const newRent = priceValue * slotCount;
-        
-        const newTotal = t.status === "Overdue" ? t.totalAmount : (newRent + (t.utilityAmount || 0));
+        if (t.status === "Paid") {
+            const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
+            const newRent = priceValue * slotCount;
+            const newTotal = newRent + (t.utilityAmount || 0);
 
-        await Tenant.updateOne(
-            { _id: t._id },
-            { $set: { rentAmount: newRent, totalAmount: newTotal } }
-        );
-        updatedCount++;
+            await Tenant.updateOne(
+                { _id: t._id },
+                { $set: { rentAmount: newRent, totalAmount: newTotal } }
+            );
+            updatedCount++;
 
-        if (t.email) {
-            try {
-                const user = await User.findOne({ email: t.email });
-                if (user && user.expoPushToken) {
-                    await sendPushNotification(
-                        user.expoPushToken,
-                        "Rent Price Updated 📢",
-                        `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
-                        { route: 'stalls' }
-                    );
+            if (t.email) {
+                try {
+                    const user = await User.findOne({ email: t.email });
+                    if (user && user.expoPushToken) {
+                        await sendPushNotification(
+                            user.expoPushToken,
+                            "Rent Price Updated!",
+                            `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
+                            { route: 'stalls' }
+                        );
+                    }
+                } catch (notifyErr) {
+                    console.error("Push failed:", notifyErr.message);
                 }
-            } catch (notifyErr) {
-                console.error("Push failed:", notifyErr.message);
             }
         }
     }
@@ -612,9 +613,18 @@ export const approveRenewalPayment = async (req, res) => {
         currentDue.setDate(Math.min(targetDay, daysInNextMonth));
     }
 
+    const priceKey = isNightMarket ? "defaultNightPrice" : "defaultPermanentPrice";
+    const defaultPriceSetting = await Settings.findOne({ key: priceKey });
+    const defaultPrice = defaultPriceSetting ? Number(defaultPriceSetting.value) : (isNightMarket ? 150 : 6000);
+
+    const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
+    const nextRentAmount = defaultPrice * slotCount;
+    const nextTotalAmount = nextRentAmount + (tenant.utilityAmount || 0);
+    // --------------------------------------------------------------------------
+
     const paymentRecord = {
         referenceNo: tenant.referenceNo || "N/A",
-        amount: tenant.totalAmount || tenant.rentAmount || 0,
+        amount: tenant.totalAmount || tenant.rentAmount || 0, 
         datePaid: new Date().toISOString(),
         receiptUrl: tenant.documents?.proofOfReceipt || "" 
     };
@@ -624,8 +634,11 @@ export const approveRenewalPayment = async (req, res) => {
       { 
           status: "Paid", 
           DueDateTime: currentDue.toISOString(),
+          rentAmount: nextRentAmount,    
+          totalAmount: nextTotalAmount,  
+          chargeAmount: 0,               
+          interestAmount: 0,            
           $push: { paymentHistory: paymentRecord },
-         
           $unset: { 
               referenceNo: "",
               "documents.proofOfReceipt": "" 
@@ -636,10 +649,7 @@ export const approveRenewalPayment = async (req, res) => {
 
     if (updatedTenant.email) {
       const subject = "Payment Approved - IBT Stalls Renewal";
-      const message = `
-
-
-      Dear ${updatedTenant.tenantName},
+      const message = `Dear ${updatedTenant.tenantName},
 
 Your renewal payment of ₱${paymentRecord.amount} has been successfully verified and approved.
 
@@ -652,17 +662,27 @@ Next Due Date: ${new Date(updatedTenant.DueDateTime).toLocaleDateString()}
 Thank you for your continued tenancy!
 
 Best regards,
-IBT Management
-      `;
+IBT Management`;
 
       try {
+          
           await sendEmail({
               email: updatedTenant.email,
               subject: subject,
               message: message
           });
-      } catch (emailError) {
-          console.error("Renewal approval email failed to send:", emailError.message);
+
+          const user = await User.findOne({ email: updatedTenant.email });
+          if (user && user.expoPushToken) {
+              await sendPushNotification(
+                  user.expoPushToken, 
+                  "Payment Approved ✅", 
+                  `Your renewal payment of ₱${paymentRecord.amount} for Slot ${updatedTenant.slotNo} was approved!`,
+                  { route: 'stalls' }
+              );
+          }
+      } catch (notifyError) {
+          console.error("Renewal approval notifications failed:", notifyError.message);
       }
     }
 
@@ -671,22 +691,6 @@ IBT Management
     console.error("Approve Renewal Error:", error);
     res.status(500).json({ error: error.message });
   }
-
-  try {
-          await sendEmail({ email: updatedTenant.email, subject: subject, message: message });
-
-          const user = await User.findOne({ email: updatedTenant.email });
-          if (user && user.expoPushToken) {
-              await sendPushNotification(
-                  user.expoPushToken, 
-                  "Payment Approved ✅", 
-                  `Your renewal payment of ₱${paymentRecord.amount} for Slot ${updateTenant.slotNo} was approved!`,
-                  { route: 'stalls' }
-              );
-          }
-      } catch (emailError) {
-          console.error("Renewal approval email/push failed:", emailError.message);
-      }
 };
 
 export const sendRentReminder = async (req, res) => {
