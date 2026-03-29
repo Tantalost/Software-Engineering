@@ -91,6 +91,7 @@ const TenantLease = () => {
     const [deleteRow, setDeleteRow] = useState(null);
     const [messagingRow, setMessagingRow] = useState(null);
     const [archiveRow, setArchiveRow] = useState(null);
+    const [operationRow, setOperationRow] = useState(null);
 
     const [emailBody, setEmailBody] = useState("");
 
@@ -799,8 +800,12 @@ const TenantLease = () => {
         }
     };
 
-    const handleStartOperation = async (tenantId, tenantName) => {
-        if (!window.confirm(`Start operations for ${tenantName}? This will lock in today as their official Day 1.`)) return;
+    const handleStartOperation = async () => {
+        if (!operationRow) return;
+        
+        const tenantId = operationRow.id || operationRow._id;
+        const tenantName = operationRow.tenantName || operationRow.name;
+
         try {
             const res = await fetch(`${API_URL}/tenants/${tenantId}/start-operation`, {
                 method: "PATCH",
@@ -810,7 +815,9 @@ const TenantLease = () => {
 
             setNotificationState({ isOpen: true, type: 'success', message: "Operation officially started!", autoClose: true, duration: 3000 });
             await logActivity(role, "START_OPERATION", `Started operation for tenant: ${tenantName}`, "Tenants");
-            fetchTenants(); 
+            
+            setOperationRow(null); 
+            fetchTenants();        
         } catch (e) {
             console.error(e);
             setNotificationState({ isOpen: true, type: 'error', message: "Failed to start operation.", autoClose: true, duration: 3000 });
@@ -1363,9 +1370,7 @@ const TenantLease = () => {
 
                             {!fullRecord?.operationStartDate ? (
                                 <button
-                                    onClick={() => handleStartOperation(fullRecord.id, fullRecord.tenantName || fullRecord.name)}
-                                    className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all flex items-center cursor-pointer shadow-sm border border-emerald-200"
-                                    title="Click to Start Operation (Day 1)"
+                                   onClick={() => setOperationRow(fullRecord)}
                                 >
                                     <Play size={16} className="fill-emerald-500" />
                                 </button>
@@ -1579,6 +1584,44 @@ const TenantLease = () => {
                 onConfirm={confirmArchive}
             />
 
+            {operationRow && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="p-3 bg-emerald-100 rounded-full shadow-inner">
+                                <Play size={24} className="fill-emerald-500 text-emerald-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-800">Start Operations</h3>
+                                <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Slot #{operationRow.slotNo}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 mb-6 text-sm text-slate-600">
+                            Are you sure you want to officially start operations for <span className="font-bold text-slate-800">{operationRow.tenantName || operationRow.name}</span>? 
+                            <br/><br/>
+                            Confirming this will permanently lock in today (<span className="font-semibold">{new Date().toLocaleDateString()}</span>) as their official <strong>Day 1</strong> of operations.
+                        </div>
+
+                        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                            <button
+                                onClick={() => setOperationRow(null)}
+                                className="px-5 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleStartOperation}
+                                className="px-6 py-2 text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 active:scale-95 rounded-lg shadow-md transition-all cursor-pointer flex items-center gap-2"
+                            >
+                                <Play size={16} className="fill-white" />
+                                Confirm & Start
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+          
             <SubmitReportModal
                 isOpen={showSubmitModal}
                 onClose={() => setShowSubmitModal(false)}
