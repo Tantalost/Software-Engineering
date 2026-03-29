@@ -3,36 +3,10 @@ Color Coding
 🟡 **In Progress**
 🟢 **Done**
 
-**IMPORTANT INFO PARA SA REQUEST NI MAAM MARJ**
-1. NO BUS Schedule - some days 72, 60, 80 
-2. Plaza application requirements - Send letter, forward to city admin for approval. City activities with no rental.  5-10k - di pwede iadd sa system
-3. grace period for when applying stall and opening - letter of intent, ibt committee approval, city council, mayor signs contract. If Magstart in middle, march 20 til april 5 200 per day. 1 month advance. Only start payment when operation starts. 
-4. How is the first payment - 1 month advance 
-5. Ticket upon arrival then issued ticket upon exit pero exceeding ₱100 OR na ibibigay
-
 **REQUEST NI SIR DERICK**
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
-- add push notifications (LLoyd)
-
-Bus admin
-- should have an estimated trip per day based on the previous report
-- should be able to indicate how many buses per day 
-- should only approve departure (have a list of busses and passenger capacity then only indicate approval of departure to minimize work)
-- should indicate number of capacity per bus
-
-Tenants
-- date of operation should be indicated (add a click or trigger when operation starts) 
-fix: When the tenant will operate, that's the time to count the days of operation.
-- should only be able to change the next months percent but not the currents and the previous months’ due balance
-- should be able to change value of percentage increase 
-- take note of today’s payable payment 
-
-mobile
-- payment history should be able to filter by date 
-
-lost and found
-- make a duration for previous data range
+- add push notifications (Steph) 🟢 **Done**
 
 New todo (Lloyd)
 
@@ -56,6 +30,21 @@ Note: this is also be shown in the table, in the add tenant modal and also in th
 
 -Fix the actions, the admin can update or archive/delete data and fix the "on fix" status to turn back into scheduled status if the bus is already ok.
 
+
+
+
+Tenants (Steph)
+- date of operation should be indicated (add a click or trigger when operation starts) 
+fix: When the tenant will operate, that's the time to count the days of operation.
+- should only be able to change the next months percent but not the currents and the previous months’ due balance
+- should be able to change value of percentage increase 🟢 **Done**
+- take note of today’s payable payment 
+
+mobile
+- payment history should be able to filter by date 
+
+lost and found
+- make a duration for previous data range
 
 
 
@@ -309,3 +298,10 @@ Major Adjustment (Priority)
 - Reports accessibility 
 - Add specific time kung kailan ma expire or di na ma view ang records (ex. records from last month lang ma view and this month) (John Loyd) 🟢 **Done**
 - fix docs and image view for stall application process di sya maview if ibang devices magsubmit 🟢 **Done**
+
+**IMPORTANT INFO PARA SA REQUEST NI MAAM MARJ**
+1. NO BUS Schedule - some days 72, 60, 80 
+2. Plaza application requirements - Send letter, forward to city admin for approval. City activities with no rental.  5-10k - di pwede iadd sa system
+3. grace period for when applying stall and opening - letter of intent, ibt committee approval, city council, mayor signs contract. If Magstart in middle, march 20 til april 5 200 per day. 1 month advance. Only start payment when operation starts. 
+4. How is the first payment - 1 month advance 
+5. Ticket upon arrival then issued ticket upon exit pero exceeding ₱100 OR na ibibigay
