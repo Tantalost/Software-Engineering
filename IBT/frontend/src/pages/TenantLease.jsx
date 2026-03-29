@@ -1372,7 +1372,7 @@ const TenantLease = () => {
                                 <button
                                    onClick={() => setOperationRow(fullRecord)}
                                 >
-                                    <Play size={16} className="fill-emerald-500" />
+                                    <Play size={16} className="fill-emerald-500 cursor-pointer" />
                                 </button>
                             ) : (
                                 <span 
