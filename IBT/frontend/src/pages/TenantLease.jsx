@@ -404,7 +404,7 @@ const TenantLease = () => {
                 "Due Date": formatDate(t.DueDateTime || t.EndDateTime),
                 "Rent": t.rentAmount || 0,
                 "Utility": t.utilityAmount || 0,
-                "Total Due": calculateDueAmount(t)
+                "Total Due": t.totalAmount || calculateDueAmount(t)
             }));
 
             const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
@@ -914,7 +914,7 @@ const TenantLease = () => {
             "Due Date": formatDate(t.DueDateTime || t.EndDateTime),
             "Rent Amount": t.rentAmount ? `₱${t.rentAmount}` : "0",
             "Utility Amount": t.utilityAmount ? `₱${t.utilityAmount}` : "0",
-            "Total Due": `₱${calculateDueAmount(t)}`,
+            "Total Due": `₱${t.totalAmount || calculateDueAmount(t)}`,
             "Status": t.status,
         }));
     };
@@ -1043,21 +1043,21 @@ const TenantLease = () => {
                     `Php ${electricity.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${(Number(feeBreakdown.otherAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                    `Php ${calculateDueAmount(t).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                    `Php ${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                 ]);
             });
 
             const lastRowNumber = worksheet.lastRow.number + 2;
             worksheet.getRow(lastRowNumber).height = 52.5;
-            // Spanned footer image across all 10 columns (A to J)
+          
             await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:J${lastRowNumber + 3}`);
 
-            // Expanded Column widths
+          
             worksheet.columns = [
-                { width: 12 }, { width: 30 }, { width: 25 }, { width: 15 }, // Slot, Name, Email, Contact
-                { width: 15 }, // Rent
-                { width: 12 }, { width: 12 }, // Electricity, Other Fees
-                { width: 15 }, { width: 15 } // Total Utility, Total Due
+                { width: 12 }, { width: 30 }, { width: 25 }, { width: 15 }, 
+                { width: 15 }, 
+                { width: 12 }, { width: 12 }, 
+                { width: 15 }, { width: 15 } 
             ];
 
           
@@ -1308,7 +1308,7 @@ const TenantLease = () => {
                         duedate: formatDate(t.DueDateTime || t.EndDateTime),
                         rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
                         util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
-                        totaldue: `₱${calculateDueAmount(t).toLocaleString()}`,
+                        totaldue: `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                         status: t.status,
                     };
 
