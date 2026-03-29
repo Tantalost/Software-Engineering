@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from "jspdf-autotable";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle, Play, Pause, Wallet } from "lucide-react";
+import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle, Play, Pause, Wallet, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
@@ -82,7 +82,8 @@ const TenantLease = () => {
     const [showSubmitModal, setShowSubmitModal] = useState(false);
 
     const [showPaymentRecords, setShowPaymentRecords] = useState(false);
-    const [paymentFilter, setPaymentFilter] = useState("Today");
+    const [paymentViewType, setPaymentViewType] = useState("Week");
+    const [paymentRefDate, setPaymentRefDate] = useState(new Date());
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("All");
 
     const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);     
@@ -407,7 +408,7 @@ const TenantLease = () => {
     }, [records, activeTab]);
 
 
-    const filteredPayments = useMemo(() => {
+    const { dateRange, filteredPayments } = useMemo(() => {
         let all = [];
         records.forEach(t => {
             if (t.paymentHistory && Array.isArray(t.paymentHistory)) {
@@ -416,7 +417,7 @@ const TenantLease = () => {
                         ...p,
                         tenantName: t.tenantName || t.name,
                         slotNo: t.slotNo,
-                        tenantType: t.tenantType || "Permanent" 
+                        tenantType: t.tenantType || "Permanent"
                     });
                 });
             }
@@ -424,29 +425,58 @@ const TenantLease = () => {
 
         all.sort((a, b) => new Date(b.datePaid) - new Date(a.datePaid));
 
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek = new Date(startOfToday);
-        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const start = new Date(paymentRefDate);
+        const end = new Date(paymentRefDate);
 
-        return all.filter(p => {
-           
+        if (paymentViewType === "Week") {
+            const day = start.getDay();
+            start.setDate(start.getDate() - day); 
+            end.setDate(start.getDate() + 6);     
+        } else if (paymentViewType === "Month") {
+            start.setDate(1);
+            end.setMonth(end.getMonth() + 1, 0);  
+        } else if (paymentViewType === "Year") {
+            start.setMonth(0, 1);
+            end.setMonth(11, 31);
+        }
+
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+
+        const filtered = all.filter(p => {
             const pDate = new Date(p.datePaid);
-            let dateMatch = true;
-            if (paymentFilter === "Today") dateMatch = pDate >= startOfToday;
-            else if (paymentFilter === "This Week") dateMatch = pDate >= startOfWeek;
-            else if (paymentFilter === "This Month") dateMatch = pDate >= startOfMonth;
-            else if (paymentFilter === "This Year") dateMatch = pDate >= startOfYear;
-            
-            let typeMatch = true;
-            if (paymentTypeFilter === "Permanent") typeMatch = p.tenantType === "Permanent";
-            else if (paymentTypeFilter === "Night Market") typeMatch = p.tenantType === "Night Market";
-
-            return dateMatch && typeMatch;
+            const isWithinDate = pDate >= start && pDate <= end;
+            const isTypeMatch = paymentTypeFilter === "All" || p.tenantType === paymentTypeFilter;
+            return isWithinDate && isTypeMatch;
         });
-    }, [records, paymentFilter, paymentTypeFilter]); 
+
+        return { dateRange: { start, end }, filteredPayments: filtered };
+    }, [records, paymentViewType, paymentRefDate, paymentTypeFilter]);
+
+    const handleShiftDate = (direction) => {
+        setPaymentRefDate(prev => {
+            const nextDate = new Date(prev);
+            if (paymentViewType === "Week") nextDate.setDate(nextDate.getDate() + (direction * 7));
+            else if (paymentViewType === "Month") nextDate.setMonth(nextDate.getMonth() + direction);
+            else if (paymentViewType === "Year") nextDate.setFullYear(nextDate.getFullYear() + direction);
+            return nextDate;
+        });
+    };
+
+    const getDisplayRangeText = () => {
+        const { start, end } = dateRange;
+        if (paymentViewType === "Week") {
+            const sMonth = start.toLocaleString('en-US', { month: 'short' });
+            const eMonth = end.toLocaleString('en-US', { month: 'short' });
+            if (start.getFullYear() !== end.getFullYear()) return `${sMonth} ${start.getDate()}, ${start.getFullYear()} - ${eMonth} ${end.getDate()}, ${end.getFullYear()}`;
+            if (sMonth === eMonth) return `${sMonth} ${start.getDate()} - ${end.getDate()}, ${start.getFullYear()}`;
+            return `${sMonth} ${start.getDate()} - ${eMonth} ${end.getDate()}, ${start.getFullYear()}`;
+        } else if (paymentViewType === "Month") {
+            return start.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        } else if (paymentViewType === "Year") {
+            return start.getFullYear().toString();
+        }
+    };
 
     const totalCollected = useMemo(() => {
         return filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
@@ -457,9 +487,10 @@ const TenantLease = () => {
         return filteredPayments.slice(start, start + paymentItemsPerPage);
     }, [filteredPayments, paymentCurrentPage, paymentItemsPerPage]);
 
+   
     useEffect(() => {
         setPaymentCurrentPage(1);
-    }, [paymentFilter, paymentTypeFilter]);
+    }, [paymentViewType, paymentRefDate, paymentTypeFilter]);
    
     const handleSubmitReport = async () => {
         setIsReporting(true);
@@ -1968,36 +1999,52 @@ const TenantLease = () => {
                             </button>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-5">
                             
-                            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar max-w-full">
-                                {["Today", "This Week", "This Month", "This Year", "All Time"].map(f => (
-                                    <button
-                                        key={f}
-                                        onClick={() => setPaymentFilter(f)}
-                                        className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all cursor-pointer ${paymentFilter === f ? "bg-emerald-500 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                                    >
-                                        {f}
-                                    </button>
-                                ))}
-                            </div>
+                            <div className="flex flex-wrap items-center gap-3">
+                                
+                                <div className="flex bg-slate-50 p-1 rounded-lg border border-slate-200 shadow-sm">
+                                    {["Week", "Month", "Year"].map(v => (
+                                        <button
+                                            key={v}
+                                            onClick={() => { setPaymentViewType(v); setPaymentRefDate(new Date()); }}
+                                            className={`px-4 py-1.5 rounded-md font-semibold text-sm transition-all cursor-pointer ${paymentViewType === v ? "bg-white text-emerald-700 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-700"}`}
+                                        >
+                                            {v}
+                                        </button>
+                                    ))}
+                                </div>
 
-                            <div className="flex bg-slate-100 p-1 rounded-lg shrink-0 border border-slate-200">
+                                <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm h-9">
+                                    <button onClick={() => handleShiftDate(-1)} className="px-2 h-full text-slate-400 hover:text-emerald-600 hover:bg-slate-50 rounded-l-lg transition-colors cursor-pointer border-r border-slate-100">
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <div className="px-4 text-sm font-bold text-slate-700 flex items-center gap-2 min-w-[180px] justify-center">
+                                        <Calendar size={14} className="text-slate-400" />
+                                        {getDisplayRangeText()}
+                                    </div>
+                                    <button onClick={() => handleShiftDate(1)} className="px-2 h-full text-slate-400 hover:text-emerald-600 hover:bg-slate-50 rounded-r-lg transition-colors cursor-pointer border-l border-slate-100">
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                          
+                            <div className="flex bg-slate-100 p-1 rounded-lg shrink-0 border border-slate-200 shadow-sm">
                                 {["All", "Permanent", "Night Market"].map(t => (
                                     <button
                                         key={t}
                                         onClick={() => setPaymentTypeFilter(t)}
-                                        className={`px-3 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer ${paymentTypeFilter === t ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                                        className={`px-3 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer ${paymentTypeFilter === t ? "bg-white text-emerald-700 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-700"}`}
                                     >
                                         {t}
                                     </button>
                                 ))}
                             </div>
                         </div>
-
+                        
                         <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
                             <div>
-                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected ({paymentFilter})</p>
+                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected ({paymentViewType})</p>
                                 <p className="text-3xl font-black text-emerald-800">₱{totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             </div>
                             <div className="text-right">
