@@ -5,11 +5,13 @@ import {
   Plus,
   X,
   CheckCircle,
+  Clock,
   Loader2,
   History,
   ListChecks,
   FileText,
   Settings,
+  User,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import headerImg from "../assets/Header.png";
@@ -72,6 +74,15 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
 
 const TerminalFees = () => {
   const role = localStorage.getItem("authRole") || "superadmin";
+  const operatorName =
+    localStorage.getItem("authName") ||
+    localStorage.getItem("authEmail") ||
+    "Admin";
+  const asOfDateLabel = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeType, setActiveType] = useState("All");
@@ -956,19 +967,21 @@ const TerminalFees = () => {
       {/* --- Main container justified to the right --- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         {/* LEFT SIDE — Collector Name */}
-        <div className="flex items-center gap-3 w-full lg:w-auto">
-          <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-            Name of Collector:
-          </label>
+        <div className="flex flex-col gap-2 w-full lg:w-auto">
+          <div className="flex items-center gap-3 w-full lg:w-auto">
+            <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+              Name of Collector:
+            </label>
 
-          <input
-            type="text"
-            value={collectorName}
-            maxLength={100}
-            onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
-            placeholder="Enter collector name"
-            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          />
+            <input
+              type="text"
+              value={collectorName}
+              maxLength={100}
+              onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
+              placeholder="Enter collector name"
+              className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            />
+          </div>
         </div>
         <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
           {role === "superadmin" && (
@@ -1099,86 +1112,110 @@ const TerminalFees = () => {
           </p>
         </div>
       ) : (
-        <Table
-          columns={tableColumns}
-          data={paginatedData.map((fee) => {
-            const rowId = fee._id || fee.id;
-            const isOnRead = fee.reportStatus === "On Read";
-            const baseData = {
-              id: rowId,
-              ticketno: fee.ticketNo,
-              passengertype: fee.passengerType,
-              reportstate: isOnRead ? (
-                <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                  On Read
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-slate-800 text-white p-4 flex flex-wrap gap-3 justify-between items-center">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <Clock size={20} className="text-emerald-400" />
+              Terminal Fees Table
+            </h2>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-slate-300 bg-slate-800 border border-slate-600 px-3 py-1 rounded-full">
+                <User size={14} className="text-blue-400" />
+                <span>
+                  Operator: <span className="text-white">{operatorName}</span>
                 </span>
-              ) : (
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                  Pending
-                </span>
-              ),
-              time: fee.time,
-              date: fee.date,
-              price: `₱${fee.price.toFixed(2)}`,
-              __highlight: isOnRead,
-            };
-
-            if (isSelectionMode) {
-              return {
-                select: (
-                  <div
-                    className="flex items-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(rowId)}
-                      onChange={() => toggleSelect(rowId)}
-                      className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                  </div>
-                ),
-                ...baseData,
-              };
-            }
-
-            return baseData;
-          })}
-          actions={(row) => {
-            const selectedRecord = records.find(
-              (r) => (r._id || r.id) == row.id,
-            );
-
-            return (
-              <div className="flex justify-end items-center space-x-2">
-                <TableActions
-                  onView={() => setViewRow(selectedRecord)}
-                  onEdit={() => setEditRow(selectedRecord)}
-                />
-                <button
-                  onClick={() => setArchiveRow(selectedRecord)}
-                  className="p-1.5 rounded-lg bg-yellow-50 cursor-pointer text-yellow-600 hover:bg-yellow-100"
-                  title="Archive"
-                >
-                  <Archive size={16} />
-                </button>
-
-                {role == "superadmin" && (
-                  <button
-                    onClick={() => {
-                      setDeleteRow(selectedRecord);
-                      setDeleteRemarks("");
-                    }}
-                    className="p-1.5 rounded-lg bg-red-50 cursor-pointer text-red-600 hover:bg-red-100"
-                    title="Delete"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
               </div>
-            );
-          }}
-        />
+
+              <span className="text-sm font-medium text-slate-300 bg-slate-700 px-3 py-1 rounded-full">
+                As of {asOfDateLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-4">
+            <Table
+              columns={tableColumns}
+              data={paginatedData.map((fee) => {
+                const rowId = fee._id || fee.id;
+                const isOnRead = fee.reportStatus === "On Read";
+                const baseData = {
+                  id: rowId,
+                  ticketno: fee.ticketNo,
+                  passengertype: fee.passengerType,
+                  reportstate: isOnRead ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                      On Read
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                      Pending
+                    </span>
+                  ),
+                  time: fee.time,
+                  date: fee.date,
+                  price: `₱${fee.price.toFixed(2)}`,
+                  __highlight: isOnRead,
+                };
+
+                if (isSelectionMode) {
+                  return {
+                    select: (
+                      <div
+                        className="flex items-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(rowId)}
+                          onChange={() => toggleSelect(rowId)}
+                          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                      </div>
+                    ),
+                    ...baseData,
+                  };
+                }
+
+                return baseData;
+              })}
+              actions={(row) => {
+                const selectedRecord = records.find(
+                  (r) => (r._id || r.id) == row.id,
+                );
+
+                return (
+                  <div className="flex justify-end items-center space-x-2">
+                    <TableActions
+                      onView={() => setViewRow(selectedRecord)}
+                      onEdit={() => setEditRow(selectedRecord)}
+                    />
+                    <button
+                      onClick={() => setArchiveRow(selectedRecord)}
+                      className="p-1.5 rounded-lg bg-yellow-50 cursor-pointer text-yellow-600 hover:bg-yellow-100"
+                      title="Archive"
+                    >
+                      <Archive size={16} />
+                    </button>
+
+                    {role == "superadmin" && (
+                      <button
+                        onClick={() => {
+                          setDeleteRow(selectedRecord);
+                          setDeleteRemarks("");
+                        }}
+                        className="p-1.5 rounded-lg bg-red-50 cursor-pointer text-red-600 hover:bg-red-100"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                );
+              }}
+            />
+          </div>
+        </div>
       )}
 
       <div className="mt-4">
@@ -1596,6 +1633,12 @@ const TerminalFees = () => {
                   <strong>Total Records Included:</strong> {filtered.length} Tickets
                   <div className="mt-2 pt-2 border-t border-blue-200">
                     <strong>Collector:</strong> {collectorName}
+                  </div>
+                  <div className="mt-1">
+                    <strong>Operator:</strong> {operatorName}
+                  </div>
+                  <div className="mt-1">
+                    <strong>As of:</strong> {asOfDateLabel}
                   </div>
                 </div>
               </div>
