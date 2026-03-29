@@ -36,6 +36,10 @@ const TenantSchema = new mongoose.Schema({
   
   StartDateTime: Date,
   DueDateTime: Date,
+
+  advancePaymentBalance: { type: Number, default: 0 },   
+  advanceUsedForPenalties: { type: Number, default: 0 },
+  
   operationStartDate: Date, 
   isOperationPaused: { type: Boolean, default: false }, 
   lastPausedDate: Date,                               

@@ -165,6 +165,7 @@ export const createTenant = async (req, res) => {
 
     const tenantData = {
         ...req.body,
+      advancePaymentBalance: Number(req.body.advancePaymentBalance || 0),
       feeBreakdown: normalizedFeeBreakdown,
         paymentHistory: [{
             referenceNo: req.body.referenceNo || "Initial Payment",
@@ -310,16 +311,39 @@ export const updateTenant = async (req, res) => {
         const rent = Number(updateData.rentAmount || oldTenant.rentAmount || 0);
         const util = updateData.utilityAmount;
 
-        const chargeAmt = rent * (cPct / 100);
-        const dueBalance = rent + chargeAmt;
-        const interestAmt = dueBalance * (iPct / 100);
+        let rawChargeAmt = rent * (cPct / 100);
+        const dueBalance = rent + rawChargeAmt;
+        let rawInterestAmt = dueBalance * (iPct / 100);
         
-        updateData.chargeAmount = chargeAmt;
-        updateData.interestAmount = interestAmt;
-        updateData.totalAmount = rent + util + chargeAmt + interestAmt;
+        const totalRawPenalty = rawChargeAmt + rawInterestAmt;
+        const availableAdvance = (oldTenant.advancePaymentBalance || 0) + (oldTenant.advanceUsedForPenalties || 0);
+        
+        let advanceUsed = 0;
+        
+        if (availableAdvance >= totalRawPenalty) {
+            advanceUsed = totalRawPenalty;
+            rawChargeAmt = 0;
+            rawInterestAmt = 0;
+        } else {
+            advanceUsed = availableAdvance;
+            if (availableAdvance >= rawChargeAmt) {
+                rawInterestAmt -= (availableAdvance - rawChargeAmt);
+                rawChargeAmt = 0;
+            } else {
+                rawChargeAmt -= availableAdvance;
+            }
+        }
+
+        updateData.advancePaymentBalance = availableAdvance - advanceUsed;
+        updateData.advanceUsedForPenalties = advanceUsed;
+        updateData.chargeAmount = rawChargeAmt;
+        updateData.interestAmount = rawInterestAmt;
+        updateData.totalAmount = rent + util + rawChargeAmt + rawInterestAmt;
+       
     } else {
         updateData.chargeAmount = 0;
         updateData.interestAmount = 0;
+        updateData.advanceUsedForPenalties = 0; 
         updateData.totalAmount = Number(updateData.rentAmount || oldTenant.rentAmount || 0) + updateData.utilityAmount;
     }
 
@@ -620,8 +644,7 @@ export const approveRenewalPayment = async (req, res) => {
     const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
     const nextRentAmount = defaultPrice * slotCount;
     const nextTotalAmount = nextRentAmount + (tenant.utilityAmount || 0);
-    // --------------------------------------------------------------------------
-
+    
     const paymentRecord = {
         referenceNo: tenant.referenceNo || "N/A",
         amount: tenant.totalAmount || tenant.rentAmount || 0, 
@@ -637,7 +660,8 @@ export const approveRenewalPayment = async (req, res) => {
           rentAmount: nextRentAmount,    
           totalAmount: nextTotalAmount,  
           chargeAmount: 0,               
-          interestAmount: 0,            
+          interestAmount: 0,    
+          advanceUsedForPenalties: 0,        
           $push: { paymentHistory: paymentRecord },
           $unset: { 
               referenceNo: "",
@@ -810,22 +834,42 @@ export const updateOverdueSettings = async (req, res) => {
 
     for (const tenant of overdueTenants) {
       const rent = tenant.rentAmount || 0;
-      const chargeAmt = rent * (cPct / 100);
-      const dueBalance = rent + chargeAmt;
-      const interestAmt = dueBalance * (iPct / 100);
-      const totalAmt = rent + (tenant.utilityAmount || 0) + chargeAmt + interestAmt;
+      let rawChargeAmt = rent * (cPct / 100);
+      const dueBalance = rent + rawChargeAmt;
+      let rawInterestAmt = dueBalance * (iPct / 100);
+      
+      const totalRawPenalty = rawChargeAmt + rawInterestAmt;
+      const availableAdvance = (tenant.advancePaymentBalance || 0) + (tenant.advanceUsedForPenalties || 0);
+      
+      let advanceUsed = 0;
+      
+      if (availableAdvance >= totalRawPenalty) {
+          advanceUsed = totalRawPenalty;
+          rawChargeAmt = 0;
+          rawInterestAmt = 0;
+      } else {
+          advanceUsed = availableAdvance;
+          if (availableAdvance >= rawChargeAmt) {
+              rawInterestAmt -= (availableAdvance - rawChargeAmt);
+              rawChargeAmt = 0;
+          } else {
+              rawChargeAmt -= availableAdvance;
+          }
+      }
 
       await Tenant.updateOne(
           { _id: tenant._id },
           { $set: { 
-              chargeAmount: chargeAmt, 
-              interestAmount: interestAmt, 
-              totalAmount: totalAmt 
+              advancePaymentBalance: availableAdvance - advanceUsed,
+              advanceUsedForPenalties: advanceUsed,
+              chargeAmount: rawChargeAmt, 
+              interestAmount: rawInterestAmt, 
+              totalAmount: rent + (tenant.utilityAmount || 0) + rawChargeAmt + rawInterestAmt 
           }}
       );
       updatedCount++;
     }
-
+    
     res.status(200).json({
       message: `Overdue settings for ${tenantType} updated successfully.`,
       updatedTenants: updatedCount

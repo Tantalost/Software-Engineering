@@ -42,6 +42,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   const [otherProductDetails, setOtherProductDetails] = useState("");
 
   const [rentAmount, setRentAmount] = useState(0);
+  const [advancePayment, setAdvancePayment] = useState(0);
   const [utilityAmount, setUtilityAmount] = useState(0);
 
   const [feeBreakdown, setFeeBreakdown] = useState({
@@ -189,6 +190,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
 
     setRentAmount(baseRent * slotCount);
+    setAdvancePayment(baseRent * slotCount);
     setDueDate(calculatedDueDate);
 
   }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice]);
@@ -200,8 +202,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     const calculatedUtils = electricityFee + otherFee;
                   
     setUtilityAmount(calculatedUtils);
-    setTotalAmount(parseFloat(rentAmount || 0) + calculatedUtils);
-  }, [rentAmount, feeBreakdown, formData.tenantType]);
+    setTotalAmount(parseFloat(rentAmount || 0) + calculatedUtils + parseFloat(advancePayment || 0));
+  }, [rentAmount, feeBreakdown, formData.tenantType, advancePayment]);
 
   const handleFileChange = (e, docType) => {
     if (e.target.files && e.target.files[0]) {
@@ -268,6 +270,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             ...(_id ? { _id } : {}),
             products: productCategory === "other" ? otherProductDetails : productCategory,
             rentAmount,
+            advancePaymentBalance: parseFloat(advancePayment || 0),
             utilityAmount: parseFloat(utilityAmount),
             totalAmount,
             feeBreakdown: JSON.stringify(feeBreakdown),
@@ -591,6 +594,12 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                   <label className="text-xs font-semibold text-slate-600">Rental Fee (x{formData.slotNo ? formData.slotNo.split(',').length : 1})</label>
                   <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={rentAmount} /></div>
                 </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-slate-600">Advance Payment</label>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} /></div>
+                </div>
+                
                 {formData.tenantType === "Permanent" && (
                   <>
                     <div className="flex flex-col gap-1">

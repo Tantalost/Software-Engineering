@@ -269,7 +269,14 @@ const ApplicationReviewModal = ({
               <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-center mb-4">
                   <div><p className="text-xs font-bold text-slate-500 uppercase">Ref No</p><p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || reviewData.referenceNo || "PENDING"}</p></div>
-                  <div className="text-right"><p className="text-xs font-bold text-slate-500 uppercase">Amount</p><p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString()}</p></div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
+                    <p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString()}</p>
+              
+                    {reviewData.advancePaymentBalance > 0 && (
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Includes ₱{Number(reviewData.advancePaymentBalance).toLocaleString()} Advance</p>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-3 border border-blue-100">
                     <Lock size={18} className="mt-0.5 shrink-0 text-blue-600" />
