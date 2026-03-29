@@ -435,17 +435,44 @@ export const updateAllNightMarketPrices = async (req, res) => {
     const priceValue = parseFloat(newPrice);
     const priceString = priceValue.toString(); 
 
-   
     await Settings.findOneAndUpdate(
       { key: "defaultNightPrice" },
       { key: "defaultNightPrice", value: priceValue },
       { upsert: true, new: true }
     );
 
-    const tenantResult = await Tenant.updateMany(
-      { tenantType: "Night Market", status: "Due" },
-      { rentAmount: priceValue }
-    );
+    const tenants = await Tenant.find({ tenantType: "Night Market", isArchived: { $ne: true } });
+    let updatedCount = 0;
+
+    for (const t of tenants) {
+        
+        const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
+        const newRent = priceValue * slotCount;
+        
+        const newTotal = t.status === "Overdue" ? t.totalAmount : (newRent + (t.utilityAmount || 0));
+
+        await Tenant.updateOne(
+            { _id: t._id },
+            { $set: { rentAmount: newRent, totalAmount: newTotal } }
+        );
+        updatedCount++;
+
+        if (t.email) {
+            try {
+                const user = await User.findOne({ email: t.email });
+                if (user && user.expoPushToken) {
+                    await sendPushNotification(
+                        user.expoPushToken,
+                        "Rent Price Updated 📢",
+                        `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
+                        { route: 'stalls' }
+                    );
+                }
+            } catch (notifyErr) {
+                console.error("Push failed:", notifyErr.message);
+            }
+        }
+    }
 
     const applicationResult = await TenantApplication.updateMany(
       { 
@@ -456,9 +483,11 @@ export const updateAllNightMarketPrices = async (req, res) => {
     );
 
     res.status(200).json({
-      message: `Updated global night market price.`,
-      modifiedCount: tenantResult.modifiedCount
+      message: `Updated global night market price. Modified ${updatedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
+      tenantModifiedCount: updatedCount,
+      applicationModifiedCount: applicationResult.modifiedCount 
     });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -486,23 +515,48 @@ export const updateAllPermanentPrices = async (req, res) => {
     const priceValue = parseFloat(newPrice);
     const priceString = priceValue.toString(); 
 
-    
     await Settings.findOneAndUpdate(
       { key: "defaultPermanentPrice" },
       { key: "defaultPermanentPrice", value: priceValue },
       { upsert: true, new: true }
     );
 
-   
-    const tenantResult = await Tenant.updateMany(
-      { 
-        $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }], 
-        status: "Due" 
-      },
-      { rentAmount: priceValue }
-    );
+    const tenants = await Tenant.find({ 
+      $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }], 
+      isArchived: { $ne: true } 
+    });
+    let updatedCount = 0;
 
-   
+    for (const t of tenants) {
+       
+        const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
+        const newRent = priceValue * slotCount;
+        
+        const newTotal = t.status === "Overdue" ? t.totalAmount : (newRent + (t.utilityAmount || 0));
+
+        await Tenant.updateOne(
+            { _id: t._id },
+            { $set: { rentAmount: newRent, totalAmount: newTotal } }
+        );
+        updatedCount++;
+
+        if (t.email) {
+            try {
+                const user = await User.findOne({ email: t.email });
+                if (user && user.expoPushToken) {
+                    await sendPushNotification(
+                        user.expoPushToken,
+                        "Rent Price Updated 📢",
+                        `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
+                        { route: 'stalls' }
+                    );
+                }
+            } catch (notifyErr) {
+                console.error("Push failed:", notifyErr.message);
+            }
+        }
+    }
+
     const applicationResult = await TenantApplication.updateMany(
       { 
         $or: [{ floor: "Permanent" }, { preferredType: "Permanent" }], 
@@ -512,8 +566,8 @@ export const updateAllPermanentPrices = async (req, res) => {
     );
 
     res.status(200).json({
-      message: `Updated global permanent price. Modified ${tenantResult.modifiedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
-      tenantModifiedCount: tenantResult.modifiedCount,
+      message: `Updated global permanent price. Modified ${updatedCount} active tenants.`,
+      tenantModifiedCount: updatedCount,
       applicationModifiedCount: applicationResult.modifiedCount
     });
   } catch (error) {

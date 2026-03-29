@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from "jspdf-autotable";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle, Play, Pause } from "lucide-react";
+import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle, Play, Pause, Wallet } from "lucide-react";
 
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
@@ -80,6 +80,9 @@ const TenantLease = () => {
     const [showEmailModal, setShowEmailModal] = useState(false);
     const [showLogModal, setShowLogModal] = useState(false);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
+
+    const [showPaymentRecords, setShowPaymentRecords] = useState(false);
+    const [paymentFilter, setPaymentFilter] = useState("Today");
 
     const [isReporting, setIsReporting] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -398,6 +401,47 @@ const TenantLease = () => {
 
         return { availableSlots: available, nonAvailableSlots: paid, totalSlots: totalSlots, totalRevenue: revenue };
     }, [records, activeTab]);
+
+
+    const filteredPayments = useMemo(() => {
+        let all = [];
+        records.forEach(t => {
+            if (t.paymentHistory && Array.isArray(t.paymentHistory)) {
+                t.paymentHistory.forEach(p => {
+                    all.push({
+                        ...p,
+                        tenantName: t.tenantName || t.name,
+                        slotNo: t.slotNo,
+                    });
+                });
+            }
+        });
+
+        all.sort((a, b) => new Date(b.datePaid) - new Date(a.datePaid));
+
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        const startOfWeek = new Date(startOfToday);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); 
+        
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+        return all.filter(p => {
+            const pDate = new Date(p.datePaid);
+            if (paymentFilter === "Today") return pDate >= startOfToday;
+            if (paymentFilter === "This Week") return pDate >= startOfWeek;
+            if (paymentFilter === "This Month") return pDate >= startOfMonth;
+            if (paymentFilter === "This Year") return pDate >= startOfYear;
+            return true; 
+        });
+    }, [records, paymentFilter]);
+
+    const totalCollected = useMemo(() => {
+        return filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    }, [filteredPayments]);
+    
 
     const handleSubmitReport = async () => {
         setIsReporting(true);
@@ -1311,6 +1355,17 @@ const TenantLease = () => {
                         </button>
                     )}
 
+                    {(role === "superadmin" || role === "lease") && (
+                        <button
+                            onClick={() => setShowPaymentRecords(true)}
+                            className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-emerald-300 transition-all cursor-pointer"
+                            title="View Payment Records"
+                        >
+                            <Wallet size={18} />
+                            <span className="hidden sm:inline">Records</span>
+                        </button>
+                    )}
+
                     {isSelectionMode && selectedIds.length > 0 && (
                         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                             <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
@@ -1881,6 +1936,76 @@ const TenantLease = () => {
                     </div>
                 </div>
             )}
+
+            {showPaymentRecords && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
+                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <Wallet size={20} className="text-emerald-600" />
+                                Collection & Payment Records
+                            </h3>
+                            <button onClick={() => setShowPaymentRecords(false)} className="text-slate-400 hover:text-red-500 cursor-pointer">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar">
+                            {["Today", "This Week", "This Month", "This Year", "All Time"].map(f => (
+                                <button
+                                    key={f}
+                                    onClick={() => setPaymentFilter(f)}
+                                    className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all cursor-pointer ${paymentFilter === f ? "bg-emerald-500 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+
+                      
+                        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
+                            <div>
+                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected ({paymentFilter})</p>
+                                <p className="text-3xl font-black text-emerald-800">₱{totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Transactions</p>
+                                <p className="text-2xl font-black text-emerald-800">{filteredPayments.length}</p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-y-auto border border-slate-200 rounded-xl flex-1 custom-scrollbar">
+                            <table className="w-full text-left border-collapse text-sm">
+                                <thead className="bg-slate-50 sticky top-0 shadow-sm z-10">
+                                    <tr>
+                                        <th className="p-3 font-bold text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">Date & Time</th>
+                                        <th className="p-3 font-bold text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">Tenant Name</th>
+                                        <th className="p-3 font-bold text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">Slot</th>
+                                        <th className="p-3 font-bold text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">Ref / OR No.</th>
+                                        <th className="p-3 font-bold text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider text-right">Amount Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredPayments.length > 0 ? filteredPayments.map((p, i) => (
+                                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                            <td className="p-3 text-slate-700 font-medium">{new Date(p.datePaid).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
+                                            <td className="p-3 text-slate-800 font-bold">{p.tenantName}</td>
+                                            <td className="p-3 text-slate-600">{p.slotNo}</td>
+                                            <td className="p-3 text-slate-500 font-mono text-xs">{p.referenceNo}</td>
+                                            <td className="p-3 text-emerald-600 font-black text-right">₱{(Number(p.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="5" className="p-10 text-center text-slate-400 font-semibold italic">No payment records found for {paymentFilter.toLowerCase()}.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
         </Layout>
     );
 };

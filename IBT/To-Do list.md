@@ -35,8 +35,8 @@ Note: this is also be shown in the table, in the add bus modal and also in the r
 
 Tenants (Steph)
 - date of operation should be indicated (add a click or trigger when operation starts) 
-fix: When the tenant will operate, that's the time to count the days of operation.
-- should only be able to change the next months percent but not the currents and the previous months’ due balance
+fix: When the tenant will operate, that's the time to count the days of operation. 🟢 **Done**
+- should only be able to change the next months percent but not the currents and the previous months’ due balance 
 - should be able to change value of percentage increase 🟢 **Done**
 - take note of today’s payable payment 
 
