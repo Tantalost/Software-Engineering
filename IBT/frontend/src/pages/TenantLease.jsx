@@ -83,6 +83,10 @@ const TenantLease = () => {
 
     const [showPaymentRecords, setShowPaymentRecords] = useState(false);
     const [paymentFilter, setPaymentFilter] = useState("Today");
+    const [paymentTypeFilter, setPaymentTypeFilter] = useState("All");
+
+    const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);     
+    const [paymentItemsPerPage, setPaymentItemsPerPage] = useState(25);
 
     const [isReporting, setIsReporting] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -412,6 +416,7 @@ const TenantLease = () => {
                         ...p,
                         tenantName: t.tenantName || t.name,
                         slotNo: t.slotNo,
+                        tenantType: t.tenantType || "Permanent" 
                     });
                 });
             }
@@ -421,28 +426,41 @@ const TenantLease = () => {
 
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
         const startOfWeek = new Date(startOfToday);
-        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); 
-        
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfYear = new Date(now.getFullYear(), 0, 1);
 
         return all.filter(p => {
+           
             const pDate = new Date(p.datePaid);
-            if (paymentFilter === "Today") return pDate >= startOfToday;
-            if (paymentFilter === "This Week") return pDate >= startOfWeek;
-            if (paymentFilter === "This Month") return pDate >= startOfMonth;
-            if (paymentFilter === "This Year") return pDate >= startOfYear;
-            return true; 
+            let dateMatch = true;
+            if (paymentFilter === "Today") dateMatch = pDate >= startOfToday;
+            else if (paymentFilter === "This Week") dateMatch = pDate >= startOfWeek;
+            else if (paymentFilter === "This Month") dateMatch = pDate >= startOfMonth;
+            else if (paymentFilter === "This Year") dateMatch = pDate >= startOfYear;
+            
+            let typeMatch = true;
+            if (paymentTypeFilter === "Permanent") typeMatch = p.tenantType === "Permanent";
+            else if (paymentTypeFilter === "Night Market") typeMatch = p.tenantType === "Night Market";
+
+            return dateMatch && typeMatch;
         });
-    }, [records, paymentFilter]);
+    }, [records, paymentFilter, paymentTypeFilter]); 
 
     const totalCollected = useMemo(() => {
         return filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     }, [filteredPayments]);
-    
 
+    const paginatedPayments = useMemo(() => {
+        const start = (paymentCurrentPage - 1) * paymentItemsPerPage;
+        return filteredPayments.slice(start, start + paymentItemsPerPage);
+    }, [filteredPayments, paymentCurrentPage, paymentItemsPerPage]);
+
+    useEffect(() => {
+        setPaymentCurrentPage(1);
+    }, [paymentFilter, paymentTypeFilter]);
+   
     const handleSubmitReport = async () => {
         setIsReporting(true);
         try {
@@ -1319,7 +1337,7 @@ const TenantLease = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-4">
                 <div className="flex items-center gap-2">
                     <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
                         <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
@@ -1342,7 +1360,7 @@ const TenantLease = () => {
                     </button>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
                     <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
                     {(role === "superadmin" || role === "lease") && (
                         <button
@@ -1950,19 +1968,33 @@ const TenantLease = () => {
                             </button>
                         </div>
 
-                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar">
-                            {["Today", "This Week", "This Month", "This Year", "All Time"].map(f => (
-                                <button
-                                    key={f}
-                                    onClick={() => setPaymentFilter(f)}
-                                    className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all cursor-pointer ${paymentFilter === f ? "bg-emerald-500 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                                >
-                                    {f}
-                                </button>
-                            ))}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                            
+                            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar max-w-full">
+                                {["Today", "This Week", "This Month", "This Year", "All Time"].map(f => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setPaymentFilter(f)}
+                                        className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all cursor-pointer ${paymentFilter === f ? "bg-emerald-500 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                    >
+                                        {f}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="flex bg-slate-100 p-1 rounded-lg shrink-0 border border-slate-200">
+                                {["All", "Permanent", "Night Market"].map(t => (
+                                    <button
+                                        key={t}
+                                        onClick={() => setPaymentTypeFilter(t)}
+                                        className={`px-3 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer ${paymentTypeFilter === t ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                      
                         <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
                             <div>
                                 <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected ({paymentFilter})</p>
@@ -1986,7 +2018,7 @@ const TenantLease = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredPayments.length > 0 ? filteredPayments.map((p, i) => (
+                                    {paginatedPayments.length > 0 ? paginatedPayments.map((p, i) => (
                                         <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                             <td className="p-3 text-slate-700 font-medium">{new Date(p.datePaid).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
                                             <td className="p-3 text-slate-800 font-bold">{p.tenantName}</td>
@@ -2000,7 +2032,21 @@ const TenantLease = () => {
                                         </tr>
                                     )}
                                 </tbody>
-                            </table>
+                         </table>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-100 mt-2 shrink-0">
+                            <Pagination
+                                currentPage={paymentCurrentPage}
+                                totalPages={Math.max(1, Math.ceil(filteredPayments.length / paymentItemsPerPage))}
+                                onPageChange={setPaymentCurrentPage}
+                                itemsPerPage={paymentItemsPerPage}
+                                totalItems={filteredPayments.length}
+                                onItemsPerPageChange={(n) => { 
+                                    setPaymentItemsPerPage(n); 
+                                    setPaymentCurrentPage(1); 
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
