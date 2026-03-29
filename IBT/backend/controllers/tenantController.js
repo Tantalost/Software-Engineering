@@ -694,7 +694,6 @@ export const updateOverdueSettings = async (req, res) => {
     const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
     const interestKey = isNightMarket ? "nightMarketInterestPercentage" : "permanentInterestPercentage";
 
-   
     if (chargePercentage !== undefined) {
       await Settings.findOneAndUpdate(
         { key: chargeKey },
@@ -703,7 +702,6 @@ export const updateOverdueSettings = async (req, res) => {
       );
     }
 
-   
     if (interestPercentage !== undefined) {
       await Settings.findOneAndUpdate(
         { key: interestKey },
@@ -729,12 +727,15 @@ export const updateOverdueSettings = async (req, res) => {
         if (t.DueDateTime) {
           const currentDue = new Date(t.DueDateTime);
           
-          const daysInMonth = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
-          
-          currentDue.setDate(Math.min(targetDay, daysInMonth));
-          t.DueDateTime = currentDue.toISOString();
-          
-          await t.save();
+          if (!isNaN(currentDue.getTime())) {
+              const daysInMonth = new Date(currentDue.getFullYear(), currentDue.getMonth() + 1, 0).getDate();
+              currentDue.setDate(Math.min(targetDay, daysInMonth));
+              
+              await Tenant.updateOne(
+                  { _id: t._id },
+                  { $set: { DueDateTime: currentDue.toISOString() } }
+              );
+          }
         }
       }
     }
@@ -756,11 +757,14 @@ export const updateOverdueSettings = async (req, res) => {
       const interestAmt = dueBalance * (iPct / 100);
       const totalAmt = rent + (tenant.utilityAmount || 0) + chargeAmt + interestAmt;
 
-      tenant.chargeAmount = chargeAmt;
-      tenant.interestAmount = interestAmt;
-      tenant.totalAmount = totalAmt;
-      
-      await tenant.save();
+      await Tenant.updateOne(
+          { _id: tenant._id },
+          { $set: { 
+              chargeAmount: chargeAmt, 
+              interestAmount: interestAmt, 
+              totalAmount: totalAmt 
+          }}
+      );
       updatedCount++;
     }
 
@@ -769,10 +773,10 @@ export const updateOverdueSettings = async (req, res) => {
       updatedTenants: updatedCount
     });
   } catch (error) {
+    console.error("Settings Update Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const startOperation = async (req, res) => {
   try {
