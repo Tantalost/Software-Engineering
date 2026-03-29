@@ -21,13 +21,23 @@ const sanitizeAdmin = (admin) => ({
   name: `${admin.firstName} ${admin.middleName ? admin.middleName + ' ' : ''}${admin.lastName}${admin.suffix ? ' ' + admin.suffix : ''}`.trim(),
   email: admin.email,
   role: admin.role,
+  assignedShift: admin.assignedShift || null,
   createdAt: admin.createdAt,
   updatedAt: admin.updatedAt,
 });
 
 export const createAdmin = async (req, res) => {
   try {
-    const { firstName, lastName, middleName, suffix, email, role, password } = req.body;
+    const {
+      firstName,
+      lastName,
+      middleName,
+      suffix,
+      email,
+      role,
+      password,
+      assignedShift,
+    } = req.body;
     
     if (!firstName || !lastName || !email || !role || !password) {
       return res.status(400).json({ message: "All required fields are required." });
@@ -37,6 +47,11 @@ export const createAdmin = async (req, res) => {
       return res.status(403).json({ 
         message: "Security restriction: Super Admin accounts cannot be created or cloned via the API." 
       });
+    }
+
+    const allowedShifts = ["00-06", "06-12", "12-18", "18-24"];
+    if (!assignedShift || !allowedShifts.includes(assignedShift)) {
+      return res.status(400).json({ message: "A valid 6-hour shift is required." });
     }
 
     const existingEmail = await Admin.findOne({ email: email.toLowerCase() });
@@ -50,6 +65,13 @@ export const createAdmin = async (req, res) => {
       return res.status(409).json({ message: "Maximum 4 admins allowed per role." });
     }
 
+    const duplicateShift = await Admin.findOne({ role, assignedShift });
+    if (duplicateShift) {
+      return res.status(409).json({
+        message: `Shift ${assignedShift} is already assigned for ${role}.`,
+      });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     
     const admin = await Admin.create({ 
@@ -59,6 +81,7 @@ export const createAdmin = async (req, res) => {
       suffix, 
       email: email.toLowerCase(), 
       role, 
+      assignedShift,
       passwordHash
     });
 
@@ -125,7 +148,7 @@ export const sendOtp = async (req, res) => {
 export const updateAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, middleName, suffix, email, password, otp } = req.body;
+    const { firstName, lastName, middleName, suffix, email, password, otp, assignedShift } = req.body;
 
     const admin = await Admin.findById(id);
     if (!admin) return res.status(404).json({ message: "Admin not found." });
@@ -135,6 +158,29 @@ export const updateAdmin = async (req, res) => {
     if (middleName !== undefined) admin.middleName = middleName;
     if (suffix !== undefined) admin.suffix = suffix;
     if (email) admin.email = email.toLowerCase();
+
+    if (assignedShift !== undefined) {
+      const allowedShifts = ["00-06", "06-12", "12-18", "18-24"];
+      if (admin.role !== "superadmin") {
+        if (!allowedShifts.includes(assignedShift)) {
+          return res.status(400).json({ message: "A valid 6-hour shift is required." });
+        }
+
+        const duplicateShift = await Admin.findOne({
+          _id: { $ne: admin._id },
+          role: admin.role,
+          assignedShift,
+        });
+
+        if (duplicateShift) {
+          return res.status(409).json({
+            message: `Shift ${assignedShift} is already assigned for ${admin.role}.`,
+          });
+        }
+      }
+
+      admin.assignedShift = admin.role === "superadmin" ? null : assignedShift;
+    }
 
     if (password) {
       if (!otp) return res.status(400).json({ message: "OTP is required to change password." });

@@ -43,12 +43,20 @@ const Table = ({ columns = [], data = [], actions }) => {
             ) : (
               data.map((row, idx) => {
                 const isEven = idx % 2 === 0;
-                const rowBg = isEven ? "bg-white" : "bg-gray-50";
+                const isHighlighted = row?.__highlight === true;
+                const rowBg = isHighlighted
+                  ? "bg-emerald-50"
+                  : isEven
+                    ? "bg-white"
+                    : "bg-gray-50";
+                const hoverBg = isHighlighted
+                  ? "hover:bg-emerald-100"
+                  : "hover:bg-blue-50";
 
                 return (
                   <tr
                     key={idx}
-                    className={`${rowBg} hover:bg-blue-50 transition-colors duration-150`}
+                    className={`${rowBg} ${hoverBg} transition-colors duration-150 ${row?.__rowClassName || ""}`}
                   >
                     {columns.map((col, i) => {
                       const key = keyFromCol(col);

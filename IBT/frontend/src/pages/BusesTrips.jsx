@@ -78,6 +78,17 @@ const formatStopType = (stopType, customStopCount) => {
   return stopType || "Regular Trip";
 };
 
+const normalizeShiftValue = (rawShift) => {
+  if (!rawShift) return "";
+  const cleaned = String(rawShift).trim();
+  const match = cleaned.match(/^(\d{1,2})\s*-\s*(\d{1,2})$/);
+  if (!match) return cleaned;
+
+  const start = String(parseInt(match[1], 10)).padStart(2, "0");
+  const end = String(parseInt(match[2], 10)).padStart(2, "0");
+  return `${start}-${end}`;
+};
+
 const ManageCompaniesModal = ({
   isOpen,
   onClose,
@@ -826,9 +837,6 @@ const BusTrips = () => {
   const [showLogModal, setShowLogModal] = useState(false);
   const [showManageCompaniesModal, setShowManageCompaniesModal] = useState(false);
   const [showCommonModal, setShowCommonModal] = useState(false);
-  const [shiftInterval, setShiftInterval] = useState(6);
-  const [selectedShift, setSelectedShift] = useState("");
-  const [isLateSubmit, setIsLateSubmit] = useState(false);
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -846,8 +854,12 @@ const BusTrips = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const role = localStorage.getItem("authRole") || "bus";
+  const [assignedShift, setAssignedShift] = useState(() =>
+    normalizeShiftValue(localStorage.getItem("authShift") || ""),
+  );
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/bustrips`;
   const COMPANY_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
+  const ADMINS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/admins`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
 
@@ -1052,6 +1064,47 @@ const BusTrips = () => {
     fetchCompanies();
   }, []);
 
+  useEffect(() => {
+    const resolveAssignedShift = async () => {
+      if (role !== "bus") return;
+
+      const current = normalizeShiftValue(localStorage.getItem("authShift") || "");
+      if (current) {
+        setAssignedShift(current);
+        return;
+      }
+
+      const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
+      if (!authEmail) return;
+
+      try {
+        const res = await fetch(ADMINS_API_URL);
+        if (!res.ok) return;
+        const admins = await res.json();
+        const mine = admins.find(
+          (admin) => (admin.email || "").toLowerCase() === authEmail,
+        );
+
+        const resolved = normalizeShiftValue(mine?.assignedShift || "");
+        if (resolved) {
+          setAssignedShift(resolved);
+          localStorage.setItem("authShift", resolved);
+        }
+      } catch (error) {
+        console.error("Failed to resolve assigned shift:", error);
+      }
+    };
+
+    resolveAssignedShift();
+  }, [role, ADMINS_API_URL]);
+
+  useEffect(() => {
+    // Bus admins should start with no active date filter.
+    if (role === "bus") {
+      setSelectedDate("");
+    }
+  }, [role]);
+
   const availableCompanies = companyData.map((c) => c.name);
 
   const filtered = records.filter((bus) => {
@@ -1078,6 +1131,21 @@ const BusTrips = () => {
     );
   });
 
+  const filteredWithoutDate = records.filter((bus) => {
+    const templateNo = bus.templateNo || bus.templateno || "";
+    const matchesSearch =
+      templateNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (bus.route || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCompany =
+      selectedCompany === "" || bus.company === selectedCompany;
+    const matchesBusType =
+      selectedBusType === "" || bus.busType === selectedBusType;
+    const matchesStatus =
+      selectedStatus === "" || bus.status === selectedStatus;
+
+    return matchesSearch && matchesCompany && matchesBusType && matchesStatus;
+  });
+
   const totalTrips = filtered.length;
   const scheduledTrips = filtered.filter(
     (t) => t.status === "Scheduled",
@@ -1091,6 +1159,15 @@ const BusTrips = () => {
 
   // Dispatch board should only show trips that were created today.
   const todayDispatchRecords = useMemo(() => {
+    // Bus admins always see today's created records only on dispatch board.
+    if (role === "bus") {
+      const todayKey = getDateKey(new Date());
+      return filteredWithoutDate.filter((trip) => {
+        const createdKey = getDateKey(trip.createdAt);
+        return createdKey === todayKey;
+      });
+    }
+
     // If user selected a specific date, dispatch board should follow that filter.
     if (selectedDate) {
       return filtered;
@@ -1101,7 +1178,7 @@ const BusTrips = () => {
       const createdKey = getDateKey(trip.createdAt);
       return createdKey === todayKey;
     });
-  }, [filtered, selectedDate]);
+  }, [filtered, filteredWithoutDate, selectedDate, role]);
 
   const dashboardTotalTrips = todayDispatchRecords.length;
   const dashboardScheduledTrips = todayDispatchRecords.filter(
@@ -1739,12 +1816,34 @@ const BusTrips = () => {
       return;
     }
 
+    if (!assignedShift) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No assigned shift found for this account. Contact Super Admin.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    const currentHour = new Date().getHours();
+    const [startHour, endHourStr] = assignedShift.split("-").map((s) => parseInt(s, 10));
+    const endHour = endHourStr === 24 ? 0 : endHourStr;
+    let isLateSubmit = false;
+
+    if (startHour < endHour) {
+      if (currentHour < startHour || currentHour >= endHour) isLateSubmit = true;
+    } else {
+      if (currentHour >= endHour && currentHour < startHour) isLateSubmit = true;
+    }
+
     setIsReporting(true);
     try {
       const reportPayload = {
         screen: "Bus Trips Management",
         generatedDate: new Date().toLocaleString(),
-        shift: selectedShift,
+        shift: assignedShift,
         submittedLate: isLateSubmit,
         collectorName: collectorName.trim(), // 2. NEW: Attach the Collector Name here
         data: filtered, // Submits ALL data (Scheduled, Departed, On Fix)
@@ -2606,50 +2705,14 @@ const BusTrips = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Select Your Shift ({shiftInterval}-hour intervals):
+                  Assigned Shift
                 </label>
-                <select 
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500"
-                  onChange={(e) => {
-                    const shiftStr = e.target.value;
-                    setSelectedShift(shiftStr);
-                    
-                    if (!shiftStr) {
-                      setIsLateSubmit(false);
-                      return;
-                    }
-
-                    // Dynamic Late Check Logic
-                    const currentHour = new Date().getHours();
-                    const [startHour, endHourStr] = shiftStr.split("-").map(s => parseInt(s));
-                    const endHour = endHourStr === 24 ? 0 : endHourStr;
-                    
-                    let isLate = false;
-                    // If current hour is totally outside the shift window
-                    if (startHour < endHour) {
-                       if (currentHour < startHour || currentHour >= endHour) isLate = true;
-                    } else { // Overnight shift (e.g. 18:00 - 00:00)
-                       if (currentHour >= endHour && currentHour < startHour) isLate = true;
-                    }
-
-                    setIsLateSubmit(isLate);
-                  }}
-                >
-                  <option value="">-- Select Shift --</option>
-                  {/* Dynamically generate shift blocks based on the shiftInterval state */}
-                  {Array.from({ length: 24 / shiftInterval }).map((_, i) => {
-                     const start = i * shiftInterval;
-                     const end = start + shiftInterval;
-                     const label = `${start.toString().padStart(2, '0')}:00 - ${end === 24 ? '00' : end.toString().padStart(2, '0')}:00`;
-                     return <option key={label} value={`${start}-${end}`}>{label}</option>
-                  })}
-                </select>
-                
-                {isLateSubmit && selectedShift && (
-                  <div className="mt-2 p-2 bg-red-50 text-red-600 text-xs rounded-md border border-red-100 font-semibold animate-in fade-in">
-                    ⚠️ Warning: You are submitting this report outside of your designated {shiftInterval}-hour shift. This will be logged as Submitted Late.
-                  </div>
-                )}
+                <input
+                  type="text"
+                  value={assignedShift || "No assigned shift"}
+                  readOnly
+                  className="w-full p-2.5 border border-slate-200 bg-slate-50 rounded-lg text-sm outline-none"
+                />
               </div>
 
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
@@ -2673,7 +2736,7 @@ const BusTrips = () => {
               </button>
               <button
                 onClick={handleSubmitReport}
-                disabled={isReporting || !selectedShift}
+                disabled={isReporting || !assignedShift}
                 className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-md disabled:opacity-70"
               >
                 {isReporting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}

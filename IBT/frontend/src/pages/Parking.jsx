@@ -44,11 +44,19 @@ const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
+  const [reportDuration, setReportDuration] = useState("All");
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
 
   const [collectorName, setCollectorName] = useState("");
+  const [readRecordIds, setReadRecordIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("parkingReadRecordIds") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   const validateCollector = () => {
     if (!collectorName || collectorName.trim() === "") {
@@ -233,6 +241,10 @@ const Parking = () => {
   useEffect(() => {
     fetchParkingTickets();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("parkingReadRecordIds", JSON.stringify(readRecordIds));
+  }, [readRecordIds]);
   useEffect(() => {
     if (notificationState.isOpen && notificationState.autoClose) {
       const timerDuration = notificationState.duration || 2000;
@@ -359,7 +371,23 @@ const Parking = () => {
     const matchesType =
       activeType === "All" ||
       ticket.type.toLowerCase() === activeType.toLowerCase();
-    return matchesSearch && matchesType && matchesDate;
+
+    const ticketTimeIn = ticket.timeIn ? new Date(ticket.timeIn) : null;
+    const now = new Date();
+    let matchesDuration = true;
+    if (reportDuration !== "All") {
+      if (!ticketTimeIn || Number.isNaN(ticketTimeIn.getTime())) {
+        matchesDuration = false;
+      } else {
+        const startDate = new Date(now);
+        if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
+        if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
+        if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
+        matchesDuration = ticketTimeIn >= startDate && ticketTimeIn <= now;
+      }
+    }
+
+    return matchesSearch && matchesType && matchesDate && matchesDuration;
   });
 
   const paginatedData = useMemo(() => {
@@ -841,6 +869,7 @@ const Parking = () => {
             ? new Date(selectedDate).toLocaleDateString()
             : "None",
           activeType,
+          duration: reportDuration,
         },
         statistics: {
           cars: fourWheelCount,
@@ -865,27 +894,24 @@ const Parking = () => {
           body: JSON.stringify({
             title: "Report Submitted: Parking Report",
             message:
-              "A new Parking Management report has been generated and the active log has been cleared.",
+              "A new Parking Management report has been generated. Submitted rows were marked as On Read.",
             source: "Parking",
             targetRole: "superadmin",
           }),
         },
       );
 
-      const deletePromises = filtered.map((item) =>
-        fetch(`${API_URL}/${item.id}`, { method: "DELETE" }),
-      );
+      const submittedIds = filtered.map((item) => item.id).filter(Boolean);
+      setReadRecordIds((prev) => Array.from(new Set([...prev, ...submittedIds])));
 
-      await Promise.all(deletePromises);
       setNotificationState({
         isOpen: true,
         type: "success",
-        message: "Report submitted successfully! The table has been cleared.",
+        message: "Report submitted successfully! Rows are marked as On Read.",
         autoClose: true,
         duration: 2000,
       });
       setShowSubmitModal(false);
-      fetchParkingTickets();
     } catch (error) {
       console.error(error);
       setNotificationState({
@@ -1094,6 +1120,7 @@ const Parking = () => {
         "Ticket No",
         "Plate No",
         "Type",
+        "Report State",
         "Fee/Hr",
         "Total",
         "Time In",
@@ -1105,6 +1132,7 @@ const Parking = () => {
         "Ticket No",
         "Plate No",
         "Type",
+        "Report State",
         "Fee/Hr",
         "Total",
         "Time In",
@@ -1166,6 +1194,20 @@ const Parking = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
         <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+          <select
+            value={reportDuration}
+            onChange={(e) => {
+              setReportDuration(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
+          >
+            <option value="All">All Time</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Yearly">Yearly</option>
+          </select>
+
           <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
             Name of Collector:
           </label>
@@ -1225,11 +1267,21 @@ const Parking = () => {
           <Table
             columns={tableColumns}
             data={paginatedData.map((ticket) => {
+              const isOnRead = readRecordIds.includes(ticket.id);
               const baseData = {
                 id: ticket.id,
                 ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : "---",
                 plateno: ticket.plateNo || "---",
                 type: ticket.type,
+                reportstate: isOnRead ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                    On Read
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                    Pending
+                  </span>
+                ),
                 "fee/hr": ticket.baseRate ? `₱${ticket.baseRate}` : "---",
                 total: ticket.finalPrice ? `₱${ticket.finalPrice}` : "---",
                 timein: formatTimeOnly(ticket.timeIn),
@@ -1238,6 +1290,7 @@ const Parking = () => {
                   : "---",
                 duration: ticket.duration || "---",
                 status: ticket.status,
+                __highlight: isOnRead,
               };
 
               if (isSelectionMode) {
@@ -1718,8 +1771,8 @@ const Parking = () => {
               Are you sure you want to capture and submit the current parking
               report?
               <br />
-              <span className="text-red-500 font-semibold text-xs">
-                Note: This will clear the current table for new entries.
+              <span className="text-emerald-600 font-semibold text-xs">
+                Note: Submitted rows will remain in the table and be marked as On Read.
               </span>
             </p>
 

@@ -28,6 +28,11 @@ const terminalFeeSchema = new mongoose.Schema({
     type: String,
     default: "Active"
   },
+  reportStatus: {
+    type: String,
+    enum: ["Pending", "On Read"],
+    default: "Pending"
+  },
   isArchived: { 
     type: Boolean, 
     default: false 

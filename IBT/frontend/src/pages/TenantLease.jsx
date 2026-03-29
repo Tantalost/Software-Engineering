@@ -42,6 +42,7 @@ const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}
 const TenantLease = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
+    const [reportDuration, setReportDuration] = useState("All");
     const [activeTab, setActiveTab] = useState("permanent");
     const [activeStatus, setActiveStatus] = useState("All");
     const [currentPage, setCurrentPage] = useState(1);
@@ -92,6 +93,13 @@ const TenantLease = () => {
     const [isReporting, setIsReporting] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
+    const [readRecordIds, setReadRecordIds] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem("tenantReadRecordIds") || "[]");
+        } catch {
+            return [];
+        }
+    });
 
     const [waitlistForm, setWaitlistForm] = useState({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
     const [reviewData, setReviewData] = useState(null);
@@ -272,6 +280,10 @@ const TenantLease = () => {
     }, []);
 
     useEffect(() => {
+        localStorage.setItem("tenantReadRecordIds", JSON.stringify(readRecordIds));
+    }, [readRecordIds]);
+
+    useEffect(() => {
         if (notificationState.isOpen && notificationState.autoClose) {
             const timerDuration = notificationState.duration || 3000;
             const timer = setTimeout(() => {
@@ -350,7 +362,24 @@ const TenantLease = () => {
         const matchesTab = activeTab === "permanent" ? (t.tenantType === "Permanent" || !t.tenantType) : t.tenantType === "Night Market";
         const matchesDate = !selectedDate || new Date(t.StartDateTime).toDateString() === new Date(selectedDate).toDateString();
         const matchesStatus = activeStatus === "All" || t.status.toLowerCase() === activeStatus.toLowerCase();
-        return matchesSearch && matchesTab && matchesDate && matchesStatus;
+
+        const tenantDate = t.StartDateTime ? new Date(t.StartDateTime) : null;
+        const now = new Date();
+        let matchesDuration = true;
+
+        if (reportDuration !== "All") {
+            if (!tenantDate || Number.isNaN(tenantDate.getTime())) {
+                matchesDuration = false;
+            } else {
+                const startDate = new Date(now);
+                if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
+                if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
+                if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
+                matchesDuration = tenantDate >= startDate && tenantDate <= now;
+            }
+        }
+
+        return matchesSearch && matchesTab && matchesDate && matchesStatus && matchesDuration;
     });
 
     const formatDate = (dateString) => {
@@ -517,7 +546,8 @@ const TenantLease = () => {
                     searchQuery,
                     activeTab,
                     activeStatus,
-                    dateFilter: selectedDate || "None"
+                    dateFilter: selectedDate || "None",
+                    duration: reportDuration,
                 },
                 statistics: {
                     totalRecords: records.length,
@@ -530,9 +560,11 @@ const TenantLease = () => {
             };
 
             await submitPageReport("Tenant Lease", reportPayload, adminName);
+            const submittedIds = filtered.map((item) => item.id).filter(Boolean);
+            setReadRecordIds((prev) => Array.from(new Set([...prev, ...submittedIds])));
             await sendNotification(
                 "Report Submitted: Tenant Lease",
-                `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}.`,
+                `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}. Submitted rows were marked as On Read.`,
                 "Tenants",
                 "superadmin"
             );
@@ -542,7 +574,7 @@ const TenantLease = () => {
             setNotificationState({
                 isOpen: true,
                 type: 'success',
-                message: "Report submitted successfully!",
+                message: "Report submitted successfully! Rows are marked as On Read.",
                 autoClose: true,
                 duration: 3000
             });
@@ -1304,9 +1336,9 @@ const TenantLease = () => {
                     className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
             </div>,
-            "Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"
+            "Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Rent", "Util", "Total Due", "Status"
         ]
-        : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Rent", "Util", "Total Due", "Status"];
+        : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Rent", "Util", "Total Due", "Status"];
 
     const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
@@ -1392,6 +1424,20 @@ const TenantLease = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
+                    <select
+                        value={reportDuration}
+                        onChange={(e) => {
+                            setReportDuration(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
+                    >
+                        <option value="All">All Time</option>
+                        <option value="Weekly">Weekly</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Yearly">Yearly</option>
+                    </select>
+
                     <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
                     {(role === "superadmin" || role === "lease") && (
                         <button
@@ -1463,6 +1509,7 @@ const TenantLease = () => {
             <Table
                 columns={tableColumns}
                 data={paginatedData.map((t) => {
+                    const isOnRead = readRecordIds.includes(t.id);
                     const baseData = {
                         id: t.id,
                         slotno: t.slotNo,
@@ -1472,10 +1519,20 @@ const TenantLease = () => {
                         contactno: t.contactNo,
                         startdate: formatDate(t.StartDateTime),
                         duedate: formatDate(t.DueDateTime || t.EndDateTime),
+                        reportstate: isOnRead ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                                On Read
+                            </span>
+                        ) : (
+                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                                Pending
+                            </span>
+                        ),
                         rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
                         util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
                         totaldue: `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                         status: t.status,
+                        __highlight: isOnRead,
                     };
 
                     if (isSelectionMode) {

@@ -62,6 +62,7 @@ const LostFound = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeStatus, setActiveStatus] = useState("All");
+  const [reportDuration, setReportDuration] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -76,6 +77,13 @@ const LostFound = () => {
   const [isReporting, setIsReporting] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [readRecordIds, setReadRecordIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("lostFoundReadRecordIds") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
@@ -112,6 +120,10 @@ const LostFound = () => {
   useEffect(() => {
     fetchLostFound();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("lostFoundReadRecordIds", JSON.stringify(readRecordIds));
+  }, [readRecordIds]);
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return "-";
@@ -396,7 +408,23 @@ const LostFound = () => {
       activeStatus === "All" ||
       item.status.toLowerCase() === activeStatus.toLowerCase();
 
-    return matchesSearch && matchesDate && matchesStatus;
+    const itemDate = item.dateTime ? new Date(item.dateTime) : null;
+    const now = new Date();
+    let matchesDuration = true;
+
+    if (reportDuration !== "All") {
+      if (!itemDate || Number.isNaN(itemDate.getTime())) {
+        matchesDuration = false;
+      } else {
+        const startDate = new Date(now);
+        if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
+        if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
+        if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
+        matchesDuration = itemDate >= startDate && itemDate <= now;
+      }
+    }
+
+    return matchesSearch && matchesDate && matchesStatus && matchesDuration;
   });
 
   const paginatedData = useMemo(() => {
@@ -554,6 +582,7 @@ const LostFound = () => {
             ? new Date(selectedDate).toLocaleDateString()
             : "None",
           activeStatus,
+          duration: reportDuration,
         },
         statistics: {
           totalItems: records.length,
@@ -570,28 +599,24 @@ const LostFound = () => {
 
       sendNotification(
         "Report Submitted: Lost & Found Report",
-        "A new Lost & Found report has been generated and the active log has been cleared.",
+        "A new Lost & Found report has been generated. Submitted rows were marked as On Read.",
         "Lost & Found",
         "superadmin",
       );
 
-      const deletePromises = filtered.map((item) =>
-        fetch(`${API_URL}/${item.id}`, { method: "DELETE" }),
-      );
-
-      await Promise.all(deletePromises);
+      const submittedIds = filtered.map((item) => item.id).filter(Boolean);
+      setReadRecordIds((prev) => Array.from(new Set([...prev, ...submittedIds])));
 
       // Success Toast
       setNotificationState({
         isOpen: true,
         type: "success",
-        message: "Report submitted successfully! The table has been cleared.",
+        message: "Report submitted successfully! Rows are marked as On Read.",
         autoClose: true,
         duration: 3000,
       });
 
       setShowSubmitModal(false);
-      fetchLostFound();
     } catch (error) {
       console.error(error);
       // Error Toast
@@ -807,9 +832,10 @@ const LostFound = () => {
       "Item Type",
       "Location",
       "Date & Time",
+      "Report State",
       "Status",
     ]
-    : ["Tracking No", "Item Type", "Location", "Date Time", "Status"];
+    : ["Tracking No", "Item Type", "Location", "Date Time", "Report State", "Status"];
 
 
   return (
@@ -825,6 +851,20 @@ const LostFound = () => {
             />
 
             <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
+              <select
+                value={reportDuration}
+                onChange={(e) => {
+                  setReportDuration(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-[44px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
+              >
+                <option value="All">All Time</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Yearly">Yearly</option>
+              </select>
+
               {role === "lostfound" && (
                 <button
                   onClick={() => setShowSubmitModal(true)}
@@ -917,13 +957,24 @@ const LostFound = () => {
           <Table
             columns={tableColumns}
             data={paginatedData.map((item) => {
+              const isOnRead = readRecordIds.includes(item.id);
               const baseData = {
                 id: item.id,
                 trackingno: item.trackingNo,
                 itemtype: item.itemType,
                 location: item.location,
                 datetime: formatDateTime(item.dateTime),
+                reportstate: isOnRead ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                    On Read
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                    Pending
+                  </span>
+                ),
                 status: item.status,
+                __highlight: isOnRead,
               };
 
               if (isSelectionMode) {
@@ -1480,8 +1531,8 @@ const LostFound = () => {
               Are you sure you want to capture and submit the current Lost &
               Found report?
               <br />
-              <span className="text-red-500 font-semibold text-xs">
-                Note: This will clear the current table for new entries.
+              <span className="text-emerald-600 font-semibold text-xs">
+                Note: Submitted rows will remain in the table and be marked as On Read.
               </span>
             </p>
             <div className="mt-6 flex justify-end gap-3">

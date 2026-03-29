@@ -46,6 +46,7 @@ export default function AdminLogin() {
     localStorage.setItem("authRole", role);
     localStorage.setItem("authName", name);
     localStorage.setItem("authEmail", admin.email);
+    localStorage.setItem("authShift", admin.assignedShift || "");
 
     const routes = { 
       parking: "/parking", 

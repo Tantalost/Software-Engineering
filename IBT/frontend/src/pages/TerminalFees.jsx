@@ -75,6 +75,7 @@ const TerminalFees = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeType, setActiveType] = useState("All");
+  const [reportDuration, setReportDuration] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -207,9 +208,25 @@ const TerminalFees = () => {
         matchesType = pType.includes(aType);
       }
 
-      return matchesType;
+      const feeDate = fee.date ? new Date(fee.date) : null;
+      const now = new Date();
+      let matchesDuration = true;
+
+      if (reportDuration !== "All") {
+        if (!feeDate || Number.isNaN(feeDate.getTime())) {
+          matchesDuration = false;
+        } else {
+          const startDate = new Date(now);
+          if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
+          if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
+          if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
+          matchesDuration = feeDate >= startDate && feeDate <= now;
+        }
+      }
+
+      return matchesType && matchesDuration;
     });
-  }, [records, activeType]);
+  }, [records, activeType, reportDuration]);
 
   const stats = useMemo(
     () => ({
@@ -274,6 +291,11 @@ const TerminalFees = () => {
   };
 
   const handleSubmitReport = async () => {
+    if (!collectorName || !collectorName.trim()) {
+      showToastMessage("Please enter Name of Collector before submitting report.", "error");
+      return;
+    }
+
     setIsReporting(true);
     try {
       const to12HourFormat = (timeStr) => {
@@ -309,6 +331,7 @@ const TerminalFees = () => {
         generatedDate: new Date().toLocaleString(),
         filters: {
           activeType,
+          duration: reportDuration,
         },
         statistics: {
           totalPassengers: stats.total,
@@ -316,6 +339,7 @@ const TerminalFees = () => {
           regularCount: stats.regular,
           studentCount: stats.student,
           seniorCount: stats.senior,
+          collector: collectorName.trim(),
         },
         data: formattedData,
       };
@@ -330,20 +354,27 @@ const TerminalFees = () => {
           body: JSON.stringify({
             title: "Report Submitted: Terminal Fees Reports",
             message:
-              "A new Terminal Fees report has been generated and the active log has been cleared.",
+              "A new Terminal Fees report has been generated. Submitted rows were marked as On Read.",
             source: "Terminal Fees",
           }),
         },
       );
 
-      const deletePromises = filtered.map((item) =>
-        fetch(`${API_URL}/terminal-fees/${item._id || item.id}`, {
-          method: "DELETE",
-        }),
+      const submittedIds = filtered
+        .map((item) => item._id || item.id)
+        .filter(Boolean);
+
+      await Promise.all(
+        submittedIds.map((id) =>
+          fetch(`${API_URL}/terminal-fees/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reportStatus: "On Read" }),
+          }),
+        ),
       );
 
-      await Promise.all(deletePromises);
-      showToastMessage("Report submitted successfully! Table cleared.");
+      showToastMessage("Report submitted successfully! Rows are marked as On Read.");
       setShowSubmitModal(false);
       fetchFees();
     } catch (error) {
@@ -352,6 +383,17 @@ const TerminalFees = () => {
     } finally {
       setIsReporting(false);
     }
+  };
+
+  const handleOpenSubmitModal = () => {
+    if (!collectorName || !collectorName.trim()) {
+      showToastMessage(
+        "Please enter Name of Collector before submitting report.",
+        "error",
+      );
+      return;
+    }
+    setShowSubmitModal(true);
   };
 
   const handleBulkDelete = async () => {
@@ -892,11 +934,12 @@ const TerminalFees = () => {
         </div>,
         "Ticket No",
         "Passenger Type",
+        "Report State",
         "Time",
         "Date",
         "Price",
       ]
-    : ["Ticket No", "Passenger Type", "Time", "Date", "Price"];
+    : ["Ticket No", "Passenger Type", "Report State", "Time", "Date", "Price"];
 
   return (
     <Layout title="Terminal Fees Management">
@@ -948,7 +991,7 @@ const TerminalFees = () => {
 
           {role === "ticket" && (
             <button
-              onClick={() => setShowSubmitModal(true)}
+              onClick={handleOpenSubmitModal}
               disabled={isReporting}
               className="flex items-center cursor-pointer justify-center gap-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
             >
@@ -969,6 +1012,25 @@ const TerminalFees = () => {
             activeType={activeType}
             onTypeChange={setActiveType}
           />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+            Duration:
+          </label>
+          <select
+            value={reportDuration}
+            onChange={(e) => {
+              setReportDuration(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
+          >
+            <option value="All">All Time</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Yearly">Yearly</option>
+          </select>
         </div>
 
         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
@@ -1041,13 +1103,24 @@ const TerminalFees = () => {
           columns={tableColumns}
           data={paginatedData.map((fee) => {
             const rowId = fee._id || fee.id;
+            const isOnRead = fee.reportStatus === "On Read";
             const baseData = {
               id: rowId,
               ticketno: fee.ticketNo,
               passengertype: fee.passengerType,
+              reportstate: isOnRead ? (
+                <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                  On Read
+                </span>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                  Pending
+                </span>
+              ),
               time: fee.time,
               date: fee.date,
               price: `₱${fee.price.toFixed(2)}`,
+              __highlight: isOnRead,
             };
 
             if (isSelectionMode) {
@@ -1491,28 +1564,55 @@ const TerminalFees = () => {
 
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
-            <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to capture and submit the current terminal
-              fees report?
-              <br />
-              <span className="text-red-500 font-semibold text-xs">
-                Note: This will clear the current table for new entries.
-              </span>
-            </p>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all">
+            <h3 className="text-xl font-bold text-slate-800 border-b pb-3 mb-4">
+              Terminal Fee Report
+            </h3>
+
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                You are submitting the current terminal fee report snapshot.
+                <strong className="text-emerald-600 ml-1">
+                  Data will remain on the table
+                </strong>
+                and submitted rows will be marked as On Read.
+              </p>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Name of Collector
+                </label>
+                <input
+                  type="text"
+                  value={collectorName}
+                  readOnly
+                  className="w-full p-2.5 border border-slate-200 bg-slate-50 rounded-lg text-sm outline-none"
+                />
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
+                <FileText className="text-blue-500 shrink-0" size={20} />
+                <div className="text-xs text-blue-800">
+                  <strong>Total Records Included:</strong> {filtered.length} Tickets
+                  <div className="mt-2 pt-2 border-t border-blue-200">
+                    <strong>Collector:</strong> {collectorName}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setShowSubmitModal(false)}
                 disabled={isReporting}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitReport}
-                disabled={isReporting}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={isReporting || !collectorName.trim()}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-md disabled:opacity-70"
               >
                 {isReporting ? (
                   <>
@@ -1520,7 +1620,10 @@ const TerminalFees = () => {
                     <span>Submitting...</span>
                   </>
                 ) : (
-                  <span>Confirm Submit</span>
+                  <>
+                    <CheckCircle size={16} />
+                    <span>Confirm Submit</span>
+                  </>
                 )}
               </button>
             </div>

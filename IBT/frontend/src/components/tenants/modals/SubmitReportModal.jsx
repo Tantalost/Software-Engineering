@@ -7,12 +7,12 @@ const SubmitReportModal = ({ isOpen, onClose, onSubmit, isReporting, recordCount
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div className="w-full max-w-md cursor-pointer rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
-                <h3 className="text-lg font-bold text-slate-800">Submit Monthly Report</h3>
+                <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
                 <p className="mt-2 text-sm text-slate-600">
                     Are you sure you want to generate and submit the current Tenant Lease report?
                     <br />
                     <span className="text-emerald-600 font-semibold text-xs">
-                        This will capture the current status of {recordCount} records.
+                        This will capture the current status of {recordCount} records and mark submitted rows as On Read.
                     </span>
                 </p>
 

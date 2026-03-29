@@ -1,13 +1,40 @@
 import Report from '../models/Report.js';
+import Admin from '../models/Admin.js';
+
+const toShiftLabel = (hour) => {
+  if (hour >= 0 && hour < 6) return "00-06";
+  if (hour >= 6 && hour < 12) return "06-12";
+  if (hour >= 12 && hour < 18) return "12-18";
+  return "18-24";
+};
 
 // CREATE
 export const createReport = async (req, res) => {
   try {
-    const { type, data, author, status } = req.body;
+    const { type, data, author, authorEmail, status } = req.body;
+    const now = new Date();
+
+    let admin = null;
+    if (authorEmail) {
+      admin = await Admin.findOne({ email: String(authorEmail).toLowerCase() });
+    }
+
+    const assignedShift = admin?.assignedShift || null;
+    const actualShiftAtSubmission = toShiftLabel(now.getHours());
+
+    const normalizedData = {
+      ...(data || {}),
+      assignedShift,
+      shift: assignedShift,
+      submittedAtServer: now.toISOString(),
+      submittedAtShiftWindow: actualShiftAtSubmission,
+      submittedLate: assignedShift ? assignedShift !== actualShiftAtSubmission : !!data?.submittedLate,
+      submittedByEmail: authorEmail || null,
+    };
     
     const newReport = new Report({
       type,
-      data,
+      data: normalizedData,
       author: author || "System User",
       status: status || "Submitted"
     });

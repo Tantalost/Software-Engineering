@@ -32,6 +32,11 @@ const adminSchema = new mongoose.Schema(
       required: true,
       enum: ["superadmin", "bus", "lease", "lostfound", "parking", "ticket"],
     },
+    assignedShift: {
+      type: String,
+      enum: ["00-06", "06-12", "12-18", "18-24"],
+      default: null,
+    },
     passwordHash: {
       type: String,
       required: true,
@@ -52,7 +57,16 @@ const adminSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-adminSchema.index({ role: 1 }, { unique: true });
+adminSchema.index(
+  { role: 1, assignedShift: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      role: { $ne: "superadmin" },
+      assignedShift: { $exists: true, $type: "string" },
+    },
+  },
+);
 
 const Admin = mongoose.model("Admin", adminSchema);
 export default Admin;

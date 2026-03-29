@@ -1,6 +1,7 @@
 export const submitPageReport = async (type, pageData, author = "Admin") => {
   try {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
+    const authorEmail = localStorage.getItem("authEmail") || "";
     const response = await fetch(`${apiUrl}/api/reports`, {
       method: 'POST',
       headers: {
@@ -10,6 +11,7 @@ export const submitPageReport = async (type, pageData, author = "Admin") => {
         type: type, 
         data: pageData,
         author: author,
+        authorEmail,
         status: "Submitted"
       }),
     });

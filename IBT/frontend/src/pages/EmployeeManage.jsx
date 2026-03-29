@@ -27,6 +27,8 @@ const roleLabels = {
   lease: "Lease Admin",
 };
 
+const shiftOptions = ["00-06", "06-12", "12-18", "18-24"];
+
 export default function EmployeeManage() {
   const [admins, setAdmins] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -38,6 +40,7 @@ export default function EmployeeManage() {
     email: "",
     password: "",
     role: "parking",
+    assignedShift: "00-06",
   });
 
   // Edit State
@@ -48,6 +51,7 @@ export default function EmployeeManage() {
     middleName: "",
     suffix: "",
     email: "",
+    assignedShift: "00-06",
     password: "",
     otp: "",
   });
@@ -172,6 +176,7 @@ export default function EmployeeManage() {
           suffix: createForm.suffix.trim() || undefined,
           email: createForm.email.trim(),
           role: createForm.role,
+          assignedShift: createForm.assignedShift,
           password: createForm.password,
         }),
       });
@@ -200,6 +205,7 @@ export default function EmployeeManage() {
         email: "",
         password: "",
         role: "parking",
+        assignedShift: "00-06",
       });
       showToast("success", "Admin created successfully.");
     } catch (error) {
@@ -278,6 +284,7 @@ export default function EmployeeManage() {
         middleName: editForm.middleName,
         suffix: editForm.suffix,
         email: editForm.email,
+        assignedShift: editForm.assignedShift,
       };
 
       if (editForm.password) {
@@ -310,6 +317,7 @@ export default function EmployeeManage() {
         middleName: "",
         suffix: "",
         email: "",
+        assignedShift: "00-06",
         password: "",
         otp: "",
       });
@@ -348,6 +356,7 @@ export default function EmployeeManage() {
       middleName: admin.middleName || "",
       suffix: admin.suffix || "",
       email: admin.email || "",
+      assignedShift: admin.assignedShift || "00-06",
       password: "",
       otp: "",
     });
@@ -430,19 +439,20 @@ export default function EmployeeManage() {
                     <th className="px-6 py-3">Name</th>
                     <th className="px-6 py-3">Email</th>
                     <th className="px-6 py-3">Role</th>
+                    <th className="px-6 py-3">Shift</th>
                     <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading && admins.length === 0 ? (
                     <tr>
-                      <td className="px-6 py-4" colSpan={4}>
+                      <td className="px-6 py-4" colSpan={5}>
                         Loading...
                       </td>
                     </tr>
                   ) : admins.length === 0 ? (
                     <tr>
-                      <td className="px-6 py-4" colSpan={4}>
+                      <td className="px-6 py-4" colSpan={5}>
                         No admins found.
                       </td>
                     </tr>
@@ -456,6 +466,9 @@ export default function EmployeeManage() {
                         <td className="px-6 py-3">{a.email}</td>
                         <td className="px-6 py-3 capitalize">
                           {roleLabels[a.role] || a.role}
+                        </td>
+                        <td className="px-6 py-3">
+                          {a.role === "superadmin" ? "N/A" : (a.assignedShift || "-")}
                         </td>
                         <td className="px-6 py-3">
                           <div className="flex justify-end gap-2">
@@ -640,6 +653,27 @@ export default function EmployeeManage() {
                         ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">
+                      Assigned Shift *
+                    </label>
+                    <select
+                      value={createForm.assignedShift}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          assignedShift: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                    >
+                      {shiftOptions.map((shift) => (
+                        <option key={shift} value={shift}>
+                          {shift}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <button
@@ -702,6 +736,25 @@ export default function EmployeeManage() {
                       setEditForm({ ...editForm, email: e.target.value })
                     }
                   />
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">
+                      Assigned Shift
+                    </label>
+                    <select
+                      value={editForm.assignedShift}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, assignedShift: e.target.value })
+                      }
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                    >
+                      {shiftOptions.map((shift) => (
+                        <option key={shift} value={shift}>
+                          {shift}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   <div className="pt-2 border-t border-slate-100 mt-2">
                     <label className="mb-1 block text-xs font-medium text-slate-600">
