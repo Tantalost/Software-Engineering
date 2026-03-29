@@ -165,7 +165,7 @@ export const createTenant = async (req, res) => {
 
     const tenantData = {
         ...req.body,
-      advancePaymentBalance: Number(req.body.advancePaymentBalance || 0),
+      advancePaymentBalance: req.body.tenantType === "Permanent" ? Number(req.body.advancePaymentBalance || 0) : 0,
       feeBreakdown: normalizedFeeBreakdown,
         paymentHistory: [{
             referenceNo: req.body.referenceNo || "Initial Payment",
