@@ -12,13 +12,14 @@ const formatStopType = (stopType, customStopCount) => {
 };
 
 const CommonBusesView = ({ records, companyData, onClose }) => {
-  const [timeFilter, setTimeFilter] = useState("Weekly"); 
+  const [timeFilter, setTimeFilter] = useState("Daily"); 
   const [typeFilter, setTypeFilter] = useState("All"); 
   const [companyFilter, setCompanyFilter] = useState("All");
 
   const commonData = useMemo(() => {
     const now = new Date();
-    let daysToSubtract = 7;
+    let daysToSubtract = 1;
+    if (timeFilter === "Weekly") daysToSubtract = 7;
     if (timeFilter === "Monthly") daysToSubtract = 30;
     if (timeFilter === "Yearly") daysToSubtract = 365;
 
@@ -57,7 +58,7 @@ const CommonBusesView = ({ records, companyData, onClose }) => {
       busStats[plate].totalRevenue += (record.price || 75);
     });
 
-    const threshold = timeFilter === "Weekly" ? 5 : timeFilter === "Monthly" ? 20 : 250;
+    const threshold = timeFilter === "Daily" ? 1 : timeFilter === "Weekly" ? 5 : timeFilter === "Monthly" ? 20 : 250;
     
     return Object.values(busStats)
       .filter(bus => bus.tripCount >= threshold)
@@ -90,6 +91,7 @@ const CommonBusesView = ({ records, companyData, onClose }) => {
               </select>
 
               <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} className="p-1 text-sm outline-none bg-transparent font-medium text-slate-700 pr-1 cursor-pointer">
+                <option value="Daily">Daily</option>
                 <option value="Weekly">Weekly</option>
                 <option value="Monthly">Monthly</option>
                 <option value="Yearly">Yearly</option>
