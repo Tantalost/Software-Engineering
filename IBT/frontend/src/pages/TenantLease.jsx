@@ -2073,9 +2073,9 @@ const TenantLease = () => {
                                             <td className="p-3 text-slate-500 font-mono text-xs">{p.referenceNo}</td>
                                             <td className="p-3 text-emerald-600 font-black text-right">₱{(Number(p.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         </tr>
-                                    )) : (
+                                   )) : (
                                         <tr>
-                                            <td colSpan="5" className="p-10 text-center text-slate-400 font-semibold italic">No payment records found for {paymentFilter.toLowerCase()}.</td>
+                                            <td colSpan="5" className="p-10 text-center text-slate-400 font-semibold italic">No payment records found for this {paymentViewType.toLowerCase()}.</td>
                                         </tr>
                                     )}
                                 </tbody>
