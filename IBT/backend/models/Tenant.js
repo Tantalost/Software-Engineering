@@ -36,6 +36,7 @@ const TenantSchema = new mongoose.Schema({
   
   StartDateTime: Date,
   DueDateTime: Date,
+  operationStartDate: Date,
   status: { type: String, default: "Paid" }, 
 
   paymentHistory: [{

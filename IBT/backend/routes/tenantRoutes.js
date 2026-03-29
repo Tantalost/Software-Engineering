@@ -17,7 +17,8 @@ import {
   updateAllPermanentPrices,
   approveRenewalPayment,
   getOverdueSettings,      
-  updateOverdueSettings
+  updateOverdueSettings,
+  startOperation
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -69,6 +70,7 @@ router.post('/',
   createTenant
 );
 
+router.patch('/:id/start-operation', startOperation);
 router.patch('/:id/archive', archiveTenant);
 router.patch('/:id/restore', restoreTenant);
 

@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from "jspdf-autotable";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle } from "lucide-react";
+import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle, Play } from "lucide-react";
 
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
@@ -799,6 +799,24 @@ const TenantLease = () => {
         }
     };
 
+    const handleStartOperation = async (tenantId, tenantName) => {
+        if (!window.confirm(`Start operations for ${tenantName}? This will lock in today as their official Day 1.`)) return;
+        try {
+            const res = await fetch(`${API_URL}/tenants/${tenantId}/start-operation`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" }
+            });
+            if (!res.ok) throw new Error("Failed to start operation");
+
+            setNotificationState({ isOpen: true, type: 'success', message: "Operation officially started!", autoClose: true, duration: 3000 });
+            await logActivity(role, "START_OPERATION", `Started operation for tenant: ${tenantName}`, "Tenants");
+            fetchTenants(); 
+        } catch (e) {
+            console.error(e);
+            setNotificationState({ isOpen: true, type: 'error', message: "Failed to start operation.", autoClose: true, duration: 3000 });
+        }
+    };
+
     const handleDeleteConfirm = async () => {
         if (!deleteRow?.id && !deleteRow?._id) return;
         const idToDelete = deleteRow._id || deleteRow.id;
@@ -1333,8 +1351,32 @@ const TenantLease = () => {
                     if (isSelectionMode) return null;
                     const fullRecord = records.find(r => r.id === row.id);
 
+                    let operationDaysText = "";
+                    if (fullRecord?.operationStartDate) {
+                        const diffTime = Math.abs(new Date() - new Date(fullRecord.operationStartDate));
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        operationDaysText = `${diffDays} Day(s)`;
+                    }
+
                     return (
                         <div className="flex justify-end items-center space-x-2">
+
+                            {!fullRecord?.operationStartDate ? (
+                                <button
+                                    onClick={() => handleStartOperation(fullRecord.id, fullRecord.tenantName || fullRecord.name)}
+                                    className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all flex items-center cursor-pointer shadow-sm border border-emerald-200"
+                                    title="Click to Start Operation (Day 1)"
+                                >
+                                    <Play size={16} className="fill-emerald-500" />
+                                </button>
+                            ) : (
+                                <span 
+                                    className="text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-1.5 rounded-lg whitespace-nowrap" 
+                                    title={`Started on ${new Date(fullRecord.operationStartDate).toLocaleDateString()}`}
+                                >
+                                    Op: {operationDaysText}
+                                </span>
+                            )}
 
                             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
                             <button
@@ -1501,7 +1543,7 @@ const TenantLease = () => {
                                 autoClose: true, 
                                 duration: 4000 
                             });
-                            
+
                             await logActivity(role, "EDIT_TENANT", `Updated tenant details for ${updatedData.tenantName || updatedData.name}`, "Tenants");
                             fetchTenants();
                             setEditRow(null);

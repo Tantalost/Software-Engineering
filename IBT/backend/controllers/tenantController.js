@@ -739,3 +739,17 @@ export const updateOverdueSettings = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const startOperation = async (req, res) => {
+  try {
+    const tenant = await Tenant.findByIdAndUpdate(
+      req.params.id,
+      { operationStartDate: new Date() }, 
+      { new: true }
+    );
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+    res.status(200).json({ message: "Operation started successfully", tenant });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
