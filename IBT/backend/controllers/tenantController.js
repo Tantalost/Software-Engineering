@@ -688,8 +688,7 @@ export const getOverdueSettings = async (req, res) => {
 
 export const updateOverdueSettings = async (req, res) => {
   try {
-    const { tenantType, chargePercentage, interestPercentage } = req.body;
-
+    const { tenantType, chargePercentage, interestPercentage, permanentDueDate } = req.body;
     
     const isNightMarket = tenantType === "Night Market";
     const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
