@@ -296,6 +296,33 @@ export const updateTenant = async (req, res) => {
     updateData.feeBreakdown = normalizedFeeBreakdown;
     updateData.utilityAmount = Number(normalizedFeeBreakdown.electricity || 0) + Number(normalizedFeeBreakdown.otherAmount || 0);
 
+    if (updateData.status === "Overdue") {
+        const isNightMarket = effectiveTenantType === "Night Market";
+        const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
+        const interestKey = isNightMarket ? "nightMarketInterestPercentage" : "permanentInterestPercentage";
+
+        const chargeSetting = await Settings.findOne({ key: chargeKey });
+        const interestSetting = await Settings.findOne({ key: interestKey });
+
+        const cPct = chargeSetting ? Number(chargeSetting.value) : 25;
+        const iPct = interestSetting ? Number(interestSetting.value) : 2;
+
+        const rent = Number(updateData.rentAmount || oldTenant.rentAmount || 0);
+        const util = updateData.utilityAmount;
+
+        const chargeAmt = rent * (cPct / 100);
+        const dueBalance = rent + chargeAmt;
+        const interestAmt = dueBalance * (iPct / 100);
+        
+        updateData.chargeAmount = chargeAmt;
+        updateData.interestAmount = interestAmt;
+        updateData.totalAmount = rent + util + chargeAmt + interestAmt;
+    } else {
+        updateData.chargeAmount = 0;
+        updateData.interestAmount = 0;
+        updateData.totalAmount = Number(updateData.rentAmount || oldTenant.rentAmount || 0) + updateData.utilityAmount;
+    }
+
     const getFile = (fieldName) => {
         if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
             return req.files[fieldName][0].filename;

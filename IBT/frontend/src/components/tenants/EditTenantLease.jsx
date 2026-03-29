@@ -33,7 +33,7 @@ const formatDateTimeForInput = (dateStr) => {
   return localISOTime;
 };
 
-const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
+const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, permInterestPct, nightChargePct, nightInterestPct }) => {
   
   const standardCategories = ["food_non_alcoholic", "clothes_textiles", "accessories", "footwears", "kitchenwares", "agricultural_produce"];
   const initialCategory = standardCategories.includes(row.products) ? row.products : "other";
@@ -68,6 +68,9 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
   const [tempSelectedSlots, setTempSelectedSlots] = useState([]);
 
   const [initialStart] = useState(formatDateTimeForInput(row.StartDateTime || row.leaseStart));
+
+  const [previewCharge, setPreviewCharge] = useState(parseFloat(row.chargeAmount) || 0);
+  const [previewInterest, setPreviewInterest] = useState(parseFloat(row.interestAmount) || 0);
 
   useEffect(() => {
      if(showMapModal) {
@@ -109,11 +112,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
 
   const [status, setStatus] = useState(row.status || "Paid");
   const [totalAmount, setTotalAmount] = useState(0);
-  const [interest25, setInterest25] = useState(0);
-  const [dueBalance, setDueBalance] = useState(0);
-  const [interest2, setInterest2] = useState(0);
-  const [overallDue, setOverallDue] = useState(0);
-
+ 
   useEffect(() => {
     if (formData.editStart && formData.editStart !== initialStart) {
       const d = new Date(formData.editStart);
@@ -127,25 +126,32 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
     }
   }, [formData.editStart, formData.tenantType, initialStart]);
 
-    useEffect(() => {
+  useEffect(() => {
     const isNightMarket = formData.tenantType === "Night Market";
     const electricityFee = isNightMarket ? 0 : (parseFloat(feeBreakdown.electricity) || 0);
     const otherFee = parseFloat(feeBreakdown.otherAmount) || 0;
     const calculatedUtils = electricityFee + otherFee;
 
     const rent = parseFloat(formData.rentAmount) || 0;
-    const charge = parseFloat(row.chargeAmount) || 0;
-    const interest = parseFloat(row.interestAmount) || 0;
-
     let total = rent + calculatedUtils;
+    let currentCharge = 0;
+    let currentInterest = 0;
 
     if (status === "Overdue") {
-      total = rent + calculatedUtils + charge + interest;
+        const cPct = isNightMarket ? (nightChargePct ?? 25) : (permChargePct ?? 25);
+        const iPct = isNightMarket ? (nightInterestPct ?? 2) : (permInterestPct ?? 2);
+
+        currentCharge = rent * (cPct / 100);
+        const dueBalance = rent + currentCharge;
+        currentInterest = dueBalance * (iPct / 100);
+        total = rent + calculatedUtils + currentCharge + currentInterest;
     }
 
+    setPreviewCharge(currentCharge);
+    setPreviewInterest(currentInterest);
     setFormData(prev => ({ ...prev, utilityFee: calculatedUtils })); 
     setTotalAmount(total);
-  }, [formData.rentAmount, feeBreakdown, status, row.chargeAmount, row.interestAmount]);
+  }, [formData.rentAmount, feeBreakdown, status, formData.tenantType, permChargePct, permInterestPct, nightChargePct, nightInterestPct]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -208,6 +214,8 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
       slotNo: formData.slotno,
       rentAmount: parseFloat(formData.rentAmount),
       utilityAmount: parseFloat(formData.utilityFee),
+      chargeAmount: previewCharge,   
+      interestAmount: previewInterest,
       totalAmount: totalAmount,
       feeBreakdown: JSON.stringify(feeBreakdown),
      
@@ -323,13 +331,13 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [] }) => {
                     </div>
                    {status === "Overdue" && (
                       <div className="mt-2 text-xs text-red-700 space-y-1">
-                        <p>Penalty Charge: ₱{(row.chargeAmount || 0).toFixed(2)}</p>
-                        <p>Interest Fee: ₱{(row.interestAmount || 0).toFixed(2)}</p>
+                        <p>Penalty Charge: ₱{previewCharge.toFixed(2)}</p>
+                        <p>Interest Fee: ₱{previewInterest.toFixed(2)}</p>
                         <p className="font-semibold mt-1 pt-1 border-t border-red-200">
                           Total Due: ₱{totalAmount.toFixed(2)}
                         </p>
                         <p className="text-[10px] text-red-500 italic mt-1 leading-tight">
-                          *Penalties are officially calculated by the system overnight or when global price settings are saved.
+                          *Auto Calculated based on current global settings.
                         </p>
                       </div>
                     )}

@@ -1448,6 +1448,10 @@ const TenantLease = () => {
                 <EditTenantLease
                     row={editRow}
                     tenants={records}
+                    permChargePct={permChargePct}    
+                    permInterestPct={permInterestPct} 
+                    nightChargePct={nightChargePct}   
+                    nightInterestPct={nightInterestPct} 
                     onClose={() => setEditRow(null)}
                     onSave={async (updatedData) => {
                         try {
@@ -1485,7 +1489,7 @@ const TenantLease = () => {
                                 throw new Error(errorData.error || "Update failed");
                             }
                             setNotificationState({ isOpen: true, type: 'success', message: "Tenant updated successfully!", autoClose: true, duration: 3000 });
-                            // if status went to overdue, inform the user that an email will be sent
+                           
                             if (editRow?.status !== 'Overdue' && updatedData.status === 'Overdue') {
                                 setNotificationState({ isOpen: true, type: 'info', message: "Tenant marked Overdue; notification email is being sent.", autoClose: true, duration: 4000 });
                             }
