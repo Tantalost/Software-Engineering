@@ -277,15 +277,15 @@ const ApplicationReviewModal = ({
                           <>
                               <div className="flex justify-end gap-6 mb-1 text-sm">
                                   <div className="text-slate-500">Rental Fee:</div>
-                                  <div className="font-bold text-slate-700">₱{Number(reviewData.paymentAmount || 0).toLocaleString()}</div>
+                                  <div className="font-bold text-slate-700">₱{(Number(reviewData.paymentAmount || 0) / 2).toLocaleString()}</div>
                               </div>
                               <div className="flex justify-end gap-6 mb-2 text-sm border-b border-slate-200 pb-2">
                                   <div className="text-slate-500">Advance Payment:</div>
-                                  <div className="font-bold text-slate-700">₱{Number(reviewData.paymentAmount || 0).toLocaleString()}</div>
+                                  <div className="font-bold text-slate-700">₱{(Number(reviewData.paymentAmount || 0) / 2).toLocaleString()}</div>
                               </div>
                               <div className="flex justify-end gap-6">
                                   <div className="text-xs font-bold text-emerald-600 uppercase mt-1">Total Expected:</div>
-                                  <div className="text-xl font-bold text-emerald-600">₱{(Number(reviewData.paymentAmount || 0) * 2).toLocaleString()}</div>
+                                  <div className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || 0).toLocaleString()}</div>
                               </div>
                           </>
                       ) : (
