@@ -6,6 +6,45 @@ Color Coding
 **REQUEST NI SIR DERICK**
 Permanent
 - Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+🟢 **Done TASKS**
+
 - add push notifications (Steph) 🟢 **Done**
 
 New todo (Lloyd)
@@ -37,28 +76,11 @@ Note: this is also be shown in the table, in the add bus modal and also in the r
 
 
 mobile
-- payment history should be able to filter by date 
+- payment history should be able to filter by date 🟢 **Done**
 
 lost and found
-- make a duration for previous data range
+- make a duration for previous data range 🟢 **Done**
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-🟢 **Done TASKS**
 
 Tenants (Steph)
 - date of operation should be indicated (add a click or trigger when operation starts) 🟢 **Done**
