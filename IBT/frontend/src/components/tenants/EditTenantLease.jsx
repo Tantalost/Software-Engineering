@@ -57,6 +57,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
     ...row,
     referenceNo: row.referenceNo || row.referenceno || (row.paymentHistory && row.paymentHistory.length > 0 ? row.paymentHistory[row.paymentHistory.length - 1].referenceNo : ""),
     rentAmount: row.rentAmount || 0,
+    advancePaymentBalance: row.advancePaymentBalance || 0,
     utilityFee: row.utilityFee || row.utilityAmount || 0,
     editStart: formatDateTimeForInput(row.StartDateTime || row.leaseStart),
     editDue: formatDateTimeForInput(row.DueDateTime || row.EndDateTime),
@@ -213,6 +214,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
       ...formData,
       slotNo: formData.slotno,
       rentAmount: parseFloat(formData.rentAmount),
+      advancePaymentBalance: parseFloat(formData.advancePaymentBalance) || 0,
       utilityAmount: parseFloat(formData.utilityFee),
       chargeAmount: previewCharge,   
       interestAmount: previewInterest,
@@ -303,6 +305,8 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-600">Financial Breakdown</h4>
              <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
                 <FormInput label="Monthly Rent" type="number" name="rentAmount" value={formData.rentAmount} readOnly={true} />
+
+                <FormInput label="Advance Balance" type="number" name="advancePaymentBalance" value={formData.advancePaymentBalance} onChange={handleChange} />
                 
                 {formData.tenantType === "Permanent" && (
                   <>
