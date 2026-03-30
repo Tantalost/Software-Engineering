@@ -90,6 +90,8 @@ export default function StallsPage() {
 
   const [dynamicPermanentPrice, setDynamicPermanentPrice] = useState(6000);
   const [dynamicNightPrice, setDynamicNightPrice] = useState(150);
+
+  const [dynamicDueDate, setDynamicDueDate] = useState(5);
   
   const [paymentData, setPaymentData] = useState({
     referenceNo: ''
@@ -102,18 +104,34 @@ export default function StallsPage() {
 
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
 
- const currentBilling = useMemo(() => {
+  const calculateProratedRent = () => {
+    const now = new Date();
+
+    let nextDue = new Date(now.getFullYear(), now.getMonth(), dynamicDueDate);
+   
+    if (now.getDate() >= dynamicDueDate) {
+        nextDue.setMonth(nextDue.getMonth() + 1);
+    }
+    const diffTime = nextDue.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return { diffDays, proratedRent: diffDays * 200, targetDay: dynamicDueDate };
+  };
+
+  const currentBilling = useMemo(() => {
     const floorType = currentApp ? currentApp.floor : selectedFloor;
     const isNightMarket = floorType === 'Night Market';
     const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice;
     
-    const totalAmount = isNightMarket ? basePrice : (basePrice * 2); 
+    const { diffDays, proratedRent } = calculateProratedRent();
+    const totalAmount = isNightMarket ? basePrice : (basePrice + proratedRent); 
 
     return {
       ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
       amountLabel: `₱${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
       rawAmount: totalAmount,
       baseRent: basePrice,
+      proratedRent,
+      diffDays,
       isPermanent: !isNightMarket
     };
   }, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice]);
@@ -122,13 +140,16 @@ export default function StallsPage() {
       const isNightMarket = selectedFloor === 'Night Market';
       const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice;
       
-      const totalAmount = isNightMarket ? basePrice : (basePrice * 2);
+      const { diffDays, proratedRent } = calculateProratedRent();
+      const totalAmount = isNightMarket ? basePrice : (basePrice + proratedRent);
       
       return {
         ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
         amountLabel: `₱${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
         rawAmount: totalAmount,
         baseRent: basePrice,
+        proratedRent,
+        diffDays,
         isPermanent: !isNightMarket
       };
   }, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice]);
@@ -233,6 +254,13 @@ export default function StallsPage() {
           const nightData = await nightRes.json();
           setDynamicNightPrice(nightData.defaultPrice);
         }
+
+        const settingsRes = await fetch(`${API_URL}/tenants/overdue-settings`);
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          setDynamicDueDate(settingsData.permanentDueDate || 5);
+        }
+
       } catch (e) {
         console.log("Error fetching default prices", e);
       }

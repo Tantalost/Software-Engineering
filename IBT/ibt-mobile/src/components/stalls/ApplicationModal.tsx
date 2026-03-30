@@ -102,8 +102,11 @@ export default function ApplicationModal({
                 <View style={styles.billingSummary}>
                     <Text style={[{fontWeight:'bold', color: colors.black }]}>Initial Payment:</Text>
                     {modalBilling.isPermanent && (
-                       <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold'}}>
-                          ₱{modalBilling.baseRent.toLocaleString()} (Rent) + ₱{modalBilling.baseRent.toLocaleString()} (Advance)
+                       <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold', textAlign: 'center'}}>
+                          ₱{modalBilling.baseRent.toLocaleString()} (Advance) + ₱{modalBilling.proratedRent.toLocaleString()} (Prorated) {"\n"}
+                          <Text style={{fontSize: 10, fontStyle: 'italic', color: 'grey'}}>
+                            *Prorated rent is {modalBilling.diffDays} days @ ₱200/day until due date.
+                          </Text>
                        </Text>
                     )}
                     <Text variant="titleLarge" style={{color: colors.primary, fontWeight:'bold'}}>{modalBilling.amountLabel}</Text>
@@ -135,8 +138,13 @@ export default function ApplicationModal({
                   <View style={{alignItems: 'flex-end'}}>
                      <Text style={styles.reviewValue}>{modalBilling.amountLabel}</Text>
                      {modalBilling.isPermanent && (
-                       <Text style={{fontSize:10, color:'grey', marginTop: 2}}>Includes 1-Month Advance</Text>
-                     )}
+                       <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold', textAlign: 'center'}}>
+                          ₱{modalBilling.baseRent.toLocaleString()} (Advance) + ₱{modalBilling.proratedRent.toLocaleString()} (Prorated) {"\n"}
+                          <Text style={{fontSize: 10, fontStyle: 'italic', color: 'grey'}}>
+                            *Prorated rent is {modalBilling.diffDays} days @ ₱200/day until due date.
+                          </Text>
+                       </Text>
+                    )}
                   </View>
                 </View>
 

@@ -170,18 +170,25 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
     if (formData.tenantType === "Permanent") {
       baseRent = defaultPermanentPrice; 
+      
       if (startDate) {
         const d = new Date(startDate);
-        d.setMonth(d.getMonth() + 1); 
-
         const targetDay = Number(defaultDueDate) || 5;
-        const daysInNextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-        d.setDate(Math.min(targetDay, daysInNextMonth));
+        
+        let nextDue = new Date(d.getFullYear(), d.getMonth(), targetDay);
+        if (d.getDate() >= targetDay) {
+            nextDue.setMonth(nextDue.getMonth() + 1);
+        }
+        calculatedDueDate = formatDateTimeForInput(nextDue);
 
-        calculatedDueDate = formatDateTimeForInput(d);
+        const diffDays = Math.ceil((nextDue.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+        const proratedRent = diffDays * 200 * slotCount;
+        setRentAmount(proratedRent);
+        
       }
     } else {
       baseRent = defaultNightPrice; 
+      setRentAmount(baseRent * slotCount);
       if (startDate) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + 7); 
@@ -189,8 +196,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
       }
     }
 
-    setRentAmount(baseRent * slotCount);
-    setAdvancePayment(formData.tenantType === "Permanent" ? (baseRent * slotCount) : 0);
+    setAdvancePayment(formData.tenantType === "Permanent" ? (defaultPermanentPrice * slotCount) : 0);
     setDueDate(calculatedDueDate);
 
   }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice]);

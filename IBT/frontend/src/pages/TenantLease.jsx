@@ -22,6 +22,7 @@ import EditTenantLease from "../components/tenants/EditTenantLease";
 import DeleteModal from "../components/common/DeleteModal";
 import TenantStatusFilter from "../components/tenants/TenantStatusFilter";
 import AddTenantModal from "../components/tenants/modals/AddTenantModal";
+import MoveOutModal from "../components/tenants/modals/MoveOutModal";
 import TenantViewModal from "../components/tenants/modals/TenantViewModal";
 import TenantMapModal from "../components/tenants/modals/TenantMapModal";
 import WaitlistModal from "../components/tenants/modals/WaitlistModal";
@@ -83,6 +84,8 @@ const TenantLease = () => {
     const [newDueDate, setNewDueDate] = useState("");
 
     const [showAddModal, setShowAddModal] = useState(false);
+    const [isMoveOutModalOpen, setIsMoveOutModalOpen] = useState(false);
+    const [tenantToMoveOut, setTenantToMoveOut] = useState(null);
     const [showNotify, setShowNotify] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
     const [showWaitlistModal, setShowWaitlistModal] = useState(false);
@@ -894,6 +897,23 @@ const TenantLease = () => {
         }
     };
 
+    const handleMoveOutSubmit = async (moveOutData) => {
+        const res = await fetch(`${API_URL}/tenants/move-out`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(moveOutData)
+        });
+        
+        if (res.ok) {
+            alert("Tenant successfully moved out!");
+            setIsMoveOutModalOpen(false);
+            setTenantToMoveOut(null);
+            fetchTenants(); 
+        } else {
+            alert("Failed to process move out.");
+        }
+    };
+
     const handleRejectApplicant = async (id, reason) => {
         try {
             const response = await fetch(`${API_URL}/waitlist/${id}`, {
@@ -1688,6 +1708,19 @@ const TenantLease = () => {
                             {(role === "superadmin") && (
                                 <button onClick={() => setDeleteRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer" title="Delete"><Trash2 size={16} /></button>
                             )}
+
+                            {fullRecord?.status !== "Moved Out" && (
+                                <button 
+                                    onClick={() => {
+                                        setTenantToMoveOut(fullRecord);
+                                        setIsMoveOutModalOpen(true);
+                                    }}
+                                    className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors cursor-pointer"
+                                >
+                                    Move Out
+                                </button>
+                            )}
+                            
                         </div>
                     )
                 }}
@@ -2234,6 +2267,15 @@ const TenantLease = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {isMoveOutModalOpen && (
+                <MoveOutModal
+                    isOpen={isMoveOutModalOpen}
+                    onClose={() => setIsMoveOutModalOpen(false)}
+                    tenant={tenantToMoveOut}
+                    onConfirm={handleMoveOutSubmit}
+                />
             )}
             
         </Layout>
