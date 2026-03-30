@@ -304,7 +304,7 @@ const PredefinedArrivalsBoard = ({
           </div>
           <div className="min-w-0">
             <h3 className="font-bold text-slate-800 text-sm sm:text-base leading-tight">
-              Predefined schedule (all routes)
+              Predefined Schedule
             </h3>
             <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               <Clock size={12} className="inline shrink-0 text-emerald-600" />
@@ -326,18 +326,6 @@ const PredefinedArrivalsBoard = ({
             </p>
           </div>
         </div>
-      </div>
-
-      <div className="px-3 py-2 bg-amber-50/80 border-b border-amber-100 flex items-start gap-2">
-        <Info size={14} className="text-amber-600 mt-0.5 shrink-0" />
-        <p className="text-[11px] sm:text-xs text-amber-900/90 leading-snug">
-          <strong>Arrive</strong> asks for the bus number (defaults to the
-          fleet plate), then logs it on the Terminal Dispatch Board.
-          <strong className="ml-1">Not Arrive</strong> saves a remark only—no
-          dispatch record. That plate cannot be marked Arrived on any route the
-          same day; the Bus Schedules app shows &quot;Not Arriving&quot;.
-          Remarks reset at midnight for a new day.
-        </p>
       </div>
 
       <div className="overflow-x-auto max-h-[min(70vh,520px)] overflow-y-auto">
