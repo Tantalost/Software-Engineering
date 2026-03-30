@@ -86,7 +86,7 @@ const TerminalFees = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeType, setActiveType] = useState("All");
-  const [reportDuration, setReportDuration] = useState("All");
+  const [reportDuration, setReportDuration] = useState("Daily");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -228,6 +228,10 @@ const TerminalFees = () => {
           matchesDuration = false;
         } else {
           const startDate = new Date(now);
+          if (reportDuration === "Daily") {
+            startDate.setHours(0, 0, 0, 0);
+            now.setHours(23, 59, 59, 999);
+          }
           if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
           if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
           if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
@@ -1040,6 +1044,7 @@ const TerminalFees = () => {
               }}
               className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
             >
+              <option value="Daily">Daily</option>
               <option value="All">All Time</option>
               <option value="Weekly">Weekly</option>
               <option value="Monthly">Monthly</option>
