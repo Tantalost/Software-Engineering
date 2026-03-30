@@ -953,14 +953,19 @@ const ManageCompaniesModal = ({
 };
 
 const BusTrips = () => {
+  const toLocalDateKey = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const [collectorName, setCollectorName] = useState("");
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const getTodayFormatted = () => {
-    const today = new Date();
-    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-    return today.toISOString().split('T')[0];
+    return toLocalDateKey(new Date());
   };
 
   const getDateKey = (dateInput) => {
@@ -973,7 +978,7 @@ const BusTrips = () => {
 
     const d = new Date(dateInput);
     if (Number.isNaN(d.getTime())) return "";
-    return d.toISOString().split("T")[0];
+    return toLocalDateKey(d);
   };
 
   const [selectedDate, setSelectedDate] = useState("");
@@ -1145,7 +1150,7 @@ const BusTrips = () => {
     stopType: "Regular Trip",
     customStopCount: "",
     time: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayFormatted(),
     status: "Scheduled",
     price: 75,
     parkingEstimation: "10 minutes",
@@ -1381,7 +1386,7 @@ const BusTrips = () => {
       stopType: "Regular Trip",
       customStopCount: "",
       time: currentTime,
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayFormatted(),
       status: "Scheduled",
       price: defaultPrice,
       parkingEstimation: "10 minutes",

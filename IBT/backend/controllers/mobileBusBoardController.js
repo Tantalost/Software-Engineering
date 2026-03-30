@@ -3,6 +3,27 @@ import BusTrip from "../models/BusTrips.js";
 import ScheduleNotArrival from "../models/ScheduleNotArrival.js";
 import { getBusScheduleTimes } from "../utils/busScheduleServer.js";
 
+const APP_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Manila";
+
+function toDateKeyInAppTimezone(dateInput) {
+  const d = new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}`;
+}
+
 /** Same calendar key as `BusesTrips.jsx` getDateKey — matches web admin + ScheduleNotArrival.dateKey. */
 export function getDateKey(dateInput) {
   if (!dateInput) return "";
@@ -12,7 +33,7 @@ export function getDateKey(dateInput) {
   }
   const d = new Date(dateInput);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().split("T")[0];
+  return toDateKeyInAppTimezone(d);
 }
 
 function makeRowKey(company, route, scheduleTime, plateNumber) {
@@ -207,7 +228,7 @@ export const getPredefinedScheduleToday = async (req, res) => {
 
 /**
  * GET /api/dispatch-board/today
- * Terminal dispatch rows created today (same rule as web dispatch board default view).
+ * Terminal dispatch rows scheduled today (same rule as web dispatch board default view).
  */
 export const getDispatchBoardToday = async (req, res) => {
   try {
@@ -223,7 +244,7 @@ export const getDispatchBoardToday = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const todayTrips = trips.filter((trip) => getDateKey(trip.createdAt) === todayKey);
+    const todayTrips = trips.filter((trip) => getDateKey(trip.date) === todayKey);
 
     const payload = todayTrips.map((item) => ({
       _id: String(item._id),
