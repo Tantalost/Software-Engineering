@@ -160,6 +160,25 @@ export const RejectedView = ({ currentApp, refreshing, onRefresh }: any) => {
   );
 };
 
+const getTimeAgo = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.round(minutes / 60);
+  const days = Math.round(hours / 24);
+  const weeks = Math.round(days / 7);
+  const months = Math.round(days / 30);
+  const years = Math.round(days / 365);
+
+  if (seconds < 60) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (hours < 24) return `${hours} hr${hours > 1 ? 's' : ''} ago`;
+  if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+  if (weeks < 4) return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+  if (months < 12) return `${months} month${months > 1 ? 's' : ''} ago`;
+  return `${years} year${years > 1 ? 's' : ''} ago`;
+};
 
 export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPaymentData, submitRenewal, applying, files, uploadProgress, onPickFile, refreshing, onRefresh }: any) => {
   
@@ -182,6 +201,12 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   const rentAmount = currentApp.rentAmount ? Number(currentApp.rentAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
   const utilityAmount = currentApp.utilityAmount ? Number(currentApp.utilityAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
   const totalAmount = currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
+
+  const chargeAmount = currentApp.chargeAmount ? Number(currentApp.chargeAmount) : 0;
+  const interestAmount = currentApp.interestAmount ? Number(currentApp.interestAmount) : 0;
+  const advanceBalance = currentApp.advancePaymentBalance ? Number(currentApp.advancePaymentBalance) : 0;
+  const advanceUsed = currentApp.advanceUsedForPenalties ? Number(currentApp.advanceUsedForPenalties) : 0;
+  const isPermanent = currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent";
 
   const feeBreakdown = typeof currentApp.feeBreakdown === 'string' 
       ? JSON.parse(currentApp.feeBreakdown || '{}') 
@@ -230,20 +255,24 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               <Text style={{ color: '#166534' }}>Rent Amount:</Text>
               <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{rentAmount}</Text>
             </View>
+
+            {/* --- NEW: Show Advance Balance (Only for Permanent) --- */}
+            {isPermanent && (
+               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <Text style={{ color: '#166534' }}>Advance Balance:</Text>
+                  <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{advanceBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+               </View>
+            )}
             
             <View style={{ marginBottom: 5 }}>
+              {/* Main Additional Fees Row (Shows for everyone) */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={{ color: '#166534' }}>Additional Fees:</Text>
                 <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{utilityAmount}</Text>
               </View>
               
-             {(currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent") && (
-              <View style={{ marginBottom: 5 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ color: '#166534' }}>Additional Fees:</Text>
-                  <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{utilityAmount}</Text>
-                </View>
-                
+             {/* Sub-breakdown (Only shows for Permanent tenants) */}
+             {isPermanent && (
                 <View style={{ paddingLeft: 10, marginTop: 4 }}>
                   {electricity > 0 && (
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
@@ -258,9 +287,41 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                       </View>
                   )}
                 </View>
-              </View>
             )}
             </View>
+
+            {currentApp.status === "Overdue" && (
+                <View style={{ marginTop: 5, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#bbf7d0' }}>
+                    <Text style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: 4 }}>Overdue Penalties:</Text>
+                    
+                    {advanceUsed > 0 && (
+                        <Text style={{ color: '#dc2626', fontSize: 10, fontStyle: 'italic', marginBottom: 6, lineHeight: 14 }}>
+                            *₱{advanceUsed.toLocaleString(undefined, {minimumFractionDigits: 2})} in penalties was automatically paid using your Advance Balance.
+                        </Text>
+                    )}
+
+                    {chargeAmount > 0 && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
+                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Remaining Surcharge:</Text>
+                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{chargeAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                        </View>
+                    )}
+                    
+                    {interestAmount > 0 && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
+                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Remaining Interest:</Text>
+                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{interestAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                        </View>
+                    )}
+
+                    {chargeAmount === 0 && interestAmount === 0 && advanceUsed > 0 && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
+                            <Text style={{ color: '#166534', fontSize: 12 }}>↳ Added to current bill:</Text>
+                            <Text style={{ color: '#166534', fontSize: 12, fontWeight: 'bold' }}>₱0.00</Text>
+                        </View>
+                    )}
+                </View>
+            )}
             
             <Divider style={{ marginVertical: 8, backgroundColor: '#bbf7d0' }} />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -323,6 +384,8 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                 hour: '2-digit',
                 minute: '2-digit'
                 })}
+      
+                <Text style={{ color: colors.success, fontStyle: 'italic' }}> ({getTimeAgo(payment.datePaid)})</Text>
               </Text>
             </View>
 
