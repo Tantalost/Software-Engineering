@@ -1019,7 +1019,7 @@ const TerminalFees = () => {
           />
         </div>
       </div>
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
           <TerminalFilter
             activeType={activeType}
@@ -1027,26 +1027,27 @@ const TerminalFees = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-            Duration:
-          </label>
-          <select
-            value={reportDuration}
-            onChange={(e) => {
-              setReportDuration(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
-          >
-            <option value="All">All Time</option>
-            <option value="Weekly">Weekly</option>
-            <option value="Monthly">Monthly</option>
-            <option value="Yearly">Yearly</option>
-          </select>
-        </div>
+        <div className="flex w-full flex-col gap-3 sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+              Duration:
+            </label>
+            <select
+              value={reportDuration}
+              onChange={(e) => {
+                setReportDuration(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
+            >
+              <option value="All">All Time</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Monthly">Monthly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
 
-        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+          <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
           {role === "superadmin" && (
             <button
               onClick={() => setShowLogModal(true)}
@@ -1068,6 +1069,7 @@ const TerminalFees = () => {
               <span className="hidden sm:inline">Logs</span>
             </button>
           )}
+          </div>
 
           {isSelectionMode && selectedIds.length > 0 && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
