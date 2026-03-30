@@ -1518,6 +1518,7 @@ const TenantLease = () => {
                 columns={tableColumns}
                 data={paginatedData.map((t) => {
                     const isOnRead = readRecordIds.includes(t.id);
+                    
                     const baseData = {
                         id: t.id,
                         slotno: t.slotNo,
@@ -1528,34 +1529,22 @@ const TenantLease = () => {
                         startdate: formatDate(t.StartDateTime),
                         duedate: formatDate(t.DueDateTime || t.EndDateTime),
                         reportstate: isOnRead ? (
-                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                                On Read
-                            </span>
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">On Read</span>
                         ) : (
-                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                                Pending
-                            </span>
-                        ),
-
-                        reportstate: isOnRead ? (
-                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                                On Read
-                            </span>
-                        ) : (
-                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                                Pending
-                            </span>
-                        ),
-                       
-                        ...(activeTab === "permanent" ? { advanceBal: t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-" } : {}),
-                        rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
-
-                        util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
-                        totaldue: `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                        status: t.status,
-                        __highlight: isOnRead,
+                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">Pending</span>
+                        )
                     };
 
+                    if (activeTab === "permanent") {
+                        baseData.advanceBal = t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-";
+                    }
+
+                    baseData.rent = t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-";
+                    baseData.util = t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0";
+                    baseData.totaldue = `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+                    baseData.status = t.status;
+                    baseData.__highlight = isOnRead;
+                    
                     if (isSelectionMode) {
                         return {
                             select: (

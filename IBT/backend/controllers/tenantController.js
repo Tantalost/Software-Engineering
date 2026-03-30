@@ -165,11 +165,15 @@ export const createTenant = async (req, res) => {
 
     const isPermanent = req.body.tenantType === "Permanent";
     const advancePayment = isPermanent ? Number(req.body.advancePaymentBalance || 0) : 0;
-    const baseTotal = Number(req.body.totalAmount) || Number(req.body.rentAmount) || 0;
-    const initialPaymentAmount = baseTotal + advancePayment;
+    
+    const rentAmt = Number(req.body.rentAmount) || 0;
+    const utilAmt = req.body.utilityAmount || 0;
+    const recurringTotal = rentAmt + utilAmt; 
+    const initialPaymentAmount = recurringTotal + advancePayment;
 
     const tenantData = {
         ...req.body,
+        totalAmount: recurringTotal, 
         advancePaymentBalance: advancePayment,
         feeBreakdown: normalizedFeeBreakdown,
         paymentHistory: [{
