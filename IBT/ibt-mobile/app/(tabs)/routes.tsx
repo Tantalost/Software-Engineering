@@ -42,6 +42,14 @@ function dispatchBadge(displayStatus: string) {
   return { emoji: '⚪', bg: '#F5F5F5', fg: '#424242' };
 }
 
+function getStopsLabel(item: DispatchTrip) {
+  if (item.stopsLabel && item.stopsLabel.trim()) return item.stopsLabel;
+  if (item.stopType === 'Other' && (item.customStopCount ?? 0) > 0) {
+    return `${item.customStopCount}-stop`;
+  }
+  return item.stopType || 'Regular Trip';
+}
+
 function isPredefinedRow(item: BoardRow): item is PredefinedEntry {
   return typeof (item as PredefinedEntry).rowKey === 'string' && (item as PredefinedEntry).rowKey.length > 0;
 }
@@ -339,12 +347,8 @@ export default function RoutesPage() {
                 {item.route}
               </Text>
 
-              {item.stopsLabel ? (
-                <>
-                  <Text style={[styles.label, { marginTop: 10 }]}>Stops</Text>
-                  <Text style={styles.value}>{item.stopsLabel}</Text>
-                </>
-              ) : null}
+              <Text style={[styles.label, { marginTop: 10 }]}>Stops</Text>
+              <Text style={styles.value}>{getStopsLabel(item)}</Text>
 
               {item.ticketReferenceNo ? (
                 <>
@@ -352,9 +356,6 @@ export default function RoutesPage() {
                   <Text style={styles.value}>{item.ticketReferenceNo}</Text>
                 </>
               ) : null}
-
-              <Text style={[styles.label, { marginTop: 10 }]}>Price</Text>
-              <Text style={styles.value}>Php {(item.price ?? 75).toFixed(2)}</Text>
 
               {item.seatingCapacity != null ? (
                 <>

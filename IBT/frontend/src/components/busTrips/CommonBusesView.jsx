@@ -94,6 +94,7 @@ const PredefinedArrivalsBoard = ({
   const [remarksMap, setRemarksMap] = useState({});
   const [notArriveSaving, setNotArriveSaving] = useState(false);
   const [undoingKey, setUndoingKey] = useState(null);
+  const [selectedTimeBucket, setSelectedTimeBucket] = useState("all");
 
   const syncBoardDateFromClock = useCallback(() => {
     const k = getDateKeyRef.current(new Date());
@@ -203,6 +204,27 @@ const PredefinedArrivalsBoard = ({
     });
     return out;
   }, [companyData, focusBucket]);
+
+  const timeFilterOptions = useMemo(() => {
+    const seen = new Set();
+    const options = [];
+    scheduleRows.forEach((row) => {
+      if (seen.has(row.hourBucket)) return;
+      seen.add(row.hourBucket);
+      options.push({
+        value: String(row.hourBucket),
+        label: formatHourSlotLabel(row.hourBucket),
+      });
+    });
+    return options;
+  }, [scheduleRows]);
+
+  const filteredScheduleRows = useMemo(() => {
+    if (selectedTimeBucket === "all") return scheduleRows;
+    const bucket = Number(selectedTimeBucket);
+    if (Number.isNaN(bucket)) return scheduleRows;
+    return scheduleRows.filter((row) => row.hourBucket === bucket);
+  }, [scheduleRows, selectedTimeBucket]);
 
   const todayStatusByPlate = useMemo(() => {
     const m = new Map();
@@ -398,6 +420,28 @@ const PredefinedArrivalsBoard = ({
             </p>
           </div>
         </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <label
+            htmlFor="predefined-time-filter"
+            className="text-xs font-semibold text-slate-600 whitespace-nowrap"
+          >
+            Time filter
+          </label>
+          <select
+            id="predefined-time-filter"
+            value={selectedTimeBucket}
+            onChange={(e) => setSelectedTimeBucket(e.target.value)}
+            className="text-xs sm:text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none"
+          >
+            <option value="all">All times</option>
+            {timeFilterOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="overflow-x-auto max-h-[min(70vh,520px)] overflow-y-auto">
@@ -413,19 +457,25 @@ const PredefinedArrivalsBoard = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {scheduleRows.length === 0 ? (
+            {filteredScheduleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={4}
                   className="px-4 py-10 text-center text-slate-500 text-sm"
                 >
-                  No predefined buses yet. Add buses with{" "}
-                  <strong>Schedule time</strong> and <strong>route</strong> in{" "}
-                  <strong>Manage Companies</strong>.
+                  {scheduleRows.length === 0 ? (
+                    <>
+                      No predefined buses yet. Add buses with{" "}
+                      <strong>Schedule time</strong> and <strong>route</strong>{" "}
+                      in <strong>Manage Companies</strong>.
+                    </>
+                  ) : (
+                    <>No buses match the selected time filter.</>
+                  )}
                 </td>
               </tr>
             ) : (
-              scheduleRows.map((row) => {
+              filteredScheduleRows.map((row) => {
                 const isPrepHour = row.hourBucket === focusBucket;
                 const plateKey = `${row.plateNumber}|||${row.company}`;
                 const st = todayStatusByPlate.get(plateKey);

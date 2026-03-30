@@ -148,6 +148,10 @@ const ManageCompaniesModal = ({
   const [deleteBusTarget, setDeleteBusTarget] = useState(null);
 
   const [newBusType, setNewBusType] = useState("Regular");
+  // Maps directly to `Company.buses[].stopType` values:
+  // - "Regular Trip" => no stop count
+  // - "1-stop" ... "10-stop" => fixed stop count
+  const [newBusStopType, setNewBusStopType] = useState("Regular Trip");
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
 
@@ -161,6 +165,7 @@ const ManageCompaniesModal = ({
     setNewBusFrom("");
     setNewBusTo("");
     setNewBusType("Regular");
+    setNewBusStopType("Regular Trip");
     setNewBusSeatingCapacity("");
     setScheduleSlots([defaultScheduleSlot()]);
     setEditBusTarget(null);
@@ -361,9 +366,10 @@ const ManageCompaniesModal = ({
         b.plateNumber === editBusTarget.plateNumber
           ? {
               ...busPayloadBase,
-              stopType: b.stopType || "Regular Trip",
-              customStopCount:
-                b.stopType === "Other" ? b.customStopCount : null,
+              stopType: newBusStopType,
+              // `customStopCount` is only used when stopType === "Other".
+              // This UI only exposes Regular + 1..10 stop modes.
+              customStopCount: null,
             }
           : b,
       );
@@ -372,7 +378,7 @@ const ManageCompaniesModal = ({
         ...activeCompany.buses,
         {
           ...busPayloadBase,
-          stopType: "Regular Trip",
+          stopType: newBusStopType,
           customStopCount: null,
         },
       ];
@@ -518,7 +524,7 @@ const ManageCompaniesModal = ({
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
                       Bus Number
@@ -561,6 +567,29 @@ const ManageCompaniesModal = ({
                         )
                       }
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      No. of Stops
+                    </label>
+                    <select
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
+                      value={newBusStopType}
+                      onChange={(e) => setNewBusStopType(e.target.value)}
+                    >
+                      <option value="Regular Trip">Regular trip (Default)</option>
+                      <option value="1-stop">1</option>
+                      <option value="2-stop">2</option>
+                      <option value="3-stop">3</option>
+                      <option value="4-stop">4</option>
+                      <option value="5-stop">5</option>
+                      <option value="6-stop">6</option>
+                      <option value="7-stop">7</option>
+                      <option value="8-stop">8</option>
+                      <option value="9-stop">9</option>
+                      <option value="10-stop">10</option>
+                    </select>
                   </div>
                 </div>
 
@@ -811,6 +840,20 @@ const ManageCompaniesModal = ({
                                       ? String(bus.seatingCapacity)
                                       : "",
                                   );
+                              // Support existing "Other" values by mapping them into 1..10 when possible.
+                              if (bus.stopType && bus.stopType !== "Other") {
+                                setNewBusStopType(bus.stopType);
+                              } else if (
+                                bus.customStopCount != null &&
+                                Number(bus.customStopCount) >= 1 &&
+                                Number(bus.customStopCount) <= 10
+                              ) {
+                                setNewBusStopType(
+                                  `${Number(bus.customStopCount)}-stop`,
+                                );
+                              } else {
+                                setNewBusStopType("Regular Trip");
+                              }
                                   const times = getBusScheduleTimes(bus);
                                   setScheduleSlots(
                                     times.length
