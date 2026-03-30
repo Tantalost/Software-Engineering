@@ -1336,9 +1336,9 @@ const TenantLease = () => {
                     className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
             </div>,
-            "Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Rent", "Util", "Total Due", "Status"
+            "Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Advance Bal.", "Rent", "Util", "Total Due", "Status"
         ]
-        : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Rent", "Util", "Total Due", "Status"];
+        : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Advance Bal.", "Rent", "Util", "Total Due", "Status"];
 
     const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
@@ -1528,7 +1528,20 @@ const TenantLease = () => {
                                 Pending
                             </span>
                         ),
+
+                        reportstate: isOnRead ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                                On Read
+                            </span>
+                        ) : (
+                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                                Pending
+                            </span>
+                        ),
+                        advanceBal: t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-",
+                        
                         rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
+
                         util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
                         totaldue: `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                         status: t.status,

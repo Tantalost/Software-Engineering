@@ -163,13 +163,18 @@ export const createTenant = async (req, res) => {
     const normalizedFeeBreakdown = normalizeFeeBreakdown(parsedFeeBreakdown, req.body.tenantType);
     req.body.utilityAmount = Number(normalizedFeeBreakdown.electricity || 0) + Number(normalizedFeeBreakdown.otherAmount || 0);
 
+    const isPermanent = req.body.tenantType === "Permanent";
+    const advancePayment = isPermanent ? Number(req.body.advancePaymentBalance || 0) : 0;
+    const baseTotal = Number(req.body.totalAmount) || Number(req.body.rentAmount) || 0;
+    const initialPaymentAmount = baseTotal + advancePayment;
+
     const tenantData = {
         ...req.body,
-      advancePaymentBalance: req.body.tenantType === "Permanent" ? Number(req.body.advancePaymentBalance || 0) : 0,
-      feeBreakdown: normalizedFeeBreakdown,
+        advancePaymentBalance: advancePayment,
+        feeBreakdown: normalizedFeeBreakdown,
         paymentHistory: [{
             referenceNo: req.body.referenceNo || "Initial Payment",
-            amount: req.body.totalAmount || req.body.rentAmount || 0,
+            amount: initialPaymentAmount, 
             datePaid: new Date().toISOString(),
             receiptUrl: proofOfReceipt || req.body.documents?.proofOfReceipt || ""
         }],
