@@ -403,6 +403,8 @@ const Parking = () => {
   const fourWheelCount = filtered.filter((t) => t.type === "FourWheels").length;
   const twoWheelCount = filtered.filter((t) => t.type === "TwoWheels").length;
   const revenue = filtered.reduce((sum, t) => {
+    if (t.status !== "Departed") return sum;
+
     if (t.finalPrice) return sum + Number(t.finalPrice);
 
     if (!t.timeIn) return sum;
