@@ -1,8 +1,8 @@
 import React from "react";
 import StatCard from "../tenants/StatCard";
-import { Bus, Clock, CheckCircle, CalendarClock, MapPin, PhilippinePeso } from "lucide-react";
+import { Bus, CalendarClock, CheckCircle, MapPin, PhilippinePeso } from "lucide-react";
 
-const StatCardGroupBus = ({ totalTrips, scheduledTrips, pendingTrips, arrivedTrips, paidTrips, totalRevenue }) => {
+const StatCardGroupBus = ({ totalTrips, predefinedSchedules, arrivedTrips, paidTrips, totalRevenue }) => {
   return (
     <div className="flex overflow-x-auto gap-4 mb-6 pb-4 w-full snap-x">
       
@@ -11,11 +11,7 @@ const StatCardGroupBus = ({ totalTrips, scheduledTrips, pendingTrips, arrivedTri
       </div>
 
       <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
-        <StatCard title="Scheduled" value={scheduledTrips} icon={CalendarClock} color="blue" />
-      </div>
-
-      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
-        <StatCard title="Pending" value={pendingTrips} icon={Clock} color="orange" />
+        <StatCard title="Predefined Schedule" value={predefinedSchedules} icon={CalendarClock} color="orange" />
       </div>
 
       <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">

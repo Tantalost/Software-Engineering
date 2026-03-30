@@ -1212,9 +1212,6 @@ const BusTrips = () => {
   });
 
   const totalTrips = filtered.length;
-  const scheduledTrips = filtered.filter(
-    (t) => t.status === "Scheduled",
-  ).length;
   const pendingTrips = filtered.filter((t) => t.status === "Pending").length;
   const arrivedTrips = filtered.filter((t) => t.status === "Arrived").length;
   const paidTrips = filtered.filter((t) => t.status === "Departed").length;
@@ -1246,12 +1243,27 @@ const BusTrips = () => {
   }, [filtered, filteredWithoutDate, selectedDate, role]);
 
   const dashboardTotalTrips = todayDispatchRecords.length;
-  const dashboardScheduledTrips = todayDispatchRecords.filter(
-    (t) => t.status === "Scheduled",
-  ).length;
-  const dashboardPendingTrips = todayDispatchRecords.filter(
-    (t) => t.status === "Pending",
-  ).length;
+  const dashboardPredefinedSchedules = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
+    return companyData
+      .filter((company) => selectedCompany === "" || company.name === selectedCompany)
+      .flatMap((company) =>
+        (company.buses || []).filter((bus) => {
+          const matchesBusType =
+            selectedBusType === "" ||
+            (bus.busType || "").toLowerCase() === selectedBusType.toLowerCase();
+
+          if (!matchesBusType) return false;
+          if (!q) return true;
+
+          const plate = (bus.plateNumber || "").toLowerCase();
+          const route = (bus.route || "").toLowerCase();
+          return plate.includes(q) || route.includes(q);
+        }),
+      ).length;
+  }, [companyData, selectedCompany, selectedBusType, searchQuery]);
+
   const dashboardArrivedTrips = todayDispatchRecords.filter(
     (t) => t.status === "Arrived",
   ).length;
@@ -2392,8 +2404,7 @@ const BusTrips = () => {
       <div className="mb-6">
         <StatCardGroupBus
           totalTrips={dashboardTotalTrips}
-          scheduledTrips={dashboardScheduledTrips}
-          pendingTrips={dashboardPendingTrips}
+          predefinedSchedules={dashboardPredefinedSchedules}
           arrivedTrips={dashboardArrivedTrips}
           paidTrips={dashboardPaidTrips}
           totalRevenue={dashboardTotalRevenue}
