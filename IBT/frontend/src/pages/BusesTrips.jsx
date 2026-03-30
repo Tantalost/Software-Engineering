@@ -21,6 +21,10 @@ import { submitPageReport } from "../utils/reportService.js";
 import TableActions from "../components/common/TableActions";
 import ViewModal from "../components/common/ViewModal";
 import { logActivity } from "../utils/logger";
+import {
+  formatBusScheduleDisplay,
+  getBusScheduleTimes,
+} from "../utils/busSchedule.js";
 import NotificationToast from "../components/common/NotificationToast";
 import {
   Archive,
@@ -34,6 +38,7 @@ import {
   X,
   Bus,
   Plus,
+  Minus,
   Settings,
 } from "lucide-react";
 
@@ -111,6 +116,12 @@ const buildScheduleTime = (hour, minute, period) => {
   return `${h}:${mm} ${period}`;
 };
 
+const defaultScheduleSlot = () => ({
+  hour: 8,
+  minute: "00",
+  period: "AM",
+});
+
 const ManageCompaniesModal = ({
   isOpen,
   onClose,
@@ -127,9 +138,7 @@ const ManageCompaniesModal = ({
   const [newBusFrom, setNewBusFrom] = useState("");
   const [newBusTo, setNewBusTo] = useState("");
   const [newBusSeatingCapacity, setNewBusSeatingCapacity] = useState("");
-  const [scheduleHour, setScheduleHour] = useState(8);
-  const [scheduleMinute, setScheduleMinute] = useState("00");
-  const [schedulePeriod, setSchedulePeriod] = useState("AM");
+  const [scheduleSlots, setScheduleSlots] = useState([defaultScheduleSlot()]);
   const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -139,6 +148,10 @@ const ManageCompaniesModal = ({
   const [deleteBusTarget, setDeleteBusTarget] = useState(null);
 
   const [newBusType, setNewBusType] = useState("Regular");
+  // Maps directly to `Company.buses[].stopType` values:
+  // - "Regular Trip" => no stop count
+  // - "1-stop" ... "10-stop" => fixed stop count
+  const [newBusStopType, setNewBusStopType] = useState("Regular Trip");
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
 
@@ -152,10 +165,9 @@ const ManageCompaniesModal = ({
     setNewBusFrom("");
     setNewBusTo("");
     setNewBusType("Regular");
+    setNewBusStopType("Regular Trip");
     setNewBusSeatingCapacity("");
-    setScheduleHour(8);
-    setScheduleMinute("00");
-    setSchedulePeriod("AM");
+    setScheduleSlots([defaultScheduleSlot()]);
     setEditBusTarget(null);
   };
 
@@ -333,25 +345,31 @@ const ManageCompaniesModal = ({
     }
 
     const routeString = `${newBusFrom.trim()} - ${newBusTo.trim()}`;
-    const scheduleStr = buildScheduleTime(
-      scheduleHour,
-      scheduleMinute,
-      schedulePeriod,
+    const built = scheduleSlots.map((s) =>
+      buildScheduleTime(s.hour, s.minute, s.period),
     );
+    const scheduleTimes = [...new Set(built)];
+    const scheduleTimeJoined = scheduleTimes.join(", ");
+
+    const busPayloadBase = {
+      plateNumber: newBusPlate.trim(),
+      route: routeString,
+      busType: newBusType,
+      seatingCapacity: cap,
+      scheduleTimes,
+      scheduleTime: scheduleTimeJoined,
+    };
 
     let updatedBuses;
     if (editBusTarget) {
       updatedBuses = activeCompany.buses.map((b) =>
         b.plateNumber === editBusTarget.plateNumber
           ? {
-              plateNumber: newBusPlate.trim(),
-              route: routeString,
-              busType: newBusType,
-              seatingCapacity: cap,
-              scheduleTime: scheduleStr,
-              stopType: b.stopType || "Regular Trip",
-              customStopCount:
-                b.stopType === "Other" ? b.customStopCount : null,
+              ...busPayloadBase,
+              stopType: newBusStopType,
+              // `customStopCount` is only used when stopType === "Other".
+              // This UI only exposes Regular + 1..10 stop modes.
+              customStopCount: null,
             }
           : b,
       );
@@ -359,12 +377,8 @@ const ManageCompaniesModal = ({
       updatedBuses = [
         ...activeCompany.buses,
         {
-          plateNumber: newBusPlate.trim(),
-          route: routeString,
-          busType: newBusType,
-          seatingCapacity: cap,
-          scheduleTime: scheduleStr,
-          stopType: "Regular Trip",
+          ...busPayloadBase,
+          stopType: newBusStopType,
           customStopCount: null,
         },
       ];
@@ -510,7 +524,7 @@ const ManageCompaniesModal = ({
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
                       Bus Number
@@ -554,53 +568,146 @@ const ManageCompaniesModal = ({
                       }
                     />
                   </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      No. of Stops
+                    </label>
+                    <select
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
+                      value={newBusStopType}
+                      onChange={(e) => setNewBusStopType(e.target.value)}
+                    >
+                      <option value="Regular Trip">Regular trip (Default)</option>
+                      <option value="1-stop">1</option>
+                      <option value="2-stop">2</option>
+                      <option value="3-stop">3</option>
+                      <option value="4-stop">4</option>
+                      <option value="5-stop">5</option>
+                      <option value="6-stop">6</option>
+                      <option value="7-stop">7</option>
+                      <option value="8-stop">8</option>
+                      <option value="9-stop">9</option>
+                      <option value="10-stop">10</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase">
-                    Schedule Time (AM/PM)
-                  </label>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <select
-                      className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[4.5rem]"
-                      value={scheduleHour}
-                      onChange={(e) =>
-                        setScheduleHour(Number(e.target.value))
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      Schedule times (AM/PM)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setScheduleSlots((prev) => [
+                          ...prev,
+                          defaultScheduleSlot(),
+                        ])
                       }
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
                     >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                        <option key={h} value={h}>
-                          {h}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="text-slate-400 font-medium">:</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={2}
-                      placeholder="00"
-                      className="w-14 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 text-center"
-                      value={scheduleMinute}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-                        setScheduleMinute(v);
-                      }}
-                      onBlur={() => {
-                        const n = parseInt(scheduleMinute, 10);
-                        if (Number.isNaN(n) || n < 0) setScheduleMinute("00");
-                        else if (n > 59) setScheduleMinute("59");
-                        else setScheduleMinute(String(n).padStart(2, "0"));
-                      }}
-                    />
-                    <select
-                      className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[5.5rem]"
-                      value={schedulePeriod}
-                      onChange={(e) => setSchedulePeriod(e.target.value)}
-                    >
-                      <option value="AM">AM</option>
-                      <option value="PM">PM</option>
-                    </select>
+                      <Plus size={14} />
+                      Add time
+                    </button>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    One bus can run several trips per day — add each departure
+                    time.
+                  </p>
+                  <div className="mt-2 space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                    {scheduleSlots.map((slot, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2"
+                      >
+                        <select
+                          className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[4.5rem]"
+                          value={slot.hour}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setScheduleSlots((prev) =>
+                              prev.map((s, i) =>
+                                i === idx ? { ...s, hour: v } : s,
+                              ),
+                            );
+                          }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                            (h) => (
+                              <option key={h} value={h}>
+                                {h}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                        <span className="text-slate-400 font-medium">:</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={2}
+                          placeholder="00"
+                          className="w-14 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 text-center"
+                          value={slot.minute}
+                          onChange={(e) => {
+                            const v = e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 2);
+                            setScheduleSlots((prev) =>
+                              prev.map((s, i) =>
+                                i === idx ? { ...s, minute: v } : s,
+                              ),
+                            );
+                          }}
+                          onBlur={() => {
+                            setScheduleSlots((prev) =>
+                              prev.map((s, i) => {
+                                if (i !== idx) return s;
+                                const n = parseInt(s.minute, 10);
+                                let mm = "00";
+                                if (!Number.isNaN(n) && n >= 0) {
+                                  mm =
+                                    n > 59
+                                      ? "59"
+                                      : String(n).padStart(2, "0");
+                                }
+                                return { ...s, minute: mm };
+                              }),
+                            );
+                          }}
+                        />
+                        <select
+                          className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[5.5rem]"
+                          value={slot.period}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setScheduleSlots((prev) =>
+                              prev.map((s, i) =>
+                                i === idx ? { ...s, period: v } : s,
+                              ),
+                            );
+                          }}
+                        >
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
+                        </select>
+                        {scheduleSlots.length > 1 && (
+                          <button
+                            type="button"
+                            title="Remove this time"
+                            onClick={() =>
+                              setScheduleSlots((prev) =>
+                                prev.filter((_, i) => i !== idx),
+                              )
+                            }
+                            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
+                          >
+                            <Minus size={16} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -708,10 +815,8 @@ const ManageCompaniesModal = ({
                                 ? bus.seatingCapacity
                                 : "—"}
                             </td>
-                            <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                              {bus.scheduleTime?.trim()
-                                ? bus.scheduleTime
-                                : "—"}
+                            <td className="px-4 py-3 text-slate-600 text-sm max-w-[220px]">
+                              {formatBusScheduleDisplay(bus) || "—"}
                             </td>
                             <td className="px-4 py-3 text-slate-600">
                               {bus.route}
@@ -735,12 +840,33 @@ const ManageCompaniesModal = ({
                                       ? String(bus.seatingCapacity)
                                       : "",
                                   );
-                                  const parts = parseScheduleParts(
-                                    bus.scheduleTime,
+                              // Support existing "Other" values by mapping them into 1..10 when possible.
+                              if (bus.stopType && bus.stopType !== "Other") {
+                                setNewBusStopType(bus.stopType);
+                              } else if (
+                                bus.customStopCount != null &&
+                                Number(bus.customStopCount) >= 1 &&
+                                Number(bus.customStopCount) <= 10
+                              ) {
+                                setNewBusStopType(
+                                  `${Number(bus.customStopCount)}-stop`,
+                                );
+                              } else {
+                                setNewBusStopType("Regular Trip");
+                              }
+                                  const times = getBusScheduleTimes(bus);
+                                  setScheduleSlots(
+                                    times.length
+                                      ? times.map((t) => {
+                                          const p = parseScheduleParts(t);
+                                          return {
+                                            hour: p.hour,
+                                            minute: p.minute,
+                                            period: p.period,
+                                          };
+                                        })
+                                      : [defaultScheduleSlot()],
                                   );
-                                  setScheduleHour(parts.hour);
-                                  setScheduleMinute(parts.minute);
-                                  setSchedulePeriod(parts.period);
                                 }}
                                 className="text-slate-400 hover:text-blue-500 p-1 mr-1 rounded-md"
                               >
@@ -870,14 +996,19 @@ const ManageCompaniesModal = ({
 };
 
 const BusTrips = () => {
+  const toLocalDateKey = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const [collectorName, setCollectorName] = useState("");
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const getTodayFormatted = () => {
-    const today = new Date();
-    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-    return today.toISOString().split('T')[0];
+    return toLocalDateKey(new Date());
   };
 
   const getDateKey = (dateInput) => {
@@ -890,7 +1021,7 @@ const BusTrips = () => {
 
     const d = new Date(dateInput);
     if (Number.isNaN(d.getTime())) return "";
-    return d.toISOString().split("T")[0];
+    return toLocalDateKey(d);
   };
 
   const [selectedDate, setSelectedDate] = useState("");
@@ -1062,7 +1193,7 @@ const BusTrips = () => {
     stopType: "Regular Trip",
     customStopCount: "",
     time: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayFormatted(),
     status: "Scheduled",
     price: 75,
     parkingEstimation: "10 minutes",
@@ -1247,21 +1378,25 @@ const BusTrips = () => {
     const q = searchQuery.trim().toLowerCase();
 
     return companyData
-      .filter((company) => selectedCompany === "" || company.name === selectedCompany)
-      .flatMap((company) =>
-        (company.buses || []).filter((bus) => {
+      .filter(
+        (company) =>
+          selectedCompany === "" || company.name === selectedCompany,
+      )
+      .reduce((sum, company) => {
+        for (const bus of company.buses || []) {
           const matchesBusType =
             selectedBusType === "" ||
             (bus.busType || "").toLowerCase() === selectedBusType.toLowerCase();
-
-          if (!matchesBusType) return false;
-          if (!q) return true;
-
-          const plate = (bus.plateNumber || "").toLowerCase();
-          const route = (bus.route || "").toLowerCase();
-          return plate.includes(q) || route.includes(q);
-        }),
-      ).length;
+          if (!matchesBusType) continue;
+          if (q) {
+            const plate = (bus.plateNumber || "").toLowerCase();
+            const route = (bus.route || "").toLowerCase();
+            if (!plate.includes(q) && !route.includes(q)) continue;
+          }
+          sum += getBusScheduleTimes(bus).length;
+        }
+        return sum;
+      }, 0);
   }, [companyData, selectedCompany, selectedBusType, searchQuery]);
 
   const dashboardArrivedTrips = todayDispatchRecords.filter(
@@ -1294,7 +1429,7 @@ const BusTrips = () => {
       stopType: "Regular Trip",
       customStopCount: "",
       time: currentTime,
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayFormatted(),
       status: "Scheduled",
       price: defaultPrice,
       parkingEstimation: "10 minutes",
