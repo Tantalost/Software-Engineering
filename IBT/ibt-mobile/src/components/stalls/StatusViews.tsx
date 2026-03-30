@@ -290,23 +290,49 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             )}
             </View>
 
-            {currentApp.tenantDbStatus === "Overdue" && (
+           {currentApp.tenantDbStatus === "Overdue" && (
                 <View style={{ marginTop: 5, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#bbf7d0' }}>
                     <Text style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: 4 }}>Overdue Penalties:</Text>
                     
-                    {chargeAmount > 0 && (
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Penalty Surcharge:</Text>
-                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{chargeAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                        </View>
-                    )}
-                    
-                    {interestAmount > 0 && (
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Accumulated Interest:</Text>
-                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{interestAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                        </View>
-                    )}
+                    {(() => {
+                       
+                        const rawCharge = Number(currentApp.chargeAmount) || 0;
+                        const rawInterest = Number(currentApp.interestAmount) || 0;
+                        
+                      
+                        const baseR = Number(currentApp.rentAmount) || 0;
+                        const utils = Number(currentApp.utilityAmount) || 0;
+                        const totalD = Number(currentApp.totalAmount) || 0;
+                        const fallbackPenalty = totalD - baseR - utils;
+
+                        if (rawCharge > 0 || rawInterest > 0) {
+                            return (
+                                <>
+                                    {rawCharge > 0 && (
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
+                                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Penalty Surcharge:</Text>
+                                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{rawCharge.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                                        </View>
+                                    )}
+                                    {rawInterest > 0 && (
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
+                                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Accumulated Interest:</Text>
+                                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{rawInterest.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                                        </View>
+                                    )}
+                                </>
+                            );
+                        } else if (fallbackPenalty > 0) {
+                            return (
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
+                                    <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Penalty & Interest:</Text>
+                                    <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{fallbackPenalty.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                                </View>
+                            );
+                        } else {
+                            return null;
+                        }
+                    })()}
                 </View>
             )}
             

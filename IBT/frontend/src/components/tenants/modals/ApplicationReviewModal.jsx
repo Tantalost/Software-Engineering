@@ -274,11 +274,27 @@ const ApplicationReviewModal = ({
                       <p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || reviewData.referenceNo || "PENDING"}</p>
                   </div>
                   <div className="text-right">
-                     {(() => {
-                                  const totalPayment = Number(reviewData.paymentAmount || 0);
-                                  const advance = defaultPermanentPrice;
+                     
+                      {isTenantRenewal ? (
+                          <>
+                              <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
+                              <p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                          </>
+                      ) : isPermanent ? (
+                          <>
+                              {(() => {
                                  
-                                  const rental = totalPayment > advance ? totalPayment - advance : totalPayment / 2; 
+                                  const rawTotal = reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0;
+                                  const totalPayment = Number(rawTotal);
+                                  
+                                  const advance = typeof defaultPermanentPrice !== 'undefined' ? Number(defaultPermanentPrice) : 6000;
+                                  
+                                  let rental = 0;
+                                  if (totalPayment > advance) {
+                                      rental = totalPayment - advance;
+                                  }
+                                  
+                                  const displayTotal = totalPayment > 0 ? totalPayment : advance;
                                   
                                   return (
                                       <>
@@ -290,9 +306,20 @@ const ApplicationReviewModal = ({
                                               <div className="text-slate-500">Advance Payment:</div>
                                               <div className="font-bold text-slate-700">₱{advance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                                           </div>
+                                          <div className="flex justify-end gap-6">
+                                              <div className="text-xs font-bold text-emerald-600 uppercase mt-1">Total Expected:</div>
+                                              <div className="text-xl font-bold text-emerald-600">₱{displayTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                                          </div>
                                       </>
                                   );
                               })()}
+                          </>
+                      ) : (
+                          <>
+                              <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
+                              <p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                          </>
+                      )}
                   </div>
                 </div>
                 <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-3 border border-blue-100">

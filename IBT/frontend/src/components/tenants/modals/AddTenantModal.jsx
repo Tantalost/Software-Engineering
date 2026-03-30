@@ -184,7 +184,10 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         calculatedDueDate = formatDateTimeForInput(nextDue);
 
         const diffDays = Math.ceil((nextDue.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-        calculatedRent = diffDays * 200 * slotCount;
+        
+        const dailyRate = baseRent / 30;
+        calculatedRent = diffDays * dailyRate * slotCount;
+
       }
     } else {
       calculatedRent = defaultNightPrice * slotCount; 

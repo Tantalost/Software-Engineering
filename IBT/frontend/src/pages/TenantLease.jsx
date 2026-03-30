@@ -951,13 +951,12 @@ const TenantLease = () => {
             const res = await fetch(`${API_URL}/tenants/${id}/approve-renewal`, { method: 'PUT' });
             if (res.ok) {
                 setNotificationState({ isOpen: true, type: 'success', message: "Renewal payment confirmed! Next due date updated.", autoClose: true, duration: 3000 });
-            
                 await logActivity(role, "APPROVE_RENEWAL", `Approved renewal payment for tenant ID #${id}`, "Tenants");
-            
                 setShowReviewModal(false);
                 fetchTenants(); 
             } else {
-                setNotificationState({ isOpen: true, type: 'error', message: "Failed to approve renewal.", autoClose: true, duration: 3000 });
+                const errData = await res.json();
+                setNotificationState({ isOpen: true, type: 'error', message: `Failed: ${errData.error || 'Unknown error'}`, autoClose: true, duration: 4000 });
             }
         } catch (err) {
             setNotificationState({ isOpen: true, type: 'error', message: "Server error approving renewal.", autoClose: true, duration: 3000 });
