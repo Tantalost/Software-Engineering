@@ -260,6 +260,14 @@ const Dashboard = () => {
       });
     }
 
+    if (category === "bus") {
+      return items.filter((i) => {
+        const s = (i.status || "").toLowerCase();
+        // Matches Terminal Dispatch / Buses Trips: revenue when trip is Departed (or Paid).
+        return ["departed", "paid"].includes(s);
+      });
+    }
+
     return items.filter((i) => {
       const s = (i.status || "").toLowerCase();
       return ["paid", "completed", "active"].includes(s);
