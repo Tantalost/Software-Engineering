@@ -294,30 +294,17 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                 <View style={{ marginTop: 5, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#bbf7d0' }}>
                     <Text style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: 4 }}>Overdue Penalties:</Text>
                     
-                    {advanceUsed > 0 && (
-                        <Text style={{ color: '#dc2626', fontSize: 10, fontStyle: 'italic', marginBottom: 6, lineHeight: 14 }}>
-                            *₱{advanceUsed.toLocaleString(undefined, {minimumFractionDigits: 2})} in penalties was automatically paid using your Advance Balance.
-                        </Text>
-                    )}
-
                     {chargeAmount > 0 && (
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Remaining Surcharge:</Text>
+                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Penalty Surcharge:</Text>
                             <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{chargeAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
                         </View>
                     )}
                     
                     {interestAmount > 0 && (
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Remaining Interest:</Text>
+                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Accumulated Interest:</Text>
                             <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{interestAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                        </View>
-                    )}
-
-                    {chargeAmount === 0 && interestAmount === 0 && advanceUsed > 0 && (
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                            <Text style={{ color: '#166534', fontSize: 12 }}>↳ Added to current bill:</Text>
-                            <Text style={{ color: '#166534', fontSize: 12, fontWeight: 'bold' }}>₱0.00</Text>
                         </View>
                     )}
                 </View>
