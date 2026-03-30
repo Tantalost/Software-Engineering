@@ -3,6 +3,7 @@ import Layout from "../components/layout/Layout";
 import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
+import TerminalBoardShell from "../components/common/TerminalBoardShell";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
@@ -954,7 +955,9 @@ const LostFound = () => {
             <p>Loading data...</p>
           </div>
         ) : (
-          <Table
+          <TerminalBoardShell title="Lost & Found Terminal">
+            <Table
+              variant="terminal"
             columns={tableColumns}
             data={paginatedData.map((item) => {
               const isOnRead = readRecordIds.includes(item.id);
@@ -1028,6 +1031,7 @@ const LostFound = () => {
               );
             }}
           />
+          </TerminalBoardShell>
         )}
       </div>
 

@@ -6,6 +6,7 @@ import footerImg from "../assets/FOOTER.png";
 import StatCardGroupPark from "../components/parking/StatCardGroupPark";
 import ExportMenu from "../components/common/exportMenu";
 import Table from "../components/common/Table";
+import TerminalBoardShell from "../components/common/TerminalBoardShell";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
@@ -1264,7 +1265,9 @@ const Parking = () => {
         <div className="text-center py-10">Loading tickets...</div>
       ) : (
         <>
-          <Table
+          <TerminalBoardShell title="Parking Terminal">
+            <Table
+              variant="terminal"
             columns={tableColumns}
             data={paginatedData.map((ticket) => {
               const isOnRead = readRecordIds.includes(ticket.id);
@@ -1357,6 +1360,7 @@ const Parking = () => {
               );
             }}
           />
+          </TerminalBoardShell>
 
           <Pagination
             currentPage={currentPage}

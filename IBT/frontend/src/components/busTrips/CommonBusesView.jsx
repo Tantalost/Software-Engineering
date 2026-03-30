@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Bus, Clock, Info, ListOrdered, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Bus, Clock, Info, ListOrdered, Undo2, X } from "lucide-react";
+
+const SCHEDULE_NOT_ARRIVAL_API = `${
+  import.meta.env.VITE_API_URL || "http://localhost:10000"
+}/api/schedule-not-arrivals`;
 
 function parseScheduleToMinutesMidnight(str) {
   if (!str || typeof str !== "string") return null;
@@ -32,19 +37,12 @@ function makeRowKey(company, route, scheduleTime, plateNumber) {
   return `${company}|||${route}|||${scheduleTime}|||${plateNumber}`;
 }
 
-function loadRemarksMap(dateKey) {
-  try {
-    const raw = sessionStorage.getItem(`ibt_predefined_not_arrived_${dateKey}`);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveRemarksMap(dateKey, map) {
-  sessionStorage.setItem(
-    `ibt_predefined_not_arrived_${dateKey}`,
-    JSON.stringify(map),
+function docToRowKey(doc) {
+  return makeRowKey(
+    doc.company,
+    doc.route,
+    doc.scheduleTime,
+    doc.plateNumber,
   );
 }
 
@@ -66,12 +64,43 @@ const PredefinedArrivalsBoard = ({
   const [notArriveRemark, setNotArriveRemark] = useState("");
   const [confirmingKey, setConfirmingKey] = useState(null);
   const [remarksMap, setRemarksMap] = useState({});
+  const [notArriveSaving, setNotArriveSaving] = useState(false);
+  const [undoingKey, setUndoingKey] = useState(null);
 
   const todayKey = getDateKey(new Date());
 
-  useEffect(() => {
-    setRemarksMap(loadRemarksMap(todayKey));
+  const refreshNotArrivals = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${SCHEDULE_NOT_ARRIVAL_API}?dateKey=${encodeURIComponent(todayKey)}`,
+      );
+      if (!res.ok) return;
+      const rows = await res.json();
+      const map = {};
+      rows.forEach((doc) => {
+        const rk = docToRowKey(doc);
+        if (doc.remark) map[rk] = doc.remark;
+      });
+      setRemarksMap(map);
+    } catch {
+      /* ignore */
+    }
   }, [todayKey]);
+
+  useEffect(() => {
+    refreshNotArrivals();
+  }, [refreshNotArrivals]);
+
+  /** Any row with a saved remark blocks Arrive for every row with the same plate + company today. */
+  const notArrivePlateCompanyKeys = useMemo(() => {
+    const s = new Set();
+    Object.entries(remarksMap).forEach(([rowKey, text]) => {
+      if (!String(text || "").trim()) return;
+      const parts = rowKey.split("|||");
+      if (parts.length >= 4) s.add(`${parts[3]}|||${parts[0]}`);
+    });
+    return s;
+  }, [remarksMap]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
@@ -134,19 +163,6 @@ const PredefinedArrivalsBoard = ({
     return m;
   }, [records, todayKey, getDateKey]);
 
-  const setRemark = useCallback(
-    (rowKey, text) => {
-      setRemarksMap((prev) => {
-        const next = { ...prev };
-        if (text.trim()) next[rowKey] = text.trim();
-        else delete next[rowKey];
-        saveRemarksMap(todayKey, next);
-        return next;
-      });
-    },
-    [todayKey],
-  );
-
   const openArrive = (row) => {
     setArriveRow(row);
     setArrivePlateInput(row.plateNumber || "");
@@ -192,11 +208,50 @@ const PredefinedArrivalsBoard = ({
     }
   };
 
-  const submitNotArrive = () => {
+  const submitNotArrive = async () => {
     if (!notArriveRow) return;
-    setRemark(notArriveRow.rowKey, notArriveRemark);
-    setNotArriveRow(null);
-    setNotArriveRemark("");
+    const trimmed = notArriveRemark.trim();
+    if (!trimmed) {
+      onNotify?.("error", "Please enter a remark (e.g. Maintenance).");
+      return;
+    }
+    setNotArriveSaving(true);
+    try {
+      const res = await fetch(SCHEDULE_NOT_ARRIVAL_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dateKey: todayKey,
+          company: notArriveRow.company,
+          route: notArriveRow.route,
+          scheduleTime: notArriveRow.scheduleTime,
+          plateNumber: notArriveRow.plateNumber,
+          remark: trimmed,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        onNotify?.(
+          "error",
+          err.message || "Could not save. Try again.",
+        );
+        return;
+      }
+      setRemarksMap((prev) => ({
+        ...prev,
+        [notArriveRow.rowKey]: trimmed,
+      }));
+      setNotArriveRow(null);
+      setNotArriveRemark("");
+      onNotify?.(
+        "success",
+        "Recorded as not arriving. It will not appear on the dispatch board; mobile schedules will update on refresh.",
+      );
+    } catch {
+      onNotify?.("error", "Network error saving remark.");
+    } finally {
+      setNotArriveSaving(false);
+    }
   };
 
   const openNotArrive = (row) => {
@@ -204,8 +259,44 @@ const PredefinedArrivalsBoard = ({
     setNotArriveRemark(remarksMap[row.rowKey] || "");
   };
 
+  const undoNotArrival = async (row) => {
+    const params = new URLSearchParams({
+      dateKey: todayKey,
+      company: row.company,
+      route: row.route,
+      scheduleTime: row.scheduleTime,
+      plateNumber: String(row.plateNumber ?? ""),
+    });
+    setUndoingKey(row.rowKey);
+    try {
+      const res = await fetch(`${SCHEDULE_NOT_ARRIVAL_API}?${params}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        onNotify?.(
+          "error",
+          err.message || "Could not undo. Try again.",
+        );
+        return;
+      }
+      await refreshNotArrivals();
+      onNotify?.(
+        "success",
+        "Not arrival removed. You can mark Arrive or Not Arrive again.",
+      );
+    } catch {
+      onNotify?.("error", "Network error.");
+    } finally {
+      setUndoingKey(null);
+    }
+  };
+
+  const modalLayer =
+    typeof document !== "undefined" ? document.body : null;
+
   return (
-    <div className="relative z-0 w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/90 via-white to-emerald-50/30 shadow-sm overflow-hidden">
+    <div className="relative w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/90 via-white to-emerald-50/30 shadow-sm overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-start gap-3 justify-between bg-white/80">
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-2 rounded-xl bg-slate-800 text-white shrink-0">
@@ -242,8 +333,10 @@ const PredefinedArrivalsBoard = ({
         <p className="text-[11px] sm:text-xs text-amber-900/90 leading-snug">
           <strong>Arrive</strong> asks for the bus number (defaults to the
           fleet plate), then logs it on the Terminal Dispatch Board.
-          <strong className="ml-1">Not Arrive</strong> records a remark (e.g.
-          Maintenance) for this shift; it does not create a trip.
+          <strong className="ml-1">Not Arrive</strong> saves a remark only—no
+          dispatch record. That plate cannot be marked Arrived on any route the
+          same day; the Bus Schedules app shows &quot;Not Arriving&quot;.
+          Remarks reset at midnight for a new day.
         </p>
       </div>
 
@@ -283,6 +376,9 @@ const PredefinedArrivalsBoard = ({
                   st === "Departed" ||
                   st === "Paid";
                 const remark = remarksMap[row.rowKey];
+                const markedNotArrive = Boolean(remark);
+                const sameBusNotArriveToday =
+                  notArrivePlateCompanyKeys.has(plateKey);
                 const busy = confirmingKey === row.rowKey;
 
                 return (
@@ -328,6 +424,38 @@ const PredefinedArrivalsBoard = ({
                           <span className="inline-flex text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1.5 rounded-lg justify-center">
                             On board today
                           </span>
+                        ) : sameBusNotArriveToday ? (
+                          <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+                            <span className="inline-flex text-xs font-semibold text-slate-700 bg-slate-200 px-2.5 py-1.5 rounded-lg">
+                              Not arriving today
+                            </span>
+                            {markedNotArrive ? (
+                              <div className="flex flex-wrap gap-2 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => openNotArrive(row)}
+                                  className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium px-2.5 py-1.5"
+                                >
+                                  Edit remark
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={undoingKey === row.rowKey}
+                                  onClick={() => undoNotArrival(row)}
+                                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-medium px-2.5 py-1.5 disabled:opacity-60"
+                                  title="Remove this not-arrival for today"
+                                >
+                                  <Undo2 size={14} aria-hidden />
+                                  {undoingKey === row.rowKey ? "…" : "Undo"}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-500 text-left sm:text-right max-w-[220px]">
+                                Same bus marked on another route today—Arrive is
+                                disabled for all its trips.
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <>
                             <button
@@ -357,119 +485,126 @@ const PredefinedArrivalsBoard = ({
         </table>
       </div>
 
-      {arriveRow && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div
-            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="arrive-dialog-title"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <h4
-                id="arrive-dialog-title"
-                className="text-lg font-bold text-slate-800"
-              >
-                Confirm bus number
-              </h4>
-              <button
-                type="button"
-                onClick={() => setArriveRow(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-                aria-label="Close"
-              >
-                <X size={20} />
-              </button>
+      {arriveRow &&
+        modalLayer &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="arrive-dialog-title"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <h4
+                  id="arrive-dialog-title"
+                  className="text-lg font-bold text-slate-800"
+                >
+                  Confirm bus number
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setArriveRow(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-sm text-slate-600 mb-3">
+                <strong>{arriveRow.company}</strong> · {arriveRow.route}
+                <br />
+                <span className="text-slate-500">
+                  Scheduled {arriveRow.scheduleTime}
+                </span>
+              </p>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Bus number
+              </label>
+              <input
+                type="text"
+                autoFocus
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-mono font-semibold mb-4 focus:ring-2 focus:ring-emerald-500 outline-none"
+                value={arrivePlateInput}
+                onChange={(e) => setArrivePlateInput(e.target.value)}
+                placeholder="Plate / bus no."
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setArriveRow(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!arrivePlateInput.trim() || arrivalBusy}
+                  onClick={submitArrive}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50"
+                >
+                  Log arrival
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-slate-600 mb-3">
-              <strong>{arriveRow.company}</strong> · {arriveRow.route}
-              <br />
-              <span className="text-slate-500">
-                Scheduled {arriveRow.scheduleTime}
-              </span>
-            </p>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Bus number
-            </label>
-            <input
-              type="text"
-              autoFocus
-              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-mono font-semibold mb-4 focus:ring-2 focus:ring-emerald-500 outline-none"
-              value={arrivePlateInput}
-              onChange={(e) => setArrivePlateInput(e.target.value)}
-              placeholder="Plate / bus no."
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setArriveRow(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!arrivePlateInput.trim() || arrivalBusy}
-                onClick={submitArrive}
-                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50"
-              >
-                Log arrival
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          modalLayer,
+        )}
 
-      {notArriveRow && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div
-            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <h4 className="text-lg font-bold text-slate-800">Not arriving</h4>
-              <button
-                type="button"
-                onClick={() => setNotArriveRow(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-                aria-label="Close"
-              >
-                <X size={20} />
-              </button>
+      {notArriveRow &&
+        modalLayer &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <h4 className="text-lg font-bold text-slate-800">Not arriving</h4>
+                <button
+                  type="button"
+                  onClick={() => setNotArriveRow(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-sm text-slate-600 mb-3">
+                {notArriveRow.company} · {notArriveRow.route} ·{" "}
+                {notArriveRow.scheduleTime}
+              </p>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Remarks
+              </label>
+              <textarea
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-h-[100px] mb-4 focus:ring-2 focus:ring-slate-400 outline-none resize-y"
+                placeholder="e.g. Maintenance, rerouted, cancelled"
+                value={notArriveRemark}
+                onChange={(e) => setNotArriveRemark(e.target.value)}
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNotArriveRow(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={notArriveSaving}
+                  onClick={submitNotArrive}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-slate-700 hover:bg-slate-800 rounded-lg disabled:opacity-60"
+                >
+                  {notArriveSaving ? "Saving…" : "Save remark"}
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-slate-600 mb-3">
-              {notArriveRow.company} · {notArriveRow.route} ·{" "}
-              {notArriveRow.scheduleTime}
-            </p>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Remarks
-            </label>
-            <textarea
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm min-h-[100px] mb-4 focus:ring-2 focus:ring-slate-400 outline-none resize-y"
-              placeholder="e.g. Maintenance, rerouted, cancelled"
-              value={notArriveRemark}
-              onChange={(e) => setNotArriveRemark(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setNotArriveRow(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={submitNotArrive}
-                className="px-4 py-2 text-sm font-semibold text-white bg-slate-700 hover:bg-slate-800 rounded-lg"
-              >
-                Save remark
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          modalLayer,
+        )}
     </div>
   );
 };

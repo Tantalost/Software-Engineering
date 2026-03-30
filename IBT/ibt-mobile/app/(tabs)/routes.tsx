@@ -18,7 +18,9 @@ interface BusTrip {
   price?: number;   
   seats?: number;   
   parkingEstimation?: string; 
-  expectedDeparture?: string; 
+  expectedDeparture?: string;
+  notArrivalRemark?: string;
+  isScheduleNotArrival?: boolean;
 }
 
 export default function RoutesPage() {
@@ -54,9 +56,18 @@ export default function RoutesPage() {
     }, [params])
   );
 
+  const localDateKey = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const fetchRoutes = async () => {
     try {
-      const response = await fetch(`${API_URL}/bus-routes`);
+      const dk = localDateKey();
+      const response = await fetch(`${API_URL}/bus-routes?dateKey=${encodeURIComponent(dk)}`);
       const data = await response.json();
       setRoutes(data);
     } catch (error) {
@@ -113,7 +124,8 @@ export default function RoutesPage() {
     let data = routes.filter(item => 
       item.status === 'Pending' || 
       item.status === 'Arrived' || 
-      item.status === 'Scheduled'
+      item.status === 'Scheduled' ||
+      item.status === 'Not Arriving'
     );
 
     if (activeFilterId && searchQuery === '') {
@@ -151,14 +163,18 @@ export default function RoutesPage() {
   };
 
   const renderItem = ({ item }: { item: BusTrip }) => {
+    const isNotArriving = item.status === 'Not Arriving';
     const hasArrived = item.status === 'Arrived';
     const isScheduled = item.status === 'Scheduled';
-    const isDelayed = !hasArrived && !isScheduled && isPastArrival(item.date, item.time);
+    const isDelayed = !isNotArriving && !hasArrived && !isScheduled && isPastArrival(item.date, item.time);
     
     let statusText = 'Est. Arrival';
     let statusColor = '#E67E22'; 
 
-    if (isScheduled) {
+    if (isNotArriving) {
+        statusText = 'Not Arriving';
+        statusColor = '#7F8C8D';
+    } else if (isScheduled) {
         statusText = 'Scheduled';
         statusColor = '#2980B9'; 
     } else if (hasArrived) {
@@ -182,8 +198,8 @@ export default function RoutesPage() {
                 <Text style={styles.busType}>{item.templateNo} • {item.busType || 'Regular'}</Text>
               </View>
             </View>
-            <View style={[styles.statusChip, { backgroundColor: isScheduled ? '#EBF5FB' : (hasArrived ? '#E0F7EC' : '#FFF3CD') }]}>
-               <Text style={{ color: isScheduled ? '#2980B9' : (hasArrived ? '#1B5E20' : '#856404'), fontSize: 12, fontWeight: 'bold', paddingHorizontal: 12 }}>
+            <View style={[styles.statusChip, { backgroundColor: isNotArriving ? '#ECEFF1' : (isScheduled ? '#EBF5FB' : (hasArrived ? '#E0F7EC' : '#FFF3CD')) }]}>
+               <Text style={{ color: isNotArriving ? '#546E7A' : (isScheduled ? '#2980B9' : (hasArrived ? '#1B5E20' : '#856404')), fontSize: 12, fontWeight: 'bold', paddingHorizontal: 12 }}>
                   {item.status}
                </Text>
             </View>
@@ -196,6 +212,15 @@ export default function RoutesPage() {
              <View style={{flex: 1}}>
                 <Text style={styles.label}>Route</Text>
                 <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
+
+                {isNotArriving && item.notArrivalRemark ? (
+                  <>
+                    <Text style={[styles.label, { marginTop: 12 }]}>Remark</Text>
+                    <Text variant="bodyMedium" style={[styles.value, { color: '#546E7A' }]}>
+                      {item.notArrivalRemark}
+                    </Text>
+                  </>
+                ) : null}
 
                 {item.parkingEstimation && (
                   <>

@@ -2,7 +2,8 @@ import React from "react";
 import StatusBadge from "./StatusBadge";
 import TableActions from "./TableActions";
 
-const Table = ({ columns = [], data = [], actions }) => {
+const Table = ({ columns = [], data = [], actions, variant = "default" }) => {
+  const isTerminal = variant === "terminal";
   const keyFromCol = (col) => {
     if (typeof col === 'string') {
       return col.toLowerCase().replace(/\s+/g, '-');
@@ -13,29 +14,48 @@ const Table = ({ columns = [], data = [], actions }) => {
     return 'col-' + Math.random().toString(36).substr(2, 9);
   };
 
-  return (
-    <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm text-left text-gray-600">
-          <thead className="bg-gray-100 text-gray-800 uppercase text-xs font-bold tracking-wider border-b-2 border-gray-200">
+  const thBase = isTerminal
+    ? "px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider"
+    : "px-6 py-4 whitespace-nowrap";
+  const theadClass = isTerminal
+    ? "bg-slate-50 border-b border-slate-200"
+    : "bg-gray-100 text-gray-800 uppercase text-xs font-bold tracking-wider border-b-2 border-gray-200";
+  const actionsThBg = isTerminal ? "bg-slate-50" : "bg-gray-100";
+  const tdBase = isTerminal
+    ? "px-4 py-4 text-sm text-slate-600 whitespace-nowrap"
+    : "px-6 py-4 whitespace-nowrap";
+
+  const tableInner = (
+        <table
+          className={
+            isTerminal
+              ? "w-full text-left whitespace-nowrap"
+              : "min-w-full text-sm text-left text-gray-600"
+          }
+        >
+          <thead className={theadClass}>
             <tr>
               {columns.map((col, idx) => (
-                <th key={idx} className="px-6 py-4 whitespace-nowrap">
+                <th key={idx} className={thBase}>
                   {col}
                 </th>
               ))}
-              <th className="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-gray-100 z-10 md:static border-b-2 border-gray-200">
+              <th
+                className={`${thBase} text-right sticky right-0 z-10 md:static ${actionsThBg} ${isTerminal ? "border-b border-slate-200" : "border-b-2 border-gray-200"}`}
+              >
                 Actions
               </th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-100">
+          <tbody
+            className={isTerminal ? "divide-y divide-slate-100" : "divide-y divide-gray-100"}
+          >
             {data.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length + 1}
-                  className="text-center py-8 text-gray-400"
+                  className={`text-center py-8 ${isTerminal ? "text-slate-400" : "text-gray-400"}`}
                 >
                   No records found
                 </td>
@@ -48,10 +68,14 @@ const Table = ({ columns = [], data = [], actions }) => {
                   ? "bg-emerald-50"
                   : isEven
                     ? "bg-white"
-                    : "bg-gray-50";
+                    : isTerminal
+                      ? "bg-slate-50/50"
+                      : "bg-gray-50";
                 const hoverBg = isHighlighted
                   ? "hover:bg-emerald-100"
-                  : "hover:bg-blue-50";
+                  : isTerminal
+                    ? "hover:bg-slate-50"
+                    : "hover:bg-blue-50";
 
                 return (
                   <tr
@@ -67,7 +91,7 @@ const Table = ({ columns = [], data = [], actions }) => {
 
                       if (colName.toLowerCase().includes("status")) {
                         return (
-                          <td key={i} className="px-6 py-4 whitespace-nowrap">
+                          <td key={i} className={tdBase}>
                             <StatusBadge status={value} />
                           </td>
                         );
@@ -80,8 +104,12 @@ const Table = ({ columns = [], data = [], actions }) => {
                       return (
                         <td
                           key={i}
-                          className={`px-6 py-4 whitespace-nowrap ${
-                            isMono ? "font-mono font-medium text-gray-900" : ""
+                          className={`${tdBase} ${
+                            isMono
+                              ? isTerminal
+                                ? "font-mono font-medium text-slate-800"
+                                : "font-mono font-medium text-gray-900"
+                              : ""
                           }`}
                         >
                           {value ?? "-"}
@@ -89,7 +117,7 @@ const Table = ({ columns = [], data = [], actions }) => {
                       );
                     })}
                     <td
-                      className={`px-6 py-4 text-right whitespace-nowrap sticky right-0 md:static shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] md:shadow-none ${rowBg}`}
+                      className={`${tdBase} text-right sticky right-0 md:static shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)] md:shadow-none ${rowBg}`}
                     >
                       {actions ? (
                         actions(row)
@@ -107,7 +135,15 @@ const Table = ({ columns = [], data = [], actions }) => {
             )}
           </tbody>
         </table>
-      </div>
+  );
+
+  if (isTerminal) {
+    return <div className="overflow-x-auto">{tableInner}</div>;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+      <div className="overflow-x-auto">{tableInner}</div>
     </div>
   );
 };
