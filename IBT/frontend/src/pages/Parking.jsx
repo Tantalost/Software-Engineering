@@ -551,20 +551,41 @@ const Parking = () => {
     }
   };
 
-  const generateTicketNumber = () => {
+  const getLocalDateKey = () => {
     const today = new Date();
-    const dateKey = today.toISOString().slice(0, 10);
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
-    let counterData = JSON.parse(localStorage.getItem("ticketCounter")) || {};
-    let count = counterData[dateKey] || 0;
+  const getCounterData = () => {
+    try {
+      return JSON.parse(localStorage.getItem("ticketCounter")) || {};
+    } catch {
+      return {};
+    }
+  };
 
-    count += 1;
-    counterData[dateKey] = count;
+  const peekNextTicketNumber = () => {
+    const dateKey = getLocalDateKey();
+    const counterData = getCounterData();
+    const nextCount = (counterData[dateKey] || 0) + 1;
+    return `T-${nextCount.toString().padStart(2, "0")}`;
+  };
+
+  const commitTicketCounterFromTicketNo = (ticketNo) => {
+    const match = String(ticketNo || "").match(/^T-(\d+)$/i);
+    if (!match) return;
+
+    const ticketCount = Number(match[1]);
+    if (!Number.isFinite(ticketCount) || ticketCount <= 0) return;
+
+    const dateKey = getLocalDateKey();
+    const counterData = getCounterData();
+    const currentCount = counterData[dateKey] || 0;
+    counterData[dateKey] = Math.max(currentCount, ticketCount);
     localStorage.setItem("ticketCounter", JSON.stringify(counterData));
-
-    const ticketNum = count.toString().padStart(2, "0");
-
-    return `T-${ticketNum}`;
   };
 
   const handleAddClick = () => {
@@ -572,7 +593,7 @@ const Parking = () => {
     const formattedTimeIn = now.toISOString();
 
     setNewTicket({
-      ticketNo: generateTicketNumber(),
+      ticketNo: peekNextTicketNumber(),
       type: "FourWheels",
       plateNo: "",
       baseRate: priceSettings.carRate,
@@ -598,12 +619,14 @@ const Parking = () => {
 
   const handleBack = () => {
     setStep(1);
-    setNewTicket((prev) => ({ ...prev, type: "", plateNo: "", ticketNo: "" }));
+    setNewTicket((prev) => ({ ...prev, type: "", plateNo: "" }));
   };
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
-    if (!newTicket.plateNo.trim() || !newTicket.ticketNo.trim()) {
+    const ticketNo = (newTicket.ticketNo || "").trim() || peekNextTicketNumber();
+
+    if (!newTicket.plateNo.trim() || !ticketNo) {
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -614,42 +637,34 @@ const Parking = () => {
       return;
     }
 
-    const duplicateTicket = records.some(
-      (ticket) => ticket.ticketNo === newTicket.ticketNo,
-    );
-    const duplicatePlateActive = records.some(
-      (ticket) =>
-        ticket.plateNo === newTicket.plateNo && ticket.status === "Parked",
-    );
-
-    if (duplicatePlateActive) {
-      setDuplicateModal({
-        isOpen: true,
-        message: `Vehicle with plate number ${newTicket.plateNo} is already parked.`,
-      });
-      return;
-    }
+    const duplicateTicket = records.some((ticket) => ticket.ticketNo === ticketNo);
 
     if (duplicateTicket) {
       setDuplicateModal({
         isOpen: true,
-        message: `Ticket Number #${newTicket.ticketNo} already exists!`,
+        message: `Ticket Number #${ticketNo} already exists!`,
       });
       return;
     }
+
+    const payload = {
+      ...newTicket,
+      ticketNo,
+    };
 
     try {
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newTicket),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         const created = await response.json();
+        commitTicketCounterFromTicketNo(ticketNo);
         await logActivity(
           role,
           "CREATE_TICKET",
-          `Created Parking Ticket #${newTicket.ticketNo}`,
+          `Created Parking Ticket #${ticketNo}`,
           "Parking",
         );
         fetchParkingTickets();
@@ -657,7 +672,7 @@ const Parking = () => {
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Parking Ticket #${newTicket.ticketNo} created successfully.`,
+          message: `Parking Ticket #${ticketNo} created successfully.`,
           autoClose: true,
           duration: 2000,
         });
