@@ -1326,6 +1326,14 @@ const TenantLease = () => {
         logActivity(role, "EXPORT_PDF", `Exported ${filtered.length} Tenant records to PDF`, "Tenants");
     };
 
+    const baseColumns = ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State"];
+    
+    if (activeTab === "permanent") {
+        baseColumns.push("Advance Bal.");
+    }
+    
+    baseColumns.push("Rent", "Util", "Total Due", "Status");
+
     const tableColumns = isSelectionMode
         ? [
             <div key="header-check" className="flex items-center">
@@ -1336,9 +1344,9 @@ const TenantLease = () => {
                     className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                 />
             </div>,
-            "Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Advance Bal.", "Rent", "Util", "Total Due", "Status"
+            ...baseColumns
         ]
-        : ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State", "Advance Bal.", "Rent", "Util", "Total Due", "Status"];
+        : baseColumns;
 
     const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
@@ -1538,8 +1546,8 @@ const TenantLease = () => {
                                 Pending
                             </span>
                         ),
-                        advanceBal: t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-",
-                        
+                       
+                        ...(activeTab === "permanent" ? { advanceBal: t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-" } : {}),
                         rent: t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-",
 
                         util: t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0",
