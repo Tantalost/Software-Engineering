@@ -304,7 +304,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
           <div className="pt-4 border-t border-slate-100">
              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-600">Financial Breakdown</h4>
              <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
-                <FormInput label="Monthly Rent" type="number" name="rentAmount" value={formData.rentAmount} readOnly={true} />
+                <FormInput label={formData.tenantType === "Permanent" ? "Monthly Rent" : "Rental Fee"} type="number" name="rentAmount" value={formData.rentAmount} readOnly={true} />
 
                 {formData.tenantType === "Permanent" && (
                   <FormInput label="Advance Balance" type="number" name="advancePaymentBalance" value={formData.advancePaymentBalance} onChange={handleChange} />
