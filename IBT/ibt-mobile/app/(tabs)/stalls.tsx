@@ -102,27 +102,36 @@ export default function StallsPage() {
 
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
 
-  const currentBilling = useMemo(() => {
-  const floorType = currentApp ? currentApp.floor : selectedFloor;
-  const isNightMarket = floorType === 'Night Market';
+ const currentBilling = useMemo(() => {
+    const floorType = currentApp ? currentApp.floor : selectedFloor;
+    const isNightMarket = floorType === 'Night Market';
+    const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice;
+    
+    const totalAmount = isNightMarket ? basePrice : (basePrice * 2); 
 
-  return {
-    ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
-   
-    amountLabel: `₱${(isNightMarket ? dynamicNightPrice : dynamicPermanentPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-    rawAmount: isNightMarket ? dynamicNightPrice : dynamicPermanentPrice
-  };
-}, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice]);
-
-const modalBilling = useMemo(() => {
-    const isNightMarket = selectedFloor === 'Night Market';
     return {
       ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
-     
-      amountLabel: `₱${(isNightMarket ? dynamicNightPrice : dynamicPermanentPrice).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-      rawAmount: isNightMarket ? dynamicNightPrice : dynamicPermanentPrice
+      amountLabel: `₱${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+      rawAmount: totalAmount,
+      baseRent: basePrice,
+      isPermanent: !isNightMarket
     };
-}, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice]);
+  }, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice]);
+
+  const modalBilling = useMemo(() => {
+      const isNightMarket = selectedFloor === 'Night Market';
+      const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice;
+      
+      const totalAmount = isNightMarket ? basePrice : (basePrice * 2);
+      
+      return {
+        ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
+        amountLabel: `₱${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+        rawAmount: totalAmount,
+        baseRent: basePrice,
+        isPermanent: !isNightMarket
+      };
+  }, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice]);
 
   const handlePhoneChange = (text: string) => {
     let cleaned = text.replace(/[^0-9]/g, '');
@@ -362,7 +371,7 @@ const modalBilling = useMemo(() => {
       const currentRent = currentBilling.amountLabel;
       const currentDate = new Date().toLocaleDateString();
       
-      // Use the official City Seal if you have a public URL, otherwise this placeholder works
+    
       const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Seal_of_Zamboanga_City.png/1200px-Seal_of_Zamboanga_City.png";
 
       const htmlContent = `

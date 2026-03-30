@@ -101,6 +101,11 @@ export default function ApplicationModal({
 
                 <View style={styles.billingSummary}>
                     <Text style={[{fontWeight:'bold', color: colors.black }]}>Initial Payment:</Text>
+                    {modalBilling.isPermanent && (
+                       <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold'}}>
+                          ₱{modalBilling.baseRent.toLocaleString()} (Rent) + ₱{modalBilling.baseRent.toLocaleString()} (Advance)
+                       </Text>
+                    )}
                     <Text variant="titleLarge" style={{color: colors.primary, fontWeight:'bold'}}>{modalBilling.amountLabel}</Text>
                     <Text style={{fontSize:11, color:'grey'}}>Good for {modalBilling.periodLabel}</Text>
                 </View>
@@ -125,7 +130,15 @@ export default function ApplicationModal({
                 <Divider style={{marginVertical: 10}} />
                 <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Target Slot:</Text><Text style={styles.reviewValue}>{selectedStall} ({selectedFloor})</Text></View>
                 <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Product:</Text><Text style={styles.reviewValue}>{formData.productType === 'other' ? formData.otherProduct : formData.productType}</Text></View>
-                <View style={styles.reviewRow}><Text style={styles.reviewLabel}>Fee:</Text><Text style={styles.reviewValue}>{modalBilling.amountLabel}</Text></View>
+                <View style={styles.reviewRow}>
+                  <Text style={styles.reviewLabel}>Total Fee:</Text>
+                  <View style={{alignItems: 'flex-end'}}>
+                     <Text style={styles.reviewValue}>{modalBilling.amountLabel}</Text>
+                     {modalBilling.isPermanent && (
+                       <Text style={{fontSize:10, color:'grey', marginTop: 2}}>Includes 1-Month Advance</Text>
+                     )}
+                  </View>
+                </View>
 
                 <View style={{marginTop: 20, padding: 10, backgroundColor: '#e8f5e9', borderRadius: 5}}>
                     <Text style={{color: '#2e7d32', fontSize: 12, fontStyle:'italic'}}>
