@@ -12,6 +12,7 @@ import FilterBar from "../components/common/Filterbar";
 import ExportMenu from "../components/common/exportMenu";
 import StatCardGroup from "../components/tenants/StatCardGroup";
 import Table from "../components/common/Table";
+import TerminalBoardShell from "../components/common/TerminalBoardShell";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import LogModal from "../components/common/LogModal";
@@ -1514,9 +1515,11 @@ const TenantLease = () => {
                 </div>
             )}
 
-            <Table
-                columns={tableColumns}
-                data={paginatedData.map((t) => {
+            <TerminalBoardShell title="Tenant Terminal">
+                <Table
+                    variant="terminal"
+                    columns={tableColumns}
+                    data={paginatedData.map((t) => {
                     const isOnRead = readRecordIds.includes(t.id);
                     
                     const baseData = {
@@ -1563,7 +1566,7 @@ const TenantLease = () => {
                     return baseData;
                 })}
                 
-                actions={(row) => {
+                    actions={(row) => {
                     if (isSelectionMode) return null;
                     const fullRecord = records.find(r => r.id === row.id);
 
@@ -1625,7 +1628,8 @@ const TenantLease = () => {
                         </div>
                     )
                 }}
-            />
+                />
+            </TerminalBoardShell>
 
             <Pagination
                 currentPage={currentPage}
