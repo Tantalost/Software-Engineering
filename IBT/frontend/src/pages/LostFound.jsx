@@ -955,7 +955,7 @@ const LostFound = () => {
             <p>Loading data...</p>
           </div>
         ) : (
-          <TerminalBoardShell title="Lost & Found Terminal">
+          <TerminalBoardShell title="Lost & Found Board">
             <Table
               variant="terminal"
             columns={tableColumns}

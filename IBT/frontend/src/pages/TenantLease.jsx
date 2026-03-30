@@ -1515,7 +1515,7 @@ const TenantLease = () => {
                 </div>
             )}
 
-            <TerminalBoardShell title="Tenant Terminal">
+            <TerminalBoardShell title="Tenant Board">
                 <Table
                     variant="terminal"
                     columns={tableColumns}

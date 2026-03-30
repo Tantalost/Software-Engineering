@@ -1286,7 +1286,7 @@ const Parking = () => {
         <div className="text-center py-10">Loading tickets...</div>
       ) : (
         <>
-          <TerminalBoardShell title="Parking Terminal">
+          <TerminalBoardShell title="Parking Board">
             <Table
               variant="terminal"
             columns={tableColumns}

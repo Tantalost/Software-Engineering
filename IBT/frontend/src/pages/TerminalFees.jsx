@@ -1123,7 +1123,7 @@ const TerminalFees = () => {
           <div className="bg-slate-800 text-white p-4 flex flex-wrap gap-3 justify-between items-center">
             <h2 className="font-bold text-lg flex items-center gap-2">
               <Clock size={20} className="text-emerald-400" />
-              Terminal Fees Table
+              Terminal Fees Board
             </h2>
 
             <div className="flex items-center gap-3">
