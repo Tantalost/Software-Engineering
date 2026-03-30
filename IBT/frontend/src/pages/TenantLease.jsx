@@ -1328,8 +1328,8 @@ const TenantLease = () => {
 
     const baseColumns = ["Slot No", "Ref No", "Name", "Email", "Contact No", "Start Date", "Due Date", "Report State"];
     
-    if (activeTab === "permanent") {
-        baseColumns.push("Advance Bal.");
+   if (activeTab === "permanent") {
+        baseColumns.push("Advance Bal"); 
     }
     
     baseColumns.push("Rent", "Util", "Total Due", "Status");
@@ -1536,7 +1536,7 @@ const TenantLease = () => {
                     };
 
                     if (activeTab === "permanent") {
-                        baseData.advanceBal = t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-";
+                        baseData.advancebal = t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-";
                     }
 
                     baseData.rent = t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-";
