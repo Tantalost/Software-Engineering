@@ -49,6 +49,15 @@ const TenantLease = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const role = localStorage.getItem("authRole") || "superadmin";
+    const operatorName =
+        localStorage.getItem("authName") ||
+        localStorage.getItem("authEmail") ||
+        (role === "lease" ? "Tenant Admin" : "Admin");
+    const asOfDateLabel = new Date().toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+    });
 
     const [records, setRecords] = useState([]);
     const [waitlistData, setWaitlistData] = useState([]);
@@ -92,6 +101,7 @@ const TenantLease = () => {
     const [paymentItemsPerPage, setPaymentItemsPerPage] = useState(25);
 
     const [isReporting, setIsReporting] = useState(false);
+    const [collectorName, setCollectorName] = useState("");
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [readRecordIds, setReadRecordIds] = useState(() => {
@@ -522,7 +532,46 @@ const TenantLease = () => {
         setPaymentCurrentPage(1);
     }, [paymentViewType, paymentRefDate, paymentTypeFilter]);
    
+    const validateCollector = () => {
+        if (!collectorName || collectorName.trim() === "") {
+            setNotificationState({
+                isOpen: true,
+                type: "error",
+                message: "Please enter the Name of Collector before exporting.",
+                autoClose: true,
+                duration: 3000,
+            });
+            return false;
+        }
+        return true;
+    };
+
+    const handleOpenSubmitModal = () => {
+        if (!collectorName || !collectorName.trim()) {
+            setNotificationState({
+                isOpen: true,
+                type: "error",
+                message: "Please enter Name of Collector before submitting report.",
+                autoClose: true,
+                duration: 3000,
+            });
+            return;
+        }
+        setShowSubmitModal(true);
+    };
+
     const handleSubmitReport = async () => {
+        if (!collectorName.trim()) {
+            setNotificationState({
+                isOpen: true,
+                type: "error",
+                message: "Please enter Name of Collector before submitting report.",
+                autoClose: true,
+                duration: 3000,
+            });
+            return;
+        }
+
         setIsReporting(true);
         try {
             const formattedData = filtered.map(t => ({
@@ -555,7 +604,7 @@ const TenantLease = () => {
                     displayedRecords: filtered.length,
                     totalRevenue: mapStats.totalRevenue,
                     occupancy: `${mapStats.nonAvailableSlots}/${mapStats.totalSlots}`,
-                    collector: adminName 
+                    collector: collectorName.trim(),
                 },
                 data: formattedData
             };
@@ -1108,6 +1157,7 @@ const TenantLease = () => {
 
     const handleSingleExportPDF = (t) => {
         if (!t) return;
+        if (!validateCollector()) return;
 
         const doc = new jsPDF("p", "mm", "a4");
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -1124,7 +1174,7 @@ const TenantLease = () => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Collector: ${localStorage.getItem("authName") || "Tenant Admin"}`, 15, 61);
+        doc.text(`Collector: ${collectorName.trim()}`, 15, 61);
 
        
         const feeBreakdown = typeof t.feeBreakdown === 'string' 
@@ -1174,6 +1224,7 @@ const TenantLease = () => {
     };
 
     const handleExportExcel = async () => {
+        if (!validateCollector()) return;
         if (filtered.length === 0) return alert("No records to export.");
 
         try {
@@ -1192,11 +1243,9 @@ const TenantLease = () => {
             titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
             titleCell.alignment = { horizontal: 'center' };
 
-            const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
-
             worksheet.addRow([]); 
             worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
-            worksheet.addRow([`Collector: ${adminName}`, '', '', '', '', '', '', '', '', '']); 
+            worksheet.addRow([`Collector: ${collectorName.trim()}`, '', '', '', '', '', '', '', '', '']); 
             worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '']);
             worksheet.addRow([]);
 
@@ -1261,6 +1310,7 @@ const TenantLease = () => {
     };
 
     const handleExportPDF = () => {
+        if (!validateCollector()) return;
         if (filtered.length === 0) return alert("No records to export.");
 
         const doc = new jsPDF("l", "mm", "a4");
@@ -1273,13 +1323,11 @@ const TenantLease = () => {
         doc.setFont("helvetica", "bold");
         doc.text("TENANTS AND LEASE REPORTS", pageWidth / 2, 45, { align: "center" });
 
-        const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || (role === "lease" ? "Tenant Admin" : "Admin");
-
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
 
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Collector: ${adminName}`, 15, 61); // <-- NEW
+        doc.text(`Collector: ${collectorName.trim()}`, 15, 61);
 
         doc.text(`No. of Payments: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
         doc.text(
@@ -1359,12 +1407,27 @@ const TenantLease = () => {
                 <StatCardGroup {...mapStats} />
             </div>
 
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-                <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-4 gap-3">
+                <div className="flex flex-col gap-3 w-full lg:flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <label className="text-sm font-semibold text-slate-700 whitespace-nowrap shrink-0">
+                            Name of Collector:
+                        </label>
+                        <input
+                            type="text"
+                            value={collectorName}
+                            maxLength={100}
+                            onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
+                            placeholder="Enter collector name"
+                            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        />
+                    </div>
+                    <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+                </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
                     {(role === "lease") && (
                         <button
-                            onClick={() => setShowSubmitModal(true)}
+                            onClick={handleOpenSubmitModal}
                             disabled={isReporting}
                             className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
                         >
@@ -1915,6 +1978,9 @@ const TenantLease = () => {
                 onSubmit={handleSubmitReport}
                 isReporting={isReporting}
                 recordCount={filtered.length}
+                collectorName={collectorName}
+                operatorName={operatorName}
+                asOfDateLabel={asOfDateLabel}
             />
 
             <NotificationToast
