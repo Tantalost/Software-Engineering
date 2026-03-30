@@ -1,6 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { Bus, Clock, Info, ListOrdered, Undo2, X } from "lucide-react";
+import { getBusScheduleTimes } from "../../utils/busSchedule.js";
 
 const SCHEDULE_NOT_ARRIVAL_API = `${
   import.meta.env.VITE_API_URL || "http://localhost:10000"
@@ -46,6 +53,18 @@ function docToRowKey(doc) {
   );
 }
 
+function formatBoardDateLabel(dateKey) {
+  if (!dateKey) return "";
+  const d = new Date(`${dateKey}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return dateKey;
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 /**
  * All company buses with schedule + route, sorted so the next clock hour
  * (current + 1) is listed first — prep window one hour ahead.
@@ -57,7 +76,16 @@ const PredefinedArrivalsBoard = ({
   onConfirmArrival,
   onNotify,
 }) => {
+  const getDateKeyRef = useRef(getDateKey);
+  useEffect(() => {
+    getDateKeyRef.current = getDateKey;
+  });
+
   const [now, setNow] = useState(() => new Date());
+  /** Calendar day this board uses — advances at local midnight / on resume so rows and remarks reset for the new day. */
+  const [boardDateKey, setBoardDateKey] = useState(() =>
+    getDateKey(new Date()),
+  );
   const [arriveRow, setArriveRow] = useState(null);
   const [arrivePlateInput, setArrivePlateInput] = useState("");
   const [notArriveRow, setNotArriveRow] = useState(null);
@@ -67,12 +95,30 @@ const PredefinedArrivalsBoard = ({
   const [notArriveSaving, setNotArriveSaving] = useState(false);
   const [undoingKey, setUndoingKey] = useState(null);
 
-  const todayKey = getDateKey(new Date());
+  const syncBoardDateFromClock = useCallback(() => {
+    const k = getDateKeyRef.current(new Date());
+    if (!k) return;
+    setBoardDateKey((prev) => (prev !== k ? k : prev));
+  }, []);
+
+  useEffect(() => {
+    syncBoardDateFromClock();
+  }, [syncBoardDateFromClock]);
+
+  useEffect(() => {
+    const onResume = () => syncBoardDateFromClock();
+    document.addEventListener("visibilitychange", onResume);
+    window.addEventListener("focus", onResume);
+    return () => {
+      document.removeEventListener("visibilitychange", onResume);
+      window.removeEventListener("focus", onResume);
+    };
+  }, [syncBoardDateFromClock]);
 
   const refreshNotArrivals = useCallback(async () => {
     try {
       const res = await fetch(
-        `${SCHEDULE_NOT_ARRIVAL_API}?dateKey=${encodeURIComponent(todayKey)}`,
+        `${SCHEDULE_NOT_ARRIVAL_API}?dateKey=${encodeURIComponent(boardDateKey)}`,
       );
       if (!res.ok) return;
       const rows = await res.json();
@@ -85,11 +131,18 @@ const PredefinedArrivalsBoard = ({
     } catch {
       /* ignore */
     }
-  }, [todayKey]);
+  }, [boardDateKey]);
 
   useEffect(() => {
+    setRemarksMap({});
+    setArriveRow(null);
+    setArrivePlateInput("");
+    setNotArriveRow(null);
+    setNotArriveRemark("");
+    setConfirmingKey(null);
+    setUndoingKey(null);
     refreshNotArrivals();
-  }, [refreshNotArrivals]);
+  }, [boardDateKey, refreshNotArrivals]);
 
   /** Any row with a saved remark blocks Arrive for every row with the same plate + company today. */
   const notArrivePlateCompanyKeys = useMemo(() => {
@@ -103,9 +156,12 @@ const PredefinedArrivalsBoard = ({
   }, [remarksMap]);
 
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30000);
+    const t = setInterval(() => {
+      setNow(new Date());
+      syncBoardDateFromClock();
+    }, 30000);
     return () => clearInterval(t);
-  }, []);
+  }, [syncBoardDateFromClock]);
 
   const focusBucket = (now.getHours() + 1) % 24;
 
@@ -113,22 +169,27 @@ const PredefinedArrivalsBoard = ({
     const out = [];
     companyData.forEach((c) => {
       c.buses?.forEach((b) => {
-        if (!b?.route?.trim() || !b?.scheduleTime?.trim()) return;
-        const msm = parseScheduleToMinutesMidnight(b.scheduleTime);
-        if (msm === null) return;
-        const hourBucket = minutesToHourBucket(msm);
-        out.push({
-          rowKey: makeRowKey(c.name, b.route, b.scheduleTime, b.plateNumber),
-          company: c.name,
-          route: b.route.trim(),
-          scheduleTime: b.scheduleTime.trim(),
-          plateNumber: b.plateNumber,
-          busType: b.busType || "Regular",
-          stopType: b.stopType || "Regular Trip",
-          customStopCount: b.customStopCount,
-          seatingCapacity: b.seatingCapacity ?? null,
-          minutesFromMidnight: msm,
-          hourBucket,
+        if (!b?.route?.trim()) return;
+        const times = getBusScheduleTimes(b);
+        if (times.length === 0) return;
+        times.forEach((schedRaw) => {
+          const sched = schedRaw.trim();
+          const msm = parseScheduleToMinutesMidnight(sched);
+          if (msm === null) return;
+          const hourBucket = minutesToHourBucket(msm);
+          out.push({
+            rowKey: makeRowKey(c.name, b.route, sched, b.plateNumber),
+            company: c.name,
+            route: b.route.trim(),
+            scheduleTime: sched,
+            plateNumber: b.plateNumber,
+            busType: b.busType || "Regular",
+            stopType: b.stopType || "Regular Trip",
+            customStopCount: b.customStopCount,
+            seatingCapacity: b.seatingCapacity ?? null,
+            minutesFromMidnight: msm,
+            hourBucket,
+          });
         });
       });
     });
@@ -146,7 +207,7 @@ const PredefinedArrivalsBoard = ({
   const todayStatusByPlate = useMemo(() => {
     const m = new Map();
     for (const r of records) {
-      if (getDateKey(r.date) !== todayKey) continue;
+      if (getDateKey(r.date) !== boardDateKey) continue;
       const plate = r.templateNo || r.templateno;
       if (!plate) continue;
       const key = `${plate}|||${r.company || ""}`;
@@ -161,7 +222,7 @@ const PredefinedArrivalsBoard = ({
       if (!prev || rank(st) >= rank(prev)) m.set(key, st);
     }
     return m;
-  }, [records, todayKey, getDateKey]);
+  }, [records, boardDateKey, getDateKey]);
 
   const openArrive = (row) => {
     setArriveRow(row);
@@ -221,7 +282,7 @@ const PredefinedArrivalsBoard = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          dateKey: todayKey,
+          dateKey: boardDateKey,
           company: notArriveRow.company,
           route: notArriveRow.route,
           scheduleTime: notArriveRow.scheduleTime,
@@ -261,7 +322,7 @@ const PredefinedArrivalsBoard = ({
 
   const undoNotArrival = async (row) => {
     const params = new URLSearchParams({
-      dateKey: todayKey,
+      dateKey: boardDateKey,
       company: row.company,
       route: row.route,
       scheduleTime: row.scheduleTime,
@@ -306,6 +367,17 @@ const PredefinedArrivalsBoard = ({
             <h3 className="font-bold text-slate-800 text-sm sm:text-base leading-tight">
               Predefined Schedule
             </h3>
+            <p className="text-[11px] text-slate-600 font-medium mt-0.5">
+              Operating day:{" "}
+              <span className="text-slate-900">
+                {formatBoardDateLabel(boardDateKey)}
+              </span>
+              <span className="text-slate-400 font-normal">
+                {" "}
+                — remarks and “on board” apply to this day only; the board
+                resets at the next calendar day.
+              </span>
+            </p>
             <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               <Clock size={12} className="inline shrink-0 text-emerald-600" />
               <span>
