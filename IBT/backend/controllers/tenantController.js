@@ -606,7 +606,8 @@ export const approveRenewalPayment = async (req, res) => {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
 
-    const submittedRef = tenant.referenceNo;
+    const submittedRef = tenant.referenceNo || tenant.paymentReference || tenant.referenceno;
+    
     if (!submittedRef || submittedRef === "N/A" || submittedRef.trim() === "") {
         return res.status(400).json({ error: "Cannot approve: No Reference/OR Number was provided." });
     }
@@ -647,10 +648,10 @@ export const approveRenewalPayment = async (req, res) => {
     const nextTotalAmount = nextRentAmount + (tenant.utilityAmount || 0);
     
     const paymentRecord = {
-        referenceNo: tenant.referenceNo || "N/A",
+        referenceNo: submittedRef || "N/A", 
         amount: tenant.totalAmount || tenant.rentAmount || 0, 
         datePaid: new Date().toISOString(),
-        receiptUrl: tenant.documents?.proofOfReceipt || "" 
+        receiptUrl: tenant.documents?.proofOfReceipt || tenant.receiptUrl || "" 
     };
 
     const updatedTenant = await Tenant.findByIdAndUpdate(
@@ -666,7 +667,10 @@ export const approveRenewalPayment = async (req, res) => {
           $push: { paymentHistory: paymentRecord },
           $unset: { 
               referenceNo: "",
-              "documents.proofOfReceipt": "" 
+              paymentReference: "", 
+              referenceno: "",
+              "documents.proofOfReceipt": "",
+              receiptUrl: "" 
           }
       },
       { new: true }
