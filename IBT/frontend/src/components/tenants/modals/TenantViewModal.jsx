@@ -208,7 +208,9 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             </h4>
             <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
               <Field label="Monthly Rent" value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString()}` : "₱0.00"} />
-              <Field label="Advance Balance" value={viewRow.advancePaymentBalance ? `₱${Number(viewRow.advancePaymentBalance).toLocaleString()}` : "₱0.00"} />
+              {isPermanentTenant && (
+                <Field label="Advance Balance" value={viewRow.advancePaymentBalance ? `₱${Number(viewRow.advancePaymentBalance).toLocaleString()}` : "₱0.00"} />
+              )}
               
               {isPermanentTenant && <Field label="Electricity" value={`₱${Number(feeBreakdown.electricity || 0).toLocaleString()}`} />}
               <Field label="Others (Amount)" value={`₱${Number(feeBreakdown.otherAmount || 0).toLocaleString()}`} />
