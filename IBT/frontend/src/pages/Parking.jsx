@@ -45,7 +45,7 @@ const Parking = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
-  const [reportDuration, setReportDuration] = useState("All");
+  const [reportDuration, setReportDuration] = useState("Daily");
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -381,9 +381,12 @@ const Parking = () => {
         matchesDuration = false;
       } else {
         const startDate = new Date(now);
-        if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
-        if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
-        if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
+        if (reportDuration === "Daily") {
+          startDate.setHours(0, 0, 0, 0);
+          now.setHours(23, 59, 59, 999);
+        } else if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
+        else if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
+        else if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
         matchesDuration = ticketTimeIn >= startDate && ticketTimeIn <= now;
       }
     }
@@ -400,6 +403,8 @@ const Parking = () => {
   const fourWheelCount = filtered.filter((t) => t.type === "FourWheels").length;
   const twoWheelCount = filtered.filter((t) => t.type === "TwoWheels").length;
   const revenue = filtered.reduce((sum, t) => {
+    if (t.status !== "Departed") return sum;
+
     if (t.finalPrice) return sum + Number(t.finalPrice);
 
     if (!t.timeIn) return sum;
@@ -1218,10 +1223,11 @@ const Parking = () => {
             }}
             className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
           >
-            <option value="All">All Time</option>
+            <option value="Daily">Daily</option>
             <option value="Weekly">Weekly</option>
             <option value="Monthly">Monthly</option>
             <option value="Yearly">Yearly</option>
+            <option value="All">All Time</option>
           </select>
 
           <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
