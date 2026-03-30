@@ -21,6 +21,8 @@ import stallRoutes from "./routes/stallRoutes.js";
 import lostFoundRoutes from './routes/lostNFoundRoutes.js';
 import busRoutes from './routes/busRoutes.js';
 import scheduleNotArrivalRoutes from './routes/scheduleNotArrivalRoutes.js';
+import predefinedScheduleRoutes from './routes/predefinedScheduleRoutes.js';
+import dispatchBoardRoutes from './routes/dispatchBoardRoutes.js';
 import authRoutes from "./routes/authRoutes.js";
 import { startCleanUP } from './utils/cleanUP.js';
 
@@ -74,6 +76,8 @@ app.use("/api/stalls", stallRoutes);
 app.use('/api/lost-found', lostFoundRoutes);
 app.use('/api/bus-routes', busRoutes);
 app.use('/api/schedule-not-arrivals', scheduleNotArrivalRoutes);
+app.use('/api/predefined-schedule', predefinedScheduleRoutes);
+app.use('/api/dispatch-board', dispatchBoardRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/broadcasts", broadcastRoutes);
 
