@@ -59,12 +59,10 @@ const baseFilteredData = isRenewalsTab
     : waitlistData.filter((app) => {
         if (statusFilter === "Verification Pending") return !app.status || app.status === "VERIFICATION_PENDING";
         if (statusFilter === "Payment Review") return app.status === "PAYMENT_REVIEW" || app.status === "PAYMENT_UNLOCKED";
-        if (statusFilter === "Contract Pending") return app.status === "CONTRACT_PENDING";
-        if (statusFilter === "Contract Review") return app.status === "CONTRACT_REVIEW";
+        if (statusFilter === "Contract Review") return app.status === "CONTRACT_REVIEW" || app.status === "CONTRACT_PENDING";
         if (statusFilter === "Rejected") return app.status === "REJECTED";
         return true;
       });
-
 
 const filteredData = baseFilteredData.filter((app) => {
     if (slotTypeFilter === "All") return true;
@@ -72,153 +70,148 @@ const filteredData = baseFilteredData.filter((app) => {
     return type === slotTypeFilter;
 });
 
-  const isRenewalRecord = (record) => {
-    return record.slotNo !== undefined && record.tenantName !== undefined; 
-  };
 
-  const getStatusBadge = (status, isRenewal) => {
-    if (isRenewal) {
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 flex items-center gap-1 w-max border border-orange-200"><ClipboardList size={12}/> Renewal Pending</span>;
-    }
-    
-    switch(status) {
-      case 'PAYMENT_UNLOCKED':
-      case 'PAYMENT_REVIEW':
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 flex items-center gap-1 w-max border border-blue-200"><CreditCard size={12}/> Payment Phase</span>;
-      case 'CONTRACT_PENDING':
-      case 'CONTRACT_REVIEW':
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 flex items-center gap-1 w-max border border-purple-200"><FileSignature size={12}/> Contract Phase</span>;
-      case 'REJECTED':
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 flex items-center gap-1 w-max border border-red-200"><XCircle size={12}/> Rejected</span>;
-      case 'VERIFICATION_PENDING':
-      default:
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1 w-max border border-amber-200"><AlertTriangle size={12}/> Verification</span>;
-    }
-  };
+const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app._id || app.id));
 
   const handleOpenReject = (appId) => {
-    setRejectData({ isOpen: true, appId });
     setRejectionReason("");
+    setRejectData({ isOpen: true, appId });
   };
 
-  const confirmReject = () => {
-    if (!rejectionReason.trim()) {
-        alert("Please provide a reason for rejection.");
-        return;
+  const handleConfirmReject = () => {
+    if (onReject) {
+        onReject(rejectData.appId, rejectionReason);
     }
-    onReject(rejectData.appId, rejectionReason);
     setRejectData({ isOpen: false, appId: null });
   };
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-6xl rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ring-1 ring-white/10">
-          
-          <div className="flex items-center justify-between bg-gradient-to-r from-emerald-600 to-teal-700 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
-                <ClipboardList className="text-white" size={24} />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Application Review Center</h3>
-                <p className="text-emerald-100 text-sm font-medium">Process waitlist applications and stall renewals</p>
-              </div>
+      {rejectData.isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-xl font-bold flex items-center gap-2 mb-2 text-red-600">
+              <AlertTriangle size={24} /> Reject Application
+            </h3>
+            <p className="text-slate-600 text-sm mb-4">Please specify why this application is being rejected. This will be emailed to the applicant.</p>
+            
+            <textarea 
+              className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none mb-4"
+              rows="3"
+              placeholder="e.g., Blurred ID, Missing Pages, Incorrect Business Permit..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => setRejectData({ isOpen: false, appId: null })} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-all">Cancel</button>
+              <button 
+                onClick={handleConfirmReject} 
+                disabled={!rejectionReason.trim()}
+                className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all disabled:opacity-50"
+              >
+                Confirm Rejection
+              </button>
             </div>
-            <button onClick={onClose} className="rounded-full p-2 text-white/80 hover:bg-white/20 hover:text-white transition-all">
-              <X size={24} />
-            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="w-full max-w-6xl rounded-xl bg-white p-6 shadow-2xl flex flex-col max-h-[85vh]">
+          <div className="flex justify-between items-center mb-4 border-b pb-4">
+            <div>
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <ClipboardList className="text-emerald-600" /> Applicants & Renewals
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">Manage incoming applications and lease renewal payments.</p>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"><X size={20}/></button>
+          </div>
+          
+          <div className="flex gap-2 mb-4 flex-wrap items-center">
+              <button onClick={() => setStatusFilter("All")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "All" ? "bg-emerald-600 text-white border-green-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>All ({waitlistData.length + (renewalsData?.length || 0)})</button>
+              <button onClick={() => setStatusFilter("Verification Pending")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Verification Pending" ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><Eye size={12}/> Verification Pending</button>
+              <button onClick={() => setStatusFilter("Payment Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Payment Review" ? "bg-orange-500 text-white border-orange-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><CreditCard size={12}/> Payment Review</button>
+              <button onClick={() => setStatusFilter("Contract Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Contract Review" ? "bg-green-600 text-white border-green-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><FileSignature size={12}/> Contract Review</button>
+              <button onClick={() => setStatusFilter("Rejected")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Rejected" ? "bg-red-500 text-white border-red-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><XCircle size={12}/> Rejected</button>
+              
+              <button onClick={() => setStatusFilter("Renewals")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Renewals" ? "bg-yellow-500 text-white border-yellow-500 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:bg-yellow-50 hover:text-yellow-700 hover:border-yelow-200"}`}>
+                  <ClipboardList size={12}/> Pending Renewals ({renewalsData?.length || 0})
+              </button>
+
+             
+              <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-3">
+                  <span className="text-xs font-bold text-slate-500">TYPE:</span>
+                  <select
+                      value={slotTypeFilter}
+                      onChange={(e) => setSlotTypeFilter(e.target.value)}
+                      className="bg-white border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-emerald-500 focus:border-emerald-500 p-1.5 outline-none font-bold shadow-sm cursor-pointer"
+                  >
+                      <option value="All">All Slots</option>
+                      <option value="Permanent">Permanent</option>
+                      <option value="Night Market">Night Market</option>
+                  </select>
+              </div>
+             
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 md:p-6 border-b border-slate-100 bg-slate-50/50">
-            <div className="flex overflow-x-auto hide-scrollbar gap-2 w-full sm:w-auto pb-2 sm:pb-0">
-              {["All", "Verification Pending", "Payment Review", "Contract Pending", "Contract Review", "Renewals", "Rejected"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setStatusFilter(tab)}
-                  className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
-                    statusFilter === tab
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-200 transform scale-105"
-                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-emerald-300"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-          
-            <div className="w-full sm:w-auto flex justify-end">
-                <select
-                    value={slotTypeFilter}
-                    onChange={(e) => setSlotTypeFilter(e.target.value)}
-                    className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none font-bold shadow-sm w-full sm:w-auto cursor-pointer"
-                >
-                    <option value="All">All Slots</option>
-                    <option value="Permanent">Permanent</option>
-                    <option value="Night Market">Night Market</option>
-                </select>
-            </div>
-         
-          </div>
-
-          <div className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
+          <div className="flex-1 overflow-y-auto pr-2">
             {filteredData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                <Filter size={48} className="mb-4 text-slate-300" />
-                <p className="text-lg font-bold text-slate-500">No applications found</p>
-                <p className="text-sm">Try adjusting your filters to see more results.</p>
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
+                  <Filter size={40} className="opacity-20 mb-3"/>
+                  <p className="font-medium text-slate-500">No records found for this filter.</p>
               </div>
             ) : (
-              <table className="w-full text-left bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                <thead className="bg-slate-100 text-slate-600 text-xs uppercase font-bold tracking-wider">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500 sticky top-0 z-10 shadow-sm">
                   <tr>
-                    <th className="px-4 py-4 first:rounded-tl-2xl">Applicant / Tenant</th>
-                    <th className="px-4 py-4">Contact Info</th>
-                    <th className="px-4 py-4">Target Slot</th>
-                    <th className="px-4 py-4">Phase</th>
-                    <th className="px-4 py-4">Submission Date</th>
-                    <th className="px-4 py-4 text-right last:rounded-tr-2xl">Actions</th>
+                    <th className="px-4 py-3 rounded-tl-lg">Name & Contact</th>
+                    <th className="px-4 py-3">Slot / Type</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right rounded-tr-lg">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {filteredData.map((app, idx) => (
-                    <tr key={app._id || app.id || idx} className="hover:bg-slate-50/80 transition-colors group">
+                <tbody className="divide-y divide-slate-100">
+                  {filteredData.map((app) => (
+                    <tr key={app._id || app.id} className="hover:bg-slate-50 transition-colors group">
                       <td className="px-4 py-3">
-                        <p className="font-bold text-slate-800">{app.name || app.tenantName}</p>
-                        <p className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded w-max mt-1">{isRenewalRecord(app) ? "Renewal" : "New Application"}</p>
+                          <div className="font-bold text-slate-800 text-base">{app.tenantName || app.name}</div>
+                          <div className="text-xs text-slate-500 font-medium">{app.contactNo || app.contact}</div>
+                          
+                          
+                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                            {new Date(app.createdAt || app.dateRequested || app.StartDateTime).toLocaleDateString()}
+                            <span className="italic font-medium text-emerald-600">
+                              ({getTimeAgo(app.createdAt || app.dateRequested || app.StartDateTime)})
+                            </span>
+                          </div>
+                          
+                          
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm text-slate-700 font-medium">{app.contact || app.contactNo}</p>
-                        <p className="text-xs text-slate-500">{app.email}</p>
+                          <div className="flex flex-col items-start gap-1">
+                              <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-xs font-bold border border-emerald-100 shadow-sm">
+                                  {app.slotNo || app.targetSlot || "Any Slot"}
+                              </span>
+                              <span className="text-xs text-slate-600 font-medium">{app.product || app.tenantType || "Permanent"}</span>
+                          </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-bold text-slate-700">{app.targetSlot || app.slotNo}</p>
-                        <p className="text-xs text-slate-500">{app.floor || app.tenantType}</p>
+                          <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
+                              app.status === 'PAYMENT_REVIEW' || app.status === 'Payment Review' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                              app.status === 'PAYMENT_UNLOCKED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              app.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
+                              app.status === 'CONTRACT_REVIEW' || app.status === 'CONTRACT_PENDING' ? 'bg-green-50 text-green-700 border-green-200' :
+                              'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {app.status ? app.status.replace('_', ' ') : 'DOC REVIEW'}
+                          </span>
                       </td>
-                      <td className="px-4 py-3">
-                         {getStatusBadge(app.status, isRenewalRecord(app))}
-                      </td>
-                      
-                     
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                         <div className="flex flex-col">
-                           <span className="font-medium">{new Date(app.createdAt || app.updatedAt).toLocaleString('en-US', {
-                                year: 'numeric', month: 'short', day: 'numeric',
-                                hour: '2-digit', minute: '2-digit'
-                            })}</span>
-                           <span className="text-xs text-emerald-600 font-bold italic mt-0.5">
-                               ({getTimeAgo(app.createdAt || app.updatedAt)})
-                           </span>
-                         </div>
-                      </td>
-                    
-
                       <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                              
-                              {!isRenewalRecord(app) && app.status !== 'REJECTED' && (
-                                  <button onClick={() => handleOpenReject(app._id || app.id)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-bold border border-transparent hover:border-red-100 transition-all">Reject</button>
+                          <div className="flex justify-end gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                              {app.status !== 'REJECTED' && !isRenewalsTab && (
+                                <button onClick={() => handleOpenReject(app._id || app.id)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-bold border border-transparent hover:border-red-100 transition-all">Reject</button>
                               )}
                               
                               <button 
@@ -241,28 +234,6 @@ const filteredData = baseFilteredData.filter((app) => {
           </div>
         </div>
       </div>
-
-      {rejectData.isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform transition-all scale-100">
-                <div className="flex items-center gap-3 mb-4 text-red-600">
-                    <AlertTriangle size={28} />
-                    <h3 className="text-xl font-bold">Reject Application</h3>
-                </div>
-                <p className="text-sm text-slate-600 mb-4">Please provide a reason for rejecting this application. This will be visible to the applicant.</p>
-                <textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none h-32 mb-6"
-                    placeholder="E.g., Incomplete documents, blurred ID..."
-                ></textarea>
-                <div className="flex justify-end gap-3">
-                    <button onClick={() => setRejectData({ isOpen: false, appId: null })} className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-                    <button onClick={confirmReject} className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-md transition-colors active:scale-95">Confirm Rejection</button>
-                </div>
-            </div>
-        </div>
-      )}
     </>
   );
 };
