@@ -92,6 +92,8 @@ export default function StallsPage() {
   const [dynamicNightPrice, setDynamicNightPrice] = useState(150);
 
   const [dynamicDueDate, setDynamicDueDate] = useState(5);
+  const [dynamicChargePct, setDynamicChargePct] = useState(25);
+  const [dynamicInterestPct, setDynamicInterestPct] = useState(2);
   
   const [paymentData, setPaymentData] = useState({
     referenceNo: ''
@@ -125,14 +127,15 @@ export default function StallsPage() {
     const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
     
     const { diffDays, proratedRent } = calculateProratedRent(basePrice);
-    const totalAmount = isNightMarket ? basePrice : (basePrice + proratedRent); 
+    
+    const totalAmount = basePrice; 
 
     return {
       ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
       amountLabel: `₱${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
       rawAmount: totalAmount,
       baseRent: basePrice,
-      proratedRent,
+      proratedRent, 
       diffDays,
       isPermanent: !isNightMarket
     };
@@ -143,7 +146,8 @@ export default function StallsPage() {
       const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
       
       const { diffDays, proratedRent } = calculateProratedRent(basePrice);
-      const totalAmount = isNightMarket ? basePrice : (basePrice + proratedRent);
+      
+      const totalAmount = basePrice;
       
       return {
         ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
@@ -261,6 +265,14 @@ export default function StallsPage() {
         if (settingsRes.ok) {
           const settingsData = await settingsRes.json();
           setDynamicDueDate(settingsData.permanentDueDate || 5);
+
+          if (selectedFloor === 'Night Market') {
+             setDynamicChargePct(settingsData.nightMarketCharge || 25);
+             setDynamicInterestPct(settingsData.nightMarketInterest || 2);
+          } else {
+             setDynamicChargePct(settingsData.permanentCharge || 25);
+             setDynamicInterestPct(settingsData.permanentInterest || 2);
+          }
         }
 
       } catch (e) {
@@ -764,7 +776,8 @@ setSelectedStall(null);
       try {
         const formPayload = new FormData();
         formPayload.append('userId', user.id);
-        formPayload.append('tenantId', currentApp.tenantId || "");
+      
+        formPayload.append('tenantId', currentApp.tenantId || currentApp.id || currentApp._id || "");
         formPayload.append('targetSlot', currentApp.targetSlot);
         formPayload.append('paymentReference', paymentData.referenceNo);
 
@@ -788,8 +801,9 @@ setSelectedStall(null);
         setPaymentData({ referenceNo: '' });
         setFiles(prev => ({ ...prev, receipt: null }));
         fetchData(user.id);
-      } catch (error) {
-        Alert.alert("Error", "Could not process receipt.");
+      } catch (error: any) {
+     
+        Alert.alert("Error", error.message || "Could not process receipt.");
       } finally {
         setApplying(false);
       }
@@ -978,6 +992,9 @@ setSelectedStall(null);
           }} 
           refreshing={refreshing}
           onRefresh={onRefresh}
+
+          dynamicChargePct={dynamicChargePct}
+          dynamicInterestPct={dynamicInterestPct}
         />
       );
     }

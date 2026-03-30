@@ -273,8 +273,7 @@ const ApplicationReviewModal = ({
                       <p className="text-xs font-bold text-slate-500 uppercase">Ref No</p>
                       <p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || reviewData.referenceNo || "PENDING"}</p>
                   </div>
-                  <div className="text-right">
-                     
+                 <div className="text-right">
                       {isTenantRenewal ? (
                           <>
                               <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
@@ -283,32 +282,26 @@ const ApplicationReviewModal = ({
                       ) : isPermanent ? (
                           <>
                               {(() => {
-                                 
-                                  const rawTotal = reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0;
-                                  const totalPayment = Number(rawTotal);
-                                  
                                   const advance = typeof defaultPermanentPrice !== 'undefined' ? Number(defaultPermanentPrice) : 6000;
-                                  
-                                  let rental = 0;
-                                  if (totalPayment > advance) {
-                                      rental = totalPayment - advance;
-                                  }
-                                  
-                                  const displayTotal = totalPayment > 0 ? totalPayment : advance;
+                                  const upcomingRent = Number(reviewData.rentAmount || 0); 
                                   
                                   return (
                                       <>
                                           <div className="flex justify-end gap-6 mb-1 text-sm">
-                                              <div className="text-slate-500">Rental Fee:</div>
-                                              <div className="font-bold text-slate-700">₱{rental.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                                          </div>
-                                          <div className="flex justify-end gap-6 mb-2 text-sm border-b border-slate-200 pb-2">
-                                              <div className="text-slate-500">Advance Payment:</div>
+                                              <div className="text-slate-500">Advance Payment (Due Now):</div>
                                               <div className="font-bold text-slate-700">₱{advance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                                           </div>
-                                          <div className="flex justify-end gap-6">
-                                              <div className="text-xs font-bold text-emerald-600 uppercase mt-1">Total Expected:</div>
-                                              <div className="text-xl font-bold text-emerald-600">₱{displayTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                                          
+                                          {(status === "VERIFICATION_PENDING" || status === "PAYMENT_UNLOCKED") && (
+                                              <div className="flex justify-end gap-6 mb-2 text-sm border-b border-slate-200 pb-2">
+                                                  <div className="text-orange-500">Prorated Rent (Due Next Cycle):</div>
+                                                  <div className="font-bold text-orange-600">₱{upcomingRent.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                                              </div>
+                                          )}
+                                          
+                                          <div className="flex justify-end gap-6 border-t border-slate-100 pt-2 mt-2">
+                                              <div className="text-xs font-bold text-emerald-600 uppercase mt-1">Total Expected Now:</div>
+                                              <div className="text-xl font-bold text-emerald-600">₱{advance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                                           </div>
                                       </>
                                   );
@@ -316,11 +309,12 @@ const ApplicationReviewModal = ({
                           </>
                       ) : (
                           <>
-                              <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
+                              <p className="text-xs font-bold text-slate-500 uppercase">Total Expected Now:</p>
                               <p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                           </>
                       )}
                   </div>
+
                 </div>
                 <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-3 border border-blue-100">
                     <Lock size={18} className="mt-0.5 shrink-0 text-blue-600" />
