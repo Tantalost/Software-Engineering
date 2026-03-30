@@ -268,14 +268,32 @@ const ApplicationReviewModal = ({
               <h4 className="flex items-center gap-2 font-bold text-slate-700 mb-4 pb-2 border-b border-slate-100"><CreditCard size={18} className="text-emerald-600" /> Verification Status</h4>
               <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
                 <div className="flex justify-between items-center mb-4">
-                  <div><p className="text-xs font-bold text-slate-500 uppercase">Ref No</p><p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || reviewData.referenceNo || "PENDING"}</p></div>
+                  <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase">Ref No</p>
+                      <p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || reviewData.referenceNo || "PENDING"}</p>
+                  </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
-                    <p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString()}</p>
-              
-                    {reviewData.advancePaymentBalance > 0 && (
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Includes ₱{Number(reviewData.advancePaymentBalance).toLocaleString()} Advance</p>
-                    )}
+                      {isPermanent ? (
+                          <>
+                              <div className="flex justify-end gap-6 mb-1 text-sm">
+                                  <div className="text-slate-500">Rental Fee:</div>
+                                  <div className="font-bold text-slate-700">₱{Number(reviewData.paymentAmount || 0).toLocaleString()}</div>
+                              </div>
+                              <div className="flex justify-end gap-6 mb-2 text-sm border-b border-slate-200 pb-2">
+                                  <div className="text-slate-500">Advance Payment:</div>
+                                  <div className="font-bold text-slate-700">₱{Number(reviewData.paymentAmount || 0).toLocaleString()}</div>
+                              </div>
+                              <div className="flex justify-end gap-6">
+                                  <div className="text-xs font-bold text-emerald-600 uppercase mt-1">Total Expected:</div>
+                                  <div className="text-xl font-bold text-emerald-600">₱{(Number(reviewData.paymentAmount || 0) * 2).toLocaleString()}</div>
+                              </div>
+                          </>
+                      ) : (
+                          <>
+                              <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
+                              <p className="text-xl font-bold text-emerald-600">₱{Number(reviewData.paymentAmount || reviewData.totalAmount || reviewData.rentAmount || 0).toLocaleString()}</p>
+                          </>
+                      )}
                   </div>
                 </div>
                 <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-3 border border-blue-100">

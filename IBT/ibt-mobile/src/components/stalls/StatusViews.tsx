@@ -107,7 +107,15 @@ export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, s
                     <View style={styles.paymentRow}><Text style={styles.paymentLabel}>STALL NUMBER</Text><Text style={styles.paymentValue}>{currentApp.targetSlot}</Text></View>
                     <View style={styles.paymentRow}><Text style={styles.paymentLabel}>REGISTERED OWNER</Text><Text style={[styles.paymentValue, { textTransform: 'uppercase' }]}>{currentApp.name}</Text></View>
                     <View style={styles.paymentRow}><Text style={styles.paymentLabel}>RENTAL PERIOD</Text><Text style={[styles.paymentValue, {color: colors.primary}]}>{currentBilling.periodLabel}</Text></View>
-                    <View style={styles.divider} /><View style={styles.totalBlock}><Text style={styles.totalLabel}>TOTAL AMOUNT TO BE PAID IN FULL</Text><Text style={styles.totalAmount}>{currentBilling.amountLabel}</Text><Text style={styles.totalNote}>(NO PARTIAL PAYMENT)</Text></View>
+                    <View style={styles.divider} /><View style={styles.totalBlock}><Text style={styles.totalLabel}>TOTAL AMOUNT TO BE PAID IN FULL</Text><Text style={styles.totalAmount}>{currentBilling.amountLabel}</Text>
+                    
+                    {currentBilling.isPermanent && (
+                        <Text style={{fontSize: 11, color: colors.primary, fontWeight: 'bold', marginBottom: 5, textAlign: 'center'}}>
+                          (Includes ₱{currentBilling.baseRent.toLocaleString(undefined, {minimumFractionDigits: 2})} Advance Payment)
+                        </Text>
+                    )}
+                    
+                    <Text style={styles.totalNote}>(NO PARTIAL PAYMENT)</Text></View>
                 </Card.Content>
             </Card>
             <Text variant="titleMedium" style={styles.sectionHeader}>Verification Details</Text>

@@ -219,15 +219,26 @@ Welcome aboard!
 IBT Management
     `;
 
-    if (savedTenant.email) {
+   if (savedTenant.email) {
         try {
+        
             await sendEmail({
                 email: savedTenant.email,
                 subject: subject,
                 message: message
             });
+
+            const user = await User.findOne({ email: savedTenant.email });
+            if (user && user.expoPushToken) {
+                await sendPushNotification(
+                    user.expoPushToken, 
+                    "Welcome to IBT Stalls! 🎉", 
+                    `Congratulations! You are officially the tenant of Slot ${savedTenant.slotNo}.`,
+                    { route: 'stalls' }
+                );
+            }
         } catch (emailError) {
-            console.error("Welcome email failed:", emailError.message);
+            console.error("Welcome email/push failed:", emailError.message);
         }
     }
 
@@ -237,25 +248,6 @@ IBT Management
     console.error("Create Tenant Error:", error);
     res.status(500).json({ error: error.message });
   }
-
-  if (savedTenant.email) {
-        try {
-            await sendEmail({ email: savedTenant.email, subject: subject, message: message });
-            
-            const user = await User.findOne({ email: savedTenant.email });
-            if (user && user.expoPushToken) {
-                await sendPushNotification(
-                    user.expoPushToken, 
-                    "Welcome to IBT Stalls! ", 
-                    `Congratulations! You are officially the tenant of Slot ${savedTenant.slotNo}.`,
-                    { route: 'stalls' }
-                );
-            }
-        } catch (emailError) {
-            console.error("Welcome email/push failed:", emailError.message);
-        }
-    }
-    res.status(201).json(savedTenant);
 };
 
 export const updateTenant = async (req, res) => {
