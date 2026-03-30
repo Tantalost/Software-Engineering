@@ -94,8 +94,11 @@ const DailyTripsDashboard = ({
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Ticket Ref</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Route</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Price</th>
+              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Seats</th>
+              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Park est.</th>
+              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Exp. dep.</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Time</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Departure</th>
+              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Actual dep.</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Company</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Actions</th>
@@ -133,13 +136,18 @@ const DailyTripsDashboard = ({
                   <td className="px-4 py-4 text-sm font-medium text-slate-700">
                     ₱{(trip.price || 75).toFixed(2)}
                   </td>
-                  
-                  {/* --- UPDATED: FORMATTED TIME COLUMN --- */}
+                  <td className="px-4 py-4 text-sm text-slate-600 tabular-nums">
+                    {trip.seatingCapacity != null ? trip.seatingCapacity : "—"}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-slate-600">
+                    {trip.parkingEstimation || "—"}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-slate-600 font-medium">
+                    {formatTime(trip.expectedDeparture)}
+                  </td>
                   <td className="px-4 py-4 text-sm text-slate-600 font-medium">
                     {formatTime(trip.time)}
                   </td>
-                  
-                  {/* --- UPDATED: FORMATTED DEPARTURE COLUMN --- */}
                   <td className="px-4 py-4 text-sm text-slate-600 font-medium">
                     {formatTime(trip.departureTime)}
                   </td>

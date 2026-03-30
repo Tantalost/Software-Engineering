@@ -97,6 +97,7 @@ const PredefinedArrivalsBoard = ({
           busType: b.busType || "Regular",
           stopType: b.stopType || "Regular Trip",
           customStopCount: b.customStopCount,
+          seatingCapacity: b.seatingCapacity ?? null,
           minutesFromMidnight: msm,
           hourBucket,
         });
@@ -181,6 +182,8 @@ const PredefinedArrivalsBoard = ({
         busType: busMeta?.busType || arriveRow.busType,
         stopType: busMeta?.stopType || arriveRow.stopType,
         customStopCount: busMeta?.customStopCount ?? arriveRow.customStopCount,
+        seatingCapacity:
+          busMeta?.seatingCapacity ?? arriveRow.seatingCapacity ?? null,
       });
       setArriveRow(null);
       setArrivePlateInput("");
@@ -202,7 +205,7 @@ const PredefinedArrivalsBoard = ({
   };
 
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/90 via-white to-emerald-50/30 shadow-sm overflow-hidden">
+    <div className="relative z-0 w-full rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/90 via-white to-emerald-50/30 shadow-sm overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-start gap-3 justify-between bg-white/80">
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-2 rounded-xl bg-slate-800 text-white shrink-0">
@@ -246,7 +249,7 @@ const PredefinedArrivalsBoard = ({
 
       <div className="overflow-x-auto max-h-[min(70vh,520px)] overflow-y-auto">
         <table className="w-full text-left text-sm">
-          <thead className="text-[10px] sm:text-xs uppercase tracking-wide text-slate-500 bg-slate-100/90 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+          <thead className="text-[10px] sm:text-xs uppercase tracking-wide text-slate-500 bg-slate-100/90 border-b border-slate-200 sticky top-0 z-[1] shadow-sm">
             <tr>
               <th className="px-3 py-2.5 font-semibold whitespace-nowrap">
                 Scheduled time

@@ -14,7 +14,10 @@ const BusTripSchema = new mongoose.Schema({
   customStopCount: { type: Number, min: 1, default: null },
   
   time: { type: String, required: true },
-  departureTime: { type: String },        
+  departureTime: { type: String },
+  parkingEstimation: { type: String, default: "10 minutes" },
+  expectedDeparture: { type: String, default: "" },
+  seatingCapacity: { type: Number, min: 1, default: null },
   date: { type: Date, required: true },
   
   status: { 

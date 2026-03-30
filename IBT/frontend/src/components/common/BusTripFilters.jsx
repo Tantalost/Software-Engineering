@@ -35,7 +35,13 @@ const BusTripFilters = ({
     const selectedDateObj = parseDateStringToLocalDate(selectedDate);
 
     return (
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full">
+        <>
+        <style>{`
+          .bus-trip-filters-datepicker-popper.react-datepicker-popper {
+            z-index: 400 !important;
+          }
+        `}</style>
+        <div className="relative z-30 flex flex-wrap sm:flex-nowrap items-center gap-2 w-full">
             <div className="flex items-center bg-white border border-gray-300 rounded-xl px-3 py-2 shadow-sm flex-grow sm:flex-none w-full sm:w-auto">
                 <input
                     type="text"
@@ -122,11 +128,13 @@ const BusTripFilters = ({
                     isClearable
                     maxDate={new Date()}
                     onKeyDown={(e) => e.preventDefault()}
+                    popperClassName="bus-trip-filters-datepicker-popper"
                     className="outline-none text-gray-700 text-sm w-full sm:w-auto cursor-pointer hover:text-emerald-600 focus:text-emerald-600 transition-colors bg-transparent border-none"
                     wrapperClassName="w-full sm:w-auto"
                 />
             </div>
         </div>
+        </>
     );
 };
 

@@ -1067,6 +1067,7 @@ const BusTrips = () => {
     price: 75,
     parkingEstimation: "10 minutes",
     expectedDeparture: "",
+    seatingCapacity: null,
   });
 
   useEffect(() => {
@@ -1286,6 +1287,7 @@ const BusTrips = () => {
       price: defaultPrice,
       parkingEstimation: "10 minutes",
       expectedDeparture: calculateExpectedDeparture(currentTime, "10 minutes"),
+      seatingCapacity: null,
     });
     setShowAddModal(true);
   };
@@ -1309,6 +1311,10 @@ const BusTrips = () => {
       customStopCount: selectedBus?.customStopCount
         ? String(selectedBus.customStopCount)
         : "",
+      seatingCapacity:
+        selectedBus?.seatingCapacity != null
+          ? selectedBus.seatingCapacity
+          : null,
     }));
   };
 
@@ -1337,6 +1343,10 @@ const BusTrips = () => {
             ? Number(newBusData.customStopCount)
             : null,
         price: newBusData.price || defaultPrice,
+        seatingCapacity:
+          newBusData.seatingCapacity != null
+            ? Number(newBusData.seatingCapacity)
+            : null,
       };
 
       const response = await fetch(API_URL, {
@@ -2045,6 +2055,9 @@ const BusTrips = () => {
   const handleMarkArrived = async (row) => {
     try {
       const fullRecord = records.find((r) => r.id === row.id) || row;
+      const plateNo = fullRecord.templateNo || fullRecord.templateno;
+      const comp = companyData.find((c) => c.name === fullRecord.company);
+      const busDef = comp?.buses?.find((b) => b.plateNumber === plateNo);
 
       const now = new Date();
       const currentHours = String(now.getHours()).padStart(2, "0");
@@ -2066,14 +2079,27 @@ const BusTrips = () => {
       const expMinutes = String(departureDate.getMinutes()).padStart(2, "0");
       const newExpectedDeparture = `${expHours}:${expMinutes}`;
 
+      const seatingCapacity =
+        fullRecord.seatingCapacity != null
+          ? fullRecord.seatingCapacity
+          : busDef?.seatingCapacity != null
+            ? busDef.seatingCapacity
+            : null;
+
+      const arrivalPayload = {
+        status: "Arrived",
+        time: actualArrivalTime,
+        expectedDeparture: newExpectedDeparture,
+        parkingEstimation: estimationStr,
+      };
+      if (seatingCapacity != null) {
+        arrivalPayload.seatingCapacity = seatingCapacity;
+      }
+
       const response = await fetch(`${API_URL}/${row.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "Arrived",
-          time: actualArrivalTime,
-          expectedDeparture: newExpectedDeparture,
-        }),
+        body: JSON.stringify(arrivalPayload),
       });
 
       if (response.ok) {
@@ -2159,6 +2185,13 @@ const BusTrips = () => {
       estimationStr,
     );
 
+    const seatingCap =
+      suggestion.seatingCapacity != null
+        ? suggestion.seatingCapacity
+        : busDef?.seatingCapacity != null
+          ? busDef.seatingCapacity
+          : null;
+
     const tripData = {
       templateNo: plate,
       company,
@@ -2172,6 +2205,7 @@ const BusTrips = () => {
       price: defaultPrice,
       parkingEstimation: estimationStr,
       expectedDeparture: newExpectedDeparture,
+      ...(seatingCap != null ? { seatingCapacity: seatingCap } : {}),
     };
 
     try {
@@ -2614,8 +2648,8 @@ const BusTrips = () => {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[min(88vh,800px)] my-4 sm:my-8 overflow-y-auto rounded-xl bg-white p-5 sm:p-6 shadow-xl animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-slate-800">
                 Add New Bus Trip
@@ -2646,6 +2680,7 @@ const BusTrips = () => {
                         customStopCount: "",
                         templateNo: "",
                         route: "",
+                        seatingCapacity: null,
                       }))
                     }
                     className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none"
@@ -2674,6 +2709,7 @@ const BusTrips = () => {
                         customStopCount: "",
                         templateNo: "",
                         route: "",
+                        seatingCapacity: null,
                       }))
                     }
                     disabled={!newBusData.company}
@@ -3035,6 +3071,13 @@ const BusTrips = () => {
             },
             { label: "Status", value: viewRow.status || "-" },
             { label: "Price", value: `₱${(viewRow.price || 75).toFixed(2)}` },
+            {
+              label: "Seating capacity",
+              value:
+                viewRow.seatingCapacity != null
+                  ? String(viewRow.seatingCapacity)
+                  : "-",
+            },
 
             { label: "Arrival Time", value: formatTime(viewRow.time) },
             { label: "Parking Est.", value: viewRow.parkingEstimation || "-" },
