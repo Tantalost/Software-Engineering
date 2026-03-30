@@ -227,11 +227,11 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.success]} />}
     >
       
-      <Card style={[styles.card, { borderColor: colors.success, borderWidth: 1, marginBottom: 20 }]}>
+      <Card style={[styles.card, { borderColor: currentApp.tenantDbStatus === 'Overdue' ? '#dc2626' : colors.success, borderWidth: 1, marginBottom: 20 }]}>
         <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
-          <Icon name="check-decagram" size={80} color={colors.success} />
-          <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: colors.success }}>
-            Active Tenant
+          <Icon name={currentApp.tenantDbStatus === 'Overdue' ? "alert-circle" : "check-decagram"} size={80} color={currentApp.tenantDbStatus === 'Overdue' ? '#dc2626' : colors.success} />
+          <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: currentApp.tenantDbStatus === 'Overdue' ? '#dc2626' : colors.success }}>
+            {currentApp.tenantDbStatus === 'Overdue' ? 'Overdue Account' : 'Active Tenant'}
           </Text>
           <Text variant="titleMedium" style={{ marginTop: 5, color: colors.textDark, fontWeight: 'bold' }}>
             Slot: {currentApp.targetSlot}
@@ -256,7 +256,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{rentAmount}</Text>
             </View>
 
-            {/* --- NEW: Show Advance Balance (Only for Permanent) --- */}
+           
             {isPermanent && (
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                   <Text style={{ color: '#166534' }}>Advance Balance:</Text>
@@ -265,13 +265,13 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             )}
             
             <View style={{ marginBottom: 5 }}>
-              {/* Main Additional Fees Row (Shows for everyone) */}
+             
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={{ color: '#166534' }}>Additional Fees:</Text>
                 <Text style={{ color: '#166534', fontWeight: 'bold' }}>₱{utilityAmount}</Text>
               </View>
               
-             {/* Sub-breakdown (Only shows for Permanent tenants) */}
+             
              {isPermanent && (
                 <View style={{ paddingLeft: 10, marginTop: 4 }}>
                   {electricity > 0 && (
@@ -290,7 +290,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             )}
             </View>
 
-            {currentApp.status === "Overdue" && (
+            {currentApp.tenantDbStatus === "Overdue" && (
                 <View style={{ marginTop: 5, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#bbf7d0' }}>
                     <Text style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: 4 }}>Overdue Penalties:</Text>
                     

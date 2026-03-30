@@ -163,32 +163,32 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   }, [showMapModal, formData.slotNo]);
 
   useEffect(() => {
-    let baseRent = 0;
+    let calculatedRent = 0;
+    let lockedAdvance = 0;
     let calculatedDueDate = "";
     
     const slotCount = formData.slotNo ? formData.slotNo.split(',').length : 1;
 
     if (formData.tenantType === "Permanent") {
-      baseRent = defaultPermanentPrice; 
-      
+      const baseRent = defaultPermanentPrice; 
+      lockedAdvance = baseRent * slotCount;   
+
       if (startDate) {
         const d = new Date(startDate);
         const targetDay = Number(defaultDueDate) || 5;
-        
         let nextDue = new Date(d.getFullYear(), d.getMonth(), targetDay);
+        
         if (d.getDate() >= targetDay) {
             nextDue.setMonth(nextDue.getMonth() + 1);
         }
         calculatedDueDate = formatDateTimeForInput(nextDue);
 
         const diffDays = Math.ceil((nextDue.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-        const proratedRent = diffDays * 200 * slotCount;
-        setRentAmount(proratedRent);
-        
+        calculatedRent = diffDays * 200 * slotCount;
       }
     } else {
-      baseRent = defaultNightPrice; 
-      setRentAmount(baseRent * slotCount);
+      calculatedRent = defaultNightPrice * slotCount; 
+      lockedAdvance = 0;
       if (startDate) {
         const d = new Date(startDate);
         d.setDate(d.getDate() + 7); 
@@ -196,10 +196,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
       }
     }
 
-    setAdvancePayment(formData.tenantType === "Permanent" ? (defaultPermanentPrice * slotCount) : 0);
+    setRentAmount(calculatedRent);
+    setAdvancePayment(lockedAdvance);
     setDueDate(calculatedDueDate);
 
-  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice]);
+  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice, defaultDueDate]);
 
   useEffect(() => {
     const isNightMarket = formData.tenantType === "Night Market";

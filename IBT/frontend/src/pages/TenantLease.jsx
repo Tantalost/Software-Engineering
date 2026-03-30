@@ -1720,7 +1720,7 @@ const TenantLease = () => {
                                     Move Out
                                 </button>
                             )}
-                            
+
                         </div>
                     )
                 }}
@@ -1776,6 +1776,7 @@ const TenantLease = () => {
             <ApplicationReviewModal
                 isOpen={showReviewModal}
                 reviewData={reviewData}
+                defaultPermanentPrice={defaultPermanentPrice}
                 onClose={() => setShowReviewModal(false)}
                 onBack={() => { 
                   setShowReviewModal(false); 

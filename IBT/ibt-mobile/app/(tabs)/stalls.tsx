@@ -106,21 +106,19 @@ export default function StallsPage() {
 
   const calculateProratedRent = () => {
     const now = new Date();
-
-    let nextDue = new Date(now.getFullYear(), now.getMonth(), dynamicDueDate);
-   
-    if (now.getDate() >= dynamicDueDate) {
+    let nextDue = new Date(now.getFullYear(), now.getMonth(), 5);
+    if (now.getDate() >= 5) {
         nextDue.setMonth(nextDue.getMonth() + 1);
     }
     const diffTime = nextDue.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return { diffDays, proratedRent: diffDays * 200, targetDay: dynamicDueDate };
+    return { diffDays, proratedRent: diffDays * 200 };
   };
 
   const currentBilling = useMemo(() => {
     const floorType = currentApp ? currentApp.floor : selectedFloor;
     const isNightMarket = floorType === 'Night Market';
-    const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice;
+    const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
     
     const { diffDays, proratedRent } = calculateProratedRent();
     const totalAmount = isNightMarket ? basePrice : (basePrice + proratedRent); 
@@ -138,7 +136,7 @@ export default function StallsPage() {
 
   const modalBilling = useMemo(() => {
       const isNightMarket = selectedFloor === 'Night Market';
-      const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice;
+      const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
       
       const { diffDays, proratedRent } = calculateProratedRent();
       const totalAmount = isNightMarket ? basePrice : (basePrice + proratedRent);
