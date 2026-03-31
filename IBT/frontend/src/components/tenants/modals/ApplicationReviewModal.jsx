@@ -8,6 +8,7 @@ const ApplicationReviewModal = ({
   isOpen, 
   reviewData,
   defaultPermanentPrice = 6000,
+  defaultDueDate = 5,
   onBack, 
   onUnlockPayment, 
   onProceedToLease,
@@ -63,12 +64,12 @@ const ApplicationReviewModal = ({
 
   const safeData = reviewData || {};
   const isPermanent = (safeData.floor === "Permanent" || safeData.tenantType === "Permanent");
-  const isTenantRenewal = !!safeData.tenantName; 
+  
+  const isTenantRenewal = !!(safeData.paymentHistory || safeData.DueDateTime || safeData.status === "Payment Review" || safeData.status === "Overdue" || safeData.status === "Paid");
 
   const documents = useMemo(() => {
     if (!reviewData) return []; 
     
-    // If it's a renewal, only show the receipt
     if (isTenantRenewal) {
         return [
             { label: "Renewal Receipt", url: getFileUrl(reviewData.documents?.proofOfReceipt) }
@@ -273,7 +274,8 @@ const ApplicationReviewModal = ({
                       <p className="text-xs font-bold text-slate-500 uppercase">Ref No</p>
                       <p className="font-mono font-bold text-slate-800">{reviewData.paymentReference || reviewData.referenceNo || "PENDING"}</p>
                   </div>
-                 <div className="text-right">
+               
+                <div className="text-right">
                       {isTenantRenewal ? (
                           <>
                               <p className="text-xs font-bold text-slate-500 uppercase">Total Expected</p>
@@ -283,7 +285,26 @@ const ApplicationReviewModal = ({
                           <>
                               {(() => {
                                   const advance = typeof defaultPermanentPrice !== 'undefined' ? Number(defaultPermanentPrice) : 6000;
-                                  const upcomingRent = Number(reviewData.rentAmount || 0); 
+                                  
+                                  let upcomingRent = Number(reviewData.rentAmount || 0); 
+                                  
+                                  if (upcomingRent === 0) {
+                                      const targetDay = Number(defaultDueDate) || 5;
+                                      const d = reviewData.createdAt ? new Date(reviewData.createdAt) : new Date();
+                                      let nextDue = new Date(d.getFullYear(), d.getMonth(), targetDay);
+                                      
+                                      if (d.getDate() >= targetDay) {
+                                          nextDue.setMonth(nextDue.getMonth() + 1);
+                                      }
+                                      
+                                      const diffDays = Math.max(0, Math.ceil((nextDue.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
+                                      const dailyRate = advance / 30;
+                                      
+                                      const slotString = reviewData.targetSlot || reviewData.slotNo || "";
+                                      const slotCount = slotString ? slotString.split(',').length : 1;
+                                      
+                                      upcomingRent = diffDays * dailyRate * slotCount;
+                                  }
                                   
                                   return (
                                       <>
@@ -292,7 +313,7 @@ const ApplicationReviewModal = ({
                                               <div className="font-bold text-slate-700">₱{advance.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                                           </div>
                                           
-                                          {(status === "VERIFICATION_PENDING" || status === "PAYMENT_UNLOCKED") && (
+                                          {["Pending", "PENDING", "VERIFICATION_PENDING", "PAYMENT_UNLOCKED", "CONTRACT_PENDING", "CONTRACT_REVIEW"].includes(status) && (
                                               <div className="flex justify-end gap-6 mb-2 text-sm border-b border-slate-200 pb-2">
                                                   <div className="text-orange-500">Prorated Rent (Due Next Cycle):</div>
                                                   <div className="font-bold text-orange-600">₱{upcomingRent.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>

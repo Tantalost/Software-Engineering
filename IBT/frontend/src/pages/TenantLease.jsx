@@ -949,14 +949,18 @@ const TenantLease = () => {
     const handleApproveRenewal = async (id) => {
         try {
             const res = await fetch(`${API_URL}/tenants/${id}/approve-renewal`, { method: 'PUT' });
+            
+            const data = await res.json(); 
+            
             if (res.ok) {
                 setNotificationState({ isOpen: true, type: 'success', message: "Renewal payment confirmed! Next due date updated.", autoClose: true, duration: 3000 });
+            
                 await logActivity(role, "APPROVE_RENEWAL", `Approved renewal payment for tenant ID #${id}`, "Tenants");
+            
                 setShowReviewModal(false);
                 fetchTenants(); 
             } else {
-                const errData = await res.json();
-                setNotificationState({ isOpen: true, type: 'error', message: `Failed: ${errData.error || 'Unknown error'}`, autoClose: true, duration: 4000 });
+                setNotificationState({ isOpen: true, type: 'error', message: `Failed: ${data.error || 'Unknown error'}`, autoClose: true, duration: 5000 });
             }
         } catch (err) {
             setNotificationState({ isOpen: true, type: 'error', message: "Server error approving renewal.", autoClose: true, duration: 3000 });
@@ -1776,6 +1780,7 @@ const TenantLease = () => {
                 isOpen={showReviewModal}
                 reviewData={reviewData}
                 defaultPermanentPrice={defaultPermanentPrice}
+                defaultDueDate={defaultDueDate}
                 onClose={() => setShowReviewModal(false)}
                 onBack={() => { 
                   setShowReviewModal(false); 

@@ -736,9 +736,14 @@ setSelectedStall(null);
       try {
         const formPayload = new FormData();
         formPayload.append('userId', user.id);
+        formPayload.append('tenantId', currentApp.tenantId || currentApp.id || currentApp._id || "");
         formPayload.append('targetSlot', currentApp.targetSlot);
         formPayload.append('paymentReference', paymentData.referenceNo);
-        formPayload.append('paymentAmount', currentBilling.rawAmount.toString());
+
+        formPayload.append('paymentAmount', (currentApp.totalAmount || 0).toString());
+       
+        const totalDue = currentApp.totalAmount || 0;
+        formPayload.append('paymentAmount', totalDue.toString());
 
         const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
         appendFile(formPayload, 'receipt', files.receipt, encReceipt);

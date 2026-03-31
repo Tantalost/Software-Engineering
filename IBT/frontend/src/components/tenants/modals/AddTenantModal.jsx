@@ -212,7 +212,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     const calculatedUtils = electricityFee + otherFee;
                   
     setUtilityAmount(calculatedUtils);
-    setTotalAmount(parseFloat(rentAmount || 0) + calculatedUtils + parseFloat(advancePayment || 0));
+    const baseUpfront = isNightMarket ? parseFloat(rentAmount || 0) : parseFloat(advancePayment || 0);
+    setTotalAmount(baseUpfront + calculatedUtils);
   }, [rentAmount, feeBreakdown, formData.tenantType, advancePayment]);
 
   const handleFileChange = (e, docType) => {

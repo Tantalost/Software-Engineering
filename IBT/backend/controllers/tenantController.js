@@ -169,7 +169,7 @@ export const createTenant = async (req, res) => {
     const rentAmt = Number(req.body.rentAmount) || 0;
     const utilAmt = req.body.utilityAmount || 0;
     const recurringTotal = rentAmt + utilAmt; 
-    const initialPaymentAmount = recurringTotal + advancePayment;
+    const initialPaymentAmount = isPermanent ? (advancePayment + utilAmt) : recurringTotal;
 
     const tenantData = {
         ...req.body,
@@ -182,6 +182,7 @@ export const createTenant = async (req, res) => {
             datePaid: new Date().toISOString(),
             receiptUrl: proofOfReceipt || req.body.documents?.proofOfReceipt || ""
         }],
+        
         documents: {
             ...(req.body.documents || {}),
             businessPermit: businessPermit || req.body.documents?.businessPermit,
@@ -298,7 +299,7 @@ export const updateTenant = async (req, res) => {
     updateData.feeBreakdown = normalizedFeeBreakdown;
     updateData.utilityAmount = Number(normalizedFeeBreakdown.electricity || 0) + Number(normalizedFeeBreakdown.otherAmount || 0);
  
-    if (updateData.status === "Overdue") {
+   if (updateData.status === "Overdue") {
         const isNightMarket = effectiveTenantType === "Night Market";
         const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
         const interestKey = isNightMarket ? "nightMarketInterestPercentage" : "permanentInterestPercentage";
@@ -309,43 +310,52 @@ export const updateTenant = async (req, res) => {
         const cPct = chargeSetting ? Number(chargeSetting.value) : 25;
         const iPct = interestSetting ? Number(interestSetting.value) : 2;
 
-        const rent = Number(updateData.rentAmount || oldTenant.rentAmount || 0);
-        const util = updateData.utilityAmount || 0;
-        const prevDueBalance = Number(oldTenant.totalAmount || rent);
+        const rent = Number(updateData.rentAmount !== undefined ? updateData.rentAmount : (oldTenant.rentAmount || 0));
+       
+        const util = updateData.utilityAmount !== undefined ? Number(updateData.utilityAmount) : Number(oldTenant.utilityAmount || 0);
 
-        let accumulatedCharge = 0;
-        let accumulatedInterest = 0;
+        let finalCharge = 0;
+        let finalInterest = 0;
         let finalTotal = 0;
 
         if (oldTenant.status !== "Overdue") {
+            const n = rent + (rent * (cPct / 100));
+            const x = n * (iPct / 100);
+            const dueBalance = x + n;
             
-            const n = rent + (rent * (cPct / 100)); 
-            const x = n * (iPct / 100);             
-            const dueBalance = x + n;             
+            finalCharge = rent * (cPct / 100);
+            finalInterest = x;
             
-            accumulatedCharge = rent * (cPct / 100);
-            accumulatedInterest = x;
-            finalTotal = dueBalance + util;       
-
+            finalTotal = dueBalance + util; 
         } else {
-           
-            const m = prevDueBalance + rent + (rent * (cPct / 100)); 
-            const y = m * (iPct / 100);                              
-            const updatedDueBalance = y + m;                        
+            const oldTotal = Number(oldTenant.totalAmount || 0);
+            const oldCharge = Number(oldTenant.chargeAmount || 0);
+            const oldInterest = Number(oldTenant.interestAmount || 0);
+            const oldUtil = Number(oldTenant.utilityAmount || 0);
+            const oldRent = Number(oldTenant.rentAmount || 0);
+
+            const pureHistoricalDebt = oldTotal - oldCharge - oldInterest - oldUtil - oldRent;
+
+            const rentBase = pureHistoricalDebt + rent;
+
+            const newSurcharge = rent * (cPct / 100);
+            const compoundingBase = rentBase + newSurcharge;
+            const newInterest = compoundingBase * (iPct / 100);
+
+            finalCharge = newSurcharge;
+            finalInterest = newInterest;
             
-            accumulatedCharge = (oldTenant.chargeAmount || 0) + (rent * (cPct / 100));
-            accumulatedInterest = (oldTenant.interestAmount || 0) + y;
-            finalTotal = updatedDueBalance + util;  
+            finalTotal = compoundingBase + newInterest + util; 
         }
 
-        updateData.chargeAmount = accumulatedCharge;
-        updateData.interestAmount = accumulatedInterest;
+        updateData.chargeAmount = finalCharge;
+        updateData.interestAmount = finalInterest;
         updateData.totalAmount = finalTotal;
        
     } else {
         updateData.chargeAmount = 0;
         updateData.interestAmount = 0;
-        updateData.totalAmount = Number(updateData.rentAmount || oldTenant.rentAmount || 0) + updateData.utilityAmount;
+        updateData.totalAmount = Number(updateData.rentAmount !== undefined ? updateData.rentAmount : (oldTenant.rentAmount || 0)) + updateData.utilityAmount;
     }
 
     const getFile = (fieldName) => {
@@ -839,22 +849,27 @@ export const updateOverdueSettings = async (req, res) => {
 
     for (const tenant of overdueTenants) {
       const rent = tenant.rentAmount || 0;
-      const util = tenant.utilityAmount || 0;
-      const prevDueBalance = tenant.totalAmount || rent;
+    
+      const util = tenant.utilityAmount || 0; 
       
-      const m = prevDueBalance + rent + (rent * (cPct / 100)); 
-      const y = m * (iPct / 100);                              
-      const updatedDueBalance = y + m;                         
+      const oldTotal = tenant.totalAmount || 0;
+      const oldCharge = tenant.chargeAmount || 0;
+      const oldInterest = tenant.interestAmount || 0;
 
-      const accumulatedCharge = (tenant.chargeAmount || 0) + (rent * (cPct / 100));
-      const accumulatedInterest = (tenant.interestAmount || 0) + y;
+      const pureRentBase = oldTotal - oldCharge - oldInterest - util;
+
+      const newSurcharge = rent * (cPct / 100);
+      const compoundingBase = pureRentBase + newSurcharge;
+      const newInterest = compoundingBase * (iPct / 100);
+
+      const finalTotal = compoundingBase + newInterest + util;
 
       await Tenant.updateOne(
           { _id: tenant._id },
           { $set: { 
-              chargeAmount: accumulatedCharge, 
-              interestAmount: accumulatedInterest, 
-              totalAmount: updatedDueBalance + util 
+              chargeAmount: newSurcharge, 
+              interestAmount: newInterest, 
+              totalAmount: finalTotal 
           }}
       );
       updatedCount++;
