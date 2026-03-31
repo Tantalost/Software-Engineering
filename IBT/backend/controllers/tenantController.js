@@ -1006,6 +1006,18 @@ export const processMoveOut = async (req, res) => {
         $push: { paymentHistory: moveOutTransaction }
     }, { new: true, runValidators: false });
 
+    await TenantApplication.findOneAndUpdate(
+        { targetSlot: tenant.slotNo, status: "TENANT" },
+        { 
+            status: "MOVED OUT",
+            $set: {
+                moveOutDetails: moveOutDetails,
+                advancePaymentBalance: advanceBal
+            }
+        },
+        { strict: false } 
+    );
+   
     if (updatedTenant.email) {
         try {
             const subject = "Lease Termination & Final Accounting - IBT Stalls";
