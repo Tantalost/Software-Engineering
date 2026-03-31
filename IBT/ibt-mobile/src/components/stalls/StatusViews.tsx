@@ -289,7 +289,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             )}
             </View>
 
-            {currentApp.tenantDbStatus === "Overdue" && (
+          {currentApp.tenantDbStatus === "Overdue" && (
                 <View style={{ marginTop: 5, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#bbf7d0' }}>
                     <Text style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: 4 }}>Overdue Penalties:</Text>
                     
@@ -308,7 +308,6 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                         let displayIPct = dynamicInterestPct;
                         let showGeneric = false;
 
-                       
                         if (rawCharge > 0 || rawInterest > 0) {
                             displayCharge = rawCharge;
                             displayInterest = rawInterest;
@@ -316,9 +315,9 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                             const compBase = baseR + rawCharge;
                             displayIPct = compBase > 0 ? Math.round((rawInterest / compBase) * 100) : dynamicInterestPct;
                         } 
-       
+                       
                         else if (fallbackPenalty > 0) {
-                           
+                       
                             const expectedC = baseR * (dynamicChargePct / 100);
                             const expectedI = (baseR + expectedC) * (dynamicInterestPct / 100);
 
@@ -326,56 +325,70 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                                 displayCharge = expectedC;
                                 displayInterest = expectedI;
                             } else {
-                              
+                                
                                 let bestMatch: any = null;
-                                let adminHistoryMatch: any = null; 
+                                let highestScore = -1;
                                 
                                 for (let c = 1; c <= 100; c++) {
                                     let testC = baseR * (c / 100);
                                     let remP = fallbackPenalty - testC;
-                                    if (remP < 0) continue;
+                                    if (remP <= 0) continue;
 
                                     let testComp = baseR + testC;
                                     let testI = (remP / testComp) * 100;
 
+                                   
                                     if (Math.abs(testI - Math.round(testI)) < 0.05) {
                                         let i = Math.round(testI);
+                                        if (i === 0) continue; // Ignore 0% interest matches
+                                        
                                         let match = { c, i, testC, remP };
                                         
                                        
-                                        if (c === dynamicChargePct || i === dynamicInterestPct) {
-                                            adminHistoryMatch = match;
-                                        }
+                                        let score = 0;
+                                        
+                                        if (c % 10 === 0) score += 3;
+                                        else if (c % 5 === 0) score += 1;
+                                        
+                                        if (i % 10 === 0) score += 3;
+                                        else if (i % 5 === 0) score += 1;
+
+                                      
+                                        if (c >= i) score += 5;
 
                                      
-                                        if (!bestMatch || (match.c >= match.i)) {
+                                        if (c >= 10) score += 2;
+
+                                      
+                                        if (score > highestScore) {
+                                            highestScore = score;
                                             bestMatch = match;
                                         }
                                     }
                                 }
 
-                                const finalMatch = adminHistoryMatch || bestMatch;
-
-                                if (finalMatch) {
-                                    displayCharge = finalMatch.testC;
-                                    displayInterest = finalMatch.remP;
-                                    displayCPct = finalMatch.c;
-                                    displayIPct = finalMatch.i;
+                                if (bestMatch) {
+                                    displayCharge = bestMatch.testC;
+                                    displayInterest = bestMatch.remP;
+                                    displayCPct = bestMatch.c;
+                                    displayIPct = bestMatch.i;
                                 } else {
                                     showGeneric = true;
                                 }
                             }
                         }
 
+                    
                         if (showGeneric && fallbackPenalty > 0) {
                             return (
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                                    <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Locked Penalties:</Text>
+                                    <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Previous Penalties:</Text>
                                     <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{fallbackPenalty.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
                                 </View>
                             );
                         }
 
+                       
                         if (displayCharge > 0 || displayInterest > 0) {
                             return (
                                 <>
