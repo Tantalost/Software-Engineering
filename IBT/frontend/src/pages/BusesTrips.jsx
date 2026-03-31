@@ -1003,6 +1003,21 @@ const BusTrips = () => {
     return `${year}-${month}-${day}`;
   };
 
+  const parseDateInputToLocalDate = (dateInput) => {
+    if (!dateInput) return null;
+    if (dateInput instanceof Date) {
+      return Number.isNaN(dateInput.getTime()) ? null : dateInput;
+    }
+    const raw = String(dateInput).trim();
+    // Treat plain YYYY-MM-DD as local calendar day.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const d = new Date(`${raw}T00:00:00`);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
   const [collectorName, setCollectorName] = useState("");
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1012,15 +1027,8 @@ const BusTrips = () => {
   };
 
   const getDateKey = (dateInput) => {
-    if (!dateInput) return "";
-
-    if (typeof dateInput === "string") {
-      const directMatch = dateInput.match(/^(\d{4}-\d{2}-\d{2})/);
-      if (directMatch) return directMatch[1];
-    }
-
-    const d = new Date(dateInput);
-    if (Number.isNaN(d.getTime())) return "";
+    const d = parseDateInputToLocalDate(dateInput);
+    if (!d) return "";
     return toLocalDateKey(d);
   };
 
@@ -1350,14 +1358,14 @@ const BusTrips = () => {
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
-  // Dispatch board should only show trips that were created today.
+  // Dispatch board should show trips by operating date (trip date), not DB createdAt.
   const todayDispatchRecords = useMemo(() => {
-    // Bus admins always see today's created records only on dispatch board.
+    // Bus admins always see today's operating records only on dispatch board.
     if (role === "bus") {
       const todayKey = getDateKey(new Date());
       return filteredWithoutDate.filter((trip) => {
-        const createdKey = getDateKey(trip.createdAt);
-        return createdKey === todayKey;
+        const tripDayKey = getDateKey(trip.date);
+        return tripDayKey === todayKey;
       });
     }
 
@@ -1368,8 +1376,8 @@ const BusTrips = () => {
 
     const todayKey = getDateKey(new Date());
     return filtered.filter((trip) => {
-      const createdKey = getDateKey(trip.createdAt);
-      return createdKey === todayKey;
+      const tripDayKey = getDateKey(trip.date);
+      return tripDayKey === todayKey;
     });
   }, [filtered, filteredWithoutDate, selectedDate, role]);
 
@@ -2268,6 +2276,7 @@ const BusTrips = () => {
     const todayKey = getDateKey(new Date());
     const plate = suggestion.templateNo;
     const company = suggestion.company;
+    const scheduledTime = String(suggestion.scheduleTime || "").trim();
     const activeStatuses = [
       "Scheduled",
       "Pending",
@@ -2280,6 +2289,12 @@ const BusTrips = () => {
       if (getDateKey(r.date) !== todayKey) return false;
       const p = r.templateNo || r.templateno;
       if (p !== plate || r.company !== company) return false;
+      if (String(r.route || "").trim() !== String(suggestion.route || "").trim()) {
+        return false;
+      }
+      if (scheduledTime) {
+        if (String(r.scheduledTime || "").trim() !== scheduledTime) return false;
+      }
       return activeStatuses.includes(r.status);
     });
 
@@ -2343,6 +2358,7 @@ const BusTrips = () => {
       templateNo: plate,
       company,
       route: suggestion.route,
+      scheduledTime,
       busType: busDef?.busType || suggestion.busType || "Regular",
       stopType,
       customStopCount: stopType === "Other" ? customStopCount : null,

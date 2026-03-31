@@ -44,6 +44,10 @@ function makeRowKey(company, route, scheduleTime, plateNumber) {
   return `${company}|||${route}|||${scheduleTime}|||${plateNumber}`;
 }
 
+function makeTripScheduleKey(company, route, scheduleTime, plateNumber) {
+  return makeRowKey(company, route, scheduleTime, plateNumber);
+}
+
 function docToRowKey(doc) {
   return makeRowKey(
     doc.company,
@@ -226,13 +230,20 @@ const PredefinedArrivalsBoard = ({
     return scheduleRows.filter((row) => row.hourBucket === bucket);
   }, [scheduleRows, selectedTimeBucket]);
 
-  const todayStatusByPlate = useMemo(() => {
+  const todayStatusByScheduleKey = useMemo(() => {
     const m = new Map();
     for (const r of records) {
       if (getDateKey(r.date) !== boardDateKey) continue;
       const plate = r.templateNo || r.templateno;
       if (!plate) continue;
-      const key = `${plate}|||${r.company || ""}`;
+      const scheduledTime = String(r.scheduledTime || "").trim();
+      if (!scheduledTime) continue;
+      const key = makeTripScheduleKey(
+        r.company || "",
+        String(r.route || "").trim(),
+        scheduledTime,
+        plate,
+      );
       const st = r.status;
       const prev = m.get(key);
       const rank = (s) => {
@@ -278,6 +289,7 @@ const PredefinedArrivalsBoard = ({
         templateNo: plate,
         company: arriveRow.company,
         route: busMeta?.route?.trim() || arriveRow.route,
+        scheduleTime: arriveRow.scheduleTime,
         busType: busMeta?.busType || arriveRow.busType,
         stopType: busMeta?.stopType || arriveRow.stopType,
         customStopCount: busMeta?.customStopCount ?? arriveRow.customStopCount,
@@ -478,7 +490,13 @@ const PredefinedArrivalsBoard = ({
               filteredScheduleRows.map((row) => {
                 const isPrepHour = row.hourBucket === focusBucket;
                 const plateKey = `${row.plateNumber}|||${row.company}`;
-                const st = todayStatusByPlate.get(plateKey);
+                const scheduleKey = makeTripScheduleKey(
+                  row.company,
+                  row.route,
+                  row.scheduleTime,
+                  row.plateNumber,
+                );
+                const st = todayStatusByScheduleKey.get(scheduleKey);
                 const loggedToday =
                   st === "Arrived" ||
                   st === "On Fix" ||
