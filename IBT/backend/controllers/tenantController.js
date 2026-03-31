@@ -992,7 +992,7 @@ export const processMoveOut = async (req, res) => {
 
     const moveOutTransaction = {
         referenceNo: "MOVE-OUT-SETTLEMENT",
-        amount: advanceBal, 
+        amount: finalRefund > 0 ? finalRefund : 0, 
         datePaid: new Date().toISOString(),
         receiptUrl: "Settlement"
     };
