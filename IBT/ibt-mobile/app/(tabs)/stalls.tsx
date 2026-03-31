@@ -47,7 +47,8 @@ import {
   PaymentReviewView,
   PaymentUnlockedView,
   TenantView,
-  RejectedView
+  RejectedView,
+  MovedOutView
 } from '@/src/components/stalls/StatusViews';
 
 const SECRET_KEY = process.env.EXPO_PUBLIC_ENCRYPTION_KEY || " ";
@@ -1015,6 +1016,11 @@ setSelectedStall(null);
     if (appStatus === "REJECTED") {
       return <RejectedView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
     }
+
+    if (appStatus === "MOVED OUT" || appStatus === "MOVED_OUT") {
+      return <MovedOutView currentApp={currentApp} refreshing={refreshing} onRefresh={onRefresh} />;
+    }
+    
     return null;
   };
 

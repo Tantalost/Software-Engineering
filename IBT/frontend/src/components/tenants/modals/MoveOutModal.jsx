@@ -4,6 +4,7 @@ import { X, LogOut, AlertTriangle, PhilippinePeso, ClipboardList } from "lucide-
 const MoveOutModal = ({ isOpen, onClose, tenant, onConfirm }) => {
   const [damageCost, setDamageCost] = useState("");
   const [damageRemarks, setDamageRemarks] = useState("");
+  const [consumeDeposit, setConsumeDeposit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen || !tenant) return null;
@@ -11,8 +12,13 @@ const MoveOutModal = ({ isOpen, onClose, tenant, onConfirm }) => {
   const advance = tenant.advancePaymentBalance || 0;
   const unpaid = tenant.status === "Overdue" ? (tenant.totalAmount || 0) : 0;
   const damages = Number(damageCost) || 0;
+  const rentAmount = tenant.rentAmount || 0;
   
-  const refund = advance - damages - unpaid;
+  
+  const showConsumeOption = advance > 0 && tenant.status !== "Overdue";
+  const lastMonthDeduction = (showConsumeOption && consumeDeposit) ? rentAmount : 0;
+  
+  const refund = advance - damages - unpaid - lastMonthDeduction;
 
   const handleConfirm = async () => {
     setIsSubmitting(true);
@@ -20,7 +26,8 @@ const MoveOutModal = ({ isOpen, onClose, tenant, onConfirm }) => {
       await onConfirm({
         tenantId: tenant._id || tenant.id,
         damageCost: damages,
-        damageRemarks
+        damageRemarks,
+        consumeDeposit: showConsumeOption ? consumeDeposit : false
       });
       onClose();
     } catch (error) {
@@ -69,9 +76,33 @@ const MoveOutModal = ({ isOpen, onClose, tenant, onConfirm }) => {
 
           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
             <h3 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2"><PhilippinePeso size={16}/> Final Accounting Breakdown</h3>
+            
+            {showConsumeOption && (
+                <div className="mb-4 bg-white p-3 rounded-lg border border-emerald-200 shadow-sm">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={consumeDeposit}
+                            onChange={(e) => setConsumeDeposit(e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        />
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-700">Use Advance for Last Month</span>
+                            <span className="text-xs text-slate-500">Deduct ₱{rentAmount.toLocaleString()} from deposit</span>
+                        </div>
+                    </label>
+                </div>
+            )}
+
             <div className="flex flex-col gap-2 text-sm">
                 <div className="flex justify-between text-slate-600"><span>Advance Deposit:</span> <span className="font-bold">₱{advance.toLocaleString()}</span></div>
+                
+                {consumeDeposit && (
+                    <div className="flex justify-between text-indigo-600"><span>Less Last Month's Rent:</span> <span className="font-bold">- ₱{lastMonthDeduction.toLocaleString()}</span></div>
+                )}
+                
                 <div className="flex justify-between text-red-500"><span>Less Damages:</span> <span className="font-bold">- ₱{damages.toLocaleString()}</span></div>
+                
                 {unpaid > 0 && <div className="flex justify-between text-red-500"><span>Less Unpaid Rent/Penalties:</span> <span className="font-bold">- ₱{unpaid.toLocaleString()}</span></div>}
                 
                 <div className="border-t border-emerald-200 my-1 pt-2 flex justify-between items-center">

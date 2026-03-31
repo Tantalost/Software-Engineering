@@ -340,7 +340,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                                    
                                     if (Math.abs(testI - Math.round(testI)) < 0.05) {
                                         let i = Math.round(testI);
-                                        if (i === 0) continue; // Ignore 0% interest matches
+                                        if (i === 0) continue; 
                                         
                                         let match = { c, i, testC, remP };
                                         
@@ -560,4 +560,106 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
 
     </ScrollView>
   );
+};
+
+export const MovedOutView = ({ currentApp, refreshing, onRefresh }: any) => {
+    const moveOutDetails = currentApp.moveOutDetails || {};
+    const damageCost = Number(moveOutDetails.damageCost) || 0;
+    const damageRemarks = moveOutDetails.damageRemarks || "None";
+    const unpaidDues = Number(moveOutDetails.unpaidDuesDeducted) || 0;
+    
+    const lastMonthRent = Number(moveOutDetails.lastMonthRentDeducted) || 0; 
+    
+    const refund = Number(moveOutDetails.finalRefund) || 0;
+    const debt = Number(moveOutDetails.remainingDebt) || 0;
+    const advanceBal = Number(currentApp.advancePaymentBalance) || 0;
+
+    return (
+        <ScrollView 
+            contentContainerStyle={{ flexGrow: 1, padding: 20, alignItems: 'center', paddingTop: 60 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#64748b']} />}
+        > 
+            <Icon name="store-remove-outline" size={80} color="#64748b" />
+            <Text variant="headlineSmall" style={{ marginTop: 20, fontWeight: 'bold', color: '#475569' }}>
+                Moved Out
+            </Text>
+            <Text style={{ marginTop: 5, color: '#64748b', textAlign: 'center', paddingHorizontal: 20 }}>
+                Your lease for Slot {currentApp.targetSlot.replace(' (Archived)', '')} has been officially terminated.
+            </Text>
+
+            <Card style={{ width: '100%', marginTop: 25, backgroundColor: '#f8fafc', borderColor: '#cbd5e1', borderWidth: 1 }}>
+                <Card.Content>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+                        <Icon name="file-document-outline" size={24} color="#475569" style={{ marginRight: 10 }} />
+                        <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#334155' }}>
+                            Final Settlement Details
+                        </Text>
+                    </View>
+
+                    <View style={{ marginBottom: 10 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <Text style={{ color: '#475569' }}>Advance Deposit:</Text>
+                            <Text style={{ color: '#475569', fontWeight: 'bold' }}>₱{advanceBal.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                        </View>
+
+                        {lastMonthRent > 0 && (
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                <Text style={{ color: '#4f46e5' }}>Less Last Month's Rent:</Text>
+                                <Text style={{ color: '#4f46e5', fontWeight: 'bold' }}>- ₱{lastMonthRent.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                            </View>
+                        )}
+
+                        {damageCost > 0 && (
+                            <View style={{ marginBottom: 8, backgroundColor: '#fef2f2', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#fecaca' }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>Less Damages:</Text>
+                                    <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>- ₱{damageCost.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                                    <Icon name="alert-circle-outline" size={14} color="#ef4444" style={{ marginRight: 4, marginTop: 2 }} />
+                                    <Text style={{ color: '#ef4444', fontSize: 12, flex: 1, fontStyle: 'italic' }}>
+                                        Reason: {damageRemarks}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {unpaidDues > 0 && (
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+                                <Text style={{ color: '#ef4444' }}>Less Unpaid Dues:</Text>
+                                <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>- ₱{unpaidDues.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <Divider style={{ marginVertical: 12, backgroundColor: '#cbd5e1' }} />
+
+                    {debt > 0 ? (
+                        <View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 16 }}>Remaining Debt:</Text>
+                                <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 16 }}>₱{debt.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                            </View>
+                            <Text style={{ color: '#ef4444', fontSize: 11, fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
+                                You have an outstanding balance. Please visit the admin office to settle your account.
+                            </Text>
+                        </View>
+                    ) : (
+                        <View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16 }}>Final Refund:</Text>
+                                <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16 }}>₱{refund.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                            </View>
+                            
+                            {lastMonthRent > 0 && (
+                                <Text style={{ color: '#10b981', fontSize: 12, fontStyle: 'italic', marginTop: 10, textAlign: 'center' }}>
+                                    Your advance deposit was successfully used to cover your last month's rent.
+                                </Text>
+                            )}
+                        </View>
+                    )}
+                </Card.Content>
+            </Card>
+        </ScrollView>
+    );
 };

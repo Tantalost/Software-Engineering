@@ -61,6 +61,7 @@ const TenantLease = () => {
     });
 
     const [records, setRecords] = useState([]);
+    const [allTenantRecords, setAllTenantRecords] = useState([]);
     const [waitlistData, setWaitlistData] = useState([]);
     const [alerts, setAlerts] = useState([]);
     const [activeWaitlistTab, setActiveWaitlistTab] = useState("All");
@@ -307,14 +308,18 @@ const TenantLease = () => {
         }
     }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
 
-    const fetchTenants = async () => {
+   const fetchTenants = async () => {
         try {
-            const res = await fetch(`${API_URL}/tenants`);
+           
+            const res = await fetch(`${API_URL}/tenants?all=true`);
             if (!res.ok) throw new Error("Failed to fetch tenants");
             const data = await res.json();
             const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
             formatted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-            setRecords(formatted);
+            
+            setAllTenantRecords(formatted);
+            
+            setRecords(formatted.filter(t => !t.isArchived && !t.isDeleted));
         } catch (err) {
             console.error("Error fetching tenants:", err);
         }
@@ -451,16 +456,18 @@ const TenantLease = () => {
     }, [records, activeTab]);
 
 
-    const { dateRange, filteredPayments } = useMemo(() => {
+   const { dateRange, filteredPayments } = useMemo(() => {
         let all = [];
-        records.forEach(t => {
+        allTenantRecords.forEach(t => {
             if (t.paymentHistory && Array.isArray(t.paymentHistory)) {
                 t.paymentHistory.forEach(p => {
                     all.push({
                         ...p,
                         tenantName: t.tenantName || t.name,
                         slotNo: t.slotNo,
-                        tenantType: t.tenantType || "Permanent"
+                        tenantType: t.tenantType || "Permanent",
+                        status: t.status,
+                        isDeleted: t.isDeleted
                     });
                 });
             }
@@ -897,20 +904,33 @@ const TenantLease = () => {
         }
     };
 
-    const handleMoveOutSubmit = async (moveOutData) => {
-        const res = await fetch(`${API_URL}/tenants/move-out`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(moveOutData)
-        });
-        
-        if (res.ok) {
-            alert("Tenant successfully moved out!");
-            setIsMoveOutModalOpen(false);
-            setTenantToMoveOut(null);
-            fetchTenants(); 
-        } else {
-            alert("Failed to process move out.");
+   const handleMoveOutSubmit = async (moveOutData) => {
+        try {
+            const res = await fetch(`${API_URL}/tenants/move-out`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(moveOutData)
+            });
+            
+            if (res.ok) {
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Tenant successfully moved out! Final accounting email sent.",
+                    autoClose: true,
+                    duration: 5000
+                });
+                await logActivity(role, "MOVE_OUT", `Processed move out for tenant in slot ${tenantToMoveOut?.slotNo}`, "Tenants");
+                
+                setIsMoveOutModalOpen(false);
+                setTenantToMoveOut(null);
+                fetchTenants(); 
+            } else {
+                const errData = await res.json();
+                setNotificationState({ isOpen: true, type: 'error', message: `Failed: ${errData.error || 'Unknown error'}`, autoClose: true, duration: 4000 });
+            }
+        } catch (err) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Server error processing move out.", autoClose: true, duration: 4000 });
         }
     };
 
@@ -2243,7 +2263,11 @@ const TenantLease = () => {
                                     {paginatedPayments.length > 0 ? paginatedPayments.map((p, i) => (
                                         <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                             <td className="p-3 text-slate-700 font-medium">{new Date(p.datePaid).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
-                                            <td className="p-3 text-slate-800 font-bold">{p.tenantName}</td>
+                                            <td className="p-3 text-slate-800 font-bold">
+                                                {p.tenantName}
+                                                {p.isDeleted && <span className="text-red-500 text-[10px] ml-2 font-bold">(Deleted)</span>}
+                                                {p.status === "Moved Out" && !p.isDeleted && <span className="text-amber-600 text-[10px] ml-2 font-bold">(Moved Out)</span>}
+                                            </td>
                                             <td className="p-3 text-slate-600">{p.slotNo}</td>
                                             <td className="p-3 text-slate-500 font-mono text-xs">{p.referenceNo}</td>
                                             <td className="p-3 text-emerald-600 font-black text-right">₱{(Number(p.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>

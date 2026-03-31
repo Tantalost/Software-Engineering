@@ -24,13 +24,13 @@ const normalizeFeeBreakdown = (rawBreakdown = {}, tenantType = "Permanent") => {
 
 export const getTenants = async (req, res) => {
   try {
-    const tenants = await Tenant.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
+    const query = req.query.all === 'true' ? {} : { isArchived: { $ne: true }, isDeleted: { $ne: true } };
+    const tenants = await Tenant.find(query).sort({ createdAt: -1 });
     res.status(200).json(tenants);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const sendTenantEmail = async (req, res) => {
   try {
@@ -93,8 +93,8 @@ export const getArchivedTenants = async (req, res) => {
 
 export const deleteTenant = async (req, res) => {
   try {
-    await Tenant.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Tenant permanently deleted" });
+    await Tenant.findByIdAndUpdate(req.params.id, { isDeleted: true, isArchived: true });
+    res.status(200).json({ message: "Tenant permanently deleted " });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -967,46 +967,85 @@ export const toggleOperationStatus = async (req, res) => {
 
 export const processMoveOut = async (req, res) => {
   try {
-    const { tenantId, damageCost, damageRemarks } = req.body;
+    const { tenantId, damageCost, damageRemarks, consumeDeposit } = req.body;
     
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
 
     const damages = Number(damageCost) || 0;
     const advanceBal = tenant.advancePaymentBalance || 0;
-    
     const unpaidDue = tenant.status === "Overdue" ? (tenant.totalAmount || 0) : 0; 
-
-    const remainingAfterDamages = advanceBal - damages;
-    const finalRefund = remainingAfterDamages - unpaidDue;
-
-    tenant.status = "Moved Out";
-    tenant.isArchived = true; 
-    tenant.slotNo = `${tenant.slotNo} (Archived)`; 
-    tenant.moveOutDate = new Date().toISOString();
+    const rentAmount = tenant.rentAmount || 0;
     
-    tenant.moveOutDetails = {
+    const lastMonthDeduction = consumeDeposit ? rentAmount : 0;
+    const totalDeductions = damages + unpaidDue + lastMonthDeduction;
+    const finalRefund = advanceBal - totalDeductions;
+    
+    const moveOutDetails = {
         damageCost: damages,
         damageRemarks: damageRemarks || "None",
-        unpaidDuesDeducted: unpaidDue > remainingAfterDamages ? Math.max(0, remainingAfterDamages) : unpaidDue,
+        lastMonthRentDeducted: lastMonthDeduction,
+        unpaidDuesDeducted: unpaidDue,
         finalRefund: finalRefund > 0 ? finalRefund : 0,
         remainingDebt: finalRefund < 0 ? Math.abs(finalRefund) : 0
     };
 
-    await tenant.save();
+    const moveOutTransaction = {
+        referenceNo: "MOVE-OUT-SETTLEMENT",
+        amount: advanceBal, 
+        datePaid: new Date().toISOString(),
+        receiptUrl: "Settlement"
+    };
 
-    if (tenant.email) {
+    const updatedTenant = await Tenant.findByIdAndUpdate(tenantId, {
+        status: "Moved Out",
+        isArchived: true, 
+        slotNo: `${tenant.slotNo} (Archived)`, 
+        moveOutDate: new Date().toISOString(),
+        moveOutDetails: moveOutDetails,
+        $push: { paymentHistory: moveOutTransaction }
+    }, { new: true, runValidators: false });
+
+    if (updatedTenant.email) {
         try {
             const subject = "Lease Termination & Final Accounting - IBT Stalls";
-            const message = `Dear ${tenant.tenantName || tenant.name},\n\nThis confirms your official move-out and lease termination.\n\nFINAL ACCOUNTING:\nAdvance Deposit: ₱${advanceBal.toLocaleString()}\nLess Damages: ₱${damages.toLocaleString()}\nLess Unpaid Dues: ₱${unpaidDue.toLocaleString()}\n\nFINAL REFUND AMOUNT: ₱${(finalRefund > 0 ? finalRefund : 0).toLocaleString()}\n${finalRefund < 0 ? `\nNote: You have an outstanding remaining debt of ₱${Math.abs(finalRefund).toLocaleString()} which must be settled.` : ''}\n\nThank you for doing business with IBT.`;
+            let message = `Dear ${updatedTenant.tenantName || updatedTenant.name},\n\nThis confirms your official move-out and lease termination.\n\nFINAL ACCOUNTING:\nAdvance Deposit: ₱${advanceBal.toLocaleString()}\n`;
+            
+            if (consumeDeposit) message += `Less Last Month's Rent: ₱${lastMonthDeduction.toLocaleString()}\n`;
+            message += `Less Damages: ₱${damages.toLocaleString()}\n`;
+            if (unpaidDue > 0) message += `Less Unpaid Dues: ₱${unpaidDue.toLocaleString()}\n`;
+            
+            message += `\nFINAL REFUND AMOUNT: ₱${(finalRefund > 0 ? finalRefund : 0).toLocaleString()}\n`;
+            
+            if (finalRefund < 0) {
+                message += `\nNote: You have an outstanding remaining debt of ₱${Math.abs(finalRefund).toLocaleString()} which must be settled.`;
+            } else if (finalRefund > 0 && damages === 0 && unpaidDue === 0 && !consumeDeposit) {
+                message += `\nGood news! Since you have no accumulated damages or unpaid dues, your advance payment is fully refunded.`;
+            } else if (consumeDeposit) {
+                message += `\nYour advance deposit was successfully used to cover your last month's rent as requested.`;
+            }
+            
+            message += `\n\nThank you for doing business with IBT.`;
 
-            await sendEmail({ email: tenant.email, subject, message });
+            await sendEmail({ email: updatedTenant.email, subject, message });
+
+            const user = await User.findOne({ email: updatedTenant.email });
+            if (user && user.expoPushToken) {
+                let pushTitle = "Move-Out Confirmed 📦";
+                let pushBody = `Your lease for Slot ${updatedTenant.slotNo.replace(' (Archived)', '')} is terminated. Final Refund: ₱${(finalRefund > 0 ? finalRefund : 0).toLocaleString()}.`;
+                
+                if (consumeDeposit) pushBody = `Deposit used for last month's rent. Final Refund: ₱${(finalRefund > 0 ? finalRefund : 0).toLocaleString()}.`;
+                if (finalRefund < 0) pushBody = `Move out processed. You have a remaining debt of ₱${Math.abs(finalRefund).toLocaleString()}.`;
+                
+                await sendPushNotification(user.expoPushToken, pushTitle, pushBody, { route: 'stalls' });
+            }
+
         } catch (emailErr) {
-            console.error("Failed to send move-out email:", emailErr.message);
+            console.error("Failed to send move-out notifications:", emailErr.message);
         }
     }
 
-    res.status(200).json({ message: "Move-out processed successfully", tenant });
+    res.status(200).json({ message: "Move-out processed successfully", tenant: updatedTenant });
   } catch (error) {
     console.error("Move Out Error:", error);
     res.status(500).json({ error: error.message });

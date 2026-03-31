@@ -66,12 +66,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false); 
 
-  // Image Viewer State
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewerImages, setViewerImages] = useState<{uri: string}[]>([]);
   
-  // Reanimated Zoom Value
   const scale = useSharedValue(1);
 
   const fetchBroadcasts = async () => {
@@ -116,11 +114,10 @@ export default function Dashboard() {
     
     setViewerImages(formattedImages);
     setCurrentImageIndex(clickedIndex !== -1 ? clickedIndex : 0);
-    scale.value = 1; // Reset zoom scale
+    scale.value = 1; 
     setIsViewerVisible(true);
   };
 
-  // Pinch Gesture Logic
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
       scale.value = e.scale;
@@ -173,7 +170,7 @@ export default function Dashboard() {
                     <View style={styles.avatarBorder}>
                       <Avatar.Image
                         size={32}
-                        source={require('../../assets/images/ibt SC.png')}
+                        source={require('../../assets/images/newLogo.png')}
                         style={styles.postAvatar}
                       />
                     </View>
@@ -226,7 +223,6 @@ export default function Dashboard() {
           )}
         </ScrollView>
         
-        {/* Custom Image Viewer Modal */}
         <Modal visible={isViewerVisible} transparent={true} animationType="fade">
           <View style={styles.modalBackground}>
             <TouchableOpacity style={styles.closeButton} onPress={() => setIsViewerVisible(false)}>
@@ -244,7 +240,7 @@ export default function Dashboard() {
                 index,
               })}
               keyExtractor={(item, index) => index.toString()}
-              onScrollBeginDrag={() => (scale.value = withSpring(1))} // Reset zoom when swiping
+              onScrollBeginDrag={() => (scale.value = withSpring(1))} 
               renderItem={({ item }) => (
                 <GestureDetector gesture={pinchGesture}>
                   <Animated.View style={[styles.imageContainer, animatedStyle]}>
