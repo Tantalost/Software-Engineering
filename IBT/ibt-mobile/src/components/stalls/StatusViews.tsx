@@ -308,7 +308,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                         let displayIPct = dynamicInterestPct;
                         let showGeneric = false;
 
-                       
+             
                         if (rawCharge > 0 || rawInterest > 0) {
                             displayCharge = rawCharge;
                             displayInterest = rawInterest;
@@ -316,7 +316,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                             const compBase = baseR + rawCharge;
                             displayIPct = compBase > 0 ? Math.round((rawInterest / compBase) * 100) : dynamicInterestPct;
                         } 
-                      
+                       
                         else if (fallbackPenalty > 0) {
                           
                             const expectedC = baseR * (dynamicChargePct / 100);
@@ -327,7 +327,9 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                                 displayInterest = expectedI;
                             } else {
                                
-                                let foundMatch = false;
+                                let bestMatch: any = null;
+                                let adminHistoryMatch: any = null; 
+                                
                                 for (let c = 1; c <= 100; c++) {
                                     let testC = baseR * (c / 100);
                                     let remP = fallbackPenalty - testC;
@@ -336,24 +338,36 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                                     let testComp = baseR + testC;
                                     let testI = (remP / testComp) * 100;
 
-                                  
+                                   
                                     if (Math.abs(testI - Math.round(testI)) < 0.05) {
-                                        displayCharge = testC;
-                                        displayInterest = remP;
-                                        displayCPct = c;
-                                        displayIPct = Math.round(testI);
-                                        foundMatch = true;
-                                        break;
+                                        let i = Math.round(testI);
+                                        let match = { c, i, testC, remP };
+                                        
+                                      
+                                        if (c === dynamicChargePct || i === dynamicInterestPct) {
+                                            adminHistoryMatch = match;
+                                        }
+
+                                        if (!bestMatch || (match.c >= match.i)) {
+                                            bestMatch = match;
+                                        }
                                     }
                                 }
 
-                                if (!foundMatch) {
+                               
+                                const finalMatch = adminHistoryMatch || bestMatch;
+
+                                if (finalMatch) {
+                                    displayCharge = finalMatch.testC;
+                                    displayInterest = finalMatch.remP;
+                                    displayCPct = finalMatch.c;
+                                    displayIPct = finalMatch.i;
+                                } else {
                                     showGeneric = true;
                                 }
                             }
                         }
 
-                       
                         if (showGeneric && fallbackPenalty > 0) {
                             return (
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
@@ -363,7 +377,6 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                             );
                         }
 
-                       
                         if (displayCharge > 0 || displayInterest > 0) {
                             return (
                                 <>
@@ -387,7 +400,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                     })()}
                 </View>
             )}
-          
+            
             
             <Divider style={{ marginVertical: 8, backgroundColor: '#bbf7d0' }} />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
