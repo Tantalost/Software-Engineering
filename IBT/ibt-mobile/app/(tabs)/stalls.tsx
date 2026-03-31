@@ -735,15 +735,18 @@ setSelectedStall(null);
     setTimeout(async () => {
       try {
         const formPayload = new FormData();
+        
         formPayload.append('userId', user.id);
-        formPayload.append('tenantId', currentApp.tenantId || currentApp.id || currentApp._id || "");
         formPayload.append('targetSlot', currentApp.targetSlot);
-        formPayload.append('paymentReference', paymentData.referenceNo);
 
-        formPayload.append('paymentAmount', (currentApp.totalAmount || 0).toString());
-       
-        const totalDue = currentApp.totalAmount || 0;
-        formPayload.append('paymentAmount', totalDue.toString());
+        formPayload.append('applicationId', currentApp.id || currentApp._id || "");
+        formPayload.append('tenantId', currentApp.tenantId || currentApp.id || currentApp._id || "");
+
+        formPayload.append('paymentReference', paymentData.referenceNo);
+        formPayload.append('referenceNo', paymentData.referenceNo);
+
+        formPayload.append('paymentAmount', currentBilling.rawAmount.toString());
+        formPayload.append('amount', currentBilling.rawAmount.toString());
 
         const encReceipt = await encryptFileBeforeUpload(files.receipt!.uri, files.receipt!.name || 'receipt.jpg');
         appendFile(formPayload, 'receipt', files.receipt, encReceipt);
@@ -762,9 +765,14 @@ setSelectedStall(null);
         await handleApiError(res);
 
         Alert.alert("Sent", "Payment submitted for review.");
+        
+        setPaymentData({ referenceNo: '' });
+        setFiles(prev => ({ ...prev, receipt: null }));
+        
         fetchData(user.id);
-      } catch (error) {
-        Alert.alert("Error", "Could not process receipt.");
+      } catch (error: any) {
+      
+        Alert.alert("Error", error.message || "Could not process receipt.");
       } finally {
         setApplying(false);
       }
