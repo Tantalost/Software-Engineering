@@ -19,7 +19,8 @@ import {
   getOverdueSettings,      
   updateOverdueSettings,
   startOperation,
-  toggleOperationStatus
+  toggleOperationStatus,
+  processMoveOut
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -57,6 +58,7 @@ router.put('/:id/approve-renewal', approveRenewalPayment);
 router.post('/send-email', sendTenantEmail);
 router.get('/overdue-settings', getOverdueSettings);
 router.put('/update-overdue-settings', updateOverdueSettings);
+router.post('/move-out', processMoveOut);
 
 router.post('/', 
   upload.fields([
