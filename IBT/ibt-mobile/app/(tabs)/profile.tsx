@@ -6,6 +6,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 import AuthScreen from '@/src/AuthScreen';
 import API_URL from '@/src/config';
@@ -122,7 +123,6 @@ export default function ProfileScreen() {
   const openEditModal = () => {
     if (!user) return;
 
-    // Format contact for UI
     let rawContact = user.contact || '';
     if (rawContact.startsWith('+63')) rawContact = rawContact.substring(3);
     else if (rawContact.startsWith('0')) rawContact = rawContact.substring(1);
@@ -143,14 +143,25 @@ export default function ProfileScreen() {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ['images'], 
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.7,
+      quality: 1, 
     });
 
     if (!result.canceled) {
-      setEditForm(prev => ({ ...prev, avatar: result.assets[0].uri }));
+      try {
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 400, height: 400 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        setEditForm(prev => ({ ...prev, avatar: manipResult.uri }));
+      } catch (error) {
+        console.error("Error manipulating image:", error);
+        Alert.alert("Error", "Could not process the selected image.");
+      }
     }
   };
 

@@ -137,6 +137,12 @@ export const getAvatar = async (req, res) => {
             bucketName: 'uploads'
         });
 
+        const ext = req.params.filename.split('.').pop().toLowerCase();
+        const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+        res.set('Content-Type', contentType);
+
+        res.set('Cache-Control', 'public, max-age=2592000');
+
         const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
         downloadStream.on('data', (chunk) => res.write(chunk));
         downloadStream.on('error', () => res.status(404).json({ message: "Image not found" }));
