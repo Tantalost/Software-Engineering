@@ -52,6 +52,7 @@ export const createBusTrip = async (req, res) => {
       parkingEstimation,
       expectedDeparture,
       seatingCapacity,
+      scheduledTime,
       busType,
       stopType,
       customStopCount,
@@ -103,6 +104,7 @@ export const createBusTrip = async (req, res) => {
       isArchived: false,
       parkingEstimation: parkingEstimation || "10 minutes",
       expectedDeparture: expectedDeparture || "",
+      scheduledTime: scheduledTime ? String(scheduledTime).trim() : "",
       seatingCapacity:
         seatingCapacity != null && !Number.isNaN(Number(seatingCapacity))
           ? Number(seatingCapacity)
