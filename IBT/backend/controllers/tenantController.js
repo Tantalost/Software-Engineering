@@ -326,34 +326,42 @@ export const updateTenant = async (req, res) => {
             finalCharge = rent * (cPct / 100);
             finalInterest = x;
             finalTotal = dueBalance + util; 
-        } else {
-           
+       } else {
+        
             const oldTotal = Number(oldTenant.totalAmount || 0);
             const oldCharge = Number(oldTenant.chargeAmount || 0);
             const oldInterest = Number(oldTenant.interestAmount || 0);
             const oldUtil = Number(oldTenant.utilityAmount || 0);
             const oldRent = Number(oldTenant.rentAmount || 0);
 
-            if (oldRent > 0 && oldCharge > 0) {
-                cPct = (oldCharge / oldRent) * 100;
+           
+            if (rent === oldRent && util === oldUtil) {
+                finalCharge = oldCharge;
+                finalInterest = oldInterest;
+                finalTotal = oldTotal;
+            } else {
+               
+                if (oldRent > 0 && oldCharge > 0) {
+                    cPct = (oldCharge / oldRent) * 100;
+                }
+
+                const pureHistoricalDebt = oldTotal - oldCharge - oldInterest - oldUtil - oldRent;
+                const rentBase = pureHistoricalDebt + oldRent;
+                const oldCompoundingBase = rentBase + oldCharge;
+
+                if (oldCompoundingBase > 0 && oldInterest > 0) {
+                    iPct = (oldInterest / oldCompoundingBase) * 100;
+                }
+
+                const newRentBase = pureHistoricalDebt + rent;
+                const newSurcharge = rent * (cPct / 100);
+                const compoundingBase = newRentBase + newSurcharge;
+                const newInterest = compoundingBase * (iPct / 100);
+
+                finalCharge = newSurcharge;
+                finalInterest = newInterest;
+                finalTotal = compoundingBase + newInterest + util; 
             }
-
-            const pureHistoricalDebt = oldTotal - oldCharge - oldInterest - oldUtil - oldRent;
-            const rentBase = pureHistoricalDebt + oldRent;
-            const oldCompoundingBase = rentBase + oldCharge;
-
-            if (oldCompoundingBase > 0 && oldInterest > 0) {
-                iPct = (oldInterest / oldCompoundingBase) * 100;
-            }
-
-            const newRentBase = pureHistoricalDebt + rent;
-            const newSurcharge = rent * (cPct / 100);
-            const compoundingBase = newRentBase + newSurcharge;
-            const newInterest = compoundingBase * (iPct / 100);
-
-            finalCharge = newSurcharge;
-            finalInterest = newInterest;
-            finalTotal = compoundingBase + newInterest + util; 
         }
 
         updateData.chargeAmount = finalCharge;

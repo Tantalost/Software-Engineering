@@ -308,7 +308,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                         let displayIPct = dynamicInterestPct;
                         let showGeneric = false;
 
-             
+                       
                         if (rawCharge > 0 || rawInterest > 0) {
                             displayCharge = rawCharge;
                             displayInterest = rawInterest;
@@ -316,9 +316,9 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                             const compBase = baseR + rawCharge;
                             displayIPct = compBase > 0 ? Math.round((rawInterest / compBase) * 100) : dynamicInterestPct;
                         } 
-                       
+       
                         else if (fallbackPenalty > 0) {
-                          
+                           
                             const expectedC = baseR * (dynamicChargePct / 100);
                             const expectedI = (baseR + expectedC) * (dynamicInterestPct / 100);
 
@@ -326,7 +326,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                                 displayCharge = expectedC;
                                 displayInterest = expectedI;
                             } else {
-                               
+                              
                                 let bestMatch: any = null;
                                 let adminHistoryMatch: any = null; 
                                 
@@ -338,23 +338,22 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                                     let testComp = baseR + testC;
                                     let testI = (remP / testComp) * 100;
 
-                                   
                                     if (Math.abs(testI - Math.round(testI)) < 0.05) {
                                         let i = Math.round(testI);
                                         let match = { c, i, testC, remP };
                                         
-                                      
+                                       
                                         if (c === dynamicChargePct || i === dynamicInterestPct) {
                                             adminHistoryMatch = match;
                                         }
 
+                                     
                                         if (!bestMatch || (match.c >= match.i)) {
                                             bestMatch = match;
                                         }
                                     }
                                 }
 
-                               
                                 const finalMatch = adminHistoryMatch || bestMatch;
 
                                 if (finalMatch) {
@@ -371,7 +370,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                         if (showGeneric && fallbackPenalty > 0) {
                             return (
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                                    <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Previous Penalties:</Text>
+                                    <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Locked Penalties:</Text>
                                     <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{fallbackPenalty.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
                                 </View>
                             );
