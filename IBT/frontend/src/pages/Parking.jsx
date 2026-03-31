@@ -221,8 +221,16 @@ const Parking = () => {
   }, [records]);
 
   const existingTicketNumbers = useMemo(() => {
-    return [...new Set(records.map((r) => r.ticketNo).filter(Boolean))];
-  }, [records]);
+  const todayStr = new Date().toDateString();
+  return [
+    ...new Set(
+      records
+        .filter(r => r.timeIn && new Date(r.timeIn).toDateString() === todayStr)
+        .map((r) => r.ticketNo)
+        .filter(Boolean)
+    ),
+  ];
+}, [records]);
 
   const fetchParkingTickets = async () => {
     setIsLoading(true);
@@ -628,71 +636,99 @@ const Parking = () => {
   };
 
   const handleCreateTicket = async (e) => {
-    e.preventDefault();
-    const ticketNo = (newTicket.ticketNo || "").trim() || peekNextTicketNumber();
+  e.preventDefault();
+  
+  // Define the variables first so the checks can use them
+  const ticketNo = (newTicket.ticketNo || "").trim() || peekNextTicketNumber();
+  const plateNo = (newTicket.plateNo || "").trim().toUpperCase();
 
-    if (!newTicket.plateNo.trim() || !ticketNo) {
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Please fill in both Ticket Number and Plate Number.",
-        autoClose: true,
-        duration: 2000,
-      });
-      return;
-    }
+  // Basic Validation
+  if (!plateNo || !ticketNo) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Please fill in both Ticket Number and Plate Number.",
+      autoClose: true,
+      duration: 2000,
+    });
+    return;
+  }
 
-    const duplicateTicket = records.some((ticket) => ticket.ticketNo === ticketNo);
+  // Check if this Plate Number is already "Parked"
+  const isCurrentlyParked = records.some(
+    (record) => record.plateNo?.toUpperCase() === plateNo && record.status === "Parked"
+  );
 
-    if (duplicateTicket) {
-      setDuplicateModal({
-        isOpen: true,
-        message: `Ticket Number #${ticketNo} already exists!`,
-      });
-      return;
-    }
+  if (isCurrentlyParked) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: `Vehicle ${plateNo} is still parked! Please process its departure first.`,
+      autoClose: true,
+      duration: 3000,
+    });
+    return; 
+  }
 
-    const payload = {
-      ...newTicket,
-      ticketNo,
-    };
+  // Daily Ticket Number Check (Ensures Ticket #1 is unique for TODAY only)
+  const todayStr = new Date().toDateString();
+  const duplicateTicketToday = records.some((ticket) => {
+    const isSameTicket = ticket.ticketNo === ticketNo;
+    const isToday = ticket.timeIn && new Date(ticket.timeIn).toDateString() === todayStr;
+    return isSameTicket && isToday;
+  });
 
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const created = await response.json();
-        commitTicketCounterFromTicketNo(ticketNo);
-        await logActivity(
-          role,
-          "CREATE_TICKET",
-          `Created Parking Ticket #${ticketNo}`,
-          "Parking",
-        );
-        fetchParkingTickets();
-        setShowAddModal(false);
-        setNotificationState({
-          isOpen: true,
-          type: "success",
-          message: `Parking Ticket #${ticketNo} created successfully.`,
-          autoClose: true,
-          duration: 2000,
-        });
-      }
-    } catch (error) {
-      console.error("Error creating ticket:", error);
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Failed to create ticket.",
-        autoClose: true,
-        duration: 2000,
-      });
-    }
+  if (duplicateTicketToday) {
+    setDuplicateModal({
+      isOpen: true,
+      message: `Ticket Number #${ticketNo} has already been issued today!`,
+    });
+    return;
+  }
+
+  // Prepare Payload
+  const payload = {
+    ...newTicket,
+    plateNo, 
+    ticketNo,
   };
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      commitTicketCounterFromTicketNo(ticketNo);
+      await logActivity(
+        role,
+        "CREATE_TICKET",
+        `Created Parking Ticket #${ticketNo}`,
+        "Parking",
+      );
+      fetchParkingTickets();
+      setShowAddModal(false);
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Parking Ticket #${ticketNo} created successfully.`,
+        autoClose: true,
+        duration: 2000,
+      });
+    }
+  } catch (error) {
+    console.error("Error creating ticket:", error);
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Failed to create ticket.",
+      autoClose: true,
+      duration: 2000,
+    });
+  }
+};
 
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
