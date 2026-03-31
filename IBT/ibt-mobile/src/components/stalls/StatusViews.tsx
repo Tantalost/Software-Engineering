@@ -289,7 +289,6 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             )}
             </View>
 
-           
             {currentApp.tenantDbStatus === "Overdue" && (
                 <View style={{ marginTop: 5, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#bbf7d0' }}>
                     <Text style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: 4 }}>Overdue Penalties:</Text>
@@ -303,69 +302,92 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                         
                         const fallbackPenalty = totalD - baseR - utils;
 
+                        let displayCharge = 0;
+                        let displayInterest = 0;
+                        let displayCPct = dynamicChargePct;
+                        let displayIPct = dynamicInterestPct;
+                        let showGeneric = false;
+
                        
                         if (rawCharge > 0 || rawInterest > 0) {
-                            
-                            const calcChargePct = baseR > 0 ? Math.round((rawCharge / baseR) * 100) : dynamicChargePct;
-                            const compoundingBase = baseR + rawCharge;
-                            const calcInterestPct = compoundingBase > 0 ? Math.round((rawInterest / compoundingBase) * 100) : dynamicInterestPct;
+                            displayCharge = rawCharge;
+                            displayInterest = rawInterest;
+                            displayCPct = baseR > 0 ? Math.round((rawCharge / baseR) * 100) : dynamicChargePct;
+                            const compBase = baseR + rawCharge;
+                            displayIPct = compBase > 0 ? Math.round((rawInterest / compBase) * 100) : dynamicInterestPct;
+                        } 
+                      
+                        else if (fallbackPenalty > 0) {
+                          
+                            const expectedC = baseR * (dynamicChargePct / 100);
+                            const expectedI = (baseR + expectedC) * (dynamicInterestPct / 100);
 
+                            if (Math.abs((expectedC + expectedI) - fallbackPenalty) < 2) {
+                                displayCharge = expectedC;
+                                displayInterest = expectedI;
+                            } else {
+                               
+                                let foundMatch = false;
+                                for (let c = 1; c <= 100; c++) {
+                                    let testC = baseR * (c / 100);
+                                    let remP = fallbackPenalty - testC;
+                                    if (remP < 0) continue;
+
+                                    let testComp = baseR + testC;
+                                    let testI = (remP / testComp) * 100;
+
+                                  
+                                    if (Math.abs(testI - Math.round(testI)) < 0.05) {
+                                        displayCharge = testC;
+                                        displayInterest = remP;
+                                        displayCPct = c;
+                                        displayIPct = Math.round(testI);
+                                        foundMatch = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!foundMatch) {
+                                    showGeneric = true;
+                                }
+                            }
+                        }
+
+                       
+                        if (showGeneric && fallbackPenalty > 0) {
+                            return (
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
+                                    <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Previous Penalties:</Text>
+                                    <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{fallbackPenalty.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                                </View>
+                            );
+                        }
+
+                       
+                        if (displayCharge > 0 || displayInterest > 0) {
                             return (
                                 <>
-                                    {rawCharge > 0 && (
+                                    {displayCharge > 0 && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Surcharge ({calcChargePct}%):</Text>
-                                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{rawCharge.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Surcharge ({displayCPct}%):</Text>
+                                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{displayCharge.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
                                         </View>
                                     )}
-                                    {rawInterest > 0 && (
+                                    {displayInterest > 0 && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Interest ({calcInterestPct}%):</Text>
-                                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{rawInterest.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+                                            <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Interest ({displayIPct}%):</Text>
+                                            <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{displayInterest.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
                                         </View>
                                     )}
                                 </>
                             );
-                        }
-
-                        if (fallbackPenalty > 0) {
-                          
-                            const expectedCharge = baseR * (dynamicChargePct / 100);
-                            const expectedInterest = (baseR + expectedCharge) * (dynamicInterestPct / 100);
-                            const expectedTotalPenalty = expectedCharge + expectedInterest;
-
-                            if (Math.abs(expectedTotalPenalty - fallbackPenalty) < 2) {
-                                return (
-                                    <>
-                                        {expectedCharge > 0 && (
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                                                <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Surcharge ({dynamicChargePct}%):</Text>
-                                                <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{expectedCharge.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                                            </View>
-                                        )}
-                                        {expectedInterest > 0 && (
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                                                <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Interest ({dynamicInterestPct}%):</Text>
-                                                <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{expectedInterest.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                                            </View>
-                                        )}
-                                    </>
-                                );
-                            } else {
-                               
-                                return (
-                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, paddingLeft: 10 }}>
-                                        <Text style={{ color: '#dc2626', fontSize: 12 }}>↳ Locked Penalties:</Text>
-                                        <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: 'bold' }}>₱{fallbackPenalty.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                                    </View>
-                                );
-                            }
                         }
                         
                         return null;
                     })()}
                 </View>
             )}
+          
             
             <Divider style={{ marginVertical: 8, backgroundColor: '#bbf7d0' }} />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
