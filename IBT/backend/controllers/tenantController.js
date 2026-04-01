@@ -256,6 +256,9 @@ IBT Management
 
   } catch (error) {
     console.error("Create Tenant Error:", error);
+    if (error.code === 11000) {
+        return res.status(400).json({ error: "Duplicate found! This Reference / OR Number is already in use." });
+    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -458,6 +461,9 @@ Thank you`;
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Update Tenant Error:", error);
+    if (error.code === 11000) {
+        return res.status(400).json({ error: "Duplicate found! This Reference / OR Number is already in use." });
+    }
     res.status(500).json({ error: error.message });
   }
 
@@ -744,6 +750,10 @@ IBT Management`;
     res.status(200).json(updatedTenant);
   } catch (error) {
     console.error("Approve Renewal Error:", error);
+    if (error.code === 11000) {
+        return res.status(400).json({ error: "Duplicate found! This Reference / OR Number is already in use." });
+    }
+
     res.status(500).json({ error: error.message });
   }
 };
@@ -1060,6 +1070,58 @@ export const processMoveOut = async (req, res) => {
     res.status(200).json({ message: "Move-out processed successfully", tenant: updatedTenant });
   } catch (error) {
     console.error("Move Out Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const rejectRenewalPayment = async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const isPastDue = tenant.DueDateTime && new Date(tenant.DueDateTime) < new Date();
+    const revertedStatus = isPastDue ? "Overdue" : "Paid";
+
+    const updatedTenant = await Tenant.findByIdAndUpdate(
+      req.params.id,
+      { 
+          status: revertedStatus, 
+          $unset: { 
+              paymentReference: "", 
+              referenceNo: "",
+              referenceno: "",
+              "documents.proofOfReceipt": "",
+              receiptUrl: "" 
+          }
+      },
+      { new: true }
+    );
+
+    if (updatedTenant.email) {
+        try {
+            const subject = "Payment Rejected - IBT Stalls Renewal";
+            const message = `Dear ${updatedTenant.tenantName || updatedTenant.name},\n\nYour recent renewal payment receipt could not be verified and has been REJECTED.\n\nReason for rejection: ${rejectionReason || "Invalid or unreadable receipt."}\n\nPlease log in to the mobile app and submit a valid payment receipt immediately to avoid penalties.\n\nThank you,\nIBT Management`;
+            
+            await sendEmail({ email: updatedTenant.email, subject, message });
+
+            const user = await User.findOne({ email: updatedTenant.email });
+            if (user && user.expoPushToken) {
+                await sendPushNotification(
+                    user.expoPushToken, 
+                    "Payment Rejected ", 
+                    `Your renewal payment was rejected. Reason: ${rejectionReason}. Please submit a valid receipt.`,
+                    { route: 'stalls' }
+                );
+            }
+        } catch (emailErr) {
+            console.error("Failed to send rejection email:", emailErr.message);
+        }
+    }
+
+    res.status(200).json({ message: "Renewal rejected successfully", tenant: updatedTenant });
+  } catch (error) {
+    console.error("Reject Renewal Error:", error);
     res.status(500).json({ error: error.message });
   }
 };

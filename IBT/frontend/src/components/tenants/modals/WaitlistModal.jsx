@@ -32,6 +32,7 @@ const WaitlistModal = ({
   onReject,
   renewalsData = [], 
   onReviewRenewal,
+  onRejectRenewal,
    initialTab = "All"
 }) => {
   const [statusFilter, setStatusFilter] = useState(initialTab);
@@ -44,8 +45,8 @@ const WaitlistModal = ({
     }
   }, [isOpen, initialTab]);
   
-  const [rejectData, setRejectData] = useState({ isOpen: false, appId: null });
-  const [rejectionReason, setRejectionReason] = useState("");
+ const [rejectData, setRejectData] = useState({ isOpen: false, appId: null, isRenewal: false });
+ const [rejectionReason, setRejectionReason] = useState("");
 
   if (!isOpen) return null;
 
@@ -73,16 +74,18 @@ const filteredData = baseFilteredData.filter((app) => {
 
 const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app._id || app.id));
 
-  const handleOpenReject = (appId) => {
+  const handleOpenReject = (appId, isRenewal = false) => {
     setRejectionReason("");
-    setRejectData({ isOpen: true, appId });
+    setRejectData({ isOpen: true, appId, isRenewal });
   };
 
   const handleConfirmReject = () => {
-    if (onReject) {
+    if (rejectData.isRenewal && onRejectRenewal) {
+        onRejectRenewal(rejectData.appId, rejectionReason);
+    } else if (onReject) {
         onReject(rejectData.appId, rejectionReason);
     }
-    setRejectData({ isOpen: false, appId: null });
+    setRejectData({ isOpen: false, appId: null, isRenewal: false });
   };
 
   return (
@@ -210,8 +213,8 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
                       </td>
                       <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
-                              {app.status !== 'REJECTED' && !isRenewalsTab && (
-                                <button onClick={() => handleOpenReject(app._id || app.id)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-bold border border-transparent hover:border-red-100 transition-all">Reject</button>
+                              {app.status !== 'REJECTED' && (
+                                <button onClick={() => handleOpenReject(app._id || app.id, isRenewalRecord(app))} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-bold border border-transparent hover:border-red-100 transition-all">Reject</button>
                               )}
                               
                               <button 

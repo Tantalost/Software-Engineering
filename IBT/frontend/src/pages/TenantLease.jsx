@@ -987,6 +987,35 @@ const TenantLease = () => {
         }
     };
 
+    const handleRejectRenewal = async (id, reason) => {
+        try {
+            const response = await fetch(`${API_URL}/tenants/${id}/reject-renewal`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rejectionReason: reason })
+            });
+
+            if (response.ok) {
+                setNotificationState({
+                    isOpen: true,
+                    type: 'success',
+                    message: "Renewal payment rejected. Tenant notified via email.",
+                    autoClose: true,
+                    duration: 3000
+                });
+                await logActivity(role, "REJECT_RENEWAL", `Rejected renewal payment for tenant ID #${id}. Reason: ${reason}`, "Tenants");
+
+                fetchTenants();
+                if (showReviewModal) setShowReviewModal(false);
+            } else {
+                setNotificationState({ isOpen: true, type: 'error', message: "Failed to reject renewal payment.", autoClose: true, duration: 3000 });
+            }
+        } catch (error) {
+            console.error(error);
+            setNotificationState({ isOpen: true, type: 'error', message: "Error rejecting renewal payment.", autoClose: true, duration: 3000 });
+        }
+    };
+
     const confirmArchive = async () => {
         if (!archiveRow) return;
         const rowToArchive = archiveRow;
@@ -1775,6 +1804,7 @@ const TenantLease = () => {
                 onAdd={handleAddToWaitlist}
                 onApprove={handleStartApproval}
                 onReject={handleRejectApplicant}
+                onRejectRenewal={handleRejectRenewal}
 
                 renewalsData={records.filter(t => t.status === "Payment Review" || t.status === "PAYMENT_REVIEW")}
                 onReviewRenewal={(record) => {
@@ -1811,6 +1841,7 @@ const TenantLease = () => {
                 onProceedToLease={handleProceedToLease}
                 onReject={handleRejectApplicant}
                 onApproveRenewal={handleApproveRenewal} 
+                onRejectRenewal={handleRejectRenewal}
             />
 
             <AddTenantModal

@@ -14,7 +14,8 @@ const ApplicationReviewModal = ({
   onProceedToLease,
   onRequestContract,
   onReject,
-  onApproveRenewal 
+  onApproveRenewal,
+  onRejectRenewal
 }) => {
   const [previewImage, setPreviewImage] = useState(null);
   const [documentError, setDocumentError] = useState("");
@@ -150,7 +151,11 @@ const ApplicationReviewModal = ({
     if (confirmConfig.action === 'lease') onProceedToLease(reviewData._id || reviewData.id);
     if (confirmConfig.action === 'renewal') onApproveRenewal(reviewData._id || reviewData.id);
     if (confirmConfig.action === 'reject') {
-      if (onReject) onReject(reviewData._id || reviewData.id, rejectionReason);
+      if (isTenantRenewal && onRejectRenewal) {
+        onRejectRenewal(reviewData._id || reviewData.id, rejectionReason);
+      } else if (onReject) {
+        onReject(reviewData._id || reviewData.id, rejectionReason);
+      }
     }
     setConfirmConfig({ isOpen: false, action: null, title: "", message: "", isReject: false });
   };
@@ -353,7 +358,7 @@ const ApplicationReviewModal = ({
           </div>
 
           <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between gap-3 rounded-b-2xl">
-            {(!isTenantRenewal && status !== 'REJECTED') ? (
+            {status !== 'REJECTED' ? (
               <button onClick={() => handleActionClick('reject')} className="bg-white border border-red-200 text-red-600 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-300 transition-all flex items-center gap-2 active:scale-95">
                 <AlertTriangle size={18} /> Reject
               </button>

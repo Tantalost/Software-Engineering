@@ -197,9 +197,18 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
       }) 
     : "Not Set";
 
-  const rentAmount = currentApp.rentAmount ? Number(currentApp.rentAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
-  const utilityAmount = currentApp.utilityAmount ? Number(currentApp.utilityAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
-  const totalAmount = currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00";
+  const rawRent = Number(currentApp.rentAmount) || 0;
+  const rawUtil = Number(currentApp.utilityAmount) || 0;
+  const rawTotal = Number(currentApp.totalAmount) || 0;
+  const hasPenalties = (rawTotal - rawRent - rawUtil) > 0;
+  const isPastDue = currentApp.due && new Date(currentApp.due).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+
+  const isOverdueState = currentApp.tenantDbStatus === 'Overdue' || 
+                         (currentApp.tenantDbStatus === 'Payment Review' && (hasPenalties || isPastDue));
+
+  const rentAmount = rawRent.toLocaleString(undefined, {minimumFractionDigits: 2});
+  const utilityAmount = rawUtil.toLocaleString(undefined, {minimumFractionDigits: 2});
+  const totalAmount = rawTotal.toLocaleString(undefined, {minimumFractionDigits: 2});
 
   const chargeAmount = currentApp.chargeAmount ? Number(currentApp.chargeAmount) : 0;
   const interestAmount = currentApp.interestAmount ? Number(currentApp.interestAmount) : 0;
@@ -217,20 +226,19 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
 
   const handleRenewalSubmit = () => {
       submitRenewal();
-    
   };
 
   return (
-    <ScrollView 
+   <ScrollView 
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.success]} />}
     >
-      
-      <Card style={[styles.card, { borderColor: currentApp.tenantDbStatus === 'Overdue' ? '#dc2626' : colors.success, borderWidth: 1, marginBottom: 20 }]}>
+
+      <Card style={[styles.card, { borderColor: isOverdueState ? '#dc2626' : colors.success, borderWidth: 1, marginBottom: 20 }]}>
         <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
-          <Icon name={currentApp.tenantDbStatus === 'Overdue' ? "alert-circle" : "check-decagram"} size={80} color={currentApp.tenantDbStatus === 'Overdue' ? '#dc2626' : colors.success} />
-          <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: currentApp.tenantDbStatus === 'Overdue' ? '#dc2626' : colors.success }}>
-            {currentApp.tenantDbStatus === 'Overdue' ? 'Overdue Account' : 'Active Tenant'}
+          <Icon name={isOverdueState ? "alert-circle" : "check-decagram"} size={80} color={isOverdueState ? '#dc2626' : colors.success} />
+          <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: isOverdueState ? '#dc2626' : colors.success }}>
+            {isOverdueState ? 'Overdue Account' : 'Active Tenant'}
           </Text>
           <Text variant="titleMedium" style={{ marginTop: 5, color: colors.textDark, fontWeight: 'bold' }}>
             Slot: {currentApp.targetSlot}
@@ -289,7 +297,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             )}
             </View>
 
-          {currentApp.tenantDbStatus === "Overdue" && (
+           {isOverdueState && (
                 <View style={{ marginTop: 5, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#bbf7d0' }}>
                     <Text style={{ color: '#dc2626', fontWeight: 'bold', marginBottom: 4 }}>Overdue Penalties:</Text>
                     

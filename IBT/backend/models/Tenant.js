@@ -9,7 +9,11 @@ const TenantSchema = new mongoose.Schema({
   
   email: { type: String, required: true },
   contactNo: { type: String, required: true },
-  referenceNo: { type: String, required: true }, 
+  referenceNo: { 
+      type: String, 
+      unique: true, 
+      sparse: true 
+  },
   uid: String, 
   
   slotNo: { type: String, required: true }, 
@@ -73,4 +77,7 @@ const TenantSchema = new mongoose.Schema({
 });
 
 const Tenant = mongoose.models.Tenant || mongoose.model('Tenant', TenantSchema);
+mongoose.connection.once('open', async () => {
+  try { await Tenant.collection.dropIndex('referenceNo_1'); } catch (e) {}
+});
 export default Tenant;
