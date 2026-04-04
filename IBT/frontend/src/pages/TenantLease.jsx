@@ -331,7 +331,13 @@ const TenantLease = () => {
             if (!res.ok) throw new Error("Failed to fetch waitlist");
             const data = await res.json();
             const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
-            const activeWaitlist = formatted.filter(app => app.status !== 'TENANT');
+            
+            const activeWaitlist = formatted.filter(app => 
+                app.status !== 'TENANT' && 
+                app.status !== 'MOVED OUT' && 
+                app.status !== 'MOVED_OUT'
+            );
+           
             setWaitlistData(activeWaitlist);
             if (reviewData) {
                 const updatedRecord = activeWaitlist.find(r => r.id === reviewData.id);
