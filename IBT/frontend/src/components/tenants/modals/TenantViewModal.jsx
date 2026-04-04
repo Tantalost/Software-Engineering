@@ -273,7 +273,7 @@ const TenantViewModal = ({ viewRow, onClose }) => {
             <div className="flex items-center justify-between mb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    Payment History & Schedule
+                    Payment Logs
                 </h4>
                 <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-full border border-slate-200 font-bold">
                     {viewRow.paymentHistory?.length || 0} Records

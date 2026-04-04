@@ -192,14 +192,16 @@ const Dashboard = () => {
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
 
-  const fetchDashboardData = async () => {
+ const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const [ticketsRes, busRes, tenantsRes, parkingRes, reportsRes] =
         await Promise.all([
           fetch(`${API_URL}/api/terminal-fees`),
           fetch(`${API_URL}/api/bustrips`),
-          fetch(`${API_URL}/api/tenants`),
+          
+          fetch(`${API_URL}/api/tenants?all=true`),
+          
           fetch(`${API_URL}/api/parking`),
           fetch(`${API_URL}/api/reports`),
         ]);
