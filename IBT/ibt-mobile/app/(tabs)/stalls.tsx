@@ -405,140 +405,104 @@ export default function StallsPage() {
 
  const generateContractPDF = async () => {
     try {
-      setApplying(true);
-      const safeUserName = user 
-      ? [user.firstName, user.middleName, user.lastName, user.suffix].filter(Boolean).join(' ') 
-      : "____________________";
-      const currentName = currentApp?.name || safeUserName;
-      const currentSlot = currentApp?.targetSlot || "________";
-      const currentRent = currentBilling.amountLabel;
-      const currentDate = new Date().toLocaleDateString();
-      
-    
-      const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Seal_of_Zamboanga_City.png/1200px-Seal_of_Zamboanga_City.png";
+      const lesseeName = currentApp?.name || currentApp?.tenantName || "_______________________";
+      const assignedSlot = currentApp?.targetSlot || currentApp?.slotNo || "_______________________";
+      const monthlyRental = currentApp?.rentAmount ? `Php ${currentApp.rentAmount.toLocaleString()}` : "_______________________";
+      const effectivityDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
       const htmlContent = `
-        <!DOCTYPE html>
         <html>
-        <head>
-          <style>
-            @page { margin: 0.5in; }
-            body { font-family: 'Times New Roman', serif; color: #000; line-height: 1.3; font-size: 12px; }
-            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .header-logo { width: 80px; text-align: center; }
-            .header-text { text-align: center; text-transform: uppercase; }
-            .header-text h3 { margin: 0; font-size: 14px; font-weight: normal; }
-            .header-text h2 { margin: 2px 0; font-size: 16px; font-weight: bold; }
-            .header-text p { margin: 0; font-size: 11px; }
-
-            .summary-box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; width: fit-content; min-width: 250px; }
-            .summary-row { margin-bottom: 3px; }
-            .label { font-weight: bold; width: 110px; display: inline-block; }
-
-            .main-title { text-align: center; font-weight: bold; text-decoration: underline; margin-bottom: 15px; font-size: 14px; }
-            
-            .section { margin-bottom: 10px; }
-            .section-title { font-weight: bold; text-transform: uppercase; margin-bottom: 4px; display: block; }
-            .policy-content { text-align: justify; margin-left: 15px; }
-            .list-item { margin-bottom: 4px; display: flex; }
-            .bullet { width: 15px; flex-shrink: 0; }
-
-            .agreement-text { margin-top: 20px; font-style: italic; text-align: center; }
-            
-            .footer-table { width: 100%; margin-top: 50px; }
-            .sig-box { width: 50%; text-align: center; vertical-align: bottom; }
-            .sig-line { border-top: 1px solid #000; width: 80%; margin: 0 auto; padding-top: 5px; font-weight: bold; text-transform: uppercase; }
-          </style>
-        </head>
-        <body>
-          <table class="header-table">
-            <tr>
-              <td class="header-logo"><img src="${logoUrl}" style="width: 70px;" /></td>
-              <td class="header-text">
-                <p>Republica de Filipinas</p>
-                <p>Ciudad de Zamboanga </p>
-                <h2>OFICINA DEL ADMINISTRADOR </h2>
-                <h3>INTEGRADO TERMINAL DE ZAMBOANGA ]</h3>
-              </td>
-              <td class="header-logo"><img src="${logoUrl}" style="width: 70px; opacity: 0;" /></td> </tr>
-          </table>
-
-          <div class="summary-box">
-            <div class="summary-row"><span class="label">Lessee Name:</span> ${currentName} </div>
-            <div class="summary-row"><span class="label">Assigned Slot:</span> ${currentSlot} </div>
-            <div class="summary-row"><span class="label">Monthly Rental:</span> ${currentRent} </div>
-            <div class="summary-row"><span class="label">Effectivity Date:</span> ${currentDate} </div>
-          </div>
-
-          <div class="main-title">IBT-ZC Contractual Concessionaires Operations & Management Policy</div>
-
-          <div class="section">
-            <span class="section-title">1. Lease Terms and Duration</span>
-            <div class="policy-content">
-              Lease agreements are valid for a maximum of two (2) years, renewable for another period not exceeding two years. Rental fees are recommended on a per-square-meter basis as approved by the Sangguniang Panlungsod.
+          <head>
+            <style>
+              body { font-family: 'Helvetica', sans-serif; padding: 40px; line-height: 1.6; color: #333; }
+              .header { text-align: center; margin-bottom: 30px; }
+              .header h3, .header h4 { margin: 5px 0; }
+              .title { font-size: 18px; font-weight: bold; text-align: center; margin: 30px 0; text-decoration: underline; }
+              .details { margin-bottom: 30px; font-size: 14px; }
+              .details p { margin: 5px 0; }
+              .section-title { font-weight: bold; margin-top: 20px; font-size: 14px; }
+              ul { margin-top: 5px; margin-bottom: 15px; font-size: 13px; }
+              li { margin-bottom: 8px; }
+              .signature-block { margin-top: 60px; text-align: right; }
+              .signature-line { border-top: 1px solid #000; width: 250px; display: inline-block; padding-top: 5px; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h3>Republica de Filipinas<br/>Ciudad de Zamboanga</h3>
+              <h4>OFICINA DEL ADMINISTRADOR<br/>INTEGRADO TERMINAL DE ZAMBOANGA</h4>
             </div>
-          </div>
 
-          <div class="section">
-            <span class="section-title">2. Payment and Financial Obligations</span>
-            <div class="policy-content">
-              Rent must be paid within the first five (5) calendar days of each month. A 25% surcharge applies for payments made after the 5th. Failure to pay for two (2) consecutive months is grounds for contract termination.
+            <div class="details">
+              <p><strong>Lessee Name:</strong> ${lesseeName}</p>
+              <p><strong>Assigned Slot:</strong> ${assignedSlot}</p>
+              <p><strong>Monthly Rental:</strong> ${monthlyRental}</p>
+              <p><strong>Effectivity Date:</strong> ${effectivityDate}</p>
             </div>
-          </div>
 
-          <div class="section">
-            <span class="section-title">3. Strict Prohibitions</span>
-            <div class="policy-content">
-              <div class="list-item"><span class="bullet">•</span><span>Unauthorized changes to structures or signs without official consent.</span></div>
-              <div class="list-item"><span class="bullet">•</span><span>Subleasing or assigning the lease to another party without written permission.</span></div>
-              <div class="list-item"><span class="bullet">•</span><span>Using the space for residential purposes/sleeping or creating noise disturbances (videoke).</span></div>
-              <div class="list-item"><span class="bullet">•</span><span>Illegal acts, gambling, or storing hazardous materials.</span></div>
+            <div class="title">IBT-ZC Contractual Concessionaires Operations & Management Policy</div>
+
+            <p class="section-title">1. Lease Terms and Duration</p>
+            <ul>
+              <li><strong>Contract Length:</strong> Lease agreements are valid for a maximum of two (2) years, renewable for another period not exceeding two years.</li>
+              <li><strong>Approval Process:</strong> Rental fees are recommended on a per-square-meter basis and must be approved by the Sangguniang Panlungsod.</li>
+              <li><strong>Types of Spaces:</strong> Includes eateries, gift shops, ticketing booths, office spaces, and other designated rentable areas.</li>
+            </ul>
+
+            <p class="section-title">2. Payment and Financial Obligations</p>
+            <ul>
+              <li><strong>Due Date:</strong> Rent must be paid within the first five (5) calendar days of each month.</li>
+              <li><strong>Late Penalties:</strong> A 25% surcharge is applied for payments made after the 5th of the month. An additional 2% monthly interest is charged on unpaid rentals and surcharges.</li>
+              <li><strong>Default:</strong> Failing to pay for two (2) consecutive months is grounds for contract termination and may result in a lien on the tenant's property.</li>
+            </ul>
+
+            <p class="section-title">3. Strict Prohibitions</p>
+            <ul>
+              <li><strong>Unauthorized Changes:</strong> You cannot build structures or display signs/advertisements without prior official consent.</li>
+              <li><strong>Subleasing:</strong> Subcontracting or assigning the lease to another party is forbidden without written permission.</li>
+              <li><strong>Residential Use:</strong> Using the space for dwelling or sleeping is prohibited.</li>
+              <li><strong>Disturbances:</strong> Using videoke/karaoke machines or making unreasonable noise is not allowed.</li>
+              <li><strong>Illegal Acts:</strong> Gambling, hazardous materials (explosives/flammables), and "immoral transactions" (e.g., prostitution) are strictly banned.</li>
+              <li><strong>Space Usage:</strong> You cannot use sidewalks or pathways as extensions of your business area.</li>
+            </ul>
+
+            <p class="section-title">4. Maintenance and Waste Management</p>
+            <ul>
+              <li><strong>Waste Disposal:</strong> Tenants are responsible for segregating their trash (boxes, bottles, etc.) and placing it in provided bins.</li>
+            </ul>
+
+            <p class="section-title">5. Termination and Penalties</p>
+            <ul>
+              <li><strong>Termination:</strong> The City can end the contract if the tenant violates the ordinance, fails to pay for two months, or engages in prohibited acts. Tenants must vacate immediately upon notice.</li>
+            </ul>
+
+            <p style="margin-top: 30px; font-style: italic; font-size: 13px;">
+              The Lessee hereby agrees to the terms and conditions set forth by the Lessor regarding the use and maintenance of the assigned slot. This agreement is legally binding once signed.
+            </p>
+
+            <div class="signature-block">
+              <div class="signature-line">
+                <strong>Lessee's Signature over printed name</strong>
+              </div>
             </div>
-          </div>
+          </body>
+        </html>
+      `;
 
-          <div class="section">
-            <span class="section-title">4. Maintenance and Termination </span>
-            <div class="policy-content">
-              Tenants are responsible for waste segregation. The City can terminate the contract for ordinance violations or failure to pay for two months. Criminal penalties for serious violations include fines up to ₱5,000.
-            </div>
-          </div>
-
-          <div class="agreement-text">
-            The Lessee hereby agrees to the terms and conditions set forth by the Lessor regarding the use and maintenance of the assigned slot. This agreement is legally binding once signed.
-          </div>
-
-          <table class="footer-table">
-            <tr>
-            <td class="sig-box">
-                <div class="sig-line">${currentName}</div>
-                <div>Lessee's Signature Over Printed Name </div>
-              </td>
-              <td class="sig-box">
-                <div class="sig-line">City Administrator</div>
-                <div>Lessor's Authorized Representative</div>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>`;
+      const { uri } = await Print.printToFileAsync({ 
+        html: htmlContent,
+        base64: false 
+      });
       
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-
-      if (Platform.OS === "android") {
-        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-        if (permissions.granted) {
-          const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-          const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, `Contract_${currentSlot}.pdf`, 'application/pdf');
-          await FileSystem.writeAsStringAsync(newFileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-          Alert.alert("Downloaded", "Contract saved to your device.");
-        }
-      } else {
-        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-      }
-    } catch (error) { 
-      Alert.alert("Error", "Could not generate PDF"); 
-    } finally { 
-      setApplying(false); 
+      await Sharing.shareAsync(uri, { 
+        UTI: '.pdf', 
+        mimeType: 'application/pdf',
+        dialogTitle: 'Download Contract'
+      });
+      
+    } catch (error) {
+      console.error("Error generating contract:", error);
+      Alert.alert("Error", "Could not generate the contract document. Please try again.");
     }
   };
   
