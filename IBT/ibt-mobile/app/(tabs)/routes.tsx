@@ -289,7 +289,7 @@ export default function RoutesPage() {
                 {item.route}
               </Text>
 
-              <Text style={[styles.label, { marginTop: 12 }]}>Scheduled window</Text>
+              <Text style={[styles.label, { marginTop: 12 }]}>Expected Scheduled Time</Text>
               <Text variant="bodyMedium" style={styles.value}>
                 {item.scheduleTime} ({item.timeWindowLabel})
               </Text>
@@ -404,8 +404,8 @@ export default function RoutesPage() {
 
   const boardSections: BoardSection[] = useMemo(
     () => [
-      { key: 'pre', title: 'Predefined schedule', data: filteredPredefined },
-      { key: 'disp', title: 'Dispatch board', data: filteredDispatch },
+      { key: 'pre', title: 'Expected Schedule', data: filteredPredefined },
+      { key: 'disp', title: 'Dispatch Board', data: filteredDispatch },
     ],
     [filteredPredefined, filteredDispatch]
   );
@@ -433,8 +433,7 @@ export default function RoutesPage() {
         </Text>
 
         <Text style={styles.dateHeader}>Today: {todayDate}</Text>
-        <Text style={styles.hint}>Updates about every {POLL_MS / 1000}s. Read-only view of the web admin boards.</Text>
-
+      
         {fetchError ? (
           <View style={styles.errorBanner}>
             <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B71C1C" />

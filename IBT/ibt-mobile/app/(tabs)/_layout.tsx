@@ -113,17 +113,17 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
     borderTopWidth: 1,
     
-    height: Platform.OS === 'ios' ? 85 : 90,
+    height: Platform.OS === 'ios' ? 100 : 105,
     
-    paddingBottom: Platform.OS === 'ios' ? 20 : 35,
+    paddingBottom: Platform.OS === 'ios' ? 35 : 50,
     paddingTop: 5,
   },
   centerButtonContainer: {
-    top: -25, 
+    top: -20, 
     justifyContent: 'center',
     alignItems: 'center',
-    width: 70,
   },
+
   centerButton: {
     width: 60,
     height: 60,
