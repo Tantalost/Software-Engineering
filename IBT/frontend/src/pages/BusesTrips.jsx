@@ -1064,10 +1064,13 @@ const BusTrips = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const role = localStorage.getItem("authRole") || "bus";
+  const authAdminId = localStorage.getItem("authAdminId") || "";
   const [assignedShift, setAssignedShift] = useState(() =>
     normalizeShiftValue(localStorage.getItem("authShift") || ""),
   );
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/bustrips`;
+  const DISPATCH_API_URL = `${API_URL}/dispatch-board`;
+  const PREDEFINED_TODAY_API_URL = `${API_URL}/predefined-today`;
   const COMPANY_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
   const ADMINS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/admins`;
   const COLLECTORS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/collectors`;
@@ -1076,6 +1079,7 @@ const BusTrips = () => {
   }/api/schedule-not-arrivals`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
+  const [predefinedTodayTrips, setPredefinedTodayTrips] = useState([]);
   const ACTIVE_DISPATCH_STATUSES = useMemo(
     () => ["Arrived", "On Fix", "Not Departed", "Departed"],
     [],
@@ -1298,7 +1302,7 @@ const BusTrips = () => {
   const fetchBusTrips = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(role === "bus" ? DISPATCH_API_URL : API_URL);
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
       const formattedData = data.map((item) => ({
@@ -1310,6 +1314,17 @@ const BusTrips = () => {
       console.error("Error fetching data:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchPredefinedTodayTrips = async () => {
+    try {
+      const response = await fetch(PREDEFINED_TODAY_API_URL);
+      if (!response.ok) throw new Error("Failed to fetch scheduled trips.");
+      const data = await response.json();
+      setPredefinedTodayTrips(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching today's scheduled trips:", error);
     }
   };
 
@@ -1328,7 +1343,8 @@ const BusTrips = () => {
   useEffect(() => {
     fetchBusTrips();
     fetchCompanies();
-  }, []);
+    fetchPredefinedTodayTrips();
+  }, [role]);
 
   useEffect(() => {
     const resolveAssignedShift = async () => {
@@ -1461,29 +1477,20 @@ const BusTrips = () => {
 
   const dashboardTotalTrips = activeDispatchRecords.length;
   const dashboardPredefinedSchedules = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-
-    return companyData
-      .filter(
-        (company) =>
-          selectedCompany === "" || company.name === selectedCompany,
-      )
-      .reduce((sum, company) => {
-        for (const bus of company.buses || []) {
-          const matchesBusType =
-            selectedBusType === "" ||
-            (bus.busType || "").toLowerCase() === selectedBusType.toLowerCase();
-          if (!matchesBusType) continue;
-          if (q) {
-            const plate = (bus.plateNumber || "").toLowerCase();
-            const route = (bus.route || "").toLowerCase();
-            if (!plate.includes(q) && !route.includes(q)) continue;
-          }
-          sum += getBusScheduleTimes(bus).length;
-        }
-        return sum;
-      }, 0);
-  }, [companyData, selectedCompany, selectedBusType, searchQuery]);
+    return predefinedTodayTrips.filter((trip) => {
+      const plate = String(trip.templateNo || trip.templateno || "").toLowerCase();
+      const route = String(trip.route || "").toLowerCase();
+      const matchesSearch =
+        !searchQuery.trim() ||
+        plate.includes(searchQuery.toLowerCase()) ||
+        route.includes(searchQuery.toLowerCase());
+      const matchesCompany =
+        selectedCompany === "" || trip.company === selectedCompany;
+      const matchesBusType =
+        selectedBusType === "" || (trip.busType || "") === selectedBusType;
+      return matchesSearch && matchesCompany && matchesBusType;
+    }).length;
+  }, [predefinedTodayTrips, searchQuery, selectedCompany, selectedBusType]);
 
   const dashboardArrivedTrips = activeDispatchRecords.filter(
     (t) => t.status === "Arrived",
@@ -2327,6 +2334,7 @@ const BusTrips = () => {
             hour: "2-digit",
             minute: "2-digit",
           }),
+          actionAdminId: authAdminId || undefined,
         }),
       });
 
@@ -2391,6 +2399,7 @@ const BusTrips = () => {
         time: actualArrivalTime,
         expectedDeparture: newExpectedDeparture,
         parkingEstimation: estimationStr,
+        actionAdminId: authAdminId || undefined,
       };
       if (seatingCapacity != null) {
         arrivalPayload.seatingCapacity = seatingCapacity;
@@ -2510,6 +2519,8 @@ const BusTrips = () => {
       time: actualArrivalTime,
       date: todayKey,
       status: "Arrived",
+      arrivalAdminId: authAdminId || null,
+      arrivalLoggedAt: new Date().toISOString(),
       price: defaultPrice,
       parkingEstimation: estimationStr,
       expectedDeparture: newExpectedDeparture,

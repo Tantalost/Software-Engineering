@@ -45,6 +45,7 @@ export default function AdminLogin() {
     localStorage.setItem("authToken", token); 
     localStorage.setItem("authRole", role);
     localStorage.setItem("authName", name);
+    localStorage.setItem("authAdminId", admin.id || admin._id || "");
     localStorage.setItem("authEmail", admin.email);
     localStorage.setItem("authShift", admin.assignedShift || "");
 

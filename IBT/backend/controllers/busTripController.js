@@ -39,6 +39,39 @@ export const getBusTrips = async (req, res) => {
   }
 };
 
+export const getPredefinedTodayTrips = async (_req, res) => {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const trips = await BusTrip.find({
+      isArchived: { $ne: true },
+      status: "Scheduled",
+      date: { $gte: startOfDay, $lte: endOfDay },
+    }).sort({ date: 1, scheduledTime: 1, createdAt: 1 });
+
+    res.status(200).json(trips);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDispatchBoardTrips = async (_req, res) => {
+  try {
+    const trips = await BusTrip.find({
+      isArchived: { $ne: true },
+      status: { $in: ["Arrived", "On Fix", "Not Departed"] },
+    }).sort({ updatedAt: -1 });
+
+    res.status(200).json(trips);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const createBusTrip = async (req, res) => {
   try {
     const {
@@ -56,6 +89,8 @@ export const createBusTrip = async (req, res) => {
       busType,
       stopType,
       customStopCount,
+      arrivalAdminId,
+      arrivalLoggedAt,
     } = req.body;
 
     if (!templateNo || !route || !company || !busType || !stopType) {
@@ -109,6 +144,8 @@ export const createBusTrip = async (req, res) => {
         seatingCapacity != null && !Number.isNaN(Number(seatingCapacity))
           ? Number(seatingCapacity)
           : null,
+      arrivalAdminId: arrivalAdminId || null,
+      arrivalLoggedAt: arrivalLoggedAt ? new Date(arrivalLoggedAt) : null,
     });
 
     const savedTrip = await newTrip.save();
@@ -138,7 +175,15 @@ export const updateBusTrip = async (req, res) => {
 
     const updatedTrip = await BusTrip.findByIdAndUpdate(
       id,
-      req.body,
+      {
+        ...req.body,
+        ...(req.body.status === "Arrived"
+          ? {
+              arrivalAdminId: req.body.actionAdminId || oldTrip.arrivalAdminId || null,
+              arrivalLoggedAt: new Date(),
+            }
+          : {}),
+      },
       { new: true }
     );
 
@@ -270,7 +315,7 @@ export const getDefaultBusPrice = async (req, res) => {
 export const approveDeparture = async (req, res) => {
   try {
     const { id } = req.params;
-    const { ticketReferenceNo } = req.body;
+    const { ticketReferenceNo, actionAdminId } = req.body;
 
     const trip = await BusTrip.findById(id);
     if (!trip) return res.status(404).json({ message: "Trip not found" });
@@ -280,7 +325,9 @@ export const approveDeparture = async (req, res) => {
       {
         status: "Departed",
         ticketReferenceNo: ticketReferenceNo || `AUTO-${Date.now().toString().slice(-6)}`,
-        departureTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+        departureTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        departureAdminId: actionAdminId || trip.departureAdminId || null,
+        departureLoggedAt: new Date(),
       },
       { new: true }
     );

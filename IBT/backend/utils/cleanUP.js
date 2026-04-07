@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import mongoose from 'mongoose';
 import TenantApplication from '../models/TenantApplication.js';
+import BusTrip from '../models/BusTrips.js';
 
 
 const ApplicationSchema = new mongoose.Schema({
@@ -107,6 +108,35 @@ export const startCleanUP = () => {
 
         } catch (error) {
             console.error("[CLEANUP ERROR]:", error);
+        }
+    });
+
+    // Bus dispatch failsafe: auto-clear stale active buses older than 48 hours.
+    cron.schedule('15 0 * * *', async () => {
+        if (mongoose.connection.readyState !== 1) return;
+        try {
+            const cutoff = new Date(Date.now() - (48 * 60 * 60 * 1000));
+            const result = await BusTrip.updateMany(
+                {
+                    isArchived: { $ne: true },
+                    status: { $in: ["Arrived", "On Fix", "Not Departed"] },
+                    $or: [
+                        { arrivalLoggedAt: { $lt: cutoff } },
+                        { arrivalLoggedAt: null, date: { $lt: cutoff } },
+                    ],
+                },
+                {
+                    $set: {
+                        status: "System Auto-Cleared",
+                        isArchived: true,
+                    },
+                },
+            );
+            if (result.modifiedCount > 0) {
+                console.log(`[CLEANUP] Auto-cleared ${result.modifiedCount} stale active bus trips.`);
+            }
+        } catch (error) {
+            console.error("[BUS AUTO-CLEAR ERROR]:", error);
         }
     });
 

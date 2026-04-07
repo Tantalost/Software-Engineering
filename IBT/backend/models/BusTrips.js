@@ -23,9 +23,13 @@ const BusTripSchema = new mongoose.Schema({
   
   status: { 
     type: String, 
-    enum: ['Scheduled', 'Arrived', 'Departed', 'On Fix', 'Not Departed', 'Pending', 'Paid'],
+    enum: ['Scheduled', 'Arrived', 'Departed', 'On Fix', 'Not Departed', 'Pending', 'Paid', 'System Auto-Cleared'],
     default: "Scheduled" 
   },
+  arrivalAdminId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin", default: null },
+  departureAdminId: { type: mongoose.Schema.Types.ObjectId, ref: "Admin", default: null },
+  arrivalLoggedAt: { type: Date, default: null },
+  departureLoggedAt: { type: Date, default: null },
   
   price: { type: Number, default: 75 },
   ticketReferenceNo: { type: String, default: "" },

@@ -1,11 +1,48 @@
 import Report from '../models/Report.js';
 import Admin from '../models/Admin.js';
+import BusTrip from '../models/BusTrips.js';
 
 const toShiftLabel = (hour) => {
   if (hour >= 0 && hour < 6) return "00-06";
   if (hour >= 6 && hour < 12) return "06-12";
   if (hour >= 12 && hour < 18) return "12-18";
   return "18-24";
+};
+
+const getShiftWindowBounds = (assignedShift, now = new Date()) => {
+  if (!assignedShift || !/^\d{2}-\d{2}$/.test(assignedShift)) {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  const [startHour, endHourRaw] = assignedShift.split('-').map((v) => parseInt(v, 10));
+  const endHour = endHourRaw === 24 ? 0 : endHourRaw;
+  const overnight = startHour >= endHour;
+
+  const start = new Date(now);
+  const end = new Date(now);
+  start.setMinutes(0, 0, 0);
+  end.setMinutes(59, 59, 999);
+
+  if (!overnight) {
+    start.setHours(startHour);
+    end.setHours(endHourRaw === 24 ? 23 : endHour);
+    return { start, end };
+  }
+
+  if (now.getHours() < endHour) {
+    start.setDate(start.getDate() - 1);
+    start.setHours(startHour);
+    end.setHours(endHour);
+  } else {
+    start.setHours(startHour);
+    end.setDate(end.getDate() + 1);
+    end.setHours(endHour);
+  }
+  return { start, end };
 };
 
 // CREATE
@@ -21,6 +58,27 @@ export const createReport = async (req, res) => {
 
     const assignedShift = admin?.assignedShift || null;
     const actualShiftAtSubmission = toShiftLabel(now.getHours());
+    const { start: shiftStart, end: shiftEnd } = getShiftWindowBounds(assignedShift, now);
+
+    let busActionRecords = [];
+    if (admin?._id) {
+      busActionRecords = await BusTrip.find({
+        $or: [
+          {
+            arrivalAdminId: admin._id,
+            arrivalLoggedAt: { $gte: shiftStart, $lte: shiftEnd },
+          },
+          {
+            departureAdminId: admin._id,
+            departureLoggedAt: { $gte: shiftStart, $lte: shiftEnd },
+          },
+        ],
+      })
+        .select(
+          "templateNo company route status arrivalAdminId departureAdminId arrivalLoggedAt departureLoggedAt time departureTime date",
+        )
+        .lean();
+    }
 
     const normalizedData = {
       ...(data || {}),
@@ -30,6 +88,11 @@ export const createReport = async (req, res) => {
       submittedAtShiftWindow: actualShiftAtSubmission,
       submittedLate: assignedShift ? assignedShift !== actualShiftAtSubmission : !!data?.submittedLate,
       submittedByEmail: authorEmail || null,
+      actionWindow: {
+        from: shiftStart.toISOString(),
+        to: shiftEnd.toISOString(),
+      },
+      busActions: busActionRecords,
     };
     
     const newReport = new Report({

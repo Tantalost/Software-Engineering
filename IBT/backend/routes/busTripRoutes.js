@@ -1,6 +1,8 @@
 import express from "express";
 import { 
   getBusTrips, 
+  getPredefinedTodayTrips,
+  getDispatchBoardTrips,
   createBusTrip, 
   updateBusTrip, 
   archiveBusTrip,       
@@ -15,6 +17,8 @@ import {
 const router = express.Router();
 
 router.get("/", getBusTrips);
+router.get("/predefined-today", getPredefinedTodayTrips);
+router.get("/dispatch-board", getDispatchBoardTrips);
 router.post("/", createBusTrip);
 router.put("/:id", updateBusTrip);
 
