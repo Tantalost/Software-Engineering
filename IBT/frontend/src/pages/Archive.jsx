@@ -79,7 +79,7 @@ const Archive = () => {
     }
   }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
 
-  const fetchArchives = async () => {
+ const fetchArchives = async () => {
     setIsLoading(true);
     try {
       
@@ -120,7 +120,15 @@ const Archive = () => {
         })
       );
 
-      setAllArchivedItems([...legacyData, ...newArchivedResults.flat()]);
+      const combinedData = [...legacyData, ...newArchivedResults.flat()];
+
+      combinedData.sort((a, b) => {
+        const dateA = new Date(a.dateArchived || a.createdAt || 0);
+        const dateB = new Date(b.dateArchived || b.createdAt || 0);
+        return dateB - dateA;
+      });
+
+      setAllArchivedItems(combinedData);
     } catch (e) {
       console.error("Failed to load archives", e);
     } finally {
