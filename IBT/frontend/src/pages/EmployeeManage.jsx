@@ -788,7 +788,7 @@ export default function EmployeeManage() {
                 </div>
                 <button
                   onClick={() => setShowCollectorCreate((prev) => !prev)}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 cursor-pointer"
+                  className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
                 >
                   {showCollectorCreate ? "Close Form" : "Add Collector"}
                 </button>
@@ -1481,7 +1481,7 @@ export default function EmployeeManage() {
                   <button
                     onClick={handleCreateCollector}
                     disabled={isCollectorLoading}
-                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    className="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white shadow hover:bg-emerald-700"
                   >
                     Add Collector
                   </button>
