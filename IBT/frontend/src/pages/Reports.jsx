@@ -208,6 +208,18 @@ const Reports = () => {
   }, []);
 
   useEffect(() => {
+    const onFocusRefresh = () => fetchReports();
+    window.addEventListener("focus", onFocusRefresh);
+    document.addEventListener("visibilitychange", onFocusRefresh);
+    const interval = setInterval(fetchReports, 30000);
+    return () => {
+      window.removeEventListener("focus", onFocusRefresh);
+      document.removeEventListener("visibilitychange", onFocusRefresh);
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     if (records.length > 0 && location.state?.openReportId) {
       const targetId = location.state.openReportId;
 

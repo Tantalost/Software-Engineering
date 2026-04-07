@@ -1034,6 +1034,7 @@ const BusTrips = () => {
   };
 
   const [collectorName, setCollectorName] = useState("");
+  const [collectorId, setCollectorId] = useState("");
   const [collectors, setCollectors] = useState([]);
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1070,6 +1071,7 @@ const BusTrips = () => {
   const [ticketRefInput, setTicketRefInput] = useState("");
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
+  const [sessionStartedAt] = useState(() => new Date().toISOString());
   const [missedBuses, setMissedBuses] = useState([]);
   const [showMissedModal, setShowMissedModal] = useState(false);
   const [isMissedLoading, setIsMissedLoading] = useState(false);
@@ -1491,20 +1493,69 @@ const BusTrips = () => {
 
   const dashboardTotalTrips = todayDispatchRecords.length;
   const dashboardPredefinedSchedules = useMemo(() => {
-    return predefinedTodayTrips.filter((trip) => {
-      const plate = String(trip.templateNo || trip.templateno || "").toLowerCase();
-      const route = String(trip.route || "").toLowerCase();
-      const matchesSearch =
-        !searchQuery.trim() ||
-        plate.includes(searchQuery.toLowerCase()) ||
-        route.includes(searchQuery.toLowerCase());
-      const matchesCompany =
-        selectedCompany === "" || trip.company === selectedCompany;
-      const matchesBusType =
-        selectedBusType === "" || (trip.busType || "") === selectedBusType;
-      return matchesSearch && matchesCompany && matchesBusType;
-    }).length;
-  }, [predefinedTodayTrips, searchQuery, selectedCompany, selectedBusType]);
+    const todayKey = getDateKey(new Date());
+    const makeScheduleKey = (company, route, scheduleTime, plateNumber) =>
+      `${company}|||${route}|||${scheduleTime}|||${plateNumber}`;
+
+    const statusByScheduleKey = new Map();
+    for (const r of records) {
+      if (getDateKey(r.date) !== todayKey) continue;
+      const plate = r.templateNo || r.templateno;
+      if (!plate) continue;
+      const scheduledTime = String(r.scheduledTime || "").trim();
+      if (!scheduledTime) continue;
+      const key = makeScheduleKey(
+        r.company || "",
+        String(r.route || "").trim(),
+        scheduledTime,
+        plate,
+      );
+      const st = r.status;
+      const prev = statusByScheduleKey.get(key);
+      const rank = (s) => {
+        if (s === "Scheduled" || s === "Pending") return 1;
+        if (s === "Arrived" || s === "On Fix" || s === "Not Departed") return 2;
+        if (s === "Departed" || s === "Paid") return 3;
+        return 0;
+      };
+      if (!prev || rank(st) >= rank(prev)) statusByScheduleKey.set(key, st);
+    }
+
+    const notArrivePlateCompanyKeys = new Set(
+      missedBuses.map((m) => `${m.plateNumber}|||${m.company}`),
+    );
+
+    let actionable = 0;
+    companyData.forEach((company) => {
+      (company.buses || []).forEach((bus) => {
+        if (!bus?.route?.trim()) return;
+        const times = getBusScheduleTimes(bus);
+        times.forEach((scheduleTimeRaw) => {
+          const scheduleTime = String(scheduleTimeRaw || "").trim();
+          if (!scheduleTime) return;
+          const scheduleKey = makeScheduleKey(
+            company.name,
+            bus.route.trim(),
+            scheduleTime,
+            bus.plateNumber,
+          );
+          const plateCompanyKey = `${bus.plateNumber}|||${company.name}`;
+          const status = statusByScheduleKey.get(scheduleKey);
+          const loggedToday =
+            status === "Arrived" ||
+            status === "On Fix" ||
+            status === "Not Departed" ||
+            status === "Departed" ||
+            status === "Paid";
+          if (!loggedToday && !notArrivePlateCompanyKeys.has(plateCompanyKey)) {
+            actionable += 1;
+          }
+        });
+      });
+    });
+
+    return actionable;
+  }, [companyData, records, missedBuses]);
 
   const dashboardArrivedTrips = todayDispatchRecords.filter(
     (t) => t.status === "Arrived",
@@ -1790,7 +1841,7 @@ const BusTrips = () => {
   };
 
   const handleExportExcel = async () => {
-    if (!collectorName.trim()) {
+    if (!collectorName.trim() || !collectorId) {
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -1938,7 +1989,7 @@ const BusTrips = () => {
   };
 
   const handleExportPDF = () => {
-    if (!collectorName.trim()) {
+    if (!collectorName.trim() || !collectorId) {
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -2132,7 +2183,7 @@ const BusTrips = () => {
 
   const handleSubmitReport = async () => {
     // 1. NEW VALIDATION: Ensure Collector Name is filled out
-    if (!collectorName.trim()) {
+    if (!collectorName.trim() || !collectorId) {
       setNotificationState({
         isOpen: true,
         type: "warning",
@@ -2168,27 +2219,13 @@ const BusTrips = () => {
 
     setIsReporting(true);
     try {
-      const reportData = [
-        ...reportActiveRecords,
-        ...missedBuses.map((missed) => ({
-          templateNo: missed.plateNumber,
-          company: missed.company,
-          route: missed.route,
-          scheduledTime: missed.scheduleTime,
-          status: "Not Arrive",
-          notArriveRemark: missed.remark || "",
-          date: missed.dateKey,
-          source: "schedule-not-arrivals",
-        })),
-      ];
-
       const reportPayload = {
         screen: "Bus Trips Management",
-        generatedDate: new Date().toLocaleString(),
-        shift: assignedShift,
+        adminId: authAdminId || null,
+        collectorId,
+        collectorName: collectorName.trim(),
+        sessionStartedAt,
         submittedLate: isLateSubmit,
-        collectorName: collectorName.trim(), // 2. NEW: Attach the Collector Name here
-        data: reportData,
       };
       
       await submitPageReport(
@@ -2201,6 +2238,7 @@ const BusTrips = () => {
       
       setShowSubmitModal(false);
       setCollectorName(""); 
+      setCollectorId("");
       
       setNotificationState({ 
         isOpen: true, 
@@ -2846,15 +2884,29 @@ const BusTrips = () => {
                     Collector:
                   </label>
                   <select
-                    value={collectorName}
-                    onChange={(e) => setCollectorName(e.target.value)}
+                    value={collectorId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      const selectedCollector = collectors.find(
+                        (collector) => (collector._id || collector.id) === nextId,
+                      );
+                      setCollectorId(nextId);
+                      setCollectorName(
+                        selectedCollector
+                          ? formatCollectorDisplayName(selectedCollector)
+                          : "",
+                      );
+                    }}
                     className="w-full sm:w-56 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
                   >
                     <option value="">Select collector</option>
                     {collectors.map((collector) => {
                       const label = formatCollectorDisplayName(collector);
                       return (
-                        <option key={collector._id || collector.id} value={label}>
+                        <option
+                          key={collector._id || collector.id}
+                          value={collector._id || collector.id}
+                        >
                           {label}
                         </option>
                       );
@@ -2862,7 +2914,7 @@ const BusTrips = () => {
                   </select>
                   <button
                     onClick={() => {
-                      if (!collectorName.trim()) {
+                      if (!collectorName.trim() || !collectorId) {
                         setNotificationState({
                           isOpen: true,
                           type: "warning",
@@ -2874,7 +2926,7 @@ const BusTrips = () => {
                       }
                       setShowSubmitModal(true);
                     }}
-                    disabled={!collectorName.trim()}
+                    disabled={!collectorName.trim() || !collectorId}
                     className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <FileText size={18} />

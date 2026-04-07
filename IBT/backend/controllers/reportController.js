@@ -50,15 +50,26 @@ export const createReport = async (req, res) => {
   try {
     const { type, data, author, authorEmail, status } = req.body;
     const now = new Date();
+    const submittedAdminId = data?.adminId || null;
 
     let admin = null;
-    if (authorEmail) {
+    if (submittedAdminId) {
+      admin = await Admin.findById(submittedAdminId);
+    } else if (authorEmail) {
       admin = await Admin.findOne({ email: String(authorEmail).toLowerCase() });
     }
 
     const assignedShift = admin?.assignedShift || null;
     const actualShiftAtSubmission = toShiftLabel(now.getHours());
     const { start: shiftStart, end: shiftEnd } = getShiftWindowBounds(assignedShift, now);
+    const sessionStartedAtRaw = data?.sessionStartedAt;
+    const parsedSessionStart = sessionStartedAtRaw
+      ? new Date(sessionStartedAtRaw)
+      : null;
+    const hasValidSessionStart =
+      parsedSessionStart && !Number.isNaN(parsedSessionStart.getTime());
+    const actionWindowStart = hasValidSessionStart ? parsedSessionStart : shiftStart;
+    const actionWindowEnd = now;
 
     let busActionRecords = [];
     if (admin?._id) {
@@ -66,11 +77,19 @@ export const createReport = async (req, res) => {
         $or: [
           {
             arrivalAdminId: admin._id,
-            arrivalLoggedAt: { $gte: shiftStart, $lte: shiftEnd },
+            $or: [
+              { arrivalLoggedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+              { updatedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+              { createdAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+            ],
           },
           {
             departureAdminId: admin._id,
-            departureLoggedAt: { $gte: shiftStart, $lte: shiftEnd },
+            $or: [
+              { departureLoggedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+              { updatedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+              { createdAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+            ],
           },
         ],
       })
@@ -81,7 +100,10 @@ export const createReport = async (req, res) => {
     }
 
     const normalizedData = {
-      ...(data || {}),
+      screen: data?.screen || "",
+      collectorId: data?.collectorId || null,
+      collectorName: data?.collectorName || "",
+      adminId: admin?._id || submittedAdminId || null,
       assignedShift,
       shift: assignedShift,
       submittedAtServer: now.toISOString(),
@@ -89,8 +111,16 @@ export const createReport = async (req, res) => {
       submittedLate: assignedShift ? assignedShift !== actualShiftAtSubmission : !!data?.submittedLate,
       submittedByEmail: authorEmail || null,
       actionWindow: {
-        from: shiftStart.toISOString(),
-        to: shiftEnd.toISOString(),
+        from: actionWindowStart.toISOString(),
+        to: actionWindowEnd.toISOString(),
+      },
+      // Backward-compatible shape expected by Reports page renderer/exporters.
+      data: busActionRecords,
+      statistics: {
+        totalActions: busActionRecords.length,
+        arrivalsLogged: busActionRecords.filter((r) => r.arrivalAdminId).length,
+        departuresLogged: busActionRecords.filter((r) => r.departureAdminId).length,
+        departedNow: busActionRecords.filter((r) => r.status === "Departed").length,
       },
       busActions: busActionRecords,
     };
