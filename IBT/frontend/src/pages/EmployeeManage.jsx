@@ -104,6 +104,7 @@ export default function EmployeeManage() {
   const [otpTimer, setOtpTimer] = useState(0);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [collectorDeleteTarget, setCollectorDeleteTarget] = useState(null); 
   const [notificationState, setNotificationState] = useState({
     isOpen: false,
     type: "success",
@@ -603,24 +604,25 @@ export default function EmployeeManage() {
     }
   };
 
-  const handleDeleteCollector = async (collector) => {
-    const ok = window.confirm(`Delete collector "${formatCollectorFullName(collector)}"?`);
-    if (!ok) return;
+  const confirmDeleteCollector = async () => {
+    if (!collectorDeleteTarget) return;
 
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/collectors/${collector._id || collector.id}`,
+        `${API_BASE_URL}/api/collectors/${collectorDeleteTarget._id || collectorDeleteTarget.id}`,
         { method: "DELETE" },
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Failed to delete collector.");
 
       setCollectors((prev) =>
-        prev.filter((c) => (c._id || c.id) !== (collector._id || collector.id)),
+        prev.filter((c) => (c._id || c.id) !== (collectorDeleteTarget._id || collectorDeleteTarget.id)),
       );
       showToast("success", "Collector deleted successfully.");
     } catch (error) {
       showToast("error", error.message);
+    } finally {
+      setCollectorDeleteTarget(null);
     }
   };
 
@@ -701,7 +703,6 @@ export default function EmployeeManage() {
       ) : (
         <div className="space-y-8">
           
-          {/* --- ADMINS TABLE SECTION --- */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-800">
@@ -783,9 +784,7 @@ export default function EmployeeManage() {
                 <h2 className="text-lg font-semibold text-gray-800">
                   Manage Collectors
                 </h2>
-                <p className="text-sm text-slate-500">
-                  Active collectors are available to Bus Admins during report hand-off.
-                </p>
+                
                 </div>
                 <button
                   onClick={() => setShowCollectorCreate((prev) => !prev)}
@@ -871,7 +870,7 @@ export default function EmployeeManage() {
                               {c.status === "Active" ? "Deactivate" : "Activate"}
                             </button>
                             <button
-                              onClick={() => handleDeleteCollector(c)}
+                              onClick={() => setCollectorDeleteTarget(c)}
                               className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition-all cursor-pointer"
                             >
                               Delete
@@ -1482,7 +1481,7 @@ export default function EmployeeManage() {
                   <button
                     onClick={handleCreateCollector}
                     disabled={isCollectorLoading}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-60 cursor-pointer"
+                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
                   >
                     Add Collector
                   </button>
@@ -1501,6 +1500,18 @@ export default function EmployeeManage() {
         icon={<UserX size={28} className="text-red-500" />}
         message={`Are you sure you want to PERMANENTLY remove the admin account for ${deleteTarget?.email}?`}
         itemName={deleteTarget?.email || ""}
+      />
+
+      <DeleteModal
+        isOpen={!!collectorDeleteTarget}
+        onClose={() => setCollectorDeleteTarget(null)}
+        onConfirm={confirmDeleteCollector}
+        title="Delete Collector"
+        icon={<UserX size={28} className="text-red-500" />}
+        message={`Are you sure you want to PERMANENTLY delete the collector ${
+          collectorDeleteTarget ? formatCollectorFullName(collectorDeleteTarget) : ""
+        }?`}
+        itemName={collectorDeleteTarget ? formatCollectorFullName(collectorDeleteTarget) : ""}
       />
 
       <NotificationToast
