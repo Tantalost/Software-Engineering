@@ -123,6 +123,20 @@ const defaultScheduleSlot = () => ({
   period: "AM",
 });
 
+const formatCollectorDisplayName = (collector) => {
+  const middleInitial = collector.middleName
+    ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
+    : "";
+  return [
+    collector.firstName,
+    middleInitial,
+    collector.lastName,
+    collector.suffix,
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
 const ManageCompaniesModal = ({
   isOpen,
   onClose,
@@ -1475,7 +1489,7 @@ const BusTrips = () => {
     });
   }, [records, role, selectedDate, ACTIVE_DISPATCH_STATUSES]);
 
-  const dashboardTotalTrips = activeDispatchRecords.length;
+  const dashboardTotalTrips = todayDispatchRecords.length;
   const dashboardPredefinedSchedules = useMemo(() => {
     return predefinedTodayTrips.filter((trip) => {
       const plate = String(trip.templateNo || trip.templateno || "").toLowerCase();
@@ -1492,13 +1506,13 @@ const BusTrips = () => {
     }).length;
   }, [predefinedTodayTrips, searchQuery, selectedCompany, selectedBusType]);
 
-  const dashboardArrivedTrips = activeDispatchRecords.filter(
+  const dashboardArrivedTrips = todayDispatchRecords.filter(
     (t) => t.status === "Arrived",
   ).length;
-  const dashboardPaidTrips = activeDispatchRecords.filter(
+  const dashboardPaidTrips = todayDispatchRecords.filter(
     (t) => t.status === "Departed",
   ).length;
-  const dashboardTotalRevenue = activeDispatchRecords
+  const dashboardTotalRevenue = todayDispatchRecords
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
@@ -2837,11 +2851,14 @@ const BusTrips = () => {
                     className="w-full sm:w-56 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
                   >
                     <option value="">Select collector</option>
-                    {collectors.map((collector) => (
-                      <option key={collector._id || collector.id} value={collector.name}>
-                        {collector.name}
-                      </option>
-                    ))}
+                    {collectors.map((collector) => {
+                      const label = formatCollectorDisplayName(collector);
+                      return (
+                        <option key={collector._id || collector.id} value={label}>
+                          {label}
+                        </option>
+                      );
+                    })}
                   </select>
                   <button
                     onClick={() => {

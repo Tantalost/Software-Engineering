@@ -1,13 +1,33 @@
 import Collector from "../models/Collector.js";
 
-const normalizeCollectorName = (value = "") =>
+const normalizeText = (value = "") =>
   String(value).trim().replace(/\s+/g, " ");
+
+const normalizeContact = (value = "") =>
+  String(value).replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
+
+const requiredDepartments = ["Bus", "Parking", "Terminal Fee", "Tenant"];
+
+const normalizeDepartments = (value) => {
+  const arr = Array.isArray(value) ? value : [];
+  const cleaned = [...new Set(arr.map((v) => normalizeText(v)).filter(Boolean))];
+  return cleaned.filter((d) => requiredDepartments.includes(d));
+};
 
 export const listCollectors = async (req, res) => {
   try {
     const activeOnly = req.query.active === "true";
-    const query = activeOnly ? { isActive: true } : {};
-    const collectors = await Collector.find(query).sort({ name: 1 });
+    const department = normalizeText(req.query.department || "");
+    const query = {};
+    if (activeOnly) query.status = "Active";
+    if (department && requiredDepartments.includes(department)) {
+      query.assignedDepartment = { $in: [department] };
+    }
+    const collectors = await Collector.find(query).sort({
+      lastName: 1,
+      firstName: 1,
+      middleName: 1,
+    });
     return res.json(collectors);
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch collectors." });
@@ -16,22 +36,34 @@ export const listCollectors = async (req, res) => {
 
 export const createCollector = async (req, res) => {
   try {
-    const name = normalizeCollectorName(req.body.name);
-    if (!name) {
-      return res.status(400).json({ message: "Collector name is required." });
+    const payload = {
+      firstName: normalizeText(req.body.firstName),
+      middleName: normalizeText(req.body.middleName || ""),
+      lastName: normalizeText(req.body.lastName),
+      suffix: normalizeText(req.body.suffix || ""),
+      contactNumber: normalizeContact(req.body.contactNumber),
+      assignedShift: normalizeText(req.body.assignedShift),
+      assignedDepartment: normalizeDepartments(req.body.assignedDepartment),
+      status: req.body.status === "Inactive" ? "Inactive" : "Active",
+    };
+
+    if (!payload.firstName || !payload.lastName || !payload.assignedShift) {
+      return res.status(400).json({ message: "Missing required collector fields." });
     }
 
-    const duplicate = await Collector.findOne({
-      name: { $regex: `^${name}$`, $options: "i" },
-    });
-    if (duplicate) {
-      return res.status(409).json({ message: "Collector already exists." });
+    if (!/^\d{10}$/.test(payload.contactNumber)) {
+      return res
+        .status(400)
+        .json({ message: "Contact number must be exactly 10 digits." });
     }
 
-    const collector = await Collector.create({ name, isActive: true });
+    const collector = await Collector.create(payload);
     return res.status(201).json({ message: "Collector created.", collector });
   } catch (error) {
-    return res.status(500).json({ message: "Failed to create collector." });
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: "Collector already exists." });
+    }
+    return res.status(500).json({ message: error.message || "Failed to create collector." });
   }
 };
 
@@ -40,23 +72,25 @@ export const updateCollector = async (req, res) => {
     const { id } = req.params;
     const updates = {};
 
-    if (req.body.name !== undefined) {
-      const name = normalizeCollectorName(req.body.name);
-      if (!name) {
-        return res.status(400).json({ message: "Collector name is required." });
-      }
-      const duplicate = await Collector.findOne({
-        _id: { $ne: id },
-        name: { $regex: `^${name}$`, $options: "i" },
-      });
-      if (duplicate) {
-        return res.status(409).json({ message: "Collector already exists." });
-      }
-      updates.name = name;
+    if (req.body.firstName !== undefined) updates.firstName = normalizeText(req.body.firstName);
+    if (req.body.middleName !== undefined) updates.middleName = normalizeText(req.body.middleName || "");
+    if (req.body.lastName !== undefined) updates.lastName = normalizeText(req.body.lastName);
+    if (req.body.suffix !== undefined) updates.suffix = normalizeText(req.body.suffix || "");
+    if (req.body.assignedShift !== undefined) updates.assignedShift = normalizeText(req.body.assignedShift);
+    if (req.body.assignedDepartment !== undefined) {
+      updates.assignedDepartment = normalizeDepartments(req.body.assignedDepartment);
     }
-
-    if (req.body.isActive !== undefined) {
-      updates.isActive = Boolean(req.body.isActive);
+    if (req.body.contactNumber !== undefined) {
+      const normalized = normalizeContact(req.body.contactNumber);
+      if (!/^\d{10}$/.test(normalized)) {
+        return res
+          .status(400)
+          .json({ message: "Contact number must be exactly 10 digits." });
+      }
+      updates.contactNumber = normalized;
+    }
+    if (req.body.status !== undefined) {
+      updates.status = req.body.status === "Inactive" ? "Inactive" : "Active";
     }
 
     const collector = await Collector.findByIdAndUpdate(id, updates, {
@@ -70,7 +104,10 @@ export const updateCollector = async (req, res) => {
 
     return res.json({ message: "Collector updated.", collector });
   } catch (error) {
-    return res.status(500).json({ message: "Failed to update collector." });
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: "Collector already exists." });
+    }
+    return res.status(500).json({ message: error.message || "Failed to update collector." });
   }
 };
 

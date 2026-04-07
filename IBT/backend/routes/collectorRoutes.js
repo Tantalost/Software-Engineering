@@ -10,6 +10,7 @@ const router = express.Router();
 
 router.get("/", listCollectors);
 router.post("/", createCollector);
+router.put("/:id", updateCollector);
 router.patch("/:id", updateCollector);
 router.delete("/:id", deleteCollector);
 

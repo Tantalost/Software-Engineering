@@ -28,6 +28,50 @@ const roleLabels = {
 };
 
 const shiftOptions = ["00-06", "06-12", "12-18", "18-24"];
+const collectorDepartments = ["Bus", "Parking", "Terminal Fee", "Tenant"];
+
+const to12Hour = (time24 = "") => {
+  const m = String(time24).match(/^(\d{2}):(\d{2})$/);
+  if (!m) return "";
+  let hour = parseInt(m[1], 10);
+  const minute = m[2];
+  const meridiem = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${String(hour).padStart(2, "0")}:${minute} ${meridiem}`;
+};
+
+const to24Hour = (time12 = "") => {
+  const m = String(time12).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return "";
+  let hour = parseInt(m[1], 10);
+  const minute = m[2];
+  const meridiem = m[3].toUpperCase();
+  if (meridiem === "PM" && hour !== 12) hour += 12;
+  if (meridiem === "AM" && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, "0")}:${minute}`;
+};
+
+const buildShiftRange = (start, end) => {
+  const formattedStart = to12Hour(start);
+  const formattedEnd = to12Hour(end);
+  if (!formattedStart || !formattedEnd) return "";
+  return `${formattedStart} - ${formattedEnd}`;
+};
+
+const parseShiftRange = (range = "") => {
+  const [start = "", end = ""] = String(range).split(" - ");
+  return {
+    shiftStart: to24Hour(start),
+    shiftEnd: to24Hour(end),
+  };
+};
+
+const formatCollectorFullName = (collector) => {
+  const mi = collector.middleName ? `${collector.middleName.trim().charAt(0).toUpperCase()}.` : "";
+  return [collector.firstName, mi, collector.lastName, collector.suffix]
+    .filter(Boolean)
+    .join(" ");
+};
 
 export default function EmployeeManage() {
   const [admins, setAdmins] = useState([]);
@@ -70,9 +114,29 @@ export default function EmployeeManage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isCollectorLoading, setIsCollectorLoading] = useState(false);
-  const [collectorFormName, setCollectorFormName] = useState("");
+  const [showCollectorCreate, setShowCollectorCreate] = useState(false);
+  const [collectorForm, setCollectorForm] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    suffix: "",
+    contactNumber: "",
+    assignedDepartment: [],
+    shiftStart: "",
+    shiftEnd: "",
+  });
   const [collectorEditTarget, setCollectorEditTarget] = useState(null);
-  const [collectorEditName, setCollectorEditName] = useState("");
+  const [collectorEditForm, setCollectorEditForm] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    suffix: "",
+    contactNumber: "",
+    assignedDepartment: [],
+    shiftStart: "",
+    shiftEnd: "",
+    status: "Active",
+  });
 
   // Recovery Code State
   const [recoveryPassword, setRecoveryPassword] = useState("");
@@ -388,9 +452,20 @@ export default function EmployeeManage() {
   };
 
   const handleCreateCollector = async () => {
-    const trimmed = collectorFormName.trim();
-    if (!trimmed) {
-      showToast("error", "Collector name is required.");
+    const assignedShift = buildShiftRange(
+      collectorForm.shiftStart,
+      collectorForm.shiftEnd,
+    );
+    if (
+      !collectorForm.firstName.trim() ||
+      !collectorForm.lastName.trim() ||
+      !assignedShift
+    ) {
+      showToast("error", "First name, last name, and shift range are required.");
+      return;
+    }
+    if (!/^\d{10}$/.test(collectorForm.contactNumber)) {
+      showToast("error", "Contact number must be exactly 10 digits.");
       return;
     }
 
@@ -399,17 +474,36 @@ export default function EmployeeManage() {
       const res = await fetch(`${API_BASE_URL}/api/collectors`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({
+          firstName: collectorForm.firstName.trim(),
+          middleName: collectorForm.middleName.trim(),
+          lastName: collectorForm.lastName.trim(),
+          suffix: collectorForm.suffix.trim(),
+          contactNumber: collectorForm.contactNumber,
+          assignedDepartment: collectorForm.assignedDepartment,
+          assignedShift,
+          status: "Active",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Failed to create collector.");
 
       setCollectors((prev) =>
         [...prev, data.collector].sort((a, b) =>
-          String(a.name).localeCompare(String(b.name)),
+          formatCollectorFullName(a).localeCompare(formatCollectorFullName(b)),
         ),
       );
-      setCollectorFormName("");
+      setCollectorForm({
+        firstName: "",
+        middleName: "",
+        lastName: "",
+        suffix: "",
+        contactNumber: "",
+        assignedDepartment: [],
+        shiftStart: "",
+        shiftEnd: "",
+      });
+      setShowCollectorCreate(false);
       showToast("success", "Collector added successfully.");
     } catch (error) {
       showToast("error", error.message);
@@ -420,9 +514,20 @@ export default function EmployeeManage() {
 
   const handleUpdateCollector = async () => {
     if (!collectorEditTarget) return;
-    const trimmed = collectorEditName.trim();
-    if (!trimmed) {
-      showToast("error", "Collector name is required.");
+    const assignedShift = buildShiftRange(
+      collectorEditForm.shiftStart,
+      collectorEditForm.shiftEnd,
+    );
+    if (
+      !collectorEditForm.firstName.trim() ||
+      !collectorEditForm.lastName.trim() ||
+      !assignedShift
+    ) {
+      showToast("error", "First name, last name, and shift range are required.");
+      return;
+    }
+    if (!/^\d{10}$/.test(collectorEditForm.contactNumber)) {
+      showToast("error", "Contact number must be exactly 10 digits.");
       return;
     }
 
@@ -433,7 +538,16 @@ export default function EmployeeManage() {
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: trimmed }),
+          body: JSON.stringify({
+            firstName: collectorEditForm.firstName.trim(),
+            middleName: collectorEditForm.middleName.trim(),
+            lastName: collectorEditForm.lastName.trim(),
+            suffix: collectorEditForm.suffix.trim(),
+            contactNumber: collectorEditForm.contactNumber,
+            assignedDepartment: collectorEditForm.assignedDepartment,
+            assignedShift,
+            status: collectorEditForm.status,
+          }),
         },
       );
       const data = await res.json().catch(() => ({}));
@@ -442,10 +556,20 @@ export default function EmployeeManage() {
       setCollectors((prev) =>
         prev
           .map((c) => ((c._id || c.id) === (data.collector._id || data.collector.id) ? data.collector : c))
-          .sort((a, b) => String(a.name).localeCompare(String(b.name))),
+          .sort((a, b) => formatCollectorFullName(a).localeCompare(formatCollectorFullName(b))),
       );
       setCollectorEditTarget(null);
-      setCollectorEditName("");
+      setCollectorEditForm({
+        firstName: "",
+        middleName: "",
+        lastName: "",
+        suffix: "",
+        contactNumber: "",
+        assignedDepartment: [],
+        shiftStart: "",
+        shiftEnd: "",
+        status: "Active",
+      });
       showToast("success", "Collector updated successfully.");
     } catch (error) {
       showToast("error", error.message);
@@ -456,13 +580,13 @@ export default function EmployeeManage() {
 
   const handleToggleCollectorStatus = async (collector) => {
     try {
-      const nextStatus = !collector.isActive;
+      const nextStatus = collector.status === "Active" ? "Inactive" : "Active";
       const res = await fetch(
         `${API_BASE_URL}/api/collectors/${collector._id || collector.id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: nextStatus }),
+          body: JSON.stringify({ status: nextStatus }),
         },
       );
       const data = await res.json().catch(() => ({}));
@@ -473,14 +597,14 @@ export default function EmployeeManage() {
           (c._id || c.id) === (data.collector._id || data.collector.id) ? data.collector : c,
         ),
       );
-      showToast("success", `Collector marked as ${nextStatus ? "active" : "inactive"}.`);
+      showToast("success", `Collector marked as ${nextStatus.toLowerCase()}.`);
     } catch (error) {
       showToast("error", error.message);
     }
   };
 
   const handleDeleteCollector = async (collector) => {
-    const ok = window.confirm(`Delete collector "${collector.name}"?`);
+    const ok = window.confirm(`Delete collector "${formatCollectorFullName(collector)}"?`);
     if (!ok) return;
 
     try {
@@ -498,6 +622,28 @@ export default function EmployeeManage() {
     } catch (error) {
       showToast("error", error.message);
     }
+  };
+
+  const handleCollectorContactChange = (value, isEdit = false) => {
+    const normalized = String(value).replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
+    if (isEdit) {
+      setCollectorEditForm((prev) => ({ ...prev, contactNumber: normalized }));
+      return;
+    }
+    setCollectorForm((prev) => ({ ...prev, contactNumber: normalized }));
+  };
+
+  const handleCollectorDepartmentToggle = (department, isEdit = false) => {
+    const setter = isEdit ? setCollectorEditForm : setCollectorForm;
+    setter((prev) => {
+      const has = prev.assignedDepartment.includes(department);
+      return {
+        ...prev,
+        assignedDepartment: has
+          ? prev.assignedDepartment.filter((d) => d !== department)
+          : [...prev.assignedDepartment, department],
+      };
+    });
   };
 
   // --- RECOVERY CODES ACTIONS ---
@@ -631,30 +777,21 @@ export default function EmployeeManage() {
           </section>
 
           <section className="space-y-4 pt-4 border-t border-slate-200">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
                 <h2 className="text-lg font-semibold text-gray-800">
                   Manage Collectors
                 </h2>
                 <p className="text-sm text-slate-500">
                   Active collectors are available to Bus Admins during report hand-off.
                 </p>
-              </div>
-
-              <div className="flex w-full md:w-auto items-center gap-2">
-                <input
-                  type="text"
-                  value={collectorFormName}
-                  onChange={(e) => setCollectorFormName(e.target.value)}
-                  placeholder="Collector name"
-                  className="w-full md:w-72 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
-                />
+                </div>
                 <button
-                  onClick={handleCreateCollector}
-                  disabled={isCollectorLoading}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-60 cursor-pointer"
+                  onClick={() => setShowCollectorCreate((prev) => !prev)}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 cursor-pointer"
                 >
-                  Add
+                  {showCollectorCreate ? "Close Form" : "Add Collector"}
                 </button>
               </div>
             </div>
@@ -663,7 +800,10 @@ export default function EmployeeManage() {
               <table className="min-w-full text-sm text-left text-gray-600">
                 <thead className="bg-gray-50 text-gray-700 uppercase text-xs font-semibold">
                   <tr>
-                    <th className="px-6 py-3">Name</th>
+                    <th className="px-6 py-3">Full Name</th>
+                    <th className="px-6 py-3">Contact</th>
+                    <th className="px-6 py-3 min-w-[220px]">Shift</th>
+                    <th className="px-6 py-3">Department</th>
                     <th className="px-6 py-3">Status</th>
                     <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
@@ -671,13 +811,13 @@ export default function EmployeeManage() {
                 <tbody>
                   {isCollectorLoading && collectors.length === 0 ? (
                     <tr>
-                      <td className="px-6 py-4" colSpan={3}>
+                      <td className="px-6 py-4" colSpan={6}>
                         Loading...
                       </td>
                     </tr>
                   ) : collectors.length === 0 ? (
                     <tr>
-                      <td className="px-6 py-4" colSpan={3}>
+                      <td className="px-6 py-4" colSpan={6}>
                         No collectors found.
                       </td>
                     </tr>
@@ -687,16 +827,19 @@ export default function EmployeeManage() {
                         key={c._id || c.id}
                         className="border-b border-gray-100 hover:bg-gray-50 transition-all"
                       >
-                        <td className="px-6 py-3 font-medium">{c.name}</td>
+                        <td className="px-6 py-3 font-medium">{formatCollectorFullName(c)}</td>
+                        <td className="px-6 py-3">+63 {c.contactNumber || "-"}</td>
+                        <td className="px-6 py-3 whitespace-nowrap">{c.assignedShift || "-"}</td>
+                        <td className="px-6 py-3">{(c.assignedDepartment || []).join(", ") || "-"}</td>
                         <td className="px-6 py-3">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              c.isActive
+                              c.status === "Active"
                                 ? "bg-emerald-100 text-emerald-700"
                                 : "bg-slate-100 text-slate-600"
                             }`}
                           >
-                            {c.isActive ? "Active" : "Inactive"}
+                            {c.status || "Active"}
                           </span>
                         </td>
                         <td className="px-6 py-3">
@@ -704,7 +847,18 @@ export default function EmployeeManage() {
                             <button
                               onClick={() => {
                                 setCollectorEditTarget(c);
-                                setCollectorEditName(c.name || "");
+                                const parsedShift = parseShiftRange(c.assignedShift || "");
+                                setCollectorEditForm({
+                                  firstName: c.firstName || "",
+                                  middleName: c.middleName || "",
+                                  lastName: c.lastName || "",
+                                  suffix: c.suffix || "",
+                                  contactNumber: c.contactNumber || "",
+                                  assignedDepartment: c.assignedDepartment || [],
+                                  shiftStart: parsedShift.shiftStart,
+                                  shiftEnd: parsedShift.shiftEnd,
+                                  status: c.status || "Active",
+                                });
                               }}
                               className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer"
                             >
@@ -714,7 +868,7 @@ export default function EmployeeManage() {
                               onClick={() => handleToggleCollectorStatus(c)}
                               className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-all cursor-pointer"
                             >
-                              {c.isActive ? "Deactivate" : "Activate"}
+                              {c.status === "Active" ? "Deactivate" : "Activate"}
                             </button>
                             <button
                               onClick={() => handleDeleteCollector(c)}
@@ -1075,20 +1229,125 @@ export default function EmployeeManage() {
 
           {collectorEditTarget && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
+              <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-lg">
                 <h3 className="mb-4 text-lg font-semibold text-slate-800">
                   Edit Collector
                 </h3>
-                <input
-                  value={collectorEditName}
-                  onChange={(e) => setCollectorEditName(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
-                />
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <Field
+                    label="First Name *"
+                    value={collectorEditForm.firstName}
+                    onChange={(e) =>
+                      setCollectorEditForm((prev) => ({ ...prev, firstName: e.target.value }))
+                    }
+                  />
+                  <Field
+                    label="Middle Name / M.I."
+                    value={collectorEditForm.middleName}
+                    onChange={(e) =>
+                      setCollectorEditForm((prev) => ({ ...prev, middleName: e.target.value }))
+                    }
+                  />
+                  <Field
+                    label="Last Name *"
+                    value={collectorEditForm.lastName}
+                    onChange={(e) =>
+                      setCollectorEditForm((prev) => ({ ...prev, lastName: e.target.value }))
+                    }
+                  />
+                  <Field
+                    label="Suffix"
+                    value={collectorEditForm.suffix}
+                    onChange={(e) =>
+                      setCollectorEditForm((prev) => ({ ...prev, suffix: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">
+                      Contact Number *
+                    </label>
+                    <div className="flex items-center rounded-md border border-slate-300 bg-white px-2">
+                      <span className="px-1 text-sm font-semibold text-slate-600">+63</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={collectorEditForm.contactNumber}
+                        onChange={(e) => handleCollectorContactChange(e.target.value, true)}
+                        className="w-full px-2 py-2 text-sm text-slate-700 outline-none"
+                        placeholder="9XXXXXXXXX"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Shift Start *</label>
+                    <input
+                      type="time"
+                      value={collectorEditForm.shiftStart}
+                      onChange={(e) =>
+                        setCollectorEditForm((prev) => ({ ...prev, shiftStart: e.target.value }))
+                      }
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Shift End *</label>
+                    <input
+                      type="time"
+                      value={collectorEditForm.shiftEnd}
+                      onChange={(e) =>
+                        setCollectorEditForm((prev) => ({ ...prev, shiftEnd: e.target.value }))
+                      }
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Assigned Department
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {collectorDepartments.map((department) => (
+                      <label key={department} className="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={collectorEditForm.assignedDepartment.includes(department)}
+                          onChange={() => handleCollectorDepartmentToggle(department, true)}
+                        />
+                        {department}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Status</label>
+                  <select
+                    value={collectorEditForm.status}
+                    onChange={(e) =>
+                      setCollectorEditForm((prev) => ({ ...prev, status: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <button
                     onClick={() => {
                       setCollectorEditTarget(null);
-                      setCollectorEditName("");
+                      setCollectorEditForm({
+                        firstName: "",
+                        middleName: "",
+                        lastName: "",
+                        suffix: "",
+                        contactNumber: "",
+                        assignedDepartment: [],
+                        shiftStart: "",
+                        shiftEnd: "",
+                        status: "Active",
+                      });
                     }}
                     className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer"
                   >
@@ -1100,6 +1359,132 @@ export default function EmployeeManage() {
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60 cursor-pointer"
                   >
                     Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showCollectorCreate && (
+            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto">
+              <div className="w-full max-w-4xl max-h-[min(88vh,820px)] my-4 sm:my-8 overflow-y-auto rounded-xl bg-white p-5 sm:p-6 shadow-xl">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold text-slate-800">Add Collector</h3>
+                  <button
+                    onClick={() => setShowCollectorCreate(false)}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <Field
+                    label="First Name *"
+                    value={collectorForm.firstName}
+                    onChange={(e) =>
+                      setCollectorForm((prev) => ({ ...prev, firstName: e.target.value }))
+                    }
+                  />
+                  <Field
+                    label="Middle Name / M.I."
+                    value={collectorForm.middleName}
+                    onChange={(e) =>
+                      setCollectorForm((prev) => ({ ...prev, middleName: e.target.value }))
+                    }
+                  />
+                  <Field
+                    label="Last Name *"
+                    value={collectorForm.lastName}
+                    onChange={(e) =>
+                      setCollectorForm((prev) => ({ ...prev, lastName: e.target.value }))
+                    }
+                  />
+                  <Field
+                    label="Suffix"
+                    value={collectorForm.suffix}
+                    onChange={(e) =>
+                      setCollectorForm((prev) => ({ ...prev, suffix: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">
+                      Contact Number *
+                    </label>
+                    <div className="flex items-center rounded-md border border-slate-300 bg-white px-2">
+                      <span className="px-1 text-sm font-semibold text-slate-600">+63</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={collectorForm.contactNumber}
+                        onChange={(e) => handleCollectorContactChange(e.target.value)}
+                        className="w-full px-2 py-2 text-sm text-slate-700 outline-none"
+                        placeholder="9XXXXXXXXX"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">
+                      Shift Start *
+                    </label>
+                    <input
+                      type="time"
+                      value={collectorForm.shiftStart}
+                      onChange={(e) =>
+                        setCollectorForm((prev) => ({ ...prev, shiftStart: e.target.value }))
+                      }
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">
+                      Shift End *
+                    </label>
+                    <input
+                      type="time"
+                      value={collectorForm.shiftEnd}
+                      onChange={(e) =>
+                        setCollectorForm((prev) => ({ ...prev, shiftEnd: e.target.value }))
+                      }
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                    Assigned Department *
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {collectorDepartments.map((department) => (
+                      <label key={department} className="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={collectorForm.assignedDepartment.includes(department)}
+                          onChange={() => handleCollectorDepartmentToggle(department)}
+                        />
+                        {department}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowCollectorCreate(false)}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateCollector}
+                    disabled={isCollectorLoading}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-60 cursor-pointer"
+                  >
+                    Add Collector
                   </button>
                 </div>
               </div>
