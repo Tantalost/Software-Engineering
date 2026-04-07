@@ -9,6 +9,7 @@ import {
   Archive,
   Trash2,
   RotateCcw,
+  Flag,
 } from "lucide-react";
 import TableActions from "../common/TableActions";
 
@@ -52,6 +53,7 @@ const DailyTripsDashboard = ({
   onEditTrip,
   onArchiveTrip,
   onDeleteTrip,
+  onRequestDeleteTrip,
 }) => {
   const todayFormatted = new Date().toLocaleDateString('en-US', { 
     month: 'long', day: 'numeric', year: 'numeric' 
@@ -91,13 +93,10 @@ const DailyTripsDashboard = ({
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Bus No</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Stops</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Ticket Ref</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Route</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Price</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Seats</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Park est.</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Exp. dep.</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Time</th>
+              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Arrival time</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Actual dep.</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Company</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
@@ -127,17 +126,8 @@ const DailyTripsDashboard = ({
                   <td className="px-4 py-4 text-sm text-slate-600">
                     {formatStopType(trip.stopType, trip.customStopCount)}
                   </td>
-                  <td className="px-4 py-4 text-sm text-slate-600 font-mono">
-                    {trip.ticketReferenceNo || "-"}
-                  </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     {trip.route}
-                  </td>
-                  <td className="px-4 py-4 text-sm font-medium text-slate-700">
-                    ₱{(trip.price || 75).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600 tabular-nums">
-                    {trip.seatingCapacity != null ? trip.seatingCapacity : "—"}
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     {trip.parkingEstimation || "—"}
@@ -212,6 +202,16 @@ const DailyTripsDashboard = ({
                               </button>
                             )}
                           </>
+                        )}
+
+                        {role === "bus" && (
+                          <button
+                            onClick={() => onRequestDeleteTrip?.(trip)}
+                            title="Request Deletion"
+                            className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all cursor-pointer"
+                          >
+                            <Flag size={16} />
+                          </button>
                         )}
 
                         {isScheduled && (

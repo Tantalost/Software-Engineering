@@ -13,6 +13,7 @@ import EditBusTrip from "../components/busTrips/EditBusTrip.jsx";
 import DailyTripsDashboard from "../components/busTrips/DailyTripsDashboard.jsx";
 import Pagination from "../components/common/Pagination";
 import PredefinedArrivalsBoard from "../components/busTrips/CommonBusesView.jsx";
+import RequestDeletionModal from "../components/common/RequestDeletionModal";
 
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
@@ -1019,6 +1020,7 @@ const BusTrips = () => {
   };
 
   const [collectorName, setCollectorName] = useState("");
+  const [collectors, setCollectors] = useState([]);
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1048,10 +1050,15 @@ const BusTrips = () => {
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
+  const [deletionRequestRow, setDeletionRequestRow] = useState(null);
+  const [deletionReason, setDeletionReason] = useState("");
   const [logoutRow, setLogoutRow] = useState(null);
   const [ticketRefInput, setTicketRefInput] = useState("");
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
+  const [missedBuses, setMissedBuses] = useState([]);
+  const [showMissedModal, setShowMissedModal] = useState(false);
+  const [isMissedLoading, setIsMissedLoading] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -1063,8 +1070,16 @@ const BusTrips = () => {
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/bustrips`;
   const COMPANY_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
   const ADMINS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/admins`;
+  const COLLECTORS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/collectors`;
+  const SCHEDULE_NOT_ARRIVAL_API = `${
+    import.meta.env.VITE_API_URL || "http://localhost:10000"
+  }/api/schedule-not-arrivals`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
+  const ACTIVE_DISPATCH_STATUSES = useMemo(
+    () => ["Arrived", "On Fix", "Not Departed", "Departed"],
+    [],
+  );
 
   const [notificationState, setNotificationState] = useState({
     isOpen: false,
@@ -1112,6 +1127,53 @@ const BusTrips = () => {
     };
     fetchDefaultPrice();
   }, []);
+
+  useEffect(() => {
+    const fetchCollectors = async () => {
+      try {
+        const res = await fetch(`${COLLECTORS_API_URL}?active=true`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCollectors(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching collectors:", error);
+      }
+    };
+
+    fetchCollectors();
+  }, [COLLECTORS_API_URL]);
+
+  const getBoardDateKey = () => {
+    if (role === "bus") return getDateKey(new Date());
+    if (selectedDate) return selectedDate;
+    return getDateKey(new Date());
+  };
+
+  const fetchMissedBuses = async () => {
+    const dateKey = getBoardDateKey();
+    if (!dateKey) return;
+    setIsMissedLoading(true);
+    try {
+      const res = await fetch(
+        `${SCHEDULE_NOT_ARRIVAL_API}?dateKey=${encodeURIComponent(dateKey)}`,
+      );
+      if (!res.ok) throw new Error("Failed to load missed buses.");
+      const data = await res.json();
+      const normalized = (Array.isArray(data) ? data : []).map((item) => ({
+        ...item,
+        status: "Not Arrive",
+      }));
+      setMissedBuses(normalized);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsMissedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMissedBuses();
+  }, [role, selectedDate]);
 
   const [showSetPriceModal, setShowSetPriceModal] = useState(false);
   const [newPrice, setNewPrice] = useState("");
@@ -1381,7 +1443,23 @@ const BusTrips = () => {
     });
   }, [filtered, filteredWithoutDate, selectedDate, role]);
 
-  const dashboardTotalTrips = todayDispatchRecords.length;
+  const activeDispatchRecords = useMemo(
+    () =>
+      todayDispatchRecords.filter((trip) =>
+        ACTIVE_DISPATCH_STATUSES.includes(trip.status),
+      ),
+    [todayDispatchRecords, ACTIVE_DISPATCH_STATUSES],
+  );
+
+  const reportActiveRecords = useMemo(() => {
+    const targetDateKey = role === "bus" ? getDateKey(new Date()) : selectedDate || getDateKey(new Date());
+    return records.filter((trip) => {
+      if (getDateKey(trip.date) !== targetDateKey) return false;
+      return ACTIVE_DISPATCH_STATUSES.includes(trip.status);
+    });
+  }, [records, role, selectedDate, ACTIVE_DISPATCH_STATUSES]);
+
+  const dashboardTotalTrips = activeDispatchRecords.length;
   const dashboardPredefinedSchedules = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
@@ -1407,22 +1485,22 @@ const BusTrips = () => {
       }, 0);
   }, [companyData, selectedCompany, selectedBusType, searchQuery]);
 
-  const dashboardArrivedTrips = todayDispatchRecords.filter(
+  const dashboardArrivedTrips = activeDispatchRecords.filter(
     (t) => t.status === "Arrived",
   ).length;
-  const dashboardPaidTrips = todayDispatchRecords.filter(
+  const dashboardPaidTrips = activeDispatchRecords.filter(
     (t) => t.status === "Departed",
   ).length;
-  const dashboardTotalRevenue = todayDispatchRecords
+  const dashboardTotalRevenue = activeDispatchRecords
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return todayDispatchRecords.slice(startIndex, startIndex + itemsPerPage);
-  }, [todayDispatchRecords, currentPage, itemsPerPage]);
+    return activeDispatchRecords.slice(startIndex, startIndex + itemsPerPage);
+  }, [activeDispatchRecords, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(todayDispatchRecords.length / itemsPerPage);
+  const totalPages = Math.ceil(activeDispatchRecords.length / itemsPerPage);
 
   const handleAddClick = () => {
     const currentTime = new Date().toLocaleTimeString("en-GB", {
@@ -1695,7 +1773,7 @@ const BusTrips = () => {
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Please enter Collector Name before exporting.",
+        message: "Please select Collector Name before exporting.",
         autoClose: true,
         duration: 3000,
       });
@@ -1843,7 +1921,7 @@ const BusTrips = () => {
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Please enter Collector Name before exporting.",
+        message: "Please select Collector Name before exporting.",
         autoClose: true,
         duration: 3000,
       });
@@ -2037,7 +2115,7 @@ const BusTrips = () => {
       setNotificationState({
         isOpen: true,
         type: "warning",
-        message: "Please enter the Name of Collector before submitting.",
+        message: "Please select a Collector before submitting.",
         autoClose: true,
         duration: 3000,
       });
@@ -2069,13 +2147,27 @@ const BusTrips = () => {
 
     setIsReporting(true);
     try {
+      const reportData = [
+        ...reportActiveRecords,
+        ...missedBuses.map((missed) => ({
+          templateNo: missed.plateNumber,
+          company: missed.company,
+          route: missed.route,
+          scheduledTime: missed.scheduleTime,
+          status: "Not Arrive",
+          notArriveRemark: missed.remark || "",
+          date: missed.dateKey,
+          source: "schedule-not-arrivals",
+        })),
+      ];
+
       const reportPayload = {
         screen: "Bus Trips Management",
         generatedDate: new Date().toLocaleString(),
         shift: assignedShift,
         submittedLate: isLateSubmit,
         collectorName: collectorName.trim(), // 2. NEW: Attach the Collector Name here
-        data: filtered, // Submits ALL data (Scheduled, Departed, On Fix)
+        data: reportData,
       };
       
       await submitPageReport(
@@ -2108,6 +2200,59 @@ const BusTrips = () => {
       });
     } finally {
       setIsReporting(false);
+    }
+  };
+
+  const handleUndoMissedBus = async (missedRow) => {
+    try {
+      const params = new URLSearchParams({
+        dateKey: String(missedRow.dateKey || ""),
+        company: String(missedRow.company || ""),
+        route: String(missedRow.route || ""),
+        scheduleTime: String(missedRow.scheduleTime || ""),
+        plateNumber: String(missedRow.plateNumber || ""),
+      });
+      const res = await fetch(`${SCHEDULE_NOT_ARRIVAL_API}?${params}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to undo not-arrive.");
+      await fetchMissedBuses();
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: "Missed bus undone. It is available in Predefined Schedule again.",
+        autoClose: true,
+        duration: 3000,
+      });
+    } catch (error) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: error.message || "Failed to undo missed bus.",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleMarkMissedAsArrived = async (missedRow) => {
+    try {
+      await handlePredefinedArrival({
+        templateNo: missedRow.plateNumber,
+        company: missedRow.company,
+        route: missedRow.route,
+        scheduleTime: missedRow.scheduleTime,
+      });
+      await handleUndoMissedBus(missedRow);
+      await fetchBusTrips();
+    } catch (error) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to mark missed bus as arrived.",
+        autoClose: true,
+        duration: 3000,
+      });
     }
   };
 
@@ -2463,6 +2608,58 @@ const BusTrips = () => {
     }
   };
 
+  const handleRequestDeletion = async () => {
+    if (!deletionRequestRow) return;
+    const trimmedReason = deletionReason.trim();
+    if (!trimmedReason) {
+      setNotificationState({
+        isOpen: true,
+        type: "warning",
+        message: "Reason for deletion is required.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/deletion-requests`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemType: "Bus Trip",
+            itemDescription: `Plate No: ${deletionRequestRow.templateNo || deletionRequestRow.templateno} - ${deletionRequestRow.company}`,
+            requestedBy: localStorage.getItem("authName") || "Bus Admin",
+            originalData: deletionRequestRow,
+            reason: trimmedReason,
+          }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to submit deletion request.");
+
+      setDeletionRequestRow(null);
+      setDeletionReason("");
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: "Deletion request sent to Superadmin.",
+        autoClose: true,
+        duration: 3000,
+      });
+    } catch (error) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: error.message || "Failed to submit deletion request.",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+  };
+
   const handleArchive = (row) => setArchiveRow(row);
   const confirmArchive = async () => {
     if (!archiveRow) return;
@@ -2558,6 +2755,7 @@ const BusTrips = () => {
           predefinedSchedules={dashboardPredefinedSchedules}
           arrivedTrips={dashboardArrivedTrips}
           paidTrips={dashboardPaidTrips}
+          missedTrips={missedBuses.length}
           totalRevenue={dashboardTotalRevenue}
         />
       </div>
@@ -2583,6 +2781,8 @@ const BusTrips = () => {
             companyData={companyData}
             getDateKey={getDateKey}
             onConfirmArrival={handlePredefinedArrival}
+            onNotArriveSaved={fetchMissedBuses}
+            onNotArriveRemoved={fetchMissedBuses}
             onNotify={(type, message) =>
               setNotificationState({
                 isOpen: true,
@@ -2615,32 +2815,50 @@ const BusTrips = () => {
             <div
               className={`flex flex-wrap items-center justify-end gap-3 ${isSelectionMode ? "ml-auto" : "w-full"}`}
             >
-             <div className="flex items-center gap-3 w-full lg:w-auto mr-auto">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-                    Name of Collector:
-                  </label>
-                  <input
-                    type="text"
-                    value={collectorName}
-                    maxLength={100}
-                    onChange={(e) =>
-                      setCollectorName(e.target.value.slice(0, 100))
-                    }
-                    placeholder="Enter collector name"
-                    className="w-full sm:w-56 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  />
-                </div>
-              </div>
-
               {role === "bus" && (
-                <button
-                  onClick={() => setShowSubmitModal(true)}
-                  className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
-                >
-                  <FileText size={18} />
-                  <span>Submit Report</span>
-                </button>
+                <div className="mr-auto flex items-center gap-2">
+                  <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+                    Collector:
+                  </label>
+                  <select
+                    value={collectorName}
+                    onChange={(e) => setCollectorName(e.target.value)}
+                    className="w-full sm:w-56 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
+                  >
+                    <option value="">Select collector</option>
+                    {collectors.map((collector) => (
+                      <option key={collector._id || collector.id} value={collector.name}>
+                        {collector.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => {
+                      if (!collectorName.trim()) {
+                        setNotificationState({
+                          isOpen: true,
+                          type: "warning",
+                          message: "Please select a Collector before submitting.",
+                          autoClose: true,
+                          duration: 3000,
+                        });
+                        return;
+                      }
+                      setShowSubmitModal(true);
+                    }}
+                    disabled={!collectorName.trim()}
+                    className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <FileText size={18} />
+                    <span>Submit Report</span>
+                  </button>
+                  <button
+                    onClick={() => setShowMissedModal(true)}
+                    className="flex items-center cursor-pointer justify-center space-x-2 border border-amber-200 bg-white text-amber-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition-all"
+                  >
+                    <span>View Missed Buses</span>
+                  </button>
+                </div>
               )}
 
               {role === "superadmin" && (
@@ -2717,6 +2935,10 @@ const BusTrips = () => {
               onEditTrip={setEditRow}
               onArchiveTrip={setArchiveRow}
               onDeleteTrip={setDeleteRow}
+              onRequestDeleteTrip={(row) => {
+                setDeletionRequestRow(row);
+                setDeletionReason("");
+              }}
             />
             
             <Pagination 
@@ -2724,7 +2946,7 @@ const BusTrips = () => {
               totalPages={totalPages} 
               onPageChange={setCurrentPage} 
               itemsPerPage={itemsPerPage} 
-              totalItems={todayDispatchRecords.length} 
+              totalItems={activeDispatchRecords.length} 
               onItemsPerPageChange={setItemsPerPage} 
             />
           </>
@@ -3107,6 +3329,88 @@ const BusTrips = () => {
         itemName={deleteRow ? `Plate No: ${deleteRow.templateNo}` : ""}
       />
 
+      <RequestDeletionModal
+        isOpen={!!deletionRequestRow}
+        onClose={() => {
+          setDeletionRequestRow(null);
+          setDeletionReason("");
+        }}
+        onConfirm={handleRequestDeletion}
+        itemIdentifier={
+          deletionRequestRow
+            ? `Plate No: ${deletionRequestRow.templateNo || deletionRequestRow.templateno}`
+            : ""
+        }
+        remarks={deletionReason}
+        setRemarks={setDeletionReason}
+      />
+
+      {showMissedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b pb-3 mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Missed / Not Arrive Buses</h3>
+              <button
+                onClick={() => setShowMissedModal(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {isMissedLoading ? (
+              <div className="py-10 text-center text-slate-500">Loading missed buses...</div>
+            ) : missedBuses.length === 0 ? (
+              <div className="py-10 text-center text-slate-500">No missed buses for this operating day.</div>
+            ) : (
+              <div className="max-h-[60vh] overflow-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+                    <tr>
+                      <th className="px-4 py-3">Bus No</th>
+                      <th className="px-4 py-3">Route</th>
+                      <th className="px-4 py-3">Company</th>
+                      <th className="px-4 py-3">Schedule</th>
+                      <th className="px-4 py-3">Remark</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {missedBuses.map((missed) => (
+                      <tr
+                        key={`${missed.dateKey}-${missed.company}-${missed.route}-${missed.scheduleTime}-${missed.plateNumber}`}
+                      >
+                        <td className="px-4 py-3 font-medium text-slate-800">{missed.plateNumber}</td>
+                        <td className="px-4 py-3 text-slate-600">{missed.route}</td>
+                        <td className="px-4 py-3 text-slate-600">{missed.company}</td>
+                        <td className="px-4 py-3 text-slate-600">{missed.scheduleTime}</td>
+                        <td className="px-4 py-3 text-slate-600">{missed.remark || "-"}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleUndoMissedBus(missed)}
+                              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+                            >
+                              Undo
+                            </button>
+                            <button
+                              onClick={() => handleMarkMissedAsArrived(missed)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold"
+                            >
+                              Mark as Arrived
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all">
@@ -3133,8 +3437,8 @@ const BusTrips = () => {
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
                 <FileText className="text-blue-500 shrink-0" size={20} />
                 <div className="text-xs text-blue-800">
-                  <strong>Total Records Included:</strong> {filtered.length} Buses<br/>
-                  (Includes Scheduled, Departed, and On Fix)
+                  <strong>Total Records Included:</strong> {reportActiveRecords.length + missedBuses.length} Buses<br/>
+                  (Includes active dispatch buses and missed buses)
                   <div className="mt-2 pt-2 border-t border-blue-200">
                     <strong>Collector:</strong> {collectorName}
                   </div>

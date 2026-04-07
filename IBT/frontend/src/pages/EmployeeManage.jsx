@@ -31,6 +31,7 @@ const shiftOptions = ["00-06", "06-12", "12-18", "18-24"];
 
 export default function EmployeeManage() {
   const [admins, setAdmins] = useState([]);
+  const [collectors, setCollectors] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({
     firstName: "",
@@ -68,6 +69,10 @@ export default function EmployeeManage() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isCollectorLoading, setIsCollectorLoading] = useState(false);
+  const [collectorFormName, setCollectorFormName] = useState("");
+  const [collectorEditTarget, setCollectorEditTarget] = useState(null);
+  const [collectorEditName, setCollectorEditName] = useState("");
 
   // Recovery Code State
   const [recoveryPassword, setRecoveryPassword] = useState("");
@@ -122,6 +127,24 @@ export default function EmployeeManage() {
     };
 
     fetchAdmins();
+  }, []);
+
+  useEffect(() => {
+    const fetchCollectors = async () => {
+      setIsCollectorLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/collectors`);
+        if (!res.ok) throw new Error("Failed to load collectors.");
+        const data = await res.json();
+        setCollectors(Array.isArray(data) ? data : []);
+      } catch (error) {
+        showToast("error", error.message || "Failed to load collectors.");
+      } finally {
+        setIsCollectorLoading(false);
+      }
+    };
+
+    fetchCollectors();
   }, []);
 
   // Timers
@@ -364,6 +387,119 @@ export default function EmployeeManage() {
     setOtpTimer(0);
   };
 
+  const handleCreateCollector = async () => {
+    const trimmed = collectorFormName.trim();
+    if (!trimmed) {
+      showToast("error", "Collector name is required.");
+      return;
+    }
+
+    try {
+      setIsCollectorLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/collectors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to create collector.");
+
+      setCollectors((prev) =>
+        [...prev, data.collector].sort((a, b) =>
+          String(a.name).localeCompare(String(b.name)),
+        ),
+      );
+      setCollectorFormName("");
+      showToast("success", "Collector added successfully.");
+    } catch (error) {
+      showToast("error", error.message);
+    } finally {
+      setIsCollectorLoading(false);
+    }
+  };
+
+  const handleUpdateCollector = async () => {
+    if (!collectorEditTarget) return;
+    const trimmed = collectorEditName.trim();
+    if (!trimmed) {
+      showToast("error", "Collector name is required.");
+      return;
+    }
+
+    try {
+      setIsCollectorLoading(true);
+      const res = await fetch(
+        `${API_BASE_URL}/api/collectors/${collectorEditTarget._id || collectorEditTarget.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: trimmed }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to update collector.");
+
+      setCollectors((prev) =>
+        prev
+          .map((c) => ((c._id || c.id) === (data.collector._id || data.collector.id) ? data.collector : c))
+          .sort((a, b) => String(a.name).localeCompare(String(b.name))),
+      );
+      setCollectorEditTarget(null);
+      setCollectorEditName("");
+      showToast("success", "Collector updated successfully.");
+    } catch (error) {
+      showToast("error", error.message);
+    } finally {
+      setIsCollectorLoading(false);
+    }
+  };
+
+  const handleToggleCollectorStatus = async (collector) => {
+    try {
+      const nextStatus = !collector.isActive;
+      const res = await fetch(
+        `${API_BASE_URL}/api/collectors/${collector._id || collector.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: nextStatus }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to update collector.");
+
+      setCollectors((prev) =>
+        prev.map((c) =>
+          (c._id || c.id) === (data.collector._id || data.collector.id) ? data.collector : c,
+        ),
+      );
+      showToast("success", `Collector marked as ${nextStatus ? "active" : "inactive"}.`);
+    } catch (error) {
+      showToast("error", error.message);
+    }
+  };
+
+  const handleDeleteCollector = async (collector) => {
+    const ok = window.confirm(`Delete collector "${collector.name}"?`);
+    if (!ok) return;
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/collectors/${collector._id || collector.id}`,
+        { method: "DELETE" },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to delete collector.");
+
+      setCollectors((prev) =>
+        prev.filter((c) => (c._id || c.id) !== (collector._id || collector.id)),
+      );
+      showToast("success", "Collector deleted successfully.");
+    } catch (error) {
+      showToast("error", error.message);
+    }
+  };
+
   // --- RECOVERY CODES ACTIONS ---
   const handleGenerateCodes = async (e) => {
     e.preventDefault();
@@ -483,6 +619,108 @@ export default function EmployeeManage() {
                               className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition-all cursor-pointer"
                             >
                               Remove
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="space-y-4 pt-4 border-t border-slate-200">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Manage Collectors
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Active collectors are available to Bus Admins during report hand-off.
+                </p>
+              </div>
+
+              <div className="flex w-full md:w-auto items-center gap-2">
+                <input
+                  type="text"
+                  value={collectorFormName}
+                  onChange={(e) => setCollectorFormName(e.target.value)}
+                  placeholder="Collector name"
+                  className="w-full md:w-72 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                />
+                <button
+                  onClick={handleCreateCollector}
+                  disabled={isCollectorLoading}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700 disabled:opacity-60 cursor-pointer"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <table className="min-w-full text-sm text-left text-gray-600">
+                <thead className="bg-gray-50 text-gray-700 uppercase text-xs font-semibold">
+                  <tr>
+                    <th className="px-6 py-3">Name</th>
+                    <th className="px-6 py-3">Status</th>
+                    <th className="px-6 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isCollectorLoading && collectors.length === 0 ? (
+                    <tr>
+                      <td className="px-6 py-4" colSpan={3}>
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : collectors.length === 0 ? (
+                    <tr>
+                      <td className="px-6 py-4" colSpan={3}>
+                        No collectors found.
+                      </td>
+                    </tr>
+                  ) : (
+                    collectors.map((c) => (
+                      <tr
+                        key={c._id || c.id}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-all"
+                      >
+                        <td className="px-6 py-3 font-medium">{c.name}</td>
+                        <td className="px-6 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              c.isActive
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {c.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setCollectorEditTarget(c);
+                                setCollectorEditName(c.name || "");
+                              }}
+                              className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleToggleCollectorStatus(c)}
+                              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-all cursor-pointer"
+                            >
+                              {c.isActive ? "Deactivate" : "Activate"}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCollector(c)}
+                              className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-50 transition-all cursor-pointer"
+                            >
+                              Delete
                             </button>
                           </div>
                         </td>
@@ -829,6 +1067,39 @@ export default function EmployeeManage() {
                                             ${editForm.password.length > 0 && !editForm.otp ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 cursor-pointer"}`}
                   >
                     {isLoading ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {collectorEditTarget && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
+                <h3 className="mb-4 text-lg font-semibold text-slate-800">
+                  Edit Collector
+                </h3>
+                <input
+                  value={collectorEditName}
+                  onChange={(e) => setCollectorEditName(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                />
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setCollectorEditTarget(null);
+                      setCollectorEditName("");
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpdateCollector}
+                    disabled={isCollectorLoading}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60 cursor-pointer"
+                  >
+                    Save
                   </button>
                 </div>
               </div>

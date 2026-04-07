@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Bus, Clock, Info, ListOrdered, Undo2, X } from "lucide-react";
+import { Bus, Clock, ListOrdered, X } from "lucide-react";
 import { getBusScheduleTimes } from "../../utils/busSchedule.js";
 
 const SCHEDULE_NOT_ARRIVAL_API = `${
@@ -79,6 +79,8 @@ const PredefinedArrivalsBoard = ({
   getDateKey,
   onConfirmArrival,
   onNotify,
+  onNotArriveSaved,
+  onNotArriveRemoved,
 }) => {
   const getDateKeyRef = useRef(getDateKey);
   useEffect(() => {
@@ -257,6 +259,27 @@ const PredefinedArrivalsBoard = ({
     return m;
   }, [records, boardDateKey, getDateKey]);
 
+  const actionableScheduleRows = useMemo(() => {
+    return filteredScheduleRows.filter((row) => {
+      const scheduleKey = makeTripScheduleKey(
+        row.company,
+        row.route,
+        row.scheduleTime,
+        row.plateNumber,
+      );
+      const plateKey = `${row.plateNumber}|||${row.company}`;
+      const st = todayStatusByScheduleKey.get(scheduleKey);
+      const loggedToday =
+        st === "Arrived" ||
+        st === "On Fix" ||
+        st === "Not Departed" ||
+        st === "Departed" ||
+        st === "Paid";
+      const sameBusNotArriveToday = notArrivePlateCompanyKeys.has(plateKey);
+      return !loggedToday && !sameBusNotArriveToday;
+    });
+  }, [filteredScheduleRows, todayStatusByScheduleKey, notArrivePlateCompanyKeys]);
+
   const openArrive = (row) => {
     setArriveRow(row);
     setArrivePlateInput(row.plateNumber || "");
@@ -336,6 +359,7 @@ const PredefinedArrivalsBoard = ({
         ...prev,
         [notArriveRow.rowKey]: trimmed,
       }));
+      onNotArriveSaved?.();
       setNotArriveRow(null);
       setNotArriveRemark("");
       onNotify?.(
@@ -376,6 +400,7 @@ const PredefinedArrivalsBoard = ({
         return;
       }
       await refreshNotArrivals();
+      onNotArriveRemoved?.();
       onNotify?.(
         "success",
         "Not arrival removed. You can mark Arrive or Not Arrive again.",
@@ -469,7 +494,7 @@ const PredefinedArrivalsBoard = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {filteredScheduleRows.length === 0 ? (
+            {actionableScheduleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={4}
@@ -482,12 +507,12 @@ const PredefinedArrivalsBoard = ({
                       in <strong>Manage Companies</strong>.
                     </>
                   ) : (
-                    <>No buses match the selected time filter.</>
+                    <>No pending buses in the selected time filter.</>
                   )}
                 </td>
               </tr>
             ) : (
-              filteredScheduleRows.map((row) => {
+              actionableScheduleRows.map((row) => {
                 const isPrepHour = row.hourBucket === focusBucket;
                 const plateKey = `${row.plateNumber}|||${row.company}`;
                 const scheduleKey = makeTripScheduleKey(
@@ -496,17 +521,7 @@ const PredefinedArrivalsBoard = ({
                   row.scheduleTime,
                   row.plateNumber,
                 );
-                const st = todayStatusByScheduleKey.get(scheduleKey);
-                const loggedToday =
-                  st === "Arrived" ||
-                  st === "On Fix" ||
-                  st === "Not Departed" ||
-                  st === "Departed" ||
-                  st === "Paid";
                 const remark = remarksMap[row.rowKey];
-                const markedNotArrive = Boolean(remark);
-                const sameBusNotArriveToday =
-                  notArrivePlateCompanyKeys.has(plateKey);
                 const busy = confirmingKey === row.rowKey;
 
                 return (
@@ -548,61 +563,21 @@ const PredefinedArrivalsBoard = ({
                             {remark}
                           </span>
                         )}
-                        {loggedToday ? (
-                          <span className="inline-flex text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1.5 rounded-lg justify-center">
-                            On board today
-                          </span>
-                        ) : sameBusNotArriveToday ? (
-                          <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-                            <span className="inline-flex text-xs font-semibold text-slate-700 bg-slate-200 px-2.5 py-1.5 rounded-lg">
-                              Not arriving today
-                            </span>
-                            {markedNotArrive ? (
-                              <div className="flex flex-wrap gap-2 justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() => openNotArrive(row)}
-                                  className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium px-2.5 py-1.5"
-                                >
-                                  Edit remark
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={undoingKey === row.rowKey}
-                                  onClick={() => undoNotArrival(row)}
-                                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-medium px-2.5 py-1.5 disabled:opacity-60"
-                                  title="Remove this not-arrival for today"
-                                >
-                                  <Undo2 size={14} aria-hidden />
-                                  {undoingKey === row.rowKey ? "…" : "Undo"}
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-slate-500 text-left sm:text-right max-w-[220px]">
-                                Same bus marked on another route today—Arrive is
-                                disabled for all its trips.
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => openArrive(row)}
-                              className="inline-flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-semibold px-3 py-2 transition-colors"
-                            >
-                              {busy ? "…" : "Arrive"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openNotArrive(row)}
-                              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 transition-colors"
-                            >
-                              Not Arrive
-                            </button>
-                          </>
-                        )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => openArrive(row)}
+                          className="inline-flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-semibold px-3 py-2 transition-colors"
+                        >
+                          {busy ? "…" : "Arrive"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openNotArrive(row)}
+                          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 transition-colors"
+                        >
+                          Not Arrive
+                        </button>
                       </div>
                     </td>
                   </tr>

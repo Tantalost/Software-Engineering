@@ -23,6 +23,7 @@ import busRoutes from './routes/busRoutes.js';
 import scheduleNotArrivalRoutes from './routes/scheduleNotArrivalRoutes.js';
 import predefinedScheduleRoutes from './routes/predefinedScheduleRoutes.js';
 import dispatchBoardRoutes from './routes/dispatchBoardRoutes.js';
+import collectorRoutes from "./routes/collectorRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { startCleanUP } from './utils/cleanUP.js';
 
@@ -78,6 +79,7 @@ app.use('/api/bus-routes', busRoutes);
 app.use('/api/schedule-not-arrivals', scheduleNotArrivalRoutes);
 app.use('/api/predefined-schedule', predefinedScheduleRoutes);
 app.use('/api/dispatch-board', dispatchBoardRoutes);
+app.use("/api/collectors", collectorRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/broadcasts", broadcastRoutes);
 

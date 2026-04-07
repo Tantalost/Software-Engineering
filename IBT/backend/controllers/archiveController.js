@@ -51,7 +51,7 @@ export const restoreArchive = async (req, res) => {
         const restored = new BusTrip(restdata);
         await restored.save();
     }
-    if (type === "LostFound") {
+    if (type === "Lost & Found") {
        
         const { _id, ...restdata } = originalData; 
         const restored = new LostFound(restdata);

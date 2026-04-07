@@ -13,14 +13,14 @@ const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api
 const Archive = () => {
   const role = localStorage.getItem("authRole") || "superadmin";
 
-  // 1. Determine which tabs are visible based on role
+  
   const availableTabs = useMemo(() => {
     switch (role) {
       case "superadmin": return ["All", "Bus Trip", "Parking Ticket", "Tenant", "Report", "Lost & Found", "Terminal Fee"];
       case "bus": return ["Bus Trip"];
       case "ticket": return ["Terminal Fee"];
       case "parking": return ["Parking Ticket"];
-      // backend uses "lease" to represent tenant admin users
+    
       case "tenant":
       case "tenant admin":
       case "tenantadmin":
@@ -31,7 +31,6 @@ const Archive = () => {
     }
   }, [role]);
 
-  // Determine the default starting tab based on role
   const getDefaultTab = () => {
     switch (role) {
       case "superadmin": return "All";
@@ -52,7 +51,6 @@ const Archive = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [timeRange, setTimeRange] = useState("All Time");
 
-  // 2. Set the default active tab
   const [activeTab, setActiveTab] = useState(getDefaultTab());
   const [viewRow, setViewRow] = useState(null);
   const [restoreRow, setRestoreRow] = useState(null);
@@ -80,15 +78,14 @@ const Archive = () => {
       return () => clearTimeout(timer);
     }
   }, [notificationState.isOpen, notificationState.autoClose, notificationState.duration]);
-  // FETCH: Bridging Legacy and New Soft-Delete Data
-  const fetchArchives = async () => {
+
+ const fetchArchives = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch Legacy Archives (Old Data from Archive Collection)
+      
       const resLegacy = await fetch(`${API_URL}/archives`);
       const legacyData = resLegacy.ok ? await resLegacy.json() : [];
 
-      // 2. Fetch New Soft-Deleted Data for each module
       const moduleEndpoints = [
         { type: "Bus Trip", url: "/bustrips/archived" },
         { type: "Terminal Fee", url: "/terminal-fees/archived" },
@@ -105,7 +102,6 @@ const Archive = () => {
             if (!res.ok) return [];
             const data = await res.json();
 
-            // Map new data to fit the Archive table structure
             return data.map(item => ({
               _id: item._id,
               id: item._id,
@@ -113,19 +109,26 @@ const Archive = () => {
               description: mod.type === "Bus Trip" ? `Trip: ${item.templateNo}` :
                 mod.type === "Terminal Fee" ? `Ticket #${item.ticketNo}` :
                   mod.type === "Parking Ticket" ? `Plate #${item.plateNo}` :
-                    mod.type === "Lost & Found" ? `Item: ${item.description}` :
+                   mod.type === "Lost & Found" ? `Item: ${item.itemType || 'Unknown'} (${item.trackingNo})` :
                       mod.type === "Tenant" ? `Tenant: ${item.tenantName || item.name}` :
                         `${mod.type} Report`,
               dateArchived: item.updatedAt,
-              isSoftDeleted: true, // Flag for routing Restore/Delete
+              isSoftDeleted: true, 
               originalData: item
             }));
           } catch { return []; }
         })
       );
 
-      // Combine legacy and new soft-deleted items
-      setAllArchivedItems([...legacyData, ...newArchivedResults.flat()]);
+      const combinedData = [...legacyData, ...newArchivedResults.flat()];
+
+      combinedData.sort((a, b) => {
+        const dateA = new Date(a.dateArchived || a.createdAt || 0);
+        const dateB = new Date(b.dateArchived || b.createdAt || 0);
+        return dateB - dateA;
+      });
+
+      setAllArchivedItems(combinedData);
     } catch (e) {
       console.error("Failed to load archives", e);
     } finally {
@@ -137,7 +140,6 @@ const Archive = () => {
     fetchArchives();
   }, []);
 
-  // FILTERS (Maintained from your original code)
   const checkTimeRange = (itemDate) => {
     if (!itemDate) return false;
     const date = new Date(itemDate);
@@ -190,7 +192,6 @@ const Archive = () => {
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-  // DYNAMIC RESTORE LOGIC
   const handleRestore = async () => {
     if (!restoreRow) return;
     try {
@@ -212,7 +213,7 @@ const Archive = () => {
           headers: { "Content-Type": "application/json" }
         });
       } else {
-        // Legacy Pattern
+      
         res = await fetch(`${API_URL}/archives/restore/${id}`, { method: "POST" });
       }
 
@@ -222,7 +223,6 @@ const Archive = () => {
       setRestoreRow(null);
       fetchArchives();
 
-      // NEW: Trigger Success Toast!
       setNotificationState({
         isOpen: true,
         type: 'success',
@@ -233,7 +233,7 @@ const Archive = () => {
 
     } catch (e) {
       console.error("Restore Error", e);
-      // NEW: Trigger Error Toast (Replaces the old alert)
+   
       setNotificationState({
         isOpen: true,
         type: 'error',
@@ -250,7 +250,7 @@ const Archive = () => {
       await Promise.all(selectedIds.map(async (id) => {
         const item = allArchivedItems.find(i => (i._id === id || i.id === id));
         if (item?.isSoftDeleted) {
-          // New: Hits actual module Hard Delete endpoint
+        
           const moduleMap = { "Bus Trip": "bustrips", "Terminal Fee": "terminal-fees", "Parking Ticket": "parking", "Lost & Found": "lostfound", "Report": "reports" };
           return fetch(`${API_URL}/${moduleMap[item.type]}/${id}`, { method: "DELETE" });
         }
