@@ -255,7 +255,7 @@ const DailyTripsDashboard = ({
                         {isOnFix && (
                           <button
                             onClick={() => onToggleOnFixStatus?.(trip)}
-                            title="Mark as Scheduled"
+                            title="Reschedule and return to board"
                             className="p-1.5 rounded-md transition-colors text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
                           >
                             <RotateCcw size={16} />

@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Bus, Clock, ListOrdered, X } from "lucide-react";
+import { AlertTriangle, Bus, Clock, ListOrdered, X } from "lucide-react";
 import { getBusScheduleTimes } from "../../utils/busSchedule.js";
 
 const SCHEDULE_NOT_ARRIVAL_API = `${
@@ -100,7 +100,6 @@ const PredefinedArrivalsBoard = ({
   const [remarksMap, setRemarksMap] = useState({});
   const [notArriveSaving, setNotArriveSaving] = useState(false);
   const [undoingKey, setUndoingKey] = useState(null);
-  const [selectedTimeBucket, setSelectedTimeBucket] = useState("all");
 
   const syncBoardDateFromClock = useCallback(() => {
     const k = getDateKeyRef.current(new Date());
@@ -211,26 +210,19 @@ const PredefinedArrivalsBoard = ({
     return out;
   }, [companyData, focusBucket]);
 
-  const timeFilterOptions = useMemo(() => {
-    const seen = new Set();
-    const options = [];
-    scheduleRows.forEach((row) => {
-      if (seen.has(row.hourBucket)) return;
-      seen.add(row.hourBucket);
-      options.push({
-        value: String(row.hourBucket),
-        label: formatHourSlotLabel(row.hourBucket),
-      });
+  const nearWindowScheduleRows = useMemo(() => {
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const maxMinutes = nowMinutes + 120;
+    return scheduleRows.filter((row) => {
+      const rowMinutes = row.minutesFromMidnight;
+      // Handle midnight rollover for windows that cross to next day.
+      if (maxMinutes < 1440) {
+        return rowMinutes >= nowMinutes && rowMinutes <= maxMinutes;
+      }
+      const overflow = maxMinutes - 1440;
+      return rowMinutes >= nowMinutes || rowMinutes <= overflow;
     });
-    return options;
-  }, [scheduleRows]);
-
-  const filteredScheduleRows = useMemo(() => {
-    if (selectedTimeBucket === "all") return scheduleRows;
-    const bucket = Number(selectedTimeBucket);
-    if (Number.isNaN(bucket)) return scheduleRows;
-    return scheduleRows.filter((row) => row.hourBucket === bucket);
-  }, [scheduleRows, selectedTimeBucket]);
+  }, [scheduleRows, now]);
 
   const todayStatusByScheduleKey = useMemo(() => {
     const m = new Map();
@@ -259,8 +251,8 @@ const PredefinedArrivalsBoard = ({
     return m;
   }, [records, boardDateKey, getDateKey]);
 
-  const actionableScheduleRows = useMemo(() => {
-    return filteredScheduleRows.filter((row) => {
+  const isActionableRow = useCallback(
+    (row) => {
       const scheduleKey = makeTripScheduleKey(
         row.company,
         row.route,
@@ -277,8 +269,28 @@ const PredefinedArrivalsBoard = ({
         st === "Paid";
       const sameBusNotArriveToday = notArrivePlateCompanyKeys.has(plateKey);
       return !loggedToday && !sameBusNotArriveToday;
-    });
-  }, [filteredScheduleRows, todayStatusByScheduleKey, notArrivePlateCompanyKeys]);
+    },
+    [todayStatusByScheduleKey, notArrivePlateCompanyKeys],
+  );
+
+  const actionableNearWindowRows = useMemo(
+    () => nearWindowScheduleRows.filter(isActionableRow),
+    [nearWindowScheduleRows, isActionableRow],
+  );
+
+  const actionableOverdueRows = useMemo(() => {
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return scheduleRows.filter(
+      (row) =>
+        row.minutesFromMidnight < nowMinutes &&
+        isActionableRow(row),
+    );
+  }, [scheduleRows, now, isActionableRow]);
+
+  const actionableScheduleRows = useMemo(
+    () => [...actionableOverdueRows, ...actionableNearWindowRows],
+    [actionableOverdueRows, actionableNearWindowRows],
+  );
 
   const openArrive = (row) => {
     setArriveRow(row);
@@ -458,26 +470,8 @@ const PredefinedArrivalsBoard = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
-          <label
-            htmlFor="predefined-time-filter"
-            className="text-xs font-semibold text-slate-600 whitespace-nowrap"
-          >
-            Time filter
-          </label>
-          <select
-            id="predefined-time-filter"
-            value={selectedTimeBucket}
-            onChange={(e) => setSelectedTimeBucket(e.target.value)}
-            className="text-xs sm:text-sm border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none"
-          >
-            <option value="all">All times</option>
-            {timeFilterOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+        <div className="ml-auto text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg">
+          Showing overdue + next 2 hours
         </div>
       </div>
 
@@ -507,20 +501,24 @@ const PredefinedArrivalsBoard = ({
                       in <strong>Manage Companies</strong>.
                     </>
                   ) : (
-                    <>No pending buses in the selected time filter.</>
+                    <>No pending buses in the current visible window.</>
                   )}
                 </td>
               </tr>
             ) : (
-              actionableScheduleRows.map((row) => {
+              <>
+                {actionableOverdueRows.length > 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-2 bg-amber-50 border-y border-amber-100">
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 uppercase tracking-wide">
+                        <AlertTriangle size={12} />
+                        Overdue / Pending Arrival ({actionableOverdueRows.length})
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {actionableScheduleRows.map((row) => {
                 const isPrepHour = row.hourBucket === focusBucket;
-                const plateKey = `${row.plateNumber}|||${row.company}`;
-                const scheduleKey = makeTripScheduleKey(
-                  row.company,
-                  row.route,
-                  row.scheduleTime,
-                  row.plateNumber,
-                );
                 const remark = remarksMap[row.rowKey];
                 const busy = confirmingKey === row.rowKey;
 
@@ -582,7 +580,8 @@ const PredefinedArrivalsBoard = ({
                     </td>
                   </tr>
                 );
-              })
+                })}
+              </>
             )}
           </tbody>
         </table>

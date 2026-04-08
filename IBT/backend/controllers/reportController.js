@@ -99,6 +99,28 @@ export const createReport = async (req, res) => {
         .lean();
     }
 
+    const completedTransactions = Array.isArray(data?.completedTransactions)
+      ? data.completedTransactions
+      : [];
+    const missedTransactions = Array.isArray(data?.missedTransactions)
+      ? data.missedTransactions
+      : [];
+
+    const finalizedActions =
+      completedTransactions.length > 0 || missedTransactions.length > 0
+        ? [
+            ...completedTransactions.map((row) => ({
+              ...row,
+              category: "completed",
+            })),
+            ...missedTransactions.map((row) => ({
+              ...row,
+              category: "missed",
+              status: "Not Arrive",
+            })),
+          ]
+        : busActionRecords;
+
     const normalizedData = {
       screen: data?.screen || "",
       collectorId: data?.collectorId || null,
@@ -115,14 +137,24 @@ export const createReport = async (req, res) => {
         to: actionWindowEnd.toISOString(),
       },
       // Backward-compatible shape expected by Reports page renderer/exporters.
-      data: busActionRecords,
+      data: finalizedActions,
       statistics: {
-        totalActions: busActionRecords.length,
-        arrivalsLogged: busActionRecords.filter((r) => r.arrivalAdminId).length,
-        departuresLogged: busActionRecords.filter((r) => r.departureAdminId).length,
-        departedNow: busActionRecords.filter((r) => r.status === "Departed").length,
+        totalActions: finalizedActions.length,
+        completedCount:
+          completedTransactions.length > 0 || missedTransactions.length > 0
+            ? completedTransactions.length
+            : finalizedActions.filter((r) => r.status === "Departed").length,
+        missedCount:
+          completedTransactions.length > 0 || missedTransactions.length > 0
+            ? missedTransactions.length
+            : 0,
+        arrivalsLogged: finalizedActions.filter((r) => r.arrivalAdminId).length,
+        departuresLogged: finalizedActions.filter((r) => r.departureAdminId).length,
+        departedNow: finalizedActions.filter((r) => r.status === "Departed").length,
       },
-      busActions: busActionRecords,
+      busActions: finalizedActions,
+      completedTransactions,
+      missedTransactions,
     };
     
     const newReport = new Report({

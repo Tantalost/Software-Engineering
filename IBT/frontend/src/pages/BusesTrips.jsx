@@ -137,6 +137,20 @@ const formatCollectorDisplayName = (collector) => {
     .join(" ");
 };
 
+const parseTo24HourTime = (timeValue) => {
+  if (!timeValue) return "";
+  const raw = String(timeValue).trim();
+  if (/^\d{2}:\d{2}$/.test(raw)) return raw;
+  const m = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return "";
+  let hours = parseInt(m[1], 10);
+  const minutes = m[2];
+  const period = m[3].toUpperCase();
+  if (period === "PM" && hours !== 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
+};
+
 const ManageCompaniesModal = ({
   isOpen,
   onClose,
@@ -1075,6 +1089,14 @@ const BusTrips = () => {
   const [missedBuses, setMissedBuses] = useState([]);
   const [showMissedModal, setShowMissedModal] = useState(false);
   const [isMissedLoading, setIsMissedLoading] = useState(false);
+  const [hasSubmittedShiftReport, setHasSubmittedShiftReport] = useState(false);
+  const [showPreviousShiftModal, setShowPreviousShiftModal] = useState(false);
+  const [previousShiftReports, setPreviousShiftReports] = useState([]);
+  const [isPreviousShiftLoading, setIsPreviousShiftLoading] = useState(false);
+  const [pendingDeletionRequests, setPendingDeletionRequests] = useState([]);
+  const [showPendingDeletionOnly, setShowPendingDeletionOnly] = useState(false);
+  const [rescheduleTrip, setRescheduleTrip] = useState(null);
+  const [rescheduledExpectedDeparture, setRescheduledExpectedDeparture] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -1093,11 +1115,13 @@ const BusTrips = () => {
   const SCHEDULE_NOT_ARRIVAL_API = `${
     import.meta.env.VITE_API_URL || "http://localhost:10000"
   }/api/schedule-not-arrivals`;
+  const DELETION_REQUESTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/deletion-requests`;
+  const REPORTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
   const [predefinedTodayTrips, setPredefinedTodayTrips] = useState([]);
   const ACTIVE_DISPATCH_STATUSES = useMemo(
-    () => ["Arrived", "On Fix", "Not Departed", "Departed"],
+    () => ["Arrived", "On Fix", "Not Departed"],
     [],
   );
 
@@ -1162,6 +1186,58 @@ const BusTrips = () => {
 
     fetchCollectors();
   }, [COLLECTORS_API_URL]);
+
+  const fetchPendingDeletionRequests = async () => {
+    try {
+      const res = await fetch(DELETION_REQUESTS_API_URL);
+      if (!res.ok) return;
+      const data = await res.json();
+      const busTripRequests = (Array.isArray(data) ? data : []).filter(
+        (r) => r.itemType === "Bus Trip" && String(r.status || "pending").toLowerCase() === "pending",
+      );
+      setPendingDeletionRequests(busTripRequests);
+    } catch (error) {
+      console.error("Error fetching pending deletion requests:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (role !== "superadmin") return;
+    fetchPendingDeletionRequests();
+  }, [role]);
+
+  const fetchPreviousShiftReports = async () => {
+    if (role !== "bus") return;
+    setIsPreviousShiftLoading(true);
+    try {
+      const res = await fetch(REPORTS_API_URL);
+      if (!res.ok) throw new Error("Failed to load reports.");
+      const data = await res.json();
+      const ownReports = (Array.isArray(data) ? data : [])
+        .filter((report) => {
+          if (report.type !== "Bus Trips") return false;
+          const reportAdminId = report?.data?.adminId;
+          return authAdminId ? String(reportAdminId || "") === String(authAdminId) : true;
+        })
+        .sort(
+          (a, b) =>
+            new Date(b?.data?.submittedAtServer || b.createdAt).getTime() -
+            new Date(a?.data?.submittedAtServer || a.createdAt).getTime(),
+        )
+        .slice(0, 10);
+      setPreviousShiftReports(ownReports);
+    } catch (error) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: error.message || "Failed to fetch previous shift reports.",
+        autoClose: true,
+        duration: 3500,
+      });
+    } finally {
+      setIsPreviousShiftLoading(false);
+    }
+  };
 
   const getBoardDateKey = () => {
     if (role === "bus") return getDateKey(new Date());
@@ -1475,6 +1551,15 @@ const BusTrips = () => {
     });
   }, [filtered, filteredWithoutDate, selectedDate, role]);
 
+  const pendingDeletionTripIdSet = useMemo(() => {
+    const set = new Set();
+    pendingDeletionRequests.forEach((req) => {
+      const originalId = req?.originalData?._id || req?.originalData?.id;
+      if (originalId) set.add(String(originalId));
+    });
+    return set;
+  }, [pendingDeletionRequests]);
+
   const activeDispatchRecords = useMemo(
     () =>
       todayDispatchRecords.filter((trip) =>
@@ -1483,13 +1568,13 @@ const BusTrips = () => {
     [todayDispatchRecords, ACTIVE_DISPATCH_STATUSES],
   );
 
-  const reportActiveRecords = useMemo(() => {
+  const reportCompletedRecords = useMemo(() => {
     const targetDateKey = role === "bus" ? getDateKey(new Date()) : selectedDate || getDateKey(new Date());
     return records.filter((trip) => {
       if (getDateKey(trip.date) !== targetDateKey) return false;
-      return ACTIVE_DISPATCH_STATUSES.includes(trip.status);
+      return trip.status === "Departed";
     });
-  }, [records, role, selectedDate, ACTIVE_DISPATCH_STATUSES]);
+  }, [records, role, selectedDate]);
 
   const dashboardTotalTrips = todayDispatchRecords.length;
   const dashboardPredefinedSchedules = useMemo(() => {
@@ -1567,12 +1652,19 @@ const BusTrips = () => {
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
+  const visibleDispatchRecords = useMemo(() => {
+    if (role !== "superadmin" || !showPendingDeletionOnly) return activeDispatchRecords;
+    return activeDispatchRecords.filter((trip) =>
+      pendingDeletionTripIdSet.has(String(trip._id || trip.id)),
+    );
+  }, [activeDispatchRecords, role, showPendingDeletionOnly, pendingDeletionTripIdSet]);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return activeDispatchRecords.slice(startIndex, startIndex + itemsPerPage);
-  }, [activeDispatchRecords, currentPage, itemsPerPage]);
+    return visibleDispatchRecords.slice(startIndex, startIndex + itemsPerPage);
+  }, [visibleDispatchRecords, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(activeDispatchRecords.length / itemsPerPage);
+  const totalPages = Math.ceil(visibleDispatchRecords.length / itemsPerPage);
 
   const handleAddClick = () => {
     const currentTime = new Date().toLocaleTimeString("en-GB", {
@@ -1702,33 +1794,70 @@ const BusTrips = () => {
     const tripId = trip?._id || trip?.id;
     if (!tripId) return;
 
-    const nextStatus = trip.status === "On Fix" ? "Scheduled" : "On Fix";
-
     // On Fix should only be toggled from Arrived or On Fix states.
     if (!["Arrived", "On Fix"].includes(trip.status)) return;
+
+    if (trip.status === "On Fix") {
+      setRescheduleTrip(trip);
+      setRescheduledExpectedDeparture(parseTo24HourTime(trip.expectedDeparture));
+      return;
+    }
 
     try {
       const response = await fetch(`${API_URL}/${tripId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
+        body: JSON.stringify({ status: "On Fix" }),
       });
 
       if (response.ok) {
         await fetchBusTrips();
         setNotificationState({
           isOpen: true,
-          type: nextStatus === "On Fix" ? "warning" : "success",
-          message:
-            nextStatus === "On Fix"
-              ? "Bus marked as On Fix."
-              : "Bus returned to Scheduled status.",
+          type: "warning",
+          message: "Bus marked as On Fix.",
           autoClose: true,
           duration: 3000,
         });
       }
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleConfirmRescheduleFromFix = async () => {
+    const tripId = rescheduleTrip?._id || rescheduleTrip?.id;
+    if (!tripId || !rescheduledExpectedDeparture) return;
+    try {
+      const response = await fetch(`${API_URL}/${tripId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "Arrived",
+          expectedDeparture: rescheduledExpectedDeparture,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to reschedule bus after maintenance.");
+      }
+      setRescheduleTrip(null);
+      setRescheduledExpectedDeparture("");
+      await fetchBusTrips();
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: `Maintenance complete. New expected departure set to ${rescheduledExpectedDeparture}.`,
+        autoClose: true,
+        duration: 3500,
+      });
+    } catch (error) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: error.message || "Could not reschedule bus.",
+        autoClose: true,
+        duration: 3500,
+      });
     }
   };
 
@@ -2226,6 +2355,22 @@ const BusTrips = () => {
         collectorName: collectorName.trim(),
         sessionStartedAt,
         submittedLate: isLateSubmit,
+        completedTransactions: reportCompletedRecords.map((trip) => ({
+          id: trip._id || trip.id,
+          templateNo: trip.templateNo || trip.templateno,
+          company: trip.company,
+          route: trip.route,
+          status: trip.status,
+          arrivalTime: trip.time || "",
+          departureTime: trip.departureTime || "",
+        })),
+        missedTransactions: missedBuses.map((missed) => ({
+          plateNumber: missed.plateNumber,
+          company: missed.company,
+          route: missed.route,
+          scheduleTime: missed.scheduleTime,
+          remark: missed.remark || "",
+        })),
       };
       
       await submitPageReport(
@@ -2235,6 +2380,22 @@ const BusTrips = () => {
           localStorage.getItem("authEmail") ||
           "Admin",
       );
+
+      if (missedBuses.length > 0) {
+        await Promise.all(
+          missedBuses.map(async (missed) => {
+            const params = new URLSearchParams({
+              dateKey: String(missed.dateKey || ""),
+              company: String(missed.company || ""),
+              route: String(missed.route || ""),
+              scheduleTime: String(missed.scheduleTime || ""),
+              plateNumber: String(missed.plateNumber || ""),
+            });
+            await fetch(`${SCHEDULE_NOT_ARRIVAL_API}?${params}`, { method: "DELETE" });
+          }),
+        );
+        await fetchMissedBuses();
+      }
       
       setShowSubmitModal(false);
       setCollectorName(""); 
@@ -2247,6 +2408,7 @@ const BusTrips = () => {
         autoClose: true, 
         duration: 3000 
       });
+      if (role === "bus") setHasSubmittedShiftReport(true);
       
     } catch (e) {
       console.error(e);
@@ -2649,7 +2811,10 @@ const BusTrips = () => {
 
       if (!response.ok) throw new Error("Failed to delete");
 
-      fetchBusTrips();
+      await fetchBusTrips();
+      if (role === "superadmin") {
+        await fetchPendingDeletionRequests();
+      }
       setDeleteRow(null);
 
       setNotificationState({
@@ -2811,7 +2976,19 @@ const BusTrips = () => {
       ];
 
   return (
-    <Layout title="Bus Trips Management">
+    <Layout
+      title="Bus Trips Management"
+      topbarProps={{
+        logoutGuard:
+          role === "bus"
+            ? {
+                canLogout: hasSubmittedShiftReport,
+                message:
+                  "Please submit your Bus Admin shift report before logging out. This protects shift accountability and keeps turnover records complete.",
+              }
+            : undefined,
+      }}
+    >
       <div className="mb-6">
         <StatCardGroupBus
           totalTrips={dashboardTotalTrips}
@@ -2938,7 +3115,34 @@ const BusTrips = () => {
                   >
                     <span>View Missed Buses</span>
                   </button>
+                  <button
+                    onClick={() => {
+                      fetchPreviousShiftReports();
+                      setShowPreviousShiftModal(true);
+                    }}
+                    className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
+                  >
+                    <span>Previous Shift Records</span>
+                  </button>
                 </div>
+              )}
+
+              {role === "superadmin" && (
+                <button
+                  onClick={() => setShowPendingDeletionOnly((prev) => !prev)}
+                  className={`flex items-center cursor-pointer justify-center space-x-2 border font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-all ${
+                    showPendingDeletionOnly
+                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>
+                    Pending Deletions
+                    {pendingDeletionRequests.length > 0
+                      ? ` (${pendingDeletionRequests.length})`
+                      : ""}
+                  </span>
+                </button>
               )}
 
               {role === "superadmin" && (
@@ -3026,7 +3230,7 @@ const BusTrips = () => {
               totalPages={totalPages} 
               onPageChange={setCurrentPage} 
               itemsPerPage={itemsPerPage} 
-              totalItems={activeDispatchRecords.length} 
+              totalItems={visibleDispatchRecords.length} 
               onItemsPerPageChange={setItemsPerPage} 
             />
           </>
@@ -3517,8 +3721,8 @@ const BusTrips = () => {
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
                 <FileText className="text-blue-500 shrink-0" size={20} />
                 <div className="text-xs text-blue-800">
-                  <strong>Total Records Included:</strong> {reportActiveRecords.length + missedBuses.length} Buses<br/>
-                  (Includes active dispatch buses and missed buses)
+                  <strong>Total Records Included:</strong> {reportCompletedRecords.length + missedBuses.length} Buses<br/>
+                  (Includes completed departures and missed buses; parked buses remain on TDB)
                   <div className="mt-2 pt-2 border-t border-blue-200">
                     <strong>Collector:</strong> {collectorName}
                   </div>
@@ -3540,6 +3744,114 @@ const BusTrips = () => {
               >
                 {isReporting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                 Confirm Hand-off
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPreviousShiftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b pb-3 mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Previous Shift Records</h3>
+              <button
+                onClick={() => setShowPreviousShiftModal(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {isPreviousShiftLoading ? (
+              <div className="py-10 text-center text-slate-500">Loading previous shift reports...</div>
+            ) : previousShiftReports.length === 0 ? (
+              <div className="py-10 text-center text-slate-500">No previous shift reports found for this Bus Admin.</div>
+            ) : (
+              <div className="max-h-[65vh] overflow-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+                    <tr>
+                      <th className="px-4 py-3">Submitted At</th>
+                      <th className="px-4 py-3">Shift</th>
+                      <th className="px-4 py-3">Collector</th>
+                      <th className="px-4 py-3">Completed</th>
+                      <th className="px-4 py-3">Missed</th>
+                      <th className="px-4 py-3">Late</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {previousShiftReports.map((report) => {
+                      const completed =
+                        report?.data?.completedTransactions?.length ??
+                        report?.data?.statistics?.completedCount ??
+                        0;
+                      const missed =
+                        report?.data?.missedTransactions?.length ??
+                        report?.data?.statistics?.missedCount ??
+                        0;
+                      return (
+                        <tr key={report._id || report.id}>
+                          <td className="px-4 py-3 text-slate-700">
+                            {new Date(
+                              report?.data?.submittedAtServer || report.createdAt,
+                            ).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {report?.data?.shift || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {report?.data?.collectorName || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{completed}</td>
+                          <td className="px-4 py-3 text-slate-700">{missed}</td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {report?.data?.submittedLate ? "Yes" : "No"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {rescheduleTrip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Return Bus From Maintenance</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Set a new expected departure time for{" "}
+              <strong>{rescheduleTrip.templateNo || rescheduleTrip.templateno}</strong> before returning it to the active dispatch board.
+            </p>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">
+              New Expected Departure Time
+            </label>
+            <input
+              type="time"
+              value={rescheduledExpectedDeparture}
+              onChange={(e) => setRescheduledExpectedDeparture(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 bg-white"
+            />
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setRescheduleTrip(null);
+                  setRescheduledExpectedDeparture("");
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRescheduleFromFix}
+                disabled={!rescheduledExpectedDeparture}
+                className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60"
+              >
+                Confirm Reschedule
               </button>
             </div>
           </div>

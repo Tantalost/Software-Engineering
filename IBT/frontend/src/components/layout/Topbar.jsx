@@ -7,12 +7,13 @@ import { useNavigate } from "react-router-dom";
 import NotificationToast from "../common/NotificationToast";
 import RecoveryCodeBadge from "../common/RecoveryCodeBadge";
 
-const Topbar = ({ title, onMenuClick }) => {
+const Topbar = ({ title, onMenuClick, logoutGuard }) => {
   const navigate = useNavigate();
 
   const [showBell, setShowBell] = useState(false);
   const [showUser, setShowUser] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showLogoutBlockedModal, setShowLogoutBlockedModal] = useState(false);
 
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastTab, setBroadcastTab] = useState("create");
@@ -280,9 +281,19 @@ const Topbar = ({ title, onMenuClick }) => {
   };
 
   const handleLogout = () => {
+    if (logoutGuard && logoutGuard.canLogout === false) {
+      setShowLogoutModal(false);
+      setShowLogoutBlockedModal(true);
+      return;
+    }
     setShowLogoutModal(false);
     localStorage.removeItem("isAdminLoggedIn");
     localStorage.removeItem("authRole");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authName");
+    localStorage.removeItem("authAdminId");
+    localStorage.removeItem("authEmail");
+    localStorage.removeItem("authShift");
     navigate("/login");
   };
 
@@ -803,6 +814,31 @@ const Topbar = ({ title, onMenuClick }) => {
               <div className="flex w-full space-x-3 mt-4">
                 <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700">Cancel</button>
                 <button onClick={handleLogout} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold">Yes, Logout</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLogoutBlockedModal && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/40 z-[60]">
+          <div className="bg-white rounded-2xl shadow-xl w-96 max-w-[95vw] p-6 relative">
+            <div className="flex flex-col items-center text-center">
+              <AlertTriangle className="text-amber-500 mb-3" size={40} />
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                Report Required Before Logout
+              </h2>
+              <p className="text-sm text-gray-600">
+                {logoutGuard?.message ||
+                  "Please submit your shift report before logging out."}
+              </p>
+              <div className="flex w-full mt-4">
+                <button
+                  onClick={() => setShowLogoutBlockedModal(false)}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold"
+                >
+                  Understood
+                </button>
               </div>
             </div>
           </div>
