@@ -1301,7 +1301,7 @@ const BusTrips = () => {
 
   const getBoardDateKey = () => {
     if (role === "bus") return getDateKey(new Date());
-    if (selectedDate) return selectedDate;
+    if (dateFilterType === "Daily") return getDateKey(currentDateRange);
     return getDateKey(new Date());
   };
 
@@ -1329,7 +1329,7 @@ const BusTrips = () => {
 
   useEffect(() => {
     fetchMissedBuses();
-  }, [role, selectedDate]);
+  }, [role, dateFilterType, currentDateRange]);
 
   const [showSetPriceModal, setShowSetPriceModal] = useState(false);
   const [newPrice, setNewPrice] = useState("");
@@ -1534,10 +1534,11 @@ const BusTrips = () => {
 
   useEffect(() => {
     if (role === "bus") {
-      setSelectedDate("");
+      setDateFilterType("Daily");
+      setCurrentDateRange(new Date());
     }
   }, [role]);
-
+  
   const availableCompanies = companyData.map((c) => c.name);
 
   const filtered = records.filter((bus) => {
