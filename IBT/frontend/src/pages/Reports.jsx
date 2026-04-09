@@ -24,13 +24,14 @@ import {
   Loader2,
   FileSpreadsheet,
   FileText,
+  ChevronLeft,   
+  ChevronRight
 } from "lucide-react";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// HELPER COMPONENT FOR VIEWING REPORT DATA
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload)
     return (
@@ -176,8 +177,8 @@ const Reports = () => {
   };
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
-
+  const [dateFilterType, setDateFilterType] = useState("All");
+  const [currentDateRange, setCurrentDateRange] = useState(new Date());
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [timeRange, setTimeRange] = useState("All");
 
@@ -243,92 +244,98 @@ const Reports = () => {
     }
   }, [records, location.state]);
 
+  const getRangeBounds = (type, date) => {
+    if (type === "All") return { start: null, end: null };
+    const start = new Date(date);
+    const end = new Date(date);
+
+    if (type === "Daily") {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Week") {
+      const day = start.getDay(); 
+      const diff = start.getDate() - day;
+      start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(diff + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Month") {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0); 
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Year") {
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(11, 31);
+      end.setHours(23, 59, 59, 999);
+    }
+    return { start, end };
+  };
+
+  const { start: filterStart, end: filterEnd } = getRangeBounds(dateFilterType, currentDateRange);
+
+  const handlePrevPeriod = () => {
+    if (dateFilterType === "All") return;
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() - 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() - 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() - 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() - 1);
+    setCurrentDateRange(newDate);
+    setCurrentPage(1);
+  };
+
+  const handleNextPeriod = () => {
+    if (dateFilterType === "All") return;
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() + 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() + 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() + 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() + 1);
+    setCurrentDateRange(newDate);
+    setCurrentPage(1);
+  };
+
+  const getPeriodDisplayStr = () => {
+    if (dateFilterType === "All") return "All Time";
+    const { start, end } = getRangeBounds(dateFilterType, currentDateRange);
+    if (dateFilterType === "Daily") {
+      return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    } else if (dateFilterType === "Week") {
+      const startStr = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const endStr = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return `${startStr} - ${endStr}`;
+    } else if (dateFilterType === "Month") {
+      return start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    } else if (dateFilterType === "Year") {
+      return start.getFullYear().toString();
+    }
+  };
+
   const filtered = useMemo(() => {
     return records.filter((report) => {
       const reportDate = new Date(report.createdAt || report.date);
-      const now = new Date();
 
       const matchesSearch =
         report.id?.toString().includes(searchQuery) ||
         report.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         report.author?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesDate =
-        !selectedDate || getDateKey(reportDate) === getDateKey(selectedDate);
       const matchesCategory =
         selectedCategory === "All" || report.type === selectedCategory;
 
-      let matchesTimeRange = true;
-      if (timeRange !== "All") {
-        const reportTime = new Date(report.createdAt || report.date);
-        
-        // Helper function to get date at start of day
-        const getStartOfDay = (date) => {
-          const d = new Date(date);
-          d.setHours(0, 0, 0, 0);
-          return d;
-        };
-        
-        // Helper function to get date at end of day
-        const getEndOfDay = (date) => {
-          const d = new Date(date);
-          d.setHours(23, 59, 59, 999);
-          return d;
-        };
-
-        switch (timeRange) {
-          case "This Week": {
-            const weekAgo = new Date();
-            weekAgo.setDate(now.getDate() - 7);
-            matchesTimeRange = reportDate >= weekAgo;
-            break;
-          }
-          case "This Month": {
-            matchesTimeRange = 
-              reportTime.getMonth() === now.getMonth() && 
-              reportTime.getFullYear() === now.getFullYear();
-            break;
-          }
-          case "Last Month": {
-            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-            matchesTimeRange = 
-              reportTime >= lastMonth && reportTime <= lastMonthEnd;
-            break;
-          }
-          case "Last Month & This Month": {
-            // Show records from last month and current month
-            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const thisMonthEnd = getEndOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-            matchesTimeRange = reportTime >= lastMonthStart && reportTime <= thisMonthEnd;
-            break;
-          }
-          case "Last 3 Months": {
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(now.getMonth() - 3);
-            matchesTimeRange = reportDate >= threeMonthsAgo;
-            break;
-          }
-          case "Last 6 Months": {
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(now.getMonth() - 6);
-            matchesTimeRange = reportDate >= sixMonthsAgo;
-            break;
-          }
-          case "This Year": {
-            matchesTimeRange = reportDate.getFullYear() === now.getFullYear();
-            break;
-          }
-          default:
-            matchesTimeRange = true;
-        }
+      let matchesDateRange = false;
+      if (dateFilterType === "All") {
+        matchesDateRange = true;
+      } else if (reportDate && !Number.isNaN(reportDate.getTime())) {
+        matchesDateRange = reportDate >= filterStart && reportDate <= filterEnd;
       }
 
-      return (
-        matchesSearch && matchesDate && matchesCategory && matchesTimeRange
-      );
+      return matchesSearch && matchesCategory && matchesDateRange;
     });
-  }, [records, searchQuery, selectedDate, selectedCategory, timeRange]);
+  }, [records, searchQuery, selectedCategory, filterStart, filterEnd, dateFilterType]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -638,7 +645,6 @@ const Reports = () => {
     paginatedData.length > 0 &&
     paginatedData.every((item) => selectedIds.includes(item.id));
 
-  // BULK ARCHIVE & DELETE (SUPERADMIN)
   const handleBulkDelete = async () => {
     if (
       !window.confirm(
@@ -687,7 +693,6 @@ const Reports = () => {
     }
   };
 
-  // SINGLE DELETE
   const handleDeleteConfirm = async () => {
     if (!deleteRow) return;
     try {
@@ -754,160 +759,94 @@ const Reports = () => {
 
   return (
     <Layout title="Reports Management">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        <FilterBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        />
-        <div className="flex items-center justify-end gap-3">
-          <div className="h-[44px] flex items-center" title="Download Reports">
-            <ExportMenu
-              onExportExcel={handleExportExcel}
-              onExportPDF={handleExportPDF}
-            />
+      <div className="flex flex-col gap-4 mb-6">
+        
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="w-full lg:w-[350px]">
+            <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
           </div>
-        </div>
-      </div>
-
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-            <Tag size={16} />
-          </div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 hover:border-slate-400 transition-all appearance-none cursor-pointer"
-          >
-            {[
-              "All",
-              "Bus Trips",
-              "Terminal Fees",
-              "Tenant/Lease",
-              "Parking",
-              "Lost & Found",
-            ].map((cat) => (
-              <option key={cat} value={cat}>
-                {cat === "All" ? "All Categories" : cat}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+          
+          <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
+             <ExportMenu onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
           </div>
         </div>
 
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-            <Calendar size={16} />
-          </div>
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 hover:border-slate-400 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Time</option>
-            <option value="This Week">This Week</option>
-            <option value="This Month">This Month</option>
-            <option value="Last Month">Last Month</option>
-            <option value="Last Month & This Month">Last Month & This Month</option>
-            <option value="Last 3 Months">Last 3 Months</option>
-            <option value="Last 6 Months">Last 6 Months</option>
-            <option value="This Year">This Year</option>
-          </select>
-          <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          
+          <div className="relative w-full sm:w-64 shrink-0">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <Calendar size={16} />
+              <Tag size={16} />
             </div>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 hover:border-slate-400 transition-all"
-              aria-label="Filter reports by date"
-            />
+            <select
+              value={selectedCategory}
+              onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-10 pr-8 h-[42px] bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+            >
+              {["All", "Bus Trips", "Terminal Fees", "Tenant/Lease", "Parking", "Lost & Found"].map((cat) => (
+                <option key={cat} value={cat}>{cat === "All" ? "All Categories" : cat}</option>
+              ))}
+            </select>
           </div>
 
-          {selectedDate && (
-            <button
-              onClick={handleClearDateFilter}
-              className="h-[42px] px-3 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold shadow-sm hover:bg-slate-50 transition-all"
-              title="Clear date filter"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+          <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
+            
+            <div className="flex items-center gap-2">
+              <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+                {["All", "Daily", "Week", "Month", "Year"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setDateFilterType(type);
+                      setCurrentDateRange(new Date());
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                      dateFilterType === type
+                        ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
 
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={() => setShowLogModal(true)}
-            className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
-            title="View Logs"
-          >
-            <History size={18} />
-            <span className="hidden xl:inline">Logs</span>
-          </button>
-
-          {isSelectionMode && selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-              <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-                {selectedIds.length} Selected
-              </span>
-              <button
-                onClick={handleBulkDelete}
-                title="Delete Selected"
-                className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-button"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
+              {dateFilterType !== "All" && (
+                <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                  <button onClick={handlePrevPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                    <Calendar size={16} className="text-slate-400" />
+                    {getPeriodDisplayStr()}
+                  </div>
+                  <button onClick={handleNextPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              )}
             </div>
-          )}
 
-          {role === "lol" && (
-            <button
-              onClick={toggleSelectionMode}
-              title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border${isSelectionMode
-                ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
-                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
+            {isSelectionMode && selectedIds.length > 0 && (
+              <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
+                <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">{selectedIds.length} Selected</span>
+                <button onClick={handleBulkDelete} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 shadow-sm border border-slate-200 cursor-pointer">
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+
+            {role === "superadmin" && (
+              <button
+                onClick={toggleSelectionMode}
+                className={`flex items-center justify-center h-[42px] px-3 rounded-xl transition-all border cursor-pointer ${
+                  isSelectionMode ? "bg-red-500 text-white border-red-600 shadow-md" : "bg-white border-slate-300 text-slate-500 hover:border-slate-400"
                 }`}
-            >
-              {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-            </button>
-          )}
+              >
+                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
