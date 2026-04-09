@@ -9,8 +9,23 @@ const toShiftLabel = (hour) => {
   return "18-24";
 };
 
+const toMinutesFrom12Hour = (part = "") => {
+  const match = String(part).trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+  if (!match) return null;
+  let hour = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (Number.isNaN(hour) || hour < 1 || hour > 12 || Number.isNaN(minutes) || minutes < 0 || minutes > 59) {
+    return null;
+  }
+  if (period === "PM" && hour !== 12) hour += 12;
+  if (period === "AM" && hour === 12) hour = 0;
+  return (hour * 60) + minutes;
+};
+
 const getShiftWindowBounds = (assignedShift, now = new Date()) => {
-  if (!assignedShift || !/^\d{2}-\d{2}$/.test(assignedShift)) {
+  const normalizedShift = String(assignedShift || "").trim();
+  if (!normalizedShift) {
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
     const end = new Date(now);
@@ -18,30 +33,60 @@ const getShiftWindowBounds = (assignedShift, now = new Date()) => {
     return { start, end };
   }
 
-  const [startHour, endHourRaw] = assignedShift.split('-').map((v) => parseInt(v, 10));
-  const endHour = endHourRaw === 24 ? 0 : endHourRaw;
-  const overnight = startHour >= endHour;
+  const legacyMatch = normalizedShift.match(/^(\d{2})-(\d{2})$/);
+  if (legacyMatch) {
+    const [startHour, endHourRaw] = legacyMatch.slice(1).map((v) => parseInt(v, 10));
+    const endHour = endHourRaw === 24 ? 0 : endHourRaw;
+    const overnight = startHour >= endHour;
 
-  const start = new Date(now);
-  const end = new Date(now);
-  start.setMinutes(0, 0, 0);
-  end.setMinutes(59, 59, 999);
+    const start = new Date(now);
+    const end = new Date(now);
+    start.setMinutes(0, 0, 0);
+    end.setMinutes(59, 59, 999);
 
-  if (!overnight) {
-    start.setHours(startHour);
-    end.setHours(endHourRaw === 24 ? 23 : endHour);
+    if (!overnight) {
+      start.setHours(startHour);
+      end.setHours(endHourRaw === 24 ? 23 : endHour);
+      return { start, end };
+    }
+
+    if (now.getHours() < endHour) {
+      start.setDate(start.getDate() - 1);
+      start.setHours(startHour);
+      end.setHours(endHour);
+    } else {
+      start.setHours(startHour);
+      end.setDate(end.getDate() + 1);
+      end.setHours(endHour);
+    }
     return { start, end };
   }
 
-  if (now.getHours() < endHour) {
-    start.setDate(start.getDate() - 1);
-    start.setHours(startHour);
-    end.setHours(endHour);
-  } else {
-    start.setHours(startHour);
-    end.setDate(end.getDate() + 1);
-    end.setHours(endHour);
+  const [dynamicStartPart = "", dynamicEndPart = ""] = normalizedShift.split(" - ");
+  const dynamicStartMinutes = toMinutesFrom12Hour(dynamicStartPart);
+  const dynamicEndMinutes = toMinutesFrom12Hour(dynamicEndPart);
+  if (dynamicStartMinutes !== null && dynamicEndMinutes !== null) {
+    const start = new Date(now);
+    const end = new Date(now);
+
+    start.setHours(Math.floor(dynamicStartMinutes / 60), dynamicStartMinutes % 60, 0, 0);
+    end.setHours(Math.floor(dynamicEndMinutes / 60), dynamicEndMinutes % 60, 59, 999);
+
+    if (dynamicEndMinutes <= dynamicStartMinutes) {
+      if ((now.getHours() * 60) + now.getMinutes() < dynamicEndMinutes) {
+        start.setDate(start.getDate() - 1);
+      } else {
+        end.setDate(end.getDate() + 1);
+      }
+    }
+
+    return { start, end };
   }
+
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
   return { start, end };
 };
 
@@ -103,7 +148,7 @@ export const createReport = async (req, res) => {
 
       const assignedShift = admin?.assignedShift || null;
       const actualShiftAtSubmission = toShiftLabel(now.getHours());
-      const { start: shiftStart } = getShiftWindowBounds(assignedShift, now);
+      const { start: shiftStart, end: shiftEnd } = getShiftWindowBounds(assignedShift, now);
       const sessionStartedAtRaw = effectivePayload?.sessionStartedAt;
       const parsedSessionStart = sessionStartedAtRaw
         ? new Date(sessionStartedAtRaw)
@@ -173,7 +218,7 @@ export const createReport = async (req, res) => {
         submittedAtServer: now.toISOString(),
         submittedAtShiftWindow: actualShiftAtSubmission,
         submittedLate: assignedShift
-          ? assignedShift !== actualShiftAtSubmission
+          ? now < shiftStart || now > shiftEnd
           : !!effectivePayload?.submittedLate,
         submittedByEmail: authorEmail || null,
         actionWindow: {
