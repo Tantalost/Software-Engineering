@@ -29,8 +29,6 @@ const CryptoJS = require('crypto-js');
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_URL from '@/src/config';
 
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import AuthScreen from '@/src/AuthScreen';
 import styles from '@/src/styles/stallsStyle';
 import { colors } from '@/src/themes/stallsColors';
@@ -402,110 +400,7 @@ export default function StallsPage() {
       }
     } catch (err) { console.log("Error picking file: ", err); }
   };
-
- const generateContractPDF = async () => {
-    try {
-      const lesseeName = currentApp?.name || currentApp?.tenantName || "_______________________";
-      const assignedSlot = currentApp?.targetSlot || currentApp?.slotNo || "_______________________";
-      const monthlyRental = currentApp?.rentAmount ? `Php ${currentApp.rentAmount.toLocaleString()}` : "_______________________";
-      const effectivityDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-      const htmlContent = `
-        <html>
-          <head>
-            <style>
-              body { font-family: 'Helvetica', sans-serif; padding: 40px; line-height: 1.6; color: #333; }
-              .header { text-align: center; margin-bottom: 30px; }
-              .header h3, .header h4 { margin: 5px 0; }
-              .title { font-size: 18px; font-weight: bold; text-align: center; margin: 30px 0; text-decoration: underline; }
-              .details { margin-bottom: 30px; font-size: 14px; }
-              .details p { margin: 5px 0; }
-              .section-title { font-weight: bold; margin-top: 20px; font-size: 14px; }
-              ul { margin-top: 5px; margin-bottom: 15px; font-size: 13px; }
-              li { margin-bottom: 8px; }
-              .signature-block { margin-top: 60px; text-align: right; }
-              .signature-line { border-top: 1px solid #000; width: 250px; display: inline-block; padding-top: 5px; text-align: center; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h3>Republica de Filipinas<br/>Ciudad de Zamboanga</h3>
-              <h4>OFICINA DEL ADMINISTRADOR<br/>INTEGRADO TERMINAL DE ZAMBOANGA</h4>
-            </div>
-
-            <div class="details">
-              <p><strong>Lessee Name:</strong> ${lesseeName}</p>
-              <p><strong>Assigned Slot:</strong> ${assignedSlot}</p>
-              <p><strong>Monthly Rental:</strong> ${monthlyRental}</p>
-              <p><strong>Effectivity Date:</strong> ${effectivityDate}</p>
-            </div>
-
-            <div class="title">IBT-ZC Contractual Concessionaires Operations & Management Policy</div>
-
-            <p class="section-title">1. Lease Terms and Duration</p>
-            <ul>
-              <li><strong>Contract Length:</strong> Lease agreements are valid for a maximum of two (2) years, renewable for another period not exceeding two years.</li>
-              <li><strong>Approval Process:</strong> Rental fees are recommended on a per-square-meter basis and must be approved by the Sangguniang Panlungsod.</li>
-              <li><strong>Types of Spaces:</strong> Includes eateries, gift shops, ticketing booths, office spaces, and other designated rentable areas.</li>
-            </ul>
-
-            <p class="section-title">2. Payment and Financial Obligations</p>
-            <ul>
-              <li><strong>Due Date:</strong> Rent must be paid within the first five (5) calendar days of each month.</li>
-              <li><strong>Late Penalties:</strong> A 25% surcharge is applied for payments made after the 5th of the month. An additional 2% monthly interest is charged on unpaid rentals and surcharges.</li>
-              <li><strong>Default:</strong> Failing to pay for two (2) consecutive months is grounds for contract termination and may result in a lien on the tenant's property.</li>
-            </ul>
-
-            <p class="section-title">3. Strict Prohibitions</p>
-            <ul>
-              <li><strong>Unauthorized Changes:</strong> You cannot build structures or display signs/advertisements without prior official consent.</li>
-              <li><strong>Subleasing:</strong> Subcontracting or assigning the lease to another party is forbidden without written permission.</li>
-              <li><strong>Residential Use:</strong> Using the space for dwelling or sleeping is prohibited.</li>
-              <li><strong>Disturbances:</strong> Using videoke/karaoke machines or making unreasonable noise is not allowed.</li>
-              <li><strong>Illegal Acts:</strong> Gambling, hazardous materials (explosives/flammables), and "immoral transactions" (e.g., prostitution) are strictly banned.</li>
-              <li><strong>Space Usage:</strong> You cannot use sidewalks or pathways as extensions of your business area.</li>
-            </ul>
-
-            <p class="section-title">4. Maintenance and Waste Management</p>
-            <ul>
-              <li><strong>Waste Disposal:</strong> Tenants are responsible for segregating their trash (boxes, bottles, etc.) and placing it in provided bins.</li>
-            </ul>
-
-            <p class="section-title">5. Termination and Penalties</p>
-            <ul>
-              <li><strong>Termination:</strong> The City can end the contract if the tenant violates the ordinance, fails to pay for two months, or engages in prohibited acts. Tenants must vacate immediately upon notice.</li>
-            </ul>
-
-            <p style="margin-top: 30px; font-style: italic; font-size: 13px;">
-              The Lessee hereby agrees to the terms and conditions set forth by the Lessor regarding the use and maintenance of the assigned slot. This agreement is legally binding once signed.
-            </p>
-
-            <div class="signature-block">
-              <div class="signature-line">
-                <strong>Lessee's Signature over printed name</strong>
-              </div>
-            </div>
-          </body>
-        </html>
-      `;
-
-      const { uri } = await Print.printToFileAsync({ 
-        html: htmlContent,
-        base64: false 
-      });
-      
-      await Sharing.shareAsync(uri, { 
-        UTI: '.pdf', 
-        mimeType: 'application/pdf',
-        dialogTitle: 'Download Contract'
-      });
-      
-    } catch (error) {
-      console.error("Error generating contract:", error);
-      Alert.alert("Error", "Could not generate the contract document. Please try again.");
-    }
-  };
-  
+ 
   const handleReview = () => {
     if (!files.permit || !files.validId || !files.clearance) {
       return Alert.alert("Missing Photos", "Please upload Permit, Valid ID, and Barangay Clearance.");
@@ -921,7 +816,6 @@ setSelectedStall(null);
       return (
         <ContractPendingView
           currentApp={currentApp}
-          generateContractPDF={generateContractPDF}
           submitContract={submitContract}
           applying={applying}
           files={files}

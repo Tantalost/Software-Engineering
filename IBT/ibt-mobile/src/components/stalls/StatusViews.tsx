@@ -43,7 +43,7 @@ export const ContractReviewView = ({ currentApp, refreshing, onRefresh }: any) =
     </ScrollView>
 );
 
-export const ContractPendingView = ({ currentApp, generateContractPDF, submitContract, applying, files, uploadProgress, onPickFile, refreshing, onRefresh }: any) => (
+export const ContractPendingView = ({ currentApp, submitContract, applying, files, uploadProgress, onPickFile, refreshing, onRefresh }: any) => (
     <ScrollView 
         contentContainerStyle={{padding: 20, alignItems:'center'}}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
@@ -52,11 +52,10 @@ export const ContractPendingView = ({ currentApp, generateContractPDF, submitCon
         <Text variant="headlineSmall" style={{color: colors.primary, fontWeight: 'bold', marginTop: 10, textAlign: 'center'}}>Contract Signing</Text>
         <Card style={[styles.statusCard, {marginTop: 20, width: '100%'}]}>
             <Card.Content>
-                <Text style={{textAlign:'center', marginBottom: 15, color: '#444', fontWeight: 'bold', fontSize: 16}}>Step 1: Download & Sign</Text>
-                <Button mode="contained" icon="download" onPress={generateContractPDF} style={{marginBottom: 25, backgroundColor: colors.primary}} textColor='white'>Download Contract PDF</Button>
-                <Divider style={{marginBottom: 20}} />
-                <Text style={{textAlign:'center', marginBottom: 15, color: '#444', fontWeight: 'bold', fontSize: 16}}>Step 2: Upload Signed PDF</Text>
+                <Text style={{textAlign:'center', marginBottom: 15, color: '#444', fontWeight: 'bold', fontSize: 16}}>Upload Signed PDF</Text>
+                
                 <FileUploadButton label="Signed PDF" fileKey="contract" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+                
                 <Button mode={applying ? "contained" : "outlined"} onPress={submitContract} loading={applying} style={{marginTop: 10, borderColor: colors.primary, borderWidth: applying ? 0 : 1,backgroundColor: applying ? colors.primary : 'transparent' }} textColor={applying ? colors.white : colors.primary}
                 >
                   Submit Contract

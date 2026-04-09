@@ -2,12 +2,12 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
-  SectionList,
+  FlatList,
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  type SectionListRenderItemInfo,
+  type ListRenderItemInfo,
 } from 'react-native';
 import { Text, Card, Searchbar, Avatar, Divider, Menu } from 'react-native-paper';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -20,12 +20,6 @@ import type { PredefinedEntry, DispatchTrip, PredefinedStatus } from '../../src/
 const POLL_MS = 45000;
 
 type BoardRow = PredefinedEntry | DispatchTrip;
-
-interface BoardSection {
-  key: 'pre' | 'disp';
-  title: string;
-  data: BoardRow[];
-}
 
 const PREDEFINED_BADGE: Record<PredefinedStatus, { emoji: string; label: string; bg: string; fg: string }> = {
   scheduled: { emoji: '🟡', label: 'Scheduled', bg: '#FFF8E1', fg: '#F57F17' },
@@ -54,6 +48,17 @@ function isPredefinedRow(item: BoardRow): item is PredefinedEntry {
   return typeof (item as PredefinedEntry).rowKey === 'string' && (item as PredefinedEntry).rowKey.length > 0;
 }
 
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return '--:--';
+  if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) return timeStr;
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  let hour = parseInt(parts[0], 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12 || 12;
+  return `${hour}:${parts[1]} ${ampm}`;
+};
+
 async function parseJsonSafe(res: Response): Promise<unknown> {
   const text = await res.text();
   if (!text.trim()) return null;
@@ -63,6 +68,105 @@ async function parseJsonSafe(res: Response): Promise<unknown> {
     return null;
   }
 }
+
+const PredefinedCard = React.memo(({ item }: { item: PredefinedEntry }) => {
+  const badge = PREDEFINED_BADGE[item.status] || PREDEFINED_BADGE.scheduled;
+  return (
+    <Card style={styles.card} mode="elevated">
+      <Card.Content>
+        <View style={styles.cardHeader}>
+          <View style={styles.companyContainer}>
+            <Avatar.Icon size={40} icon="calendar-clock" style={{ backgroundColor: '#E3F2FD' }} color="#1565C0" />
+            <View>
+              <Text style={styles.companyName}>{item.company}</Text>
+              <Text style={styles.busType}>{item.plateNumber} • {item.busType || 'Regular'}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusChip, { backgroundColor: badge.bg }]}>
+            <Text style={{ color: badge.fg, fontSize: 12, fontWeight: 'bold', paddingHorizontal: 10 }}>
+              {badge.emoji} {badge.label}
+            </Text>
+          </View>
+        </View>
+        <Divider style={styles.divider} />
+        <View style={styles.routeRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>Route</Text>
+            <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
+            <Text style={[styles.label, { marginTop: 12 }]}>Expected Scheduled Time</Text>
+            <Text variant="bodyMedium" style={styles.value}>{item.scheduleTime} ({item.timeWindowLabel})</Text>
+            
+            {item.notArrivalRemark ? (
+              <>
+                <Text style={[styles.label, { marginTop: 12 }]}>Remark</Text>
+                <Text variant="bodyMedium" style={[styles.value, { color: '#546E7A' }]}>
+                  {item.notArrivalRemark}
+                </Text>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Card.Content>
+    </Card>
+  );
+});
+
+const DispatchCard = React.memo(({ item }: { item: DispatchTrip }) => {
+  const label = (item.displayStatus ?? item.status ?? '').trim();
+  const b = dispatchBadge(label);
+  
+  // 🚀 ADJUSTMENT: Determine if the bus has departed
+  const isDeparted = label === 'Departed';
+
+  return (
+    <Card style={styles.card} mode="elevated">
+      <Card.Content>
+        <View style={styles.cardHeader}>
+          <View style={styles.companyContainer}>
+            <Avatar.Icon size={40} icon="bus" style={{ backgroundColor: '#E8F5E9' }} color="#1B5E20" />
+            <View>
+              <Text style={styles.companyName}>{item.company}</Text>
+              <Text style={styles.busType}>{item.templateNo} • {item.busType || 'Regular'}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusChip, { backgroundColor: b.bg }]}>
+            <Text style={{ color: b.fg, fontSize: 12, fontWeight: 'bold', paddingHorizontal: 10 }}>
+              {b.emoji} {label || item.status || '—'}
+            </Text>
+          </View>
+        </View>
+        <Divider style={styles.divider} />
+        <View style={styles.routeRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>Route</Text>
+            <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
+            <Text style={[styles.label, { marginTop: 10 }]}>Stops</Text>
+            <Text style={styles.value}>{getStopsLabel(item)}</Text>
+          </View>
+          
+          <View style={{ alignItems: 'flex-end', minWidth: 120 }}>
+            {/* 🚀 ADJUSTMENT: Dynamically change time label and value based on status */}
+            <Text style={[styles.label, { color: '#1B5E20', fontWeight: 'bold' }]}>
+              {isDeparted ? 'Time (departed)' : 'Time (arrived)'}
+            </Text>
+            <Text variant="titleLarge" style={[styles.timeValue, { color: '#1B5E20' }]}>
+              {isDeparted ? (item.departureTime ? formatTime(item.departureTime) : formatTime(item.time)) : formatTime(item.time)}
+            </Text>
+            
+            {/* 🚀 ADJUSTMENT: Hide Expected Departure if the bus has already departed */}
+            {!isDeparted && item.expectedDeparture && (
+              <>
+                <Text style={[styles.label, { marginTop: 12 }]}>Exp. dep.</Text>
+                <Text variant="titleMedium" style={[styles.timeValue, { color: '#D35400' }]}>{formatTime(item.expectedDeparture)}</Text>
+              </>
+            )}
+          </View>
+        </View>
+      </Card.Content>
+    </Card>
+  );
+});
+
 
 export default function RoutesPage() {
   const router = useRouter();
@@ -100,7 +204,6 @@ export default function RoutesPage() {
           setDispatchTrips(trips);
           setFetchError(null);
         } catch (legacyErr) {
-          console.error('Legacy terminal board fallback failed:', legacyErr);
           setPredefinedEntries([]);
           setDispatchTrips([]);
           setFetchError('Schedule API returned 404. Fallback failed.');
@@ -129,7 +232,6 @@ export default function RoutesPage() {
 
       setFetchError(errors.length > 0 ? `Could not load: ${errors.join(', ')}` : null);
     } catch (error) {
-      console.error('Error fetching terminal boards:', error);
       setFetchError('Network error. Check connection.');
     } finally {
       setLoading(false);
@@ -152,17 +254,6 @@ export default function RoutesPage() {
     fetchBoardData();
   };
 
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return '--:--';
-    if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) return timeStr;
-    const parts = timeStr.split(':');
-    if (parts.length < 2) return timeStr;
-    let hour = parseInt(parts[0], 10);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12 || 12;
-    return `${hour}:${parts[1]} ${ampm}`;
-  };
-
   const companies = useMemo(() => {
     const fromPre = predefinedEntries.map((e) => e.company);
     const fromDisp = dispatchTrips.map((t) => t.company);
@@ -170,11 +261,22 @@ export default function RoutesPage() {
   }, [predefinedEntries, dispatchTrips]);
 
   const busTypes = ['All', 'Aircon', 'Regular'];
-  const statusFilters = ['All', 'Arrived', 'Scheduled'];
+  const statusFilters = ['All', 'Scheduled', 'Arrived', 'Not Arrived', 'Departed', 'Under Maintenance'];
 
   const filteredPredefined = useMemo(() => {
-    if (selectedStatus === 'Arrived') return [];
+    if (['Arrived', 'Under Maintenance', 'Departed'].includes(selectedStatus)) return [];
+    
     let data = [...predefinedEntries];
+    
+    // 🚀 ADJUSTMENT: Always hide predefined buses that have already arrived to prevent duplicates
+    data = data.filter((item) => item.status !== 'arrived');
+    
+    if (selectedStatus === 'Scheduled') {
+      data = data.filter((item) => item.status === 'scheduled');
+    } else if (selectedStatus === 'Not Arrived') {
+      data = data.filter((item) => item.status === 'not_arrived');
+    }
+
     if (activeFilterId && searchQuery === '') data = data.filter((item) => item.rowKey === activeFilterId);
     if (selectedCompany !== 'All') data = data.filter((item) => item.company === selectedCompany);
     if (selectedBusType !== 'All') data = data.filter((item) => (item.busType || 'Regular') === selectedBusType);
@@ -186,8 +288,21 @@ export default function RoutesPage() {
   }, [predefinedEntries, searchQuery, activeFilterId, selectedCompany, selectedBusType, selectedStatus]);
 
   const filteredDispatch = useMemo(() => {
-    if (selectedStatus === 'Scheduled') return []; 
+    if (['Scheduled', 'Not Arrived'].includes(selectedStatus)) return []; 
+    
     let data = [...dispatchTrips];
+
+    if (selectedStatus === 'Arrived') {
+      data = data.filter((item) => (item.displayStatus ?? item.status ?? '').trim() === 'Arrived');
+    } else if (selectedStatus === 'Departed') {
+      data = data.filter((item) => (item.displayStatus ?? item.status ?? '').trim() === 'Departed');
+    } else if (selectedStatus === 'Under Maintenance') {
+      data = data.filter((item) => {
+        const s = (item.displayStatus ?? item.status ?? '').trim();
+        return s === 'Under Maintenance';
+      });
+    }
+
     if (activeFilterId && searchQuery === '') data = data.filter((item) => item._id === activeFilterId);
     if (selectedCompany !== 'All') data = data.filter((item) => item.company === selectedCompany);
     if (selectedBusType !== 'All') data = data.filter((item) => (item.busType || 'Regular') === selectedBusType);
@@ -198,6 +313,10 @@ export default function RoutesPage() {
     return data;
   }, [dispatchTrips, searchQuery, activeFilterId, selectedCompany, selectedBusType, selectedStatus]);
 
+  const combinedBoardData = useMemo(() => {
+    return [...filteredPredefined, ...filteredDispatch];
+  }, [filteredPredefined, filteredDispatch]);
+
   const clearFilters = () => {
     setSearchQuery('');
     setActiveFilterId(null);
@@ -207,98 +326,12 @@ export default function RoutesPage() {
     router.setParams({ tripId: '', search: '' });
   };
 
- 
   const hasActiveDropdownFilters = selectedStatus !== 'All' || selectedBusType !== 'All';
 
-  const renderPredefinedItem = ({ item }: { item: PredefinedEntry }) => {
-    const badge = PREDEFINED_BADGE[item.status] || PREDEFINED_BADGE.scheduled;
-    return (
-      <Card style={styles.card} mode="elevated">
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <View style={styles.companyContainer}>
-              <Avatar.Icon size={40} icon="calendar-clock" style={{ backgroundColor: '#E3F2FD' }} color="#1565C0" />
-              <View>
-                <Text style={styles.companyName}>{item.company}</Text>
-                <Text style={styles.busType}>{item.plateNumber} • {item.busType || 'Regular'}</Text>
-              </View>
-            </View>
-            <View style={[styles.statusChip, { backgroundColor: badge.bg }]}>
-              <Text style={{ color: badge.fg, fontSize: 12, fontWeight: 'bold', paddingHorizontal: 10 }}>
-                {badge.emoji} {badge.label}
-              </Text>
-            </View>
-          </View>
-          <Divider style={styles.divider} />
-          <View style={styles.routeRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Route</Text>
-              <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
-              <Text style={[styles.label, { marginTop: 12 }]}>Expected Scheduled Time</Text>
-              <Text variant="bodyMedium" style={styles.value}>{item.scheduleTime} ({item.timeWindowLabel})</Text>
-            </View>
-          </View>
-        </Card.Content>
-      </Card>
-    );
-  };
-
-  const renderDispatchItem = ({ item }: { item: DispatchTrip }) => {
-    const label = (item.displayStatus ?? item.status ?? '').trim();
-    const b = dispatchBadge(label);
-    return (
-      <Card style={styles.card} mode="elevated">
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <View style={styles.companyContainer}>
-              <Avatar.Icon size={40} icon="bus" style={{ backgroundColor: '#E8F5E9' }} color="#1B5E20" />
-              <View>
-                <Text style={styles.companyName}>{item.company}</Text>
-                <Text style={styles.busType}>{item.templateNo} • {item.busType || 'Regular'}</Text>
-              </View>
-            </View>
-            <View style={[styles.statusChip, { backgroundColor: b.bg }]}>
-              <Text style={{ color: b.fg, fontSize: 12, fontWeight: 'bold', paddingHorizontal: 10 }}>
-                {b.emoji} {label || item.status || '—'}
-              </Text>
-            </View>
-          </View>
-          <Divider style={styles.divider} />
-          <View style={styles.routeRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Route</Text>
-              <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
-              <Text style={[styles.label, { marginTop: 10 }]}>Stops</Text>
-              <Text style={styles.value}>{getStopsLabel(item)}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end', minWidth: 120 }}>
-              <Text style={[styles.label, { color: '#1B5E20', fontWeight: 'bold' }]}>Time (arrived)</Text>
-              <Text variant="titleLarge" style={[styles.timeValue, { color: '#1B5E20' }]}>{formatTime(item.time)}</Text>
-              {item.expectedDeparture && (
-                <>
-                  <Text style={[styles.label, { marginTop: 12 }]}>Exp. dep.</Text>
-                  <Text variant="titleMedium" style={[styles.timeValue, { color: '#D35400' }]}>{formatTime(item.expectedDeparture)}</Text>
-                </>
-              )}
-            </View>
-          </View>
-        </Card.Content>
-      </Card>
-    );
-  };
-
-  const boardSections: BoardSection[] = useMemo(
-    () => [
-      { key: 'pre', title: 'Expected Schedule', data: filteredPredefined },
-      { key: 'disp', title: 'Dispatch Board', data: filteredDispatch },
-    ],
-    [filteredPredefined, filteredDispatch]
-  );
-
-  const renderBoardItem = ({ item, section }: SectionListRenderItemInfo<BoardRow, BoardSection>) => {
-    if (section.key === 'pre' && isPredefinedRow(item)) return renderPredefinedItem({ item });
-    return renderDispatchItem({ item: item as DispatchTrip });
-  };
+  const renderBoardItem = useCallback(({ item }: ListRenderItemInfo<BoardRow>) => {
+    if (isPredefinedRow(item)) return <PredefinedCard item={item} />;
+    return <DispatchCard item={item as DispatchTrip} />;
+  }, []);
 
   if (loading) {
     return (
@@ -321,7 +354,6 @@ export default function RoutesPage() {
           </View>
         )}
 
-       
         <View style={styles.searchRow}>
           <Searchbar
             placeholder="Search route, company, bus no…"
@@ -355,7 +387,6 @@ export default function RoutesPage() {
               </TouchableOpacity>
             }
           >
-           
             <Text style={styles.menuSectionTitle}>Trip Status</Text>
             {statusFilters.map(status => (
               <Menu.Item
@@ -370,7 +401,7 @@ export default function RoutesPage() {
             ))}
             
             <Divider style={{ marginVertical: 8 }} />
-         
+            
             <Text style={styles.menuSectionTitle}>Bus Type</Text>
             {busTypes.map(type => (
               <Menu.Item
@@ -386,7 +417,6 @@ export default function RoutesPage() {
           </Menu>
         </View>
 
-       
         <View style={styles.filtersContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
             {companies.map((c) => (
@@ -408,25 +438,23 @@ export default function RoutesPage() {
         )}
       </View>
 
-      <SectionList<BoardRow, BoardSection>
-        sections={boardSections}
+      <FlatList<BoardRow>
+        data={combinedBoardData}
         keyExtractor={(item, index) => isPredefinedRow(item) ? `pre-${item.rowKey}` : `disp-${String((item as DispatchTrip)._id ?? index)}`}
         renderItem={renderBoardItem}
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <Text variant="titleMedium" style={styles.sectionHeaderTitle}>{section.title}</Text>
-          </View>
-        )}
-        renderSectionFooter={({ section }) => section.data.length > 0 ? null : (
-          <View style={styles.sectionEmpty}>
-            <Text style={styles.sectionEmptyText}>
-              {section.key === 'pre' ? 'No buses scheduled yet.' : 'No buses on the dispatch board yet.'}
+        initialNumToRender={8}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
+        ListEmptyComponent={
+          <View style={styles.listEmpty}>
+            <Text style={styles.listEmptyText}>
+              No buses match the current filters.
             </Text>
           </View>
-        )}
+        }
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1B5E20']} />}
-        stickySectionHeadersEnabled={false}
       />
     </SafeAreaView>
   );
@@ -435,56 +463,29 @@ export default function RoutesPage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
   centerContent: { justifyContent: 'center', alignItems: 'center' },
-  headerContainer: { backgroundColor: '#FFFFFF', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E0E0E0' },
+  headerContainer: { backgroundColor: '#FFFFFF', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E0E0E0', zIndex: 1 },
   headerTitle: { fontWeight: 'bold', color: '#1A1A1A', marginBottom: 8 },
   dateHeader: { fontSize: 16, color: '#1B5E20', marginBottom: 12, fontWeight: '800' },
   errorBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#FFEBEE', borderRadius: 10, padding: 10, marginBottom: 12 },
   errorBannerText: { flex: 1, fontSize: 12, color: '#B71C1C' },
-  sectionHeader: { paddingTop: 8, paddingBottom: 10, backgroundColor: '#F5F5F5' },
-  sectionHeaderTitle: { fontWeight: '700', color: '#1B5E20' },
-  sectionEmpty: { paddingVertical: 16 },
-  sectionEmptyText: { fontSize: 14, color: '#9E9E9E', fontStyle: 'italic' },
-  
- 
+  listEmpty: { paddingVertical: 32, alignItems: 'center' },
+  listEmptyText: { fontSize: 14, color: '#9E9E9E', fontStyle: 'italic' },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   searchBar: { flex: 1, backgroundColor: '#F0F4F8', elevation: 0, borderRadius: 12, height: 48 },
   searchInput: { fontSize: 14, alignSelf: 'center', color: 'black' },
-  filterButton: {
-    height: 48,
-    width: 48,
-    borderRadius: 12,
-    backgroundColor: '#F0F4F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0'
-  },
-  filterButtonActive: {
-    backgroundColor: '#1B5E20',
-    borderColor: '#1B5E20'
-  },
-  menuSectionTitle: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#888',
-    textTransform: 'uppercase'
-  },
-  
+  filterButton: { height: 48, width: 48, borderRadius: 12, backgroundColor: '#F0F4F8', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E0E0E0' },
+  filterButtonActive: { backgroundColor: '#1B5E20', borderColor: '#1B5E20' },
+  menuSectionTitle: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, fontSize: 12, fontWeight: 'bold', color: '#888', textTransform: 'uppercase' },
   filtersContainer: { marginTop: 12 },
   filterScroll: { flexGrow: 0 },
   filterChip: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F0F4F8', marginRight: 8, borderWidth: 1, borderColor: '#E0E0E0' },
   activeFilterChip: { backgroundColor: '#1B5E20', borderColor: '#1B5E20' },
   filterChipText: { fontSize: 12, color: '#666', fontWeight: '600' },
   activeFilterChipText: { color: '#FFFFFF' },
-  
   filterBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#D4EDDA', padding: 8, borderRadius: 8, marginTop: 10, gap: 8 },
   filterText: { flex: 1, color: '#155724', fontSize: 12, fontWeight: '600' },
   clearFilterText: { color: '#1B5E20', fontWeight: 'bold', fontSize: 12, textDecorationLine: 'underline' },
-  
-  listContent: { padding: 16, paddingBottom: 140 }, 
+  listContent: { padding: 16, paddingBottom: 140 },
   card: { backgroundColor: 'white', marginBottom: 16, borderRadius: 16 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   companyContainer: { flexDirection: 'row', gap: 12, alignItems: 'center', flex: 1 },

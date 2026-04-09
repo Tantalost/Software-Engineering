@@ -58,7 +58,7 @@ const styles = StyleSheet.create ({
   },
   scrollContent: { 
     paddingHorizontal: 16, 
-    paddingBottom: 32 
+    paddingBottom: 120 
   },
   resultsText: { 
     color: '#1B5E20', 
