@@ -286,6 +286,7 @@ const Parking = () => {
   const role = localStorage.getItem("authRole") || "superadmin";
   const authAdminId = localStorage.getItem("authAdminId") || "";
   const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
+  const assignedShiftValue = localStorage.getItem("authShift") || "";
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/parking`;
   const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
   const REPORTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
@@ -1077,6 +1078,7 @@ const Parking = () => {
       const reportPayload = {
         screen: "Parking Management",
         generatedDate: new Date().toLocaleString(),
+        assignedShift: assignedShiftValue || "No assigned shift",
         sessionStartedAt,
         filters: {
           searchQuery,
@@ -1537,62 +1539,64 @@ const Parking = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 h-[42px]">
-              <label className="text-sm font-semibold text-slate-600 whitespace-nowrap">
-                Collector:
-              </label>
-              <select
-                value={collectorId}
-                onChange={(e) => {
-                  const nextId = e.target.value;
-                  const selectedCollector = collectors.find(
-                    (collector) => (collector._id || collector.id) === nextId,
-                  );
-                  setCollectorId(nextId);
+            {role !== "superadmin" && (
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 h-[42px]">
+                <label className="text-sm font-semibold text-slate-600 whitespace-nowrap">
+                  Collector:
+                </label>
+                <select
+                  value={collectorId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    const selectedCollector = collectors.find(
+                      (collector) => (collector._id || collector.id) === nextId,
+                    );
+                    setCollectorId(nextId);
 
-                  if (!selectedCollector) {
-                    setCollectorName("");
-                    return;
-                  }
+                    if (!selectedCollector) {
+                      setCollectorName("");
+                      return;
+                    }
 
-                  const middleInitial = selectedCollector.middleName
-                    ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
-                    : "";
-                  const displayName = [
-                    selectedCollector.firstName,
-                    middleInitial,
-                    selectedCollector.lastName,
-                    selectedCollector.suffix,
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
+                    const middleInitial = selectedCollector.middleName
+                      ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
+                      : "";
+                    const displayName = [
+                      selectedCollector.firstName,
+                      middleInitial,
+                      selectedCollector.lastName,
+                      selectedCollector.suffix,
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
 
-                  setCollectorName(displayName);
-                }}
-                className="w-full sm:w-48 bg-transparent border-none text-sm font-medium text-slate-800 focus:ring-0 cursor-pointer outline-none"
-              >
-                <option value="">Select collector...</option>
-                {collectors.map((collector) => {
-                  const middleInitial = collector.middleName
-                    ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
-                    : "";
-                  const label = [
-                    collector.firstName,
-                    middleInitial,
-                    collector.lastName,
-                    collector.suffix,
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
+                    setCollectorName(displayName);
+                  }}
+                  className="w-full sm:w-48 bg-transparent border-none text-sm font-medium text-slate-800 focus:ring-0 cursor-pointer outline-none"
+                >
+                  <option value="">Select collector...</option>
+                  {collectors.map((collector) => {
+                    const middleInitial = collector.middleName
+                      ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
+                      : "";
+                    const label = [
+                      collector.firstName,
+                      middleInitial,
+                      collector.lastName,
+                      collector.suffix,
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
 
-                  return (
-                    <option key={collector._id || collector.id} value={collector._id || collector.id}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+                    return (
+                      <option key={collector._id || collector.id} value={collector._id || collector.id}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
 
             <button
               onClick={() => setShowLogModal(true)}
@@ -2162,7 +2166,7 @@ const Parking = () => {
         isOpen={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
         onSubmit={handleSubmitReport}
-        requiresCollector={true}
+        requiresCollector={role !== "superadmin"}
         moduleName="Parking"
         reportType="Parking"
         collectors={collectors}
@@ -2188,11 +2192,11 @@ const Parking = () => {
             .join(" ");
           setCollectorName(displayName);
         }}
-        assignedShift="Current Shift"
+        assignedShift={assignedShiftValue || "No assigned shift"}
         totalRecords={records.length}
         helperText="Submitted shift rows are removed from active parking board."
         isSubmitting={isReporting}
-        submitDisabled={!collectorId || !collectorName.trim()}
+        submitDisabled={role !== "superadmin" && (!collectorId || !collectorName.trim())}
         submitLabel="Confirm Submit"
       />
 
@@ -2240,7 +2244,7 @@ const Parking = () => {
                             ).toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
-                            {report?.data?.shift || report?.payload?.assignedShift || "-"}
+                            {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}

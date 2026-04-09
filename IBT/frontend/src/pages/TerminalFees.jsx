@@ -123,6 +123,7 @@ const TerminalFees = () => {
   const [sessionStartedAt] = useState(() => new Date().toISOString());
   const authAdminId = localStorage.getItem("authAdminId") || "";
   const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
+  const assignedShiftValue = localStorage.getItem("authShift") || "";
   const REPORTS_API_URL = `${API_URL}/reports`;
 
   const getRangeBounds = (type, date) => {
@@ -472,6 +473,7 @@ const TerminalFees = () => {
       const reportPayload = {
         screen: "Terminal Fees Management",
         generatedDate: new Date().toLocaleString(),
+        assignedShift: assignedShiftValue || "No assigned shift",
         sessionStartedAt,
         filters: {
           activeType,
@@ -1908,7 +1910,7 @@ const TerminalFees = () => {
         collectorId={collectorId}
         collectorName={collectorName}
         onCollectorChange={handleCollectorSelection}
-        assignedShift="Current Shift"
+        assignedShift={assignedShiftValue || "No assigned shift"}
         totalRecords={shiftRecords.length}
         helperText={`Operator: ${operatorName} | As of: ${asOfDateLabel}. Submitted rows are cleared from active board.`}
         isSubmitting={isReporting}
@@ -1960,7 +1962,7 @@ const TerminalFees = () => {
                             ).toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
-                            {report?.data?.shift || report?.payload?.assignedShift || "-"}
+                            {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}
