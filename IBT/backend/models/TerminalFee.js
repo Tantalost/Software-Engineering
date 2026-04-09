@@ -32,6 +32,19 @@ const terminalFeeSchema = new mongoose.Schema({
     enum: ["Pending", "On Read"],
     default: "Pending"
   },
+  submitted: {
+    type: Boolean,
+    default: false,
+  },
+  submittedAt: {
+    type: Date,
+    default: null,
+  },
+  reportId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Report",
+    default: null,
+  },
   isArchived: { 
     type: Boolean, 
     default: false 

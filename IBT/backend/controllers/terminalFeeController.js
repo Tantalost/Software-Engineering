@@ -35,8 +35,51 @@ export const getNextTicketNumber = async (req, res) => {
 
 export const getTerminalFees = async (req, res) => {
   try {
-    const fees = await TerminalFee.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
+    const fees = await TerminalFee.find({
+      isArchived: { $ne: true },
+      submitted: { $ne: true },
+    }).sort({ createdAt: -1 });
     res.json(fees);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const submitTerminalFeesForShift = async (req, res) => {
+  try {
+    const { sessionStartedAt, reportId } = req.body;
+    const shiftStart = sessionStartedAt ? new Date(sessionStartedAt) : null;
+
+    if (!shiftStart || Number.isNaN(shiftStart.getTime())) {
+      return res.status(400).json({ error: "Valid sessionStartedAt is required." });
+    }
+
+    const now = new Date();
+    const updatePayload = {
+      submitted: true,
+      submittedAt: now,
+      reportStatus: "On Read",
+    };
+
+    if (reportId) {
+      updatePayload.reportId = reportId;
+    }
+
+    const result = await TerminalFee.updateMany(
+      {
+        isArchived: { $ne: true },
+        submitted: { $ne: true },
+        createdAt: { $gte: shiftStart, $lte: now },
+      },
+      { $set: updatePayload },
+    );
+
+    res.json({
+      message: "Shift terminal fees marked as submitted.",
+      matchedCount: result.matchedCount || 0,
+      modifiedCount: result.modifiedCount || 0,
+      reportId: reportId || null,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

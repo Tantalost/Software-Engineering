@@ -30,6 +30,21 @@ const roleLabels = {
 const shiftOptions = ["00-06", "06-12", "12-18", "18-24"];
 const collectorDepartments = ["Bus", "Parking", "Terminal Fee", "Tenant"];
 
+const formatShiftOptionLabel = (shift = "") => {
+  const [startRaw, endRaw] = String(shift).split("-");
+  if (!startRaw || !endRaw) return shift;
+
+  const toMeridiem = (hourValue) => {
+    const normalized = hourValue === "24" ? 0 : Number(hourValue);
+    if (Number.isNaN(normalized)) return "";
+    const suffix = normalized >= 12 ? "PM" : "AM";
+    const hour12 = normalized % 12 || 12;
+    return `${hour12}:00 ${suffix}`;
+  };
+
+  return `${toMeridiem(startRaw)} - ${toMeridiem(endRaw)}`;
+};
+
 const to12Hour = (time24 = "") => {
   const m = String(time24).match(/^(\d{2}):(\d{2})$/);
   if (!m) return "";
@@ -1060,7 +1075,7 @@ export default function EmployeeManage() {
                     >
                       {shiftOptions.map((shift) => (
                         <option key={shift} value={shift}>
-                          {shift}
+                          {formatShiftOptionLabel(shift)}
                         </option>
                       ))}
                     </select>
@@ -1141,7 +1156,7 @@ export default function EmployeeManage() {
                     >
                       {shiftOptions.map((shift) => (
                         <option key={shift} value={shift}>
-                          {shift}
+                          {formatShiftOptionLabel(shift)}
                         </option>
                       ))}
                     </select>

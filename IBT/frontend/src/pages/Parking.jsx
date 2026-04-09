@@ -14,6 +14,7 @@ import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
 import LogModal from "../components/common/LogModal";
+import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 import { submitPageReport } from "../utils/reportService.js";
 import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
@@ -38,7 +39,6 @@ import autoTable from "jspdf-autotable";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { Settings } from "lucide-react";
-
 const Parking = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,20 +51,16 @@ const Parking = () => {
   const [showLogModal, setShowLogModal] = useState(false);
 
   const [collectorName, setCollectorName] = useState("");
-  const [readRecordIds, setReadRecordIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("parkingReadRecordIds") || "[]");
-    } catch {
-      return [];
-    }
-  });
+  const [collectorId, setCollectorId] = useState("");
+  const [collectors, setCollectors] = useState([]);
+  const [sessionStartedAt] = useState(() => new Date().toISOString());
 
   const validateCollector = () => {
-    if (!collectorName || collectorName.trim() === "") {
+    if (!collectorName || collectorName.trim() === "" || !collectorId) {
       setNotificationState({
         isOpen: true,
         type: "error",
-        message: "Please enter the Name of Collector before exporting.",
+        message: "Please select a Collector before exporting.",
         autoClose: true,
         duration: 2000,
       });
@@ -111,6 +107,17 @@ const Parking = () => {
       motorcycle: priceSettings.motorcycleRate,
     });
     setShowPriceModal(false);
+    if (!collectorName || !collectorName.trim() || !collectorId) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please select a Collector before submitting report.",
+        autoClose: true,
+        duration: 2000,
+      });
+      return;
+    }
+
   };
 
   const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -252,8 +259,20 @@ const Parking = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("parkingReadRecordIds", JSON.stringify(readRecordIds));
-  }, [readRecordIds]);
+    const fetchCollectors = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/collectors?active=true`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCollectors(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching collectors:", error);
+      }
+    };
+
+    fetchCollectors();
+  }, []);
+
   useEffect(() => {
     if (notificationState.isOpen && notificationState.autoClose) {
       const timerDuration = notificationState.duration || 2000;
@@ -885,6 +904,17 @@ const Parking = () => {
   };
 
   const handleSubmitReport = async () => {
+    if (!collectorName || !collectorName.trim() || !collectorId) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please select a Collector before submitting report.",
+        autoClose: true,
+        duration: 2000,
+      });
+      return;
+    }
+
     setIsReporting(true);
     try {
       const formatDateTime = (dateStr) => {
@@ -899,7 +929,13 @@ const Parking = () => {
         });
       };
 
-      const formattedData = filtered.map((item) => {
+      const shiftStart = new Date(sessionStartedAt);
+      const shiftRecords = records.filter((item) => {
+        const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
+        return createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= shiftStart;
+      });
+
+      const formattedData = shiftRecords.map((item) => {
         const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
         return {
           ...rest,
@@ -910,16 +946,17 @@ const Parking = () => {
         };
       });
 
-      const carCount = filtered.filter(
+      const carCount = shiftRecords.filter(
         (item) => item.type && item.type.toLowerCase() === "fourwheels",
       ).length;
-      const motoCount = filtered.filter(
+      const motoCount = shiftRecords.filter(
         (item) => item.type && item.type.toLowerCase() === "twowheels",
       ).length;
 
       const reportPayload = {
         screen: "Parking Management",
         generatedDate: new Date().toLocaleString(),
+        sessionStartedAt,
         filters: {
           searchQuery,
           selectedDate: selectedDate
@@ -929,10 +966,12 @@ const Parking = () => {
           duration: reportDuration,
         },
         statistics: {
-          cars: fourWheelCount,
-          motorcycles: twoWheelCount,
-          totalVehicles: filtered.length,
-          totalRevenue: revenue,
+          cars: carCount,
+          motorcycles: motoCount,
+          totalVehicles: shiftRecords.length,
+          totalRevenue: shiftRecords.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0),
+          collector: collectorName.trim(),
+          collectorId,
         },
         data: formattedData,
       };
@@ -941,7 +980,10 @@ const Parking = () => {
         localStorage.getItem("authName") ||
         localStorage.getItem("authEmail") ||
         "Parking Admin";
-      await submitPageReport("Parking", reportPayload, adminName);
+      const report = await submitPageReport("Parking", reportPayload, adminName, {
+        reportType: "Parking",
+        payload: reportPayload,
+      });
 
       await fetch(
         `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`,
@@ -951,24 +993,37 @@ const Parking = () => {
           body: JSON.stringify({
             title: "Report Submitted: Parking Report",
             message:
-              "A new Parking Management report has been generated. Submitted rows were marked as On Read.",
+              "A new Parking Management report has been generated. Shift rows were submitted and cleared from active board.",
             source: "Parking",
             targetRole: "superadmin",
           }),
         },
       );
 
-      const submittedIds = filtered.map((item) => item.id).filter(Boolean);
-      setReadRecordIds((prev) => Array.from(new Set([...prev, ...submittedIds])));
+      const submitShiftRes = await fetch(`${API_URL}/submit-shift`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionStartedAt,
+          reportId: report?._id || report?.id || null,
+        }),
+      });
+
+      if (!submitShiftRes.ok) {
+        throw new Error("Report created, but failed to mark shift parking records as submitted.");
+      }
 
       setNotificationState({
         isOpen: true,
         type: "success",
-        message: "Report submitted successfully! Rows are marked as On Read.",
+        message: "Report submitted successfully! Shift rows are cleared from active board.",
         autoClose: true,
         duration: 2000,
       });
       setShowSubmitModal(false);
+      setCollectorId("");
+      setCollectorName("");
+      fetchParkingTickets();
     } catch (error) {
       console.error(error);
       setNotificationState({
@@ -1270,14 +1325,60 @@ const Parking = () => {
             Name of Collector:
           </label>
 
-          <input
-            type="text"
-            value={collectorName}
-            maxLength={100}
-            onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
-            placeholder="Enter collector name"
-            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          />
+          <select
+            value={collectorId}
+            onChange={(e) => {
+              const nextId = e.target.value;
+              const selectedCollector = collectors.find(
+                (collector) => (collector._id || collector.id) === nextId,
+              );
+              setCollectorId(nextId);
+
+              if (!selectedCollector) {
+                setCollectorName("");
+                return;
+              }
+
+              const middleInitial = selectedCollector.middleName
+                ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
+                : "";
+              const displayName = [
+                selectedCollector.firstName,
+                middleInitial,
+                selectedCollector.lastName,
+                selectedCollector.suffix,
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              setCollectorName(displayName);
+            }}
+            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
+          >
+            <option value="">Select collector</option>
+            {collectors.map((collector) => {
+              const middleInitial = collector.middleName
+                ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
+                : "";
+              const label = [
+                collector.firstName,
+                middleInitial,
+                collector.lastName,
+                collector.suffix,
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              return (
+                <option
+                  key={collector._id || collector.id}
+                  value={collector._id || collector.id}
+                >
+                  {label}
+                </option>
+              );
+            })}
+          </select>
           <button
             onClick={() => setShowLogModal(true)}
             className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
@@ -1327,7 +1428,7 @@ const Parking = () => {
               variant="terminal"
             columns={tableColumns}
             data={paginatedData.map((ticket) => {
-              const isOnRead = readRecordIds.includes(ticket.id);
+              const isOnRead = Boolean(ticket.submitted);
               const baseData = {
                 id: ticket.id,
                 ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : "---",
@@ -1824,45 +1925,43 @@ const Parking = () => {
         }
       />
 
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
-            <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to capture and submit the current parking
-              report?
-              <br />
-              <span className="text-emerald-600 font-semibold text-xs">
-                Note: Submitted rows will remain in the table and be marked as On Read.
-              </span>
-            </p>
+      <SharedSubmitReportModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onSubmit={handleSubmitReport}
+        requiresCollector={true}
+        moduleName="Parking"
+        reportType="Parking"
+        collectors={collectors}
+        collectorId={collectorId}
+        collectorName={collectorName}
+        onCollectorChange={(nextCollectorId, selectedCollector) => {
+          setCollectorId(nextCollectorId);
+          if (!selectedCollector) {
+            setCollectorName("");
+            return;
+          }
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowSubmitModal(false)}
-                disabled={isReporting}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitReport}
-                disabled={isReporting}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isReporting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <span>Confirm Submit</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          const middleInitial = selectedCollector.middleName
+            ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
+            : "";
+          const displayName = [
+            selectedCollector.firstName,
+            middleInitial,
+            selectedCollector.lastName,
+            selectedCollector.suffix,
+          ]
+            .filter(Boolean)
+            .join(" ");
+          setCollectorName(displayName);
+        }}
+        assignedShift="Current Shift"
+        totalRecords={records.length}
+        helperText="Submitted shift rows are removed from active parking board."
+        isSubmitting={isReporting}
+        submitDisabled={!collectorId || !collectorName.trim()}
+        submitLabel="Confirm Submit"
+      />
 
       {notificationState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">

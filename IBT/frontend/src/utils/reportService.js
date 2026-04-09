@@ -1,4 +1,9 @@
-export const submitPageReport = async (type, pageData, author = "Admin") => {
+export const submitPageReport = async (
+  type,
+  pageData,
+  author = "Admin",
+  options = {},
+) => {
   try {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:10000";
     const authorEmail = localStorage.getItem("authEmail") || "";
@@ -10,6 +15,8 @@ export const submitPageReport = async (type, pageData, author = "Admin") => {
       body: JSON.stringify({
         type: type, 
         data: pageData,
+        payload: options.payload || pageData,
+        reportType: options.reportType,
         author: author,
         authorEmail,
         status: "Submitted"
