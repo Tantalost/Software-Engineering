@@ -700,23 +700,19 @@ const Parking = () => {
     return; 
   }
 
-  // Daily Ticket Number Check (Ensures Ticket #1 is unique for TODAY only)
-  const todayStr = new Date().toDateString();
-  const duplicateTicketToday = records.some((ticket) => {
-    const isSameTicket = ticket.ticketNo === ticketNo;
-    const isToday = ticket.timeIn && new Date(ticket.timeIn).toDateString() === todayStr;
-    return isSameTicket && isToday;
-  });
+  const isDuplicateTicket = records.some((ticket) => ticket.ticketNo === ticketNo);
 
-  if (duplicateTicketToday) {
-    setDuplicateModal({
+  if (isDuplicateTicket) {
+    setNotificationState({
       isOpen: true,
-      message: `Ticket Number #${ticketNo} has already been issued today!`,
+      type: "error",
+      message: `Ticket Number ${ticketNo} already exists!`,
+      autoClose: true,
+      duration: 3000,
     });
     return;
   }
 
-  // Prepare Payload
   const payload = {
     ...newTicket,
     plateNo, 

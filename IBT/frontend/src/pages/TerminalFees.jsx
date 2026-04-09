@@ -709,11 +709,25 @@ const TerminalFees = () => {
     }
   };
 
-  const handleSaveNew = async () => {
+ const handleSaveNew = async () => {
     if (!newTicket.ticketNo || String(newTicket.ticketNo).trim() === "") {
       showToastMessage("Please enter a ticket number.", "error");
       return;
     }
+
+    const ticketNoStr = String(newTicket.ticketNo).trim();
+    const isDuplicateTicket = records.some(
+      (fee) => String(fee.ticketNo).trim() === ticketNoStr
+    );
+
+    if (isDuplicateTicket) {
+      showToastMessage(
+        `Ticket Number ${ticketNoStr} already exists! `, 
+        "error"
+      );
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/terminal-fees`, {
         method: "POST",
@@ -729,7 +743,6 @@ const TerminalFees = () => {
         );
       }
 
-      if (!res.ok) throw new Error("Failed to save to database");
       await fetchFees();
       await logActivity(
         role,
