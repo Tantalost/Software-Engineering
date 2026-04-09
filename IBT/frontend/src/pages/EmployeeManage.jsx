@@ -27,8 +27,9 @@ const roleLabels = {
   lease: "Lease Admin",
 };
 
-const shiftOptions = ["00-06", "06-12", "12-18", "18-24"];
 const collectorDepartments = ["Bus", "Parking", "Terminal Fee", "Tenant"];
+const ADMIN_SHIFT_DEFAULT_START = "00:00";
+const ADMIN_SHIFT_DEFAULT_END = "06:00";
 
 const formatShiftOptionLabel = (shift = "") => {
   const [startRaw, endRaw] = String(shift).split("-");
@@ -74,6 +75,17 @@ const buildShiftRange = (start, end) => {
 };
 
 const parseShiftRange = (range = "") => {
+  const legacy = String(range).trim().match(/^(\d{2})-(\d{2})$/);
+  if (legacy) {
+    const startHour = Number(legacy[1]);
+    const endRaw = Number(legacy[2]);
+    const endHour = endRaw === 24 ? 0 : endRaw;
+    return {
+      shiftStart: `${String(startHour).padStart(2, "0")}:00`,
+      shiftEnd: `${String(endHour).padStart(2, "0")}:00`,
+    };
+  }
+
   const [start = "", end = ""] = String(range).split(" - ");
   return {
     shiftStart: to24Hour(start),
@@ -100,7 +112,8 @@ export default function EmployeeManage() {
     email: "",
     password: "",
     role: "parking",
-    assignedShift: "00-06",
+    shiftStart: ADMIN_SHIFT_DEFAULT_START,
+    shiftEnd: ADMIN_SHIFT_DEFAULT_END,
   });
 
   // Edit State
@@ -111,7 +124,8 @@ export default function EmployeeManage() {
     middleName: "",
     suffix: "",
     email: "",
-    assignedShift: "00-06",
+    shiftStart: ADMIN_SHIFT_DEFAULT_START,
+    shiftEnd: ADMIN_SHIFT_DEFAULT_END,
     password: "",
     otp: "",
   });
@@ -267,6 +281,12 @@ export default function EmployeeManage() {
       return;
     }
 
+    const assignedShift = buildShiftRange(createForm.shiftStart, createForm.shiftEnd);
+    if (!assignedShift) {
+      showToast("error", "Assigned shift start and end are required.");
+      return;
+    }
+
     try {
       setIsLoading(true);
       const res = await fetch(`${API_BASE_URL}/api/admins`, {
@@ -279,7 +299,7 @@ export default function EmployeeManage() {
           suffix: createForm.suffix.trim() || undefined,
           email: createForm.email.trim(),
           role: createForm.role,
-          assignedShift: createForm.assignedShift,
+          assignedShift,
           password: createForm.password,
         }),
       });
@@ -308,7 +328,8 @@ export default function EmployeeManage() {
         email: "",
         password: "",
         role: "parking",
-        assignedShift: "00-06",
+        shiftStart: ADMIN_SHIFT_DEFAULT_START,
+        shiftEnd: ADMIN_SHIFT_DEFAULT_END,
       });
       showToast("success", "Admin created successfully.");
     } catch (error) {
@@ -368,6 +389,17 @@ export default function EmployeeManage() {
   const handleUpdateAdmin = async () => {
     if (!editTarget) return;
 
+    const assignedShift = buildShiftRange(editForm.shiftStart, editForm.shiftEnd);
+    if (!assignedShift) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Assigned shift start and end are required.",
+        autoClose: true,
+      });
+      return;
+    }
+
     if (editForm.password && !editForm.otp) {
       setNotificationState({
         isOpen: true,
@@ -387,7 +419,7 @@ export default function EmployeeManage() {
         middleName: editForm.middleName,
         suffix: editForm.suffix,
         email: editForm.email,
-        assignedShift: editForm.assignedShift,
+        assignedShift,
       };
 
       if (editForm.password) {
@@ -420,7 +452,8 @@ export default function EmployeeManage() {
         middleName: "",
         suffix: "",
         email: "",
-        assignedShift: "00-06",
+        shiftStart: ADMIN_SHIFT_DEFAULT_START,
+        shiftEnd: ADMIN_SHIFT_DEFAULT_END,
         password: "",
         otp: "",
       });
@@ -452,6 +485,7 @@ export default function EmployeeManage() {
   };
 
   const openEditModal = (admin) => {
+    const parsedAdminShift = parseShiftRange(admin.assignedShift || "");
     setEditTarget(admin);
     setEditForm({
       firstName: admin.firstName || "",
@@ -459,7 +493,8 @@ export default function EmployeeManage() {
       middleName: admin.middleName || "",
       suffix: admin.suffix || "",
       email: admin.email || "",
-      assignedShift: admin.assignedShift || "00-06",
+      shiftStart: parsedAdminShift.shiftStart || ADMIN_SHIFT_DEFAULT_START,
+      shiftEnd: parsedAdminShift.shiftEnd || ADMIN_SHIFT_DEFAULT_END,
       password: "",
       otp: "",
     });
@@ -1063,22 +1098,33 @@ export default function EmployeeManage() {
                     <label className="mb-1 block text-xs font-medium text-slate-600">
                       Assigned Shift *
                     </label>
-                    <select
-                      value={createForm.assignedShift}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          assignedShift: e.target.value,
-                        })
-                      }
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
-                    >
-                      {shiftOptions.map((shift) => (
-                        <option key={shift} value={shift}>
-                          {formatShiftOptionLabel(shift)}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <input
+                        type="time"
+                        value={createForm.shiftStart}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            shiftStart: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                      />
+                      <input
+                        type="time"
+                        value={createForm.shiftEnd}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            shiftEnd: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Preview: {buildShiftRange(createForm.shiftStart, createForm.shiftEnd) || "Set start and end times"}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
@@ -1147,19 +1193,27 @@ export default function EmployeeManage() {
                     <label className="mb-1 block text-xs font-medium text-slate-600">
                       Assigned Shift
                     </label>
-                    <select
-                      value={editForm.assignedShift}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, assignedShift: e.target.value })
-                      }
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
-                    >
-                      {shiftOptions.map((shift) => (
-                        <option key={shift} value={shift}>
-                          {formatShiftOptionLabel(shift)}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <input
+                        type="time"
+                        value={editForm.shiftStart}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, shiftStart: e.target.value })
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                      />
+                      <input
+                        type="time"
+                        value={editForm.shiftEnd}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, shiftEnd: e.target.value })
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Preview: {buildShiftRange(editForm.shiftStart, editForm.shiftEnd) || "Set start and end times"}
+                    </p>
                   </div>
 
                   <div className="pt-2 border-t border-slate-100 mt-2">

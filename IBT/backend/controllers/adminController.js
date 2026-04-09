@@ -26,6 +26,42 @@ const sanitizeAdmin = (admin) => ({
   updatedAt: admin.updatedAt,
 });
 
+const LEGACY_SHIFT_PATTERN = /^(\d{2})-(\d{2})$/;
+const DYNAMIC_SHIFT_PATTERN = /^\d{1,2}:\d{2}\s?(AM|PM)\s-\s\d{1,2}:\d{2}\s?(AM|PM)$/i;
+
+const normalizeAssignedShift = (rawShift = "") => {
+  const value = String(rawShift || "").trim().replace(/\s+/g, " ");
+  if (!value) return "";
+
+  if (LEGACY_SHIFT_PATTERN.test(value)) {
+    const [, startRaw, endRaw] = value.match(LEGACY_SHIFT_PATTERN) || [];
+    const start = String(parseInt(startRaw, 10)).padStart(2, "0");
+    const end = String(parseInt(endRaw, 10)).padStart(2, "0");
+    return `${start}-${end}`;
+  }
+
+  if (!DYNAMIC_SHIFT_PATTERN.test(value)) {
+    return "";
+  }
+
+  const [startPart, endPart] = value.split(" - ");
+  const normalizePart = (part) => {
+    const match = String(part).trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+    if (!match) return "";
+    const hour = String(parseInt(match[1], 10)).padStart(2, "0");
+    const minute = match[2];
+    const period = match[3].toUpperCase();
+    return `${hour}:${minute} ${period}`;
+  };
+
+  const normalizedStart = normalizePart(startPart);
+  const normalizedEnd = normalizePart(endPart);
+  if (!normalizedStart || !normalizedEnd) return "";
+  if (normalizedStart === normalizedEnd) return "";
+
+  return `${normalizedStart} - ${normalizedEnd}`;
+};
+
 export const createAdmin = async (req, res) => {
   try {
     const {
@@ -49,9 +85,9 @@ export const createAdmin = async (req, res) => {
       });
     }
 
-    const allowedShifts = ["00-06", "06-12", "12-18", "18-24"];
-    if (!assignedShift || !allowedShifts.includes(assignedShift)) {
-      return res.status(400).json({ message: "A valid 6-hour shift is required." });
+    const normalizedShift = normalizeAssignedShift(assignedShift);
+    if (!normalizedShift) {
+      return res.status(400).json({ message: "A valid assigned shift is required." });
     }
 
     const existingEmail = await Admin.findOne({ email: email.toLowerCase() });
@@ -65,10 +101,10 @@ export const createAdmin = async (req, res) => {
       return res.status(409).json({ message: "Maximum 4 admins allowed per role." });
     }
 
-    const duplicateShift = await Admin.findOne({ role, assignedShift });
+    const duplicateShift = await Admin.findOne({ role, assignedShift: normalizedShift });
     if (duplicateShift) {
       return res.status(409).json({
-        message: `Shift ${assignedShift} is already assigned for ${role}.`,
+        message: `Shift ${normalizedShift} is already assigned for ${role}.`,
       });
     }
 
@@ -81,7 +117,7 @@ export const createAdmin = async (req, res) => {
       suffix, 
       email: email.toLowerCase(), 
       role, 
-      assignedShift,
+      assignedShift: normalizedShift,
       passwordHash
     });
 
@@ -160,26 +196,26 @@ export const updateAdmin = async (req, res) => {
     if (email) admin.email = email.toLowerCase();
 
     if (assignedShift !== undefined) {
-      const allowedShifts = ["00-06", "06-12", "12-18", "18-24"];
+      const normalizedShift = normalizeAssignedShift(assignedShift);
       if (admin.role !== "superadmin") {
-        if (!allowedShifts.includes(assignedShift)) {
-          return res.status(400).json({ message: "A valid 6-hour shift is required." });
+        if (!normalizedShift) {
+          return res.status(400).json({ message: "A valid assigned shift is required." });
         }
 
         const duplicateShift = await Admin.findOne({
           _id: { $ne: admin._id },
           role: admin.role,
-          assignedShift,
+          assignedShift: normalizedShift,
         });
 
         if (duplicateShift) {
           return res.status(409).json({
-            message: `Shift ${assignedShift} is already assigned for ${admin.role}.`,
+            message: `Shift ${normalizedShift} is already assigned for ${admin.role}.`,
           });
         }
       }
 
-      admin.assignedShift = admin.role === "superadmin" ? null : assignedShift;
+      admin.assignedShift = admin.role === "superadmin" ? null : normalizedShift;
     }
 
     if (password) {
