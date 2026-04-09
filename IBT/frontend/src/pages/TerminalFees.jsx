@@ -30,6 +30,7 @@ import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
 import SecurityCheckModal from "../components/common/SecurityCheckModal";
 import RequestDeletionModal from "../components/common/RequestDeletionModal";
+import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 import StatCardGroupTerminal from "../components/terminal/StatCardGroupTerminal";
 import TerminalFilter from "../components/terminal/TerminalFilter";
 import { logActivity } from "../utils/logger";
@@ -109,6 +110,9 @@ const TerminalFees = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [collectorName, setCollectorName] = useState("");
+  const [collectorId, setCollectorId] = useState("");
+  const [collectors, setCollectors] = useState([]);
+  const [sessionStartedAt] = useState(() => new Date().toISOString());
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -135,6 +139,21 @@ const TerminalFees = () => {
 
   useEffect(() => {
     fetchFees();
+  }, []);
+
+  useEffect(() => {
+    const fetchCollectors = async () => {
+      try {
+        const res = await fetch(`${API_URL}/collectors?active=true`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCollectors(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching collectors:", error);
+      }
+    };
+
+    fetchCollectors();
   }, []);
 
   const [modalPrices, setModalPrices] = useState({
@@ -306,7 +325,7 @@ const TerminalFees = () => {
   };
 
   const handleSubmitReport = async () => {
-    if (!collectorName || !collectorName.trim()) {
+    if (!collectorName || !collectorName.trim() || !collectorId) {
       showToastMessage("Please enter Name of Collector before submitting report.", "error");
       return;
     }
@@ -327,7 +346,13 @@ const TerminalFees = () => {
         }
       };
 
-      const formattedData = filtered.map((item) => {
+      const shiftStart = new Date(sessionStartedAt);
+      const shiftRecords = records.filter((item) => {
+        const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
+        return createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= shiftStart;
+      });
+
+      const formattedData = shiftRecords.map((item) => {
         const { createdAt, updatedAt, __v, _id, isArchived, status, ...rest } =
           item;
         return {
@@ -344,23 +369,40 @@ const TerminalFees = () => {
       const reportPayload = {
         screen: "Terminal Fees Management",
         generatedDate: new Date().toLocaleString(),
+        sessionStartedAt,
         filters: {
           activeType,
           duration: reportDuration,
         },
         statistics: {
-          totalPassengers: stats.total,
-          totalRevenue: stats.revenue,
-          regularCount: stats.regular,
-          studentCount: stats.student,
-          seniorCount: stats.senior,
+          totalPassengers: shiftRecords.length,
+          totalRevenue: shiftRecords.reduce((sum, item) => sum + (Number(item.price) || 0), 0),
+          regularCount: shiftRecords.filter((f) =>
+            (f.passengerType || "").toLowerCase().includes("regular"),
+          ).length,
+          studentCount: shiftRecords.filter((f) =>
+            (f.passengerType || "").toLowerCase().includes("student"),
+          ).length,
+          seniorCount: shiftRecords.filter((f) => {
+            const type = (f.passengerType || "").toLowerCase();
+            return type.includes("senior") || type.includes("pwd");
+          }).length,
           collector: collectorName.trim(),
+          collectorId,
         },
         data: formattedData,
       };
 
       const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Ticket Admin";
-      await submitPageReport("Terminal Fees", reportPayload, adminName);
+      const report = await submitPageReport(
+        "Terminal Fees",
+        reportPayload,
+        adminName,
+        {
+          reportType: "TerminalFee",
+          payload: reportPayload,
+        },
+      );
       await fetch(
         `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`,
         {
@@ -369,28 +411,29 @@ const TerminalFees = () => {
           body: JSON.stringify({
             title: "Report Submitted: Terminal Fees Reports",
             message:
-              "A new Terminal Fees report has been generated. Submitted rows were marked as On Read.",
+              "A new Terminal Fees report has been generated. Shift rows were submitted and cleared from active board.",
             source: "Terminal Fees",
           }),
         },
       );
 
-      const submittedIds = filtered
-        .map((item) => item._id || item.id)
-        .filter(Boolean);
+      const submitShiftRes = await fetch(`${API_URL}/terminal-fees/submit-shift`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionStartedAt,
+          reportId: report?._id || report?.id || null,
+        }),
+      });
 
-      await Promise.all(
-        submittedIds.map((id) =>
-          fetch(`${API_URL}/terminal-fees/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ reportStatus: "On Read" }),
-          }),
-        ),
-      );
+      if (!submitShiftRes.ok) {
+        throw new Error("Report created, but failed to mark shift records as submitted.");
+      }
 
-      showToastMessage("Report submitted successfully! Rows are marked as On Read.");
+      showToastMessage("Report submitted successfully! Shift rows are cleared from active board.");
       setShowSubmitModal(false);
+      setCollectorId("");
+      setCollectorName("");
       fetchFees();
     } catch (error) {
       console.error(error);
@@ -401,14 +444,37 @@ const TerminalFees = () => {
   };
 
   const handleOpenSubmitModal = () => {
-    if (!collectorName || !collectorName.trim()) {
-      showToastMessage(
-        "Please enter Name of Collector before submitting report.",
-        "error",
-      );
+    setShowSubmitModal(true);
+  };
+
+  const shiftRecords = useMemo(() => {
+    const shiftStart = new Date(sessionStartedAt);
+    return records.filter((item) => {
+      const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
+      return createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= shiftStart;
+    });
+  }, [records, sessionStartedAt]);
+
+  const handleCollectorSelection = (nextCollectorId, selectedCollector) => {
+    setCollectorId(nextCollectorId);
+    if (!selectedCollector) {
+      setCollectorName("");
       return;
     }
-    setShowSubmitModal(true);
+
+    const middleInitial = selectedCollector.middleName
+      ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
+      : "";
+    const displayName = [
+      selectedCollector.firstName,
+      middleInitial,
+      selectedCollector.lastName,
+      selectedCollector.suffix,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    setCollectorName(displayName);
   };
 
   const handleBulkDelete = async () => {
@@ -977,14 +1043,41 @@ const TerminalFees = () => {
               Name of Collector:
             </label>
 
-            <input
-              type="text"
-              value={collectorName}
-              maxLength={100}
-              onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
-              placeholder="Enter collector name"
-              className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-            />
+            <select
+              value={collectorId}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                const selectedCollector = collectors.find(
+                  (collector) => (collector._id || collector.id) === nextId,
+                );
+                handleCollectorSelection(nextId, selectedCollector || null);
+              }}
+              className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
+            >
+              <option value="">Select collector</option>
+              {collectors.map((collector) => {
+                const middleInitial = collector.middleName
+                  ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
+                  : "";
+                const label = [
+                  collector.firstName,
+                  middleInitial,
+                  collector.lastName,
+                  collector.suffix,
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+
+                return (
+                  <option
+                    key={collector._id || collector.id}
+                    value={collector._id || collector.id}
+                  >
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
@@ -1606,80 +1699,24 @@ const TerminalFees = () => {
         </div>
       )}
 
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all">
-            <h3 className="text-xl font-bold text-slate-800 border-b pb-3 mb-4">
-              Terminal Fee Report
-            </h3>
-
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600">
-                You are submitting the current terminal fee report snapshot.
-                <strong className="text-emerald-600 ml-1">
-                  Data will remain on the table
-                </strong>
-                and submitted rows will be marked as On Read.
-              </p>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Name of Collector
-                </label>
-                <input
-                  type="text"
-                  value={collectorName}
-                  readOnly
-                  className="w-full p-2.5 border border-slate-200 bg-slate-50 rounded-lg text-sm outline-none"
-                />
-              </div>
-
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-3">
-                <FileText className="text-blue-500 shrink-0" size={20} />
-                <div className="text-xs text-blue-800">
-                  <strong>Total Records Included:</strong> {filtered.length} Tickets
-                  <div className="mt-2 pt-2 border-t border-blue-200">
-                    <strong>Collector:</strong> {collectorName}
-                  </div>
-                  <div className="mt-1">
-                    <strong>Operator:</strong> {operatorName}
-                  </div>
-                  <div className="mt-1">
-                    <strong>As of:</strong> {asOfDateLabel}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowSubmitModal(false)}
-                disabled={isReporting}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitReport}
-                disabled={isReporting || !collectorName.trim()}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-md disabled:opacity-70"
-              >
-                {isReporting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={16} />
-                    <span>Confirm Submit</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SharedSubmitReportModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onSubmit={handleSubmitReport}
+        requiresCollector={true}
+        moduleName="Terminal Fee"
+        reportType="TerminalFee"
+        collectors={collectors}
+        collectorId={collectorId}
+        collectorName={collectorName}
+        onCollectorChange={handleCollectorSelection}
+        assignedShift="Current Shift"
+        totalRecords={shiftRecords.length}
+        helperText={`Operator: ${operatorName} | As of: ${asOfDateLabel}. Submitted rows are cleared from active board.`}
+        isSubmitting={isReporting}
+        submitDisabled={!collectorId || !collectorName.trim()}
+        submitLabel="Confirm Submit"
+      />
       {toast && (
         <NotificationToast
           isOpen={toast.isOpen}

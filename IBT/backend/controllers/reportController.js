@@ -45,121 +45,168 @@ const getShiftWindowBounds = (assignedShift, now = new Date()) => {
   return { start, end };
 };
 
+const REPORT_TYPE_BY_LABEL = {
+  "Bus Trips": "Bus",
+  Bus: "Bus",
+  "Terminal Fees": "TerminalFee",
+  "Terminal Fee": "TerminalFee",
+  TerminalFee: "TerminalFee",
+  Parking: "Parking",
+  Tenant: "Tenant",
+  "Tenant Lease": "Tenant",
+  LostAndFound: "LostAndFound",
+  "Lost & Found": "LostAndFound",
+};
+
+const normalizeReportType = (reportType, typeLabel) => {
+  if (reportType && REPORT_TYPE_BY_LABEL[reportType]) {
+    return REPORT_TYPE_BY_LABEL[reportType];
+  }
+  if (typeLabel && REPORT_TYPE_BY_LABEL[typeLabel]) {
+    return REPORT_TYPE_BY_LABEL[typeLabel];
+  }
+  return "Bus";
+};
+
 // CREATE
 export const createReport = async (req, res) => {
   try {
-    const { type, data, author, authorEmail, status } = req.body;
+    const {
+      type,
+      reportType,
+      data,
+      payload,
+      author,
+      authorEmail,
+      status,
+    } = req.body;
+    const effectivePayload = payload ?? data ?? {};
+    const resolvedType = type || "General";
+    const resolvedReportType = normalizeReportType(reportType, resolvedType);
     const now = new Date();
-    const submittedAdminId = data?.adminId || null;
+    const submittedAdminId = effectivePayload?.adminId || null;
 
     let admin = null;
-    if (submittedAdminId) {
-      admin = await Admin.findById(submittedAdminId);
-    } else if (authorEmail) {
-      admin = await Admin.findOne({ email: String(authorEmail).toLowerCase() });
-    }
-
-    const assignedShift = admin?.assignedShift || null;
-    const actualShiftAtSubmission = toShiftLabel(now.getHours());
-    const { start: shiftStart, end: shiftEnd } = getShiftWindowBounds(assignedShift, now);
-    const sessionStartedAtRaw = data?.sessionStartedAt;
-    const parsedSessionStart = sessionStartedAtRaw
-      ? new Date(sessionStartedAtRaw)
-      : null;
-    const hasValidSessionStart =
-      parsedSessionStart && !Number.isNaN(parsedSessionStart.getTime());
-    const actionWindowStart = hasValidSessionStart ? parsedSessionStart : shiftStart;
-    const actionWindowEnd = now;
-
-    let busActionRecords = [];
-    if (admin?._id) {
-      busActionRecords = await BusTrip.find({
-        $or: [
-          {
-            arrivalAdminId: admin._id,
-            $or: [
-              { arrivalLoggedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
-              { updatedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
-              { createdAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
-            ],
-          },
-          {
-            departureAdminId: admin._id,
-            $or: [
-              { departureLoggedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
-              { updatedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
-              { createdAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
-            ],
-          },
-        ],
-      })
-        .select(
-          "templateNo company route status arrivalAdminId departureAdminId arrivalLoggedAt departureLoggedAt time departureTime date",
-        )
-        .lean();
-    }
-
-    const completedTransactions = Array.isArray(data?.completedTransactions)
-      ? data.completedTransactions
-      : [];
-    const missedTransactions = Array.isArray(data?.missedTransactions)
-      ? data.missedTransactions
-      : [];
-
-    const finalizedActions =
-      completedTransactions.length > 0 || missedTransactions.length > 0
-        ? [
-            ...completedTransactions.map((row) => ({
-              ...row,
-              category: "completed",
-            })),
-            ...missedTransactions.map((row) => ({
-              ...row,
-              category: "missed",
-              status: "Not Arrive",
-            })),
-          ]
-        : busActionRecords;
-
-    const normalizedData = {
-      screen: data?.screen || "",
-      collectorId: data?.collectorId || null,
-      collectorName: data?.collectorName || "",
-      adminId: admin?._id || submittedAdminId || null,
-      assignedShift,
-      shift: assignedShift,
+    let normalizedData = {
+      ...(effectivePayload || {}),
+      reportType: resolvedReportType,
       submittedAtServer: now.toISOString(),
-      submittedAtShiftWindow: actualShiftAtSubmission,
-      submittedLate: assignedShift ? assignedShift !== actualShiftAtSubmission : !!data?.submittedLate,
       submittedByEmail: authorEmail || null,
-      actionWindow: {
-        from: actionWindowStart.toISOString(),
-        to: actionWindowEnd.toISOString(),
-      },
-      // Backward-compatible shape expected by Reports page renderer/exporters.
-      data: finalizedActions,
-      statistics: {
-        totalActions: finalizedActions.length,
-        completedCount:
-          completedTransactions.length > 0 || missedTransactions.length > 0
-            ? completedTransactions.length
-            : finalizedActions.filter((r) => r.status === "Departed").length,
-        missedCount:
-          completedTransactions.length > 0 || missedTransactions.length > 0
-            ? missedTransactions.length
-            : 0,
-        arrivalsLogged: finalizedActions.filter((r) => r.arrivalAdminId).length,
-        departuresLogged: finalizedActions.filter((r) => r.departureAdminId).length,
-        departedNow: finalizedActions.filter((r) => r.status === "Departed").length,
-      },
-      busActions: finalizedActions,
-      completedTransactions,
-      missedTransactions,
     };
+
+    if (resolvedReportType === "Bus") {
+      if (submittedAdminId) {
+        admin = await Admin.findById(submittedAdminId);
+      } else if (authorEmail) {
+        admin = await Admin.findOne({ email: String(authorEmail).toLowerCase() });
+      }
+
+      const assignedShift = admin?.assignedShift || null;
+      const actualShiftAtSubmission = toShiftLabel(now.getHours());
+      const { start: shiftStart } = getShiftWindowBounds(assignedShift, now);
+      const sessionStartedAtRaw = effectivePayload?.sessionStartedAt;
+      const parsedSessionStart = sessionStartedAtRaw
+        ? new Date(sessionStartedAtRaw)
+        : null;
+      const hasValidSessionStart =
+        parsedSessionStart && !Number.isNaN(parsedSessionStart.getTime());
+      const actionWindowStart = hasValidSessionStart ? parsedSessionStart : shiftStart;
+      const actionWindowEnd = now;
+
+      let busActionRecords = [];
+      if (admin?._id) {
+        busActionRecords = await BusTrip.find({
+          $or: [
+            {
+              arrivalAdminId: admin._id,
+              $or: [
+                { arrivalLoggedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+                { updatedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+                { createdAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+              ],
+            },
+            {
+              departureAdminId: admin._id,
+              $or: [
+                { departureLoggedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+                { updatedAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+                { createdAt: { $gte: actionWindowStart, $lte: actionWindowEnd } },
+              ],
+            },
+          ],
+        })
+          .select(
+            "templateNo company route status arrivalAdminId departureAdminId arrivalLoggedAt departureLoggedAt time departureTime date",
+          )
+          .lean();
+      }
+
+      const completedTransactions = Array.isArray(effectivePayload?.completedTransactions)
+        ? effectivePayload.completedTransactions
+        : [];
+      const missedTransactions = Array.isArray(effectivePayload?.missedTransactions)
+        ? effectivePayload.missedTransactions
+        : [];
+
+      const finalizedActions =
+        completedTransactions.length > 0 || missedTransactions.length > 0
+          ? [
+              ...completedTransactions.map((row) => ({
+                ...row,
+                category: "completed",
+              })),
+              ...missedTransactions.map((row) => ({
+                ...row,
+                category: "missed",
+                status: "Not Arrive",
+              })),
+            ]
+          : busActionRecords;
+
+      normalizedData = {
+        screen: effectivePayload?.screen || "",
+        collectorId: effectivePayload?.collectorId || null,
+        collectorName: effectivePayload?.collectorName || "",
+        adminId: admin?._id || submittedAdminId || null,
+        assignedShift,
+        shift: assignedShift,
+        submittedAtServer: now.toISOString(),
+        submittedAtShiftWindow: actualShiftAtSubmission,
+        submittedLate: assignedShift
+          ? assignedShift !== actualShiftAtSubmission
+          : !!effectivePayload?.submittedLate,
+        submittedByEmail: authorEmail || null,
+        actionWindow: {
+          from: actionWindowStart.toISOString(),
+          to: actionWindowEnd.toISOString(),
+        },
+        // Backward-compatible shape expected by Reports page renderer/exporters.
+        data: finalizedActions,
+        statistics: {
+          totalActions: finalizedActions.length,
+          completedCount:
+            completedTransactions.length > 0 || missedTransactions.length > 0
+              ? completedTransactions.length
+              : finalizedActions.filter((r) => r.status === "Departed").length,
+          missedCount:
+            completedTransactions.length > 0 || missedTransactions.length > 0
+              ? missedTransactions.length
+              : 0,
+          arrivalsLogged: finalizedActions.filter((r) => r.arrivalAdminId).length,
+          departuresLogged: finalizedActions.filter((r) => r.departureAdminId).length,
+          departedNow: finalizedActions.filter((r) => r.status === "Departed").length,
+        },
+        busActions: finalizedActions,
+        completedTransactions,
+        missedTransactions,
+      };
+    }
     
     const newReport = new Report({
-      type,
+      type: resolvedType,
+      reportType: resolvedReportType,
       data: normalizedData,
+      payload: effectivePayload,
       author: author || "System User",
       status: status || "Submitted"
     });

@@ -7,7 +7,8 @@ import {
   departParking,
   archiveParking,
   restoreParking,
-  getArchivedParkingTickets
+  getArchivedParkingTickets,
+  submitParkingForShift,
 } from "../controllers/parkingController.js";
 
 const router = express.Router();
@@ -15,6 +16,7 @@ const router = express.Router();
 // Standard Routes
 router.get("/", getParkingTickets);
 router.post("/", createParking);
+router.put("/submit-shift", submitParkingForShift);
 router.put("/:id", updateParking);
 router.put("/:id/depart", departParking);
 

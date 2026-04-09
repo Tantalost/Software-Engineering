@@ -5,6 +5,12 @@ const reportSchema = new mongoose.Schema({
     type: String,
     required: true, 
   },
+  reportType: {
+    type: String,
+    enum: ['Bus', 'TerminalFee', 'Parking', 'Tenant', 'LostAndFound'],
+    default: 'Bus',
+    required: true,
+  },
   author: {
     type: String,
     default: "System User"
@@ -16,7 +22,13 @@ const reportSchema = new mongoose.Schema({
   },
   data: {
     type: mongoose.Schema.Types.Mixed, 
-    required: true
+    required: false,
+    default: null,
+  },
+  payload: {
+    type: mongoose.Schema.Types.Mixed,
+    required: false,
+    default: null,
   },
   isArchived: {
     type: Boolean,

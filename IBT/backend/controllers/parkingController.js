@@ -3,8 +3,50 @@ import Parking from "../models/Parking.js";
 // GET ALL
 export const getParkingTickets = async (req, res) => {
   try {
-    const tickets = await Parking.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
+    const tickets = await Parking.find({
+      isArchived: { $ne: true },
+      submitted: { $ne: true },
+    }).sort({ createdAt: -1 });
     res.status(200).json(tickets);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const submitParkingForShift = async (req, res) => {
+  try {
+    const { sessionStartedAt, reportId } = req.body;
+    const shiftStart = sessionStartedAt ? new Date(sessionStartedAt) : null;
+
+    if (!shiftStart || Number.isNaN(shiftStart.getTime())) {
+      return res.status(400).json({ message: "Valid sessionStartedAt is required." });
+    }
+
+    const now = new Date();
+    const updatePayload = {
+      submitted: true,
+      submittedAt: now,
+    };
+
+    if (reportId) {
+      updatePayload.reportId = reportId;
+    }
+
+    const result = await Parking.updateMany(
+      {
+        isArchived: { $ne: true },
+        submitted: { $ne: true },
+        createdAt: { $gte: shiftStart, $lte: now },
+      },
+      { $set: updatePayload },
+    );
+
+    res.status(200).json({
+      message: "Shift parking tickets marked as submitted.",
+      matchedCount: result.matchedCount || 0,
+      modifiedCount: result.modifiedCount || 0,
+      reportId: reportId || null,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
