@@ -91,6 +91,7 @@ const TerminalFees = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [isAutoTicket, setIsAutoTicket] = useState(true);
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [archiveRow, setArchiveRow] = useState(null);
@@ -607,6 +608,7 @@ const TerminalFees = () => {
   };
 
   const handleOpenAdd = async () => {
+    setIsAutoTicket(true);
     const now = new Date();
     setNewTicket({
       ticketNo: "Loading...",
@@ -638,6 +640,10 @@ const TerminalFees = () => {
   };
 
   const handleSaveNew = async () => {
+    if (!newTicket.ticketNo || String(newTicket.ticketNo).trim() === "") {
+      showToastMessage("Please enter a ticket number.", "error");
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/terminal-fees`, {
         method: "POST",
@@ -1396,15 +1402,67 @@ const TerminalFees = () => {
               </button>
             </div>
             <div className="space-y-5">
+              <div className="flex items-center justify-between mb-3 border-b pb-3">
+                <label className="block text-xs font-semibold text-slate-500 uppercase">
+                  Ticket Input Mode
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${!isAutoTicket ? 'text-emerald-600' : 'text-slate-400'}`}>Manual</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const nextMode = !isAutoTicket;
+                      setIsAutoTicket(nextMode);
+                      
+                      if (!nextMode) {
+                 
+                        setNewTicket({ ...newTicket, ticketNo: "" });
+                      } else {
+                     
+                        setNewTicket({ ...newTicket, ticketNo: "Loading..." });
+                        try {
+                          const res = await fetch(`${API_URL}/terminal-fees/next-ticket`);
+                          if (res.ok) {
+                            const data = await res.json();
+                            setNewTicket(prev => ({ ...prev, ticketNo: data.nextTicketNo }));
+                          } else {
+                            setNewTicket(prev => ({ ...prev, ticketNo: "Auto-generated" }));
+                          }
+                        } catch (error) {
+                          console.error("Error getting next ticket:", error);
+                          setNewTicket(prev => ({ ...prev, ticketNo: "Auto-generated" }));
+                        }
+                      }
+                    }}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
+                      isAutoTicket ? 'bg-emerald-500' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                        isAutoTicket ? 'translate-x-5' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-xs font-medium ${isAutoTicket ? 'text-emerald-600' : 'text-slate-400'}`}>Auto</span>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                  Ticket No
+                  Ticket No {isAutoTicket && <span className="text-emerald-500 lowercase normal-case ml-1">(Auto-generated)</span>}
                 </label>
                 <input
                   type="text"
                   value={newTicket.ticketNo}
-                  disabled
-                  className="w-full bg-slate-100 text-slate-500 italic border border-slate-300 px-3 py-2 rounded-lg font-medium"
+                  onChange={(e) => setNewTicket({ ...newTicket, ticketNo: e.target.value })}
+                  disabled={isAutoTicket}
+                  placeholder={!isAutoTicket ? "Enter custom ticket number" : ""}
+                  className={`w-full px-3 py-2 rounded-lg font-medium border transition-all ${
+                    isAutoTicket 
+                      ? "bg-slate-100 text-slate-500 italic border-slate-300 cursor-not-allowed" 
+                      : "bg-white text-slate-800 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                  }`}
                 />
               </div>
               <div>
