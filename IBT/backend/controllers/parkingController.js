@@ -1,6 +1,5 @@
 import Parking from "../models/Parking.js";
 
-// GET ALL
 export const getParkingTickets = async (req, res) => {
   try {
     const tickets = await Parking.find({
@@ -75,7 +74,6 @@ export const createParking = async (req, res) => {
   }
 };
 
-// DEPART (Calculate Duration & Price)
 export const departParking = async (req, res) => {
   try {
     console.log("DEPART API HIT:", req.params.id);
@@ -89,7 +87,6 @@ export const departParking = async (req, res) => {
     const timeOut = new Date();
 const timeIn = new Date(parkingRecord.timeIn);
 
-// ✅ compute duration in hours
 const diffMs = timeOut - timeIn;
 const duration = diffMs / (1000 * 60 * 60);
 
@@ -99,7 +96,6 @@ const durationText = `${hours} hours ${minutes} minutes`;
 
 let finalPrice = 0;
 
-// ✅ 4 Wheels (₱base for 3 hrs, +base per extra hour)
 if (parkingRecord.type === "4 Wheels") {
   const base = parkingRecord.baseRate;
 
@@ -111,7 +107,6 @@ if (parkingRecord.type === "4 Wheels") {
   }
 }
 
-// ✅ 2 Wheels (same logic as 4 wheels but lower base)
 else if (parkingRecord.type === "Two Wheels") {
   const base = parkingRecord.baseRate;
 
@@ -123,12 +118,10 @@ else if (parkingRecord.type === "Two Wheels") {
   }
 }
 
-// ✅ Jeep (flat rate)
 else if (parkingRecord.type === "Jeep") {
   finalPrice = parkingRecord.baseRate;
 }
 
-// ✅ SAVE RESULTS
 parkingRecord.timeOut = timeOut;
 parkingRecord.duration = String(durationText);
 parkingRecord.finalPrice = finalPrice;
@@ -142,7 +135,6 @@ res.status(200).json(updatedRecord);
   }
 };
 
-// UPDATE (Standard Edit if needed)
 export const updateParking = async (req, res) => {
   try {
     const updated = await Parking.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -151,8 +143,6 @@ export const updateParking = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
-
-// --- SOFT DELETE FUNCTIONS (Archive & Restore) ---
 
 export const archiveParking = async (req, res) => {
   try {
@@ -205,32 +195,31 @@ export const deleteParking = async (req, res) => {
 
 export const getNextParkingTicketNumber = async (req, res) => {
   try {
-    const result = await Parking.aggregate([
-      {
-        $addFields: {
-         
-          cleanString: {
-            $replaceAll: { input: "$ticketNo", find: "T-", replacement: "" }
-          }
-        }
-      },
-      {
-        $addFields: {
-          numericTicketNo: {
-            $convert: { input: "$cleanString", to: "int", onError: 0, onNull: 0 }
-          }
-        }
-      },
-      { $sort: { numericTicketNo: -1 } },
-      { $limit: 1 }
-    ]);
+  
+    const latestTicket = await Parking.findOne().sort({ createdAt: -1 });
 
-    const maxTicket = result.length > 0 ? result[0].numericTicketNo : 0;
-    const nextNumber = maxTicket + 1;
-    
-    const formattedNext = `T-${nextNumber.toString().padStart(2, "0")}`;
+    let nextTicketNo = "T-01"; 
 
-    res.json({ nextTicketNo: formattedNext });
+    if (latestTicket && latestTicket.ticketNo) {
+      const lastTicketStr = latestTicket.ticketNo.trim();
+
+      const match = lastTicketStr.match(/^(.*?)(\d+)$/);
+
+      if (match) {
+        const prefix = match[1]; 
+        const numberStr = match[2]; 
+
+        const nextNum = parseInt(numberStr, 10) + 1;
+
+        const paddedNum = nextNum.toString().padStart(numberStr.length, "0");
+
+        nextTicketNo = `${prefix}${paddedNum}`;
+      } else {
+        nextTicketNo = `${lastTicketStr}-01`;
+      }
+    }
+
+    res.json({ nextTicketNo });
   } catch (error) {
     console.error("Error fetching next parking ticket number:", error);
     res.status(500).json({ error: "Server error" });
