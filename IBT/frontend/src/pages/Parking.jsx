@@ -219,7 +219,7 @@ const Parking = () => {
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
-    type: "FourWheels",
+    type: "4 Wheels",
     plateNo: "",
     baseRate: 10,
     timeIn: "",
@@ -312,7 +312,7 @@ const Parking = () => {
     try {
       // Determine correct rate based on vehicle type
       let baseRate =
-        updatedData.type === "FourWheels"
+        updatedData.type === "4 Wheels"
           ? priceSettings.carRate
           : priceSettings.motorcycleRate;
 
@@ -429,8 +429,8 @@ const Parking = () => {
   }, [filtered, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const fourWheelCount = filtered.filter((t) => t.type === "FourWheels").length;
-  const twoWheelCount = filtered.filter((t) => t.type === "TwoWheels").length;
+  const fourWheelCount = filtered.filter((t) => t.type === "4 Wheels").length;
+  const twoWheelCount = filtered.filter((t) => t.type === "2 Wheels").length;
   const revenue = filtered.reduce((sum, t) => {
     if (t.status !== "Departed") return sum;
 
@@ -445,7 +445,7 @@ const Parking = () => {
     const duration = diffMs / (1000 * 60 * 60);
 
     // ✅ 4 Wheels
-    if (t.type === "FourWheels") {
+    if (t.type === "4 Wheels") {
       const base = priceSettings.carRate;
 
       if (duration <= 3) return sum + base;
@@ -455,7 +455,7 @@ const Parking = () => {
     }
 
     // ✅ 2 Wheels
-    if (t.type === "TwoWheels") {
+    if (t.type === "2 Wheels") {
       const base = priceSettings.motorcycleRate;
 
       if (duration <= 3) return sum + base;
@@ -628,7 +628,7 @@ const Parking = () => {
 
     setNewTicket({
       ticketNo: isAutoTicket ? "Loading..." : "",
-      type: "FourWheels",
+      type: "4 Wheels",
       plateNo: "",
       baseRate: priceSettings.carRate,
       timeIn: formattedTimeIn,
@@ -652,8 +652,8 @@ const Parking = () => {
   const handleSelectType = (type) => {
     let rate = 0;
 
-    if (type === "FourWheels") rate = priceSettings.carRate;
-    else if (type === "TwoWheels") rate = priceSettings.motorcycleRate;
+    if (type === "4 Wheels") rate = priceSettings.carRate;
+    else if (type === "2 Wheels") rate = priceSettings.motorcycleRate;
     else if (type === "Jeep") rate = priceSettings.jeepRate;
     setNewTicket((prev) => ({
       ...prev,
@@ -957,10 +957,10 @@ const Parking = () => {
       });
 
       const carCount = shiftRecords.filter(
-        (item) => item.type && item.type.toLowerCase() === "fourwheels",
+        (item) => item.type && item.type.toLowerCase() === "4 wheels",
       ).length;
       const motoCount = shiftRecords.filter(
-        (item) => item.type && item.type.toLowerCase() === "twowheels",
+        (item) => item.type && item.type.toLowerCase() === "2 wheels",
       ).length;
 
       const reportPayload = {
@@ -1049,7 +1049,7 @@ const Parking = () => {
   };
 
   const getBadgeStyles = () => {
-    if (newTicket.type === "FourWheels")
+    if (newTicket.type === "4 Wheels")
       return "bg-blue-50 text-blue-600 border-blue-600";
     return "bg-orange-50 text-orange-500 border-orange-500";
   };
@@ -1711,7 +1711,7 @@ const Parking = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 animate-in fade-in duration-300">
                 {/* 4 Wheels */}
                 <button
-                  onClick={() => handleSelectType("FourWheels")}
+                  onClick={() => handleSelectType("4 Wheels")}
                   className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-cyan-50 text-cyan-600 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
                   <Car size={80} className="mb-4" />
@@ -1724,7 +1724,7 @@ const Parking = () => {
 
                 {/* 2 Wheels */}
                 <button
-                  onClick={() => handleSelectType("TwoWheels")}
+                  onClick={() => handleSelectType("2 Wheels")}
                   className="h-[170px] px-6 w-full flex flex-col items-center justify-center text-center rounded-[20px] bg-orange-50 text-orange-500 cursor-pointer transition-transform active:scale-95 hover:shadow-lg hover:-translate-y-1"
                 >
                   <Bike size={70} className="mb-4" />
@@ -1750,68 +1750,113 @@ const Parking = () => {
               </div>
             )}
             {step === 2 && (
-              <div className="text-left mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-gray-500 text-lg font-semibold ml-1">
-                    Ticket Number {isAutoTicket && <span className="text-emerald-500 text-sm lowercase normal-case ml-1">(Auto-counted)</span>}
-                  </label>
+              <div className="flex justify-center">
+                <div className="w-full max-w-lg flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                   
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold uppercase tracking-wider ${!isAutoTicket ? 'text-emerald-600' : 'text-gray-400'}`}>Manual</span>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const nextMode = !isAutoTicket;
-                        setIsAutoTicket(nextMode);
-                        if (!nextMode) {
-                          setNewTicket({ ...newTicket, ticketNo: "" });
-                        } else {
-                          setNewTicket({ ...newTicket, ticketNo: "Loading..." });
-                          try {
-                            const res = await fetch(`${API_URL}/next-ticket`);
-                            if (res.ok) {
-                              const data = await res.json();
-                              setNewTicket(prev => ({ ...prev, ticketNo: data.nextTicketNo }));
-                            }
-                          } catch (error) {
-                            setNewTicket(prev => ({ ...prev, ticketNo: "T-01" }));
-                          }
-                        }
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${isAutoTicket ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  <div>
+                    <span
+                      className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoTicket ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                    <span className={`text-xs font-bold uppercase tracking-wider ${isAutoTicket ? 'text-emerald-600' : 'text-gray-400'}`}>Auto</span>
+                      Selected:{" "}
+                      {newTicket.type === "4 Wheels"
+                        ? "4 Wheels"
+                        : newTicket.type === "2 Wheels"
+                          ? "2 Wheels"
+                          : "Jeep"}
+                    </span>
                   </div>
-                </div>
 
-                <input
-                  type="text"
-                  value={newTicket.ticketNo}
-                  onChange={(e) => setNewTicket({ ...newTicket, ticketNo: e.target.value })}
-                  disabled={isAutoTicket}
-                  placeholder={!isAutoTicket ? "Enter custom ticket (e.g. T-99)" : ""}
-                  className={`w-full p-5 text-2xl border-2 rounded-xl transition-all font-bold ${
-                    isAutoTicket
-                      ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-50 border-gray-300 text-gray-800 focus:bg-white focus:border-blue-600 outline-none"
-                  }`}
-                />
+                  <div className="text-left">
+                    <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
+                      Plate Number
+                    </label>
+                    <input
+                      ref={plateInputRef}
+                      type="text"
+                      list="plate-options"
+                      placeholder="ABC 123"
+                      required
+                      value={newTicket.plateNo}
+                      onChange={(e) =>
+                        setNewTicket({
+                          ...newTicket,
+                          plateNo: e.target.value.toUpperCase(),
+                        })
+                      }
+                      className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors uppercase"
+                    />
+                    <datalist id="plate-options">
+                      {existingPlates.map((plate, index) => (
+                        <option key={index} value={plate} />
+                      ))}
+                    </datalist>
+                  </div>
 
-                <div className="flex gap-4 mt-6">
-                  <button
-                    onClick={handleBack}
-                    className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors py-3"
-                  >
-                    <ArrowLeft size={24} /> Back
-                  </button>
-                  <button
-                    onClick={handleCreateTicket}
-                    className="flex-[2] bg-emerald-500 text-white text-xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg py-3"
-                  >
-                    ENTER TICKET
-                  </button>
+                  <div className="text-left mt-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-gray-500 text-lg font-semibold ml-1">
+                        Ticket Number {isAutoTicket && <span className="text-emerald-500 text-sm lowercase normal-case ml-1">(Auto-counted)</span>}
+                      </label>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold uppercase tracking-wider ${!isAutoTicket ? 'text-emerald-600' : 'text-gray-400'}`}>Manual</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const nextMode = !isAutoTicket;
+                            setIsAutoTicket(nextMode);
+                            if (!nextMode) {
+                              setNewTicket({ ...newTicket, ticketNo: "" });
+                            } else {
+                              setNewTicket({ ...newTicket, ticketNo: "Loading..." });
+                              try {
+                                const res = await fetch(`${API_URL}/next-ticket`);
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setNewTicket(prev => ({ ...prev, ticketNo: data.nextTicketNo }));
+                                }
+                              } catch (error) {
+                                setNewTicket(prev => ({ ...prev, ticketNo: "T-01" }));
+                              }
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${isAutoTicket ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoTicket ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isAutoTicket ? 'text-emerald-600' : 'text-gray-400'}`}>Auto</span>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={newTicket.ticketNo}
+                      onChange={(e) => setNewTicket({ ...newTicket, ticketNo: e.target.value })}
+                      disabled={isAutoTicket}
+                      placeholder={!isAutoTicket ? "Enter custom ticket (e.g. T-99)" : ""}
+                      className={`w-full p-5 text-2xl border-2 rounded-xl transition-all font-bold ${
+                        isAutoTicket
+                          ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
+                          : "bg-gray-50 border-gray-300 text-gray-800 focus:bg-white focus:border-blue-600 outline-none"
+                      }`}
+                    />
+                  </div>
+
+                  <div className="flex gap-4 mt-4">
+                    <button
+                      onClick={handleBack}
+                      className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors py-3"
+                    >
+                      <ArrowLeft size={24} /> Back
+                    </button>
+                    <button
+                      onClick={handleCreateTicket}
+                      className="flex-[2] bg-emerald-500 text-white text-xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg py-3"
+                    >
+                      ENTER TICKET
+                    </button>
+                  </div>
+
                 </div>
               </div>
             )}

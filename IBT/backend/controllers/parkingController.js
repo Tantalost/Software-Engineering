@@ -100,7 +100,7 @@ const durationText = `${hours} hours ${minutes} minutes`;
 let finalPrice = 0;
 
 // ✅ 4 Wheels (₱base for 3 hrs, +base per extra hour)
-if (parkingRecord.type === "FourWheels") {
+if (parkingRecord.type === "4 Wheels") {
   const base = parkingRecord.baseRate;
 
   if (duration <= 3) {
@@ -112,7 +112,7 @@ if (parkingRecord.type === "FourWheels") {
 }
 
 // ✅ 2 Wheels (same logic as 4 wheels but lower base)
-else if (parkingRecord.type === "TwoWheels") {
+else if (parkingRecord.type === "Two Wheels") {
   const base = parkingRecord.baseRate;
 
   if (duration <= 3) {
