@@ -1335,9 +1335,14 @@ const Parking = () => {
           totalRevenue={revenue}
         />
       </div>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        <div className="flex items-center justify-end gap-3">
+
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
+        
+        <div className="w-full lg:w-[350px]">
+          <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        </div>
+        
+        <div className="flex flex-wrap items-center justify-start lg:justify-end gap-3 w-full lg:w-auto">
           {role === "parking" && (
             <button
               onClick={() => setShowSubmitModal(true)}
@@ -1362,46 +1367,46 @@ const Parking = () => {
 
           <button
             onClick={handleAddClick}
-            className="bg-gradient-to-r cursor-pointer from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+            className="bg-gradient-to-r cursor-pointer from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all whitespace-nowrap"
             title="Add New Ticket"
           >
             + Add New
           </button>
-          <ExportMenu
-            onExportExcel={handleExportExcel}
-            onExportPDF={exportToPDF}
-          />
+          
+          <ExportMenu onExportExcel={handleExportExcel} onExportPDF={exportToPDF} />
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
-        <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
-        <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
+      <div className="flex flex-col gap-4 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           
-          <select
-            value={activeStatus}
-            onChange={(e) => {
-              setActiveStatus(e.target.value);
-              setCurrentPage(1); 
-            }}
-            className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
-          >
-            <option value="All">All Status</option>
-            <option value="Parked">Parked</option>
-            <option value="Departed">Departed</option>
-          </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
+            <select
+              value={activeStatus}
+              onChange={(e) => {
+                setActiveStatus(e.target.value);
+                setCurrentPage(1); 
+              }}
+              className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer"
+            >
+              <option value="All">All Status</option>
+              <option value="Parked">Parked</option>
+              <option value="Departed">Departed</option>
+            </select>
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
               {["Daily", "Week", "Month", "Year"].map((type) => (
                 <button
                   key={type}
                   onClick={() => {
                     setDateFilterType(type);
-                    setCurrentDateRange(new Date()); 
+                    setCurrentDateRange(new Date());
                     setCurrentPage(1);
                   }}
-                  className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
+                  className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
                     dateFilterType === type
                       ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
                       : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
@@ -1431,102 +1436,110 @@ const Parking = () => {
               </button>
             </div>
           </div>
+        </div>
 
-          <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-            Name of Collector:
-          </label>
-
-          <select
-            value={collectorId}
-            onChange={(e) => {
-              const nextId = e.target.value;
-              const selectedCollector = collectors.find(
-                (collector) => (collector._id || collector.id) === nextId,
-              );
-              setCollectorId(nextId);
-
-              if (!selectedCollector) {
-                setCollectorName("");
-                return;
-              }
-
-              const middleInitial = selectedCollector.middleName
-                ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
-                : "";
-              const displayName = [
-                selectedCollector.firstName,
-                middleInitial,
-                selectedCollector.lastName,
-                selectedCollector.suffix,
-              ]
-                .filter(Boolean)
-                .join(" ");
-
-              setCollectorName(displayName);
-            }}
-            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
-          >
-            <option value="">Select collector</option>
-            {collectors.map((collector) => {
-              const middleInitial = collector.middleName
-                ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
-                : "";
-              const label = [
-                collector.firstName,
-                middleInitial,
-                collector.lastName,
-                collector.suffix,
-              ]
-                .filter(Boolean)
-                .join(" ");
-
-              return (
-                <option
-                  key={collector._id || collector.id}
-                  value={collector._id || collector.id}
-                >
-                  {label}
-                </option>
-              );
-            })}
-          </select>
-          <button
-            onClick={() => setShowLogModal(true)}
-            className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
-            title="View Logs"
-          >
-            <History size={18} />
-            <span className="hidden sm:inline cursor-pointer">Logs</span>
-          </button>
-
-          {isSelectionMode && selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-              <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-                {selectedIds.length} Selected
-              </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          
+          <div className="flex items-center gap-2 min-h-[42px]">
+            {role === "parking" && (
               <button
-                onClick={handleBulkDelete}
-                title="Delete Selected"
-                className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                onClick={toggleSelectionMode}
+                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                className={`flex items-center justify-center h-[42px] px-3 cursor-pointer rounded-xl transition-all border ${
+                  isSelectionMode
+                    ? "bg-red-500 text-white border-red-600 shadow-md"
+                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                }`}
               >
-                <Trash2 className="h-5 w-5" />
+                {isSelectionMode ? <X size={18} className="mr-1.5"/> : <ListChecks size={18} className="mr-1.5"/>}
+                <span className="text-sm font-medium">{isSelectionMode ? "Cancel" : "Select"}</span>
               </button>
-            </div>
-          )}
+            )}
 
-          {role == "parking" && (
+            {isSelectionMode && selectedIds.length > 0 && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-5 bg-red-50 p-1.5 rounded-xl border border-red-100 h-[42px]">
+                <span className="text-sm font-semibold text-red-600 px-2 whitespace-nowrap">
+                  {selectedIds.length} Selected
+                </span>
+                <button
+                  onClick={handleBulkDelete}
+                  title="Delete Selected"
+                  className="rounded-lg p-1.5 bg-white text-red-500 hover:text-red-700 shadow-sm border border-red-200 transition-all cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 h-[42px]">
+              <label className="text-sm font-semibold text-slate-600 whitespace-nowrap">
+                Collector:
+              </label>
+              <select
+                value={collectorId}
+                onChange={(e) => {
+                  const nextId = e.target.value;
+                  const selectedCollector = collectors.find(
+                    (collector) => (collector._id || collector.id) === nextId,
+                  );
+                  setCollectorId(nextId);
+
+                  if (!selectedCollector) {
+                    setCollectorName("");
+                    return;
+                  }
+
+                  const middleInitial = selectedCollector.middleName
+                    ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
+                    : "";
+                  const displayName = [
+                    selectedCollector.firstName,
+                    middleInitial,
+                    selectedCollector.lastName,
+                    selectedCollector.suffix,
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+
+                  setCollectorName(displayName);
+                }}
+                className="w-full sm:w-48 bg-transparent border-none text-sm font-medium text-slate-800 focus:ring-0 cursor-pointer outline-none"
+              >
+                <option value="">Select collector...</option>
+                {collectors.map((collector) => {
+                  const middleInitial = collector.middleName
+                    ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
+                    : "";
+                  const label = [
+                    collector.firstName,
+                    middleInitial,
+                    collector.lastName,
+                    collector.suffix,
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+
+                  return (
+                    <option key={collector._id || collector.id} value={collector._id || collector.id}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
             <button
-              onClick={toggleSelectionMode}
-              title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 cursor-pointer rounded-xl transition-all border ${
-                isSelectionMode
-                  ? "bg-red-500 text-white shadow-md"
-                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-              }`}
+              onClick={() => setShowLogModal(true)}
+              className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
+              title="View Logs"
             >
-              {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+              <History size={18} />
+              <span className="hidden sm:inline">Logs</span>
             </button>
-          )}
+          </div>
+
         </div>
       </div>
 
