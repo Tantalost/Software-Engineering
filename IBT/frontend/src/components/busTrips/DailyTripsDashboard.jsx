@@ -48,7 +48,6 @@ const DailyTripsDashboard = ({
   onApproveDeparture,
   onToggleOnFixStatus,
   onMarkArrived,
-  onMarkNotDeparted,
   onViewTrip,
   onEditTrip,
   onArchiveTrip,
@@ -232,14 +231,6 @@ const DailyTripsDashboard = ({
                               className="p-1.5 rounded-md transition-colors text-amber-500 bg-amber-50 hover:bg-amber-100"
                             >
                               <Wrench size={16} />
-                            </button>
-
-                            <button
-                              onClick={() => onMarkNotDeparted?.(trip)}
-                              title="Mark as Not Departed"
-                              className="p-1.5 rounded-md transition-colors text-orange-600 bg-orange-50 hover:bg-orange-100"
-                            >
-                              <XCircle size={16} />
                             </button>
 
                             <button

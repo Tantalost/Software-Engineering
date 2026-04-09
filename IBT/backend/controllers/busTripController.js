@@ -163,6 +163,17 @@ export const createBusTrip = async (req, res) => {
   }
 };
 
+const normalizeTicketReference = (value = "") => String(value).trim();
+
+const generateAutoTicketReference = async () => {
+  for (let i = 0; i < 5; i += 1) {
+    const candidate = `AUTO-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    const existing = await BusTrip.exists({ ticketReferenceNo: candidate });
+    if (!existing) return candidate;
+  }
+  return `AUTO-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+};
+
 export const updateBusTrip = async (req, res) => {
   try {
     const { id } = req.params;
@@ -173,17 +184,46 @@ export const updateBusTrip = async (req, res) => {
       return res.status(404).json({ message: "Bus trip not found" });
     }
 
+    const incomingTicketReferenceNo = normalizeTicketReference(
+      req.body.ticketReferenceNo,
+    );
+
+    if (incomingTicketReferenceNo) {
+      const duplicateReference = await BusTrip.findOne({
+        _id: { $ne: id },
+        ticketReferenceNo: incomingTicketReferenceNo,
+      }).select("_id");
+
+      if (duplicateReference) {
+        return res.status(409).json({
+          message: `Ticket Reference No. \"${incomingTicketReferenceNo}\" already exists.`,
+        });
+      }
+    }
+
+    const updatePayload = {
+      ...req.body,
+      ...(incomingTicketReferenceNo
+        ? { ticketReferenceNo: incomingTicketReferenceNo }
+        : {}),
+      ...(req.body.status === "Arrived"
+        ? {
+            arrivalAdminId: req.body.actionAdminId || oldTrip.arrivalAdminId || null,
+            arrivalLoggedAt: new Date(),
+          }
+        : {}),
+    };
+
+    if (
+      !incomingTicketReferenceNo &&
+      Object.prototype.hasOwnProperty.call(req.body, "ticketReferenceNo")
+    ) {
+      delete updatePayload.ticketReferenceNo;
+    }
+
     const updatedTrip = await BusTrip.findByIdAndUpdate(
       id,
-      {
-        ...req.body,
-        ...(req.body.status === "Arrived"
-          ? {
-              arrivalAdminId: req.body.actionAdminId || oldTrip.arrivalAdminId || null,
-              arrivalLoggedAt: new Date(),
-            }
-          : {}),
-      },
+      updatePayload,
       { new: true }
     );
 
@@ -320,11 +360,29 @@ export const approveDeparture = async (req, res) => {
     const trip = await BusTrip.findById(id);
     if (!trip) return res.status(404).json({ message: "Trip not found" });
 
+    const normalizedTicketReferenceNo = normalizeTicketReference(ticketReferenceNo);
+
+    if (normalizedTicketReferenceNo) {
+      const duplicateReference = await BusTrip.findOne({
+        _id: { $ne: id },
+        ticketReferenceNo: normalizedTicketReferenceNo,
+      }).select("_id");
+
+      if (duplicateReference) {
+        return res.status(409).json({
+          message: `Ticket Reference No. \"${normalizedTicketReferenceNo}\" already exists.`,
+        });
+      }
+    }
+
+    const finalTicketReferenceNo =
+      normalizedTicketReferenceNo || (await generateAutoTicketReference());
+
     const updatedTrip = await BusTrip.findByIdAndUpdate(
       id,
       {
         status: "Departed",
-        ticketReferenceNo: ticketReferenceNo || `AUTO-${Date.now().toString().slice(-6)}`,
+        ticketReferenceNo: finalTicketReferenceNo,
         departureTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         departureAdminId: actionAdminId || trip.departureAdminId || null,
         departureLoggedAt: new Date(),

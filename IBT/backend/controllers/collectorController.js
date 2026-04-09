@@ -3,8 +3,13 @@ import Collector from "../models/Collector.js";
 const normalizeText = (value = "") =>
   String(value).trim().replace(/\s+/g, " ");
 
-const normalizeContact = (value = "") =>
-  String(value).replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
+const normalizeContact = (value = "") => {
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("63")) return digits.slice(2, 12);
+  if (digits.startsWith("0")) return digits.slice(1, 11);
+  return digits.slice(0, 10);
+};
 
 const requiredDepartments = ["Bus", "Parking", "Terminal Fee", "Tenant"];
 
@@ -57,10 +62,54 @@ export const createCollector = async (req, res) => {
         .json({ message: "Contact number must be exactly 10 digits." });
     }
 
+    const existingCollector = await Collector.findOne({
+      firstName: payload.firstName,
+      middleName: payload.middleName,
+      lastName: payload.lastName,
+      suffix: payload.suffix,
+      contactNumber: payload.contactNumber,
+    });
+
+    // If an inactive record already exists for this person+contact, revive it instead of failing.
+    if (existingCollector) {
+      if (existingCollector.status === "Inactive") {
+        existingCollector.assignedShift = payload.assignedShift;
+        existingCollector.assignedDepartment = payload.assignedDepartment;
+        existingCollector.status = "Active";
+        await existingCollector.save();
+        return res.status(200).json({
+          message: "Existing collector record reactivated.",
+          collector: existingCollector,
+        });
+      }
+
+      return res.status(409).json({ message: "Collector already exists." });
+    }
+
     const collector = await Collector.create(payload);
     return res.status(201).json({ message: "Collector created.", collector });
   } catch (error) {
     if (error?.code === 11000) {
+      // Defensive fallback for race conditions around unique index.
+      const existingCollector = await Collector.findOne({
+        firstName: normalizeText(req.body.firstName),
+        middleName: normalizeText(req.body.middleName || ""),
+        lastName: normalizeText(req.body.lastName),
+        suffix: normalizeText(req.body.suffix || ""),
+        contactNumber: normalizeContact(req.body.contactNumber),
+      });
+
+      if (existingCollector?.status === "Inactive") {
+        existingCollector.assignedShift = normalizeText(req.body.assignedShift);
+        existingCollector.assignedDepartment = normalizeDepartments(req.body.assignedDepartment);
+        existingCollector.status = "Active";
+        await existingCollector.save();
+        return res.status(200).json({
+          message: "Existing collector record reactivated.",
+          collector: existingCollector,
+        });
+      }
+
       return res.status(409).json({ message: "Collector already exists." });
     }
     return res.status(500).json({ message: error.message || "Failed to create collector." });

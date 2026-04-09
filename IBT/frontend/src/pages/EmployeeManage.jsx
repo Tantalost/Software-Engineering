@@ -539,8 +539,13 @@ export default function EmployeeManage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Failed to create collector.");
 
+      const createdCollector = data?.collector || data;
+      if (!createdCollector || (!createdCollector._id && !createdCollector.id)) {
+        throw new Error("Collector created but response payload is invalid.");
+      }
+
       setCollectors((prev) =>
-        [...prev, data.collector].sort((a, b) =>
+        [...prev, createdCollector].sort((a, b) =>
           formatCollectorFullName(a).localeCompare(formatCollectorFullName(b)),
         ),
       );
@@ -677,7 +682,15 @@ export default function EmployeeManage() {
   };
 
   const handleCollectorContactChange = (value, isEdit = false) => {
-    const normalized = String(value).replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
+    const digits = String(value).replace(/\D/g, "");
+    let normalized = digits;
+    if (normalized.startsWith("63")) {
+      normalized = normalized.slice(2);
+    } else if (normalized.startsWith("0")) {
+      normalized = normalized.slice(1);
+    }
+    normalized = normalized.slice(0, 10);
+
     if (isEdit) {
       setCollectorEditForm((prev) => ({ ...prev, contactNumber: normalized }));
       return;

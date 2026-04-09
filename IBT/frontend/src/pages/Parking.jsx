@@ -279,10 +279,16 @@ const Parking = () => {
 
   const [isReporting, setIsReporting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showPreviousShiftModal, setShowPreviousShiftModal] = useState(false);
+  const [previousShiftReports, setPreviousShiftReports] = useState([]);
+  const [isPreviousShiftLoading, setIsPreviousShiftLoading] = useState(false);
 
   const role = localStorage.getItem("authRole") || "superadmin";
+  const authAdminId = localStorage.getItem("authAdminId") || "";
+  const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/parking`;
   const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
+  const REPORTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -341,6 +347,50 @@ const Parking = () => {
 
     fetchCollectors();
   }, []);
+
+  const fetchPreviousShiftReports = async () => {
+    if (role !== "parking") return;
+    setIsPreviousShiftLoading(true);
+    try {
+      const res = await fetch(REPORTS_API_URL);
+      if (!res.ok) throw new Error("Failed to load reports.");
+      const data = await res.json();
+      const ownReports = (Array.isArray(data) ? data : [])
+        .filter((report) => {
+          const reportType = report?.reportType || report?.data?.reportType || "";
+          if (reportType !== "Parking") return false;
+
+          const reportAdminId = report?.data?.adminId;
+          const reportEmail = String(report?.data?.submittedByEmail || "").toLowerCase();
+
+          if (authAdminId && reportAdminId) {
+            return String(reportAdminId) === String(authAdminId);
+          }
+          if (authEmail && reportEmail) {
+            return reportEmail === authEmail;
+          }
+          return true;
+        })
+        .sort(
+          (a, b) =>
+            new Date(b?.data?.submittedAtServer || b.createdAt).getTime() -
+            new Date(a?.data?.submittedAtServer || a.createdAt).getTime(),
+        )
+        .slice(0, 10);
+
+      setPreviousShiftReports(ownReports);
+    } catch (error) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: error.message || "Failed to fetch previous shift reports.",
+        autoClose: true,
+        duration: 2500,
+      });
+    } finally {
+      setIsPreviousShiftLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (notificationState.isOpen && notificationState.autoClose) {
@@ -1349,6 +1399,18 @@ const Parking = () => {
             </button>
           )}
 
+          {role === "parking" && (
+            <button
+              onClick={() => {
+                fetchPreviousShiftReports();
+                setShowPreviousShiftModal(true);
+              }}
+              className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
+            >
+              <span>Previous Shift Records</span>
+            </button>
+          )}
+
           {role === "superadmin" && (
             <button
               onClick={() => setShowPriceModal(true)}
@@ -2118,6 +2180,68 @@ const Parking = () => {
         submitDisabled={!collectorId || !collectorName.trim()}
         submitLabel="Confirm Submit"
       />
+
+      {showPreviousShiftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b pb-3 mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Previous Shift Records</h3>
+              <button
+                onClick={() => setShowPreviousShiftModal(false)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {isPreviousShiftLoading ? (
+              <div className="py-10 text-center text-slate-500">Loading previous shift reports...</div>
+            ) : previousShiftReports.length === 0 ? (
+              <div className="py-10 text-center text-slate-500">No previous shift reports found for this Parking Admin.</div>
+            ) : (
+              <div className="max-h-[65vh] overflow-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+                    <tr>
+                      <th className="px-4 py-3">Submitted At</th>
+                      <th className="px-4 py-3">Shift</th>
+                      <th className="px-4 py-3">Collector</th>
+                      <th className="px-4 py-3">Records</th>
+                      <th className="px-4 py-3">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {previousShiftReports.map((report) => {
+                      const recordCount =
+                        report?.data?.data?.length ??
+                        report?.data?.statistics?.totalVehicles ??
+                        0;
+                      const revenue = Number(report?.data?.statistics?.totalRevenue) || 0;
+                      return (
+                        <tr key={report._id || report.id}>
+                          <td className="px-4 py-3 text-slate-700">
+                            {new Date(
+                              report?.data?.submittedAtServer || report.createdAt,
+                            ).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {report?.data?.shift || report?.payload?.assignedShift || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{recordCount}</td>
+                          <td className="px-4 py-3 text-slate-700">{revenue.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {notificationState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 pointer-events-none">

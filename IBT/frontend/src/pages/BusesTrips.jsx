@@ -1142,7 +1142,6 @@ const BusTrips = () => {
     normalizeShiftValue(localStorage.getItem("authShift") || ""),
   );
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/bustrips`;
-  const DISPATCH_API_URL = `${API_URL}/dispatch-board`;
   const PREDEFINED_TODAY_API_URL = `${API_URL}/predefined-today`;
   const COMPANY_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
   const ADMINS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/admins`;
@@ -1155,7 +1154,7 @@ const BusTrips = () => {
   const [defaultPrice, setDefaultPrice] = useState(75);
   const [predefinedTodayTrips, setPredefinedTodayTrips] = useState([]);
   const ACTIVE_DISPATCH_STATUSES = useMemo(
-    () => ["Arrived", "On Fix", "Not Departed"],
+    () => ["Arrived", "On Fix", "Not Departed", "Departed", "Paid"],
     [],
   );
 
@@ -1409,7 +1408,7 @@ const BusTrips = () => {
   const fetchBusTrips = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(role === "bus" ? DISPATCH_API_URL : API_URL);
+      const response = await fetch(API_URL);
       if (!response.ok) throw new Error("Failed to fetch");
       const data = await response.json();
       const formattedData = data.map((item) => ({
@@ -1815,18 +1814,25 @@ const BusTrips = () => {
         body: JSON.stringify({ status: "On Fix" }),
       });
 
-      if (response.ok) {
-        await fetchBusTrips();
-        setNotificationState({
-          isOpen: true,
-          type: "warning",
-          message: "Bus marked as On Fix.",
-          autoClose: true,
-          duration: 3000,
-        });
-      }
+      if (!response.ok) throw new Error("Failed to update bus status.");
+
+      await fetchBusTrips();
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: "successfully updated to under maintenance",
+        autoClose: true,
+        duration: 3000,
+      });
     } catch (error) {
       console.error(error);
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: error.message || "Failed to update bus status.",
+        autoClose: true,
+        duration: 3000,
+      });
     }
   };
 
@@ -3198,7 +3204,6 @@ const BusTrips = () => {
               onApproveDeparture={handleApproveDeparture}
               onToggleOnFixStatus={handleToggleOnFixStatus}
               onMarkArrived={handleMarkArrived}
-              onMarkNotDeparted={handleMarkNotDeparted}
               onViewTrip={setViewRow}
               onEditTrip={setEditRow}
               onArchiveTrip={setArchiveRow}

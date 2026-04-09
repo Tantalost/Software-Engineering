@@ -95,6 +95,9 @@ const TenantLease = () => {
     const [showEmailModal, setShowEmailModal] = useState(false);
     const [showLogModal, setShowLogModal] = useState(false);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
+    const [showPreviousShiftModal, setShowPreviousShiftModal] = useState(false);
+    const [previousShiftReports, setPreviousShiftReports] = useState([]);
+    const [isPreviousShiftLoading, setIsPreviousShiftLoading] = useState(false);
 
     const [showPaymentRecords, setShowPaymentRecords] = useState(false);
     const [paymentViewType, setPaymentViewType] = useState("Week");
@@ -108,6 +111,9 @@ const TenantLease = () => {
     const [collectors, setCollectors] = useState([]);
     const [collectorId, setCollectorId] = useState("");
     const [collectorName, setCollectorName] = useState("");
+    const authAdminId = localStorage.getItem("authAdminId") || "";
+    const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
+    const REPORTS_API_URL = `${API_URL}/reports`;
     const [sessionStartedAt, setSessionStartedAt] = useState(() => {
         const key = "shiftSessionStart:tenant";
         const existing = localStorage.getItem(key);
@@ -333,6 +339,51 @@ const TenantLease = () => {
             setCollectors(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error fetching tenant collectors:", error);
+        }
+    };
+
+    const fetchPreviousShiftReports = async () => {
+        if (role !== "lease") return;
+        setIsPreviousShiftLoading(true);
+        try {
+            const res = await fetch(REPORTS_API_URL);
+            if (!res.ok) throw new Error("Failed to load reports.");
+            const data = await res.json();
+
+            const ownReports = (Array.isArray(data) ? data : [])
+                .filter((report) => {
+                    const reportType = report?.reportType || report?.data?.reportType || "";
+                    if (reportType !== "Tenant") return false;
+
+                    const reportAdminId = report?.data?.adminId;
+                    const reportEmail = String(report?.data?.submittedByEmail || "").toLowerCase();
+
+                    if (authAdminId && reportAdminId) {
+                        return String(reportAdminId) === String(authAdminId);
+                    }
+                    if (authEmail && reportEmail) {
+                        return reportEmail === authEmail;
+                    }
+                    return true;
+                })
+                .sort(
+                    (a, b) =>
+                        new Date(b?.data?.submittedAtServer || b.createdAt).getTime() -
+                        new Date(a?.data?.submittedAtServer || a.createdAt).getTime(),
+                )
+                .slice(0, 10);
+
+            setPreviousShiftReports(ownReports);
+        } catch (error) {
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: error.message || 'Failed to fetch previous shift reports.',
+                autoClose: true,
+                duration: 3000,
+            });
+        } finally {
+            setIsPreviousShiftLoading(false);
         }
     };
 
@@ -1613,6 +1664,19 @@ const TenantLease = () => {
                         </button>
                     )}
 
+                    {(role === "lease") && (
+                        <button
+                            onClick={() => {
+                                fetchPreviousShiftReports();
+                                setShowPreviousShiftModal(true);
+                            }}
+                            className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+                        >
+                            <span className="hidden sm:inline">Previous Shift Records</span>
+                            <span className="sm:hidden">Previous Shifts</span>
+                        </button>
+                    )}
+
                     <button onClick={() => setShowAddModal(true)} className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 hover:scale-105 flex items-center justify-center cursor-pointer" title='Add New Tenant'>
                         + Add New
                     </button>
@@ -2162,6 +2226,68 @@ const TenantLease = () => {
                                 )}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showPreviousShiftModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl">
+                        <div className="flex items-center justify-between border-b pb-3 mb-4">
+                            <h3 className="text-lg font-bold text-slate-800">Previous Shift Records</h3>
+                            <button
+                                onClick={() => setShowPreviousShiftModal(false)}
+                                className="text-slate-500 hover:text-slate-700"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {isPreviousShiftLoading ? (
+                            <div className="py-10 text-center text-slate-500">Loading previous shift reports...</div>
+                        ) : previousShiftReports.length === 0 ? (
+                            <div className="py-10 text-center text-slate-500">No previous shift reports found for this Lease Admin.</div>
+                        ) : (
+                            <div className="max-h-[65vh] overflow-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+                                        <tr>
+                                            <th className="px-4 py-3">Submitted At</th>
+                                            <th className="px-4 py-3">Shift</th>
+                                            <th className="px-4 py-3">Collector</th>
+                                            <th className="px-4 py-3">Records</th>
+                                            <th className="px-4 py-3">Revenue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {previousShiftReports.map((report) => {
+                                            const recordCount =
+                                                report?.data?.data?.length ??
+                                                report?.data?.statistics?.submittedShiftRecords ??
+                                                0;
+                                            const revenue = Number(report?.data?.statistics?.totalRevenue) || 0;
+                                            return (
+                                                <tr key={report._id || report.id}>
+                                                    <td className="px-4 py-3 text-slate-700">
+                                                        {new Date(
+                                                            report?.data?.submittedAtServer || report.createdAt,
+                                                        ).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-700">
+                                                        {report?.data?.shift || report?.payload?.assignedShift || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-700">
+                                                        {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-700">{recordCount}</td>
+                                                    <td className="px-4 py-3 text-slate-700">{revenue.toFixed(2)}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
