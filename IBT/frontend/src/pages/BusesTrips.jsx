@@ -42,6 +42,8 @@ import {
   Plus,
   Minus,
   Settings,
+  ChevronLeft,  
+  ChevronRight,  
 } from "lucide-react";
 
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -1075,7 +1077,6 @@ const BusTrips = () => {
       return Number.isNaN(dateInput.getTime()) ? null : dateInput;
     }
     const raw = String(dateInput).trim();
-    // Treat plain YYYY-MM-DD as local calendar day.
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
       const d = new Date(`${raw}T00:00:00`);
       return Number.isNaN(d.getTime()) ? null : d;
@@ -1100,7 +1101,52 @@ const BusTrips = () => {
     return toLocalDateKey(d);
   };
 
-  const [selectedDate, setSelectedDate] = useState("");
+  const [dateFilterType, setDateFilterType] = useState("Daily");
+  const [currentDateRange, setCurrentDateRange] = useState(new Date());
+
+  const getRangeBounds = (type, date) => {
+    if (type === "All") return { start: null, end: null };
+    const start = new Date(date);
+    const end = new Date(date);
+
+    if (type === "Daily") { start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999); } 
+    else if (type === "Week") { const day = start.getDay(); start.setDate(start.getDate() - day); start.setHours(0, 0, 0, 0); end.setDate(start.getDate() + 6); end.setHours(23, 59, 59, 999); } 
+    else if (type === "Month") { start.setDate(1); start.setHours(0, 0, 0, 0); end.setMonth(end.getMonth() + 1); end.setDate(0); end.setHours(23, 59, 59, 999); } 
+    else if (type === "Year") { start.setMonth(0, 1); start.setHours(0, 0, 0, 0); end.setMonth(11, 31); end.setHours(23, 59, 59, 999); }
+    return { start, end };
+  };
+
+  const { start: filterStart, end: filterEnd } = getRangeBounds(dateFilterType, currentDateRange);
+
+  const handlePrevPeriod = () => {
+    if (dateFilterType === "All") return;
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() - 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() - 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() - 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() - 1);
+    setCurrentDateRange(newDate); setCurrentPage(1);
+  };
+
+  const handleNextPeriod = () => {
+    if (dateFilterType === "All") return;
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() + 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() + 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() + 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() + 1);
+    setCurrentDateRange(newDate); setCurrentPage(1);
+  };
+
+  const getPeriodDisplayStr = () => {
+    if (dateFilterType === "All") return "All Time";
+    const { start, end } = getRangeBounds(dateFilterType, currentDateRange);
+    if (dateFilterType === "Daily") return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    else if (dateFilterType === "Week") return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    else if (dateFilterType === "Month") return start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    else if (dateFilterType === "Year") return start.getFullYear().toString();
+  };
+
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedBusType, setSelectedBusType] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -1487,7 +1533,6 @@ const BusTrips = () => {
   }, [role, ADMINS_API_URL]);
 
   useEffect(() => {
-    // Bus admins should start with no active date filter.
     if (role === "bus") {
       setSelectedDate("");
     }
@@ -1502,18 +1547,24 @@ const BusTrips = () => {
       (bus.route || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCompany =
       selectedCompany === "" || bus.company === selectedCompany;
-    const matchesDate = !selectedDate || getDateKey(bus.date) === selectedDate;
-
     const matchesBusType =
       selectedBusType === "" || bus.busType === selectedBusType;
-
     const matchesStatus =
       selectedStatus === "" || bus.status === selectedStatus;
+
+    const busDate = bus.date ? parseDateInputToLocalDate(bus.date) : null;
+    let matchesDateRange = false;
+
+    if (dateFilterType === "All") {
+      matchesDateRange = true;
+    } else if (busDate && !Number.isNaN(busDate.getTime())) {
+      matchesDateRange = busDate >= filterStart && busDate <= filterEnd;
+    }
 
     return (
       matchesSearch &&
       matchesCompany &&
-      matchesDate &&
+      matchesDateRange &&
       matchesBusType &&
       matchesStatus
     );
@@ -1534,17 +1585,11 @@ const BusTrips = () => {
     return matchesSearch && matchesCompany && matchesBusType && matchesStatus;
   });
 
-  const totalTrips = filtered.length;
-  const pendingTrips = filtered.filter((t) => t.status === "Pending").length;
-  const arrivedTrips = filtered.filter((t) => t.status === "Arrived").length;
-  const paidTrips = filtered.filter((t) => t.status === "Departed").length;
   const totalRevenue = filtered
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
-  // Dispatch board should show trips by operating date (trip date), not DB createdAt.
   const todayDispatchRecords = useMemo(() => {
-    // Bus admins always see today's operating records only on dispatch board.
     if (role === "bus") {
       const todayKey = getDateKey(new Date());
       return filteredWithoutDate.filter((trip) => {
@@ -1552,18 +1597,8 @@ const BusTrips = () => {
         return tripDayKey === todayKey;
       });
     }
-
-    // If user selected a specific date, dispatch board should follow that filter.
-    if (selectedDate) {
-      return filtered;
-    }
-
-    const todayKey = getDateKey(new Date());
-    return filtered.filter((trip) => {
-      const tripDayKey = getDateKey(trip.date);
-      return tripDayKey === todayKey;
-    });
-  }, [filtered, filteredWithoutDate, selectedDate, role]);
+    return filtered; 
+  }, [filtered, filteredWithoutDate, role]);
 
   const activeDispatchRecords = useMemo(
     () =>
@@ -1573,13 +1608,13 @@ const BusTrips = () => {
     [todayDispatchRecords, ACTIVE_DISPATCH_STATUSES],
   );
 
-  const reportCompletedRecords = useMemo(() => {
-    const targetDateKey = role === "bus" ? getDateKey(new Date()) : selectedDate || getDateKey(new Date());
-    return records.filter((trip) => {
-      if (getDateKey(trip.date) !== targetDateKey) return false;
-      return trip.status === "Departed";
-    });
-  }, [records, role, selectedDate]);
+ const reportCompletedRecords = useMemo(() => {
+    if (role === "bus") {
+      const todayKey = getDateKey(new Date());
+      return records.filter(trip => getDateKey(trip.date) === todayKey && trip.status === "Departed");
+    }
+    return filtered.filter(trip => trip.status === "Departed");
+  }, [records, filtered, role]);
 
   const dashboardTotalTrips = todayDispatchRecords.length;
   const dashboardPredefinedSchedules = useMemo(() => {
@@ -3009,21 +3044,60 @@ const BusTrips = () => {
       </div>
 
       <div className="px-4 lg:px-8">
-        <div className="flex flex-col gap-4 w-full">
-          <BusTripFilters
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            selectedCompany={selectedCompany}
-            setSelectedCompany={setSelectedCompany}
-            uniqueCompanies={availableCompanies}
-            selectedBusType={selectedBusType}
-            setSelectedBusType={setSelectedBusType}
-            selectedStatus={selectedStatus}
-            setSelectedStatus={setSelectedStatus}
-          />
+        <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4 mb-2">
+          <div className="flex-1 w-full">
+              <BusTripFilters
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedCompany={selectedCompany}
+                setSelectedCompany={setSelectedCompany}
+                uniqueCompanies={availableCompanies}
+                selectedBusType={selectedBusType}
+                setSelectedBusType={setSelectedBusType}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
+              />
+            </div>
+           
+           {role === "superadmin" && (
+              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
+                <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+                  {["All", "Daily", "Week", "Month", "Year"].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setDateFilterType(type);
+                        setCurrentDateRange(new Date());
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                        dateFilterType === type
+                          ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                          : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
 
+                {dateFilterType !== "All" && (
+                  <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                    <button onClick={handlePrevPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                      <ChevronLeft size={18} />
+                    </button>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                      <Calendar size={16} className="text-slate-400" />
+                      {getPeriodDisplayStr()}
+                    </div>
+                    <button onClick={handleNextPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            
           <PredefinedArrivalsBoard
             records={records}
             companyData={companyData}
