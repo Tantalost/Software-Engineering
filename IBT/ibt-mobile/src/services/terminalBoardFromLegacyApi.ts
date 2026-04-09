@@ -97,7 +97,7 @@ function formatStopType(stopType: string | undefined, customStopCount: number | 
 }
 
 function dispatchDisplayStatus(raw: string | undefined): string {
-  if (raw === 'On Fix') return 'To Be Fixed';
+  if (raw === 'On Fix') return 'Under Maintenance';
   if (raw === 'Paid') return 'Departed';
   return raw || '';
 }
