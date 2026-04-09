@@ -9,23 +9,25 @@ import {
   restoreParking,
   getArchivedParkingTickets,
   submitParkingForShift,
+  getNextParkingTicketNumber
 } from "../controllers/parkingController.js";
 
 const router = express.Router();
 
-// Standard Routes
+
 router.get("/", getParkingTickets);
 router.post("/", createParking);
 router.put("/submit-shift", submitParkingForShift);
 router.put("/:id", updateParking);
 router.put("/:id/depart", departParking);
+router.get("/next-ticket", getNextParkingTicketNumber);
 
-// New Soft Delete Routes
+
 router.get("/archived", getArchivedParkingTickets);
 router.patch("/:id/archive", archiveParking);
 router.patch("/:id/restore", restoreParking);
 
-// Hard Delete Route
+
 router.delete("/:id", deleteParking);
 
 export default router;

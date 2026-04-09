@@ -55,6 +55,8 @@ const Parking = () => {
   const [collectors, setCollectors] = useState([]);
   const [sessionStartedAt] = useState(() => new Date().toISOString());
 
+  const [isAutoTicket, setIsAutoTicket] = useState(true); 
+
   const validateCollector = () => {
     if (!collectorName || collectorName.trim() === "" || !collectorId) {
       setNotificationState({
@@ -620,12 +622,12 @@ const Parking = () => {
     localStorage.setItem("ticketCounter", JSON.stringify(counterData));
   };
 
-  const handleAddClick = () => {
+  const handleAddClick = async () => {
     const now = new Date();
     const formattedTimeIn = now.toISOString();
 
     setNewTicket({
-      ticketNo: peekNextTicketNumber(),
+      ticketNo: isAutoTicket ? "Loading..." : "",
       type: "FourWheels",
       plateNo: "",
       baseRate: priceSettings.carRate,
@@ -633,6 +635,18 @@ const Parking = () => {
     });
     setStep(1);
     setShowAddModal(true);
+
+    if (isAutoTicket) {
+      try {
+        const res = await fetch(`${API_URL}/next-ticket`);
+        if (!res.ok) throw new Error("Failed to fetch next ticket number");
+        const data = await res.json();
+        setNewTicket((prev) => ({ ...prev, ticketNo: data.nextTicketNo }));
+      } catch (error) {
+        console.error("Error getting next ticket:", error);
+        setNewTicket((prev) => ({ ...prev, ticketNo: "T-01" }));
+      }
+    }
   };
 
   const handleSelectType = (type) => {
@@ -655,25 +669,22 @@ const Parking = () => {
   };
 
   const handleCreateTicket = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
   
-  // Define the variables first so the checks can use them
-  const ticketNo = (newTicket.ticketNo || "").trim() || peekNextTicketNumber();
-  const plateNo = (newTicket.plateNo || "").trim().toUpperCase();
+    const ticketNo = (newTicket.ticketNo || "").trim();
+    const plateNo = (newTicket.plateNo || "").trim().toUpperCase();
 
-  // Basic Validation
-  if (!plateNo || !ticketNo) {
-    setNotificationState({
-      isOpen: true,
-      type: "error",
-      message: "Please fill in both Ticket Number and Plate Number.",
-      autoClose: true,
-      duration: 2000,
-    });
-    return;
-  }
-
-  // Check if this Plate Number is already "Parked"
+    if (!plateNo || !ticketNo || ticketNo === "Loading...") {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please enter both a valid Ticket Number and Plate Number.",
+        autoClose: true,
+        duration: 2000,
+      });
+      return;
+    }
+ 
   const isCurrentlyParked = records.some(
     (record) => record.plateNo?.toUpperCase() === plateNo && record.status === "Parked"
   );
@@ -720,7 +731,6 @@ const Parking = () => {
     });
 
     if (response.ok) {
-      commitTicketCounterFromTicketNo(ticketNo);
       await logActivity(
         role,
         "CREATE_TICKET",
@@ -1740,70 +1750,55 @@ const Parking = () => {
               </div>
             )}
             {step === 2 && (
-              <div className="flex justify-center">
-                <div className="w-full max-w-lg flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div>
-                    <span
-                      className={`inline-block px-6 py-3 rounded-full text-lg font-bold border-2 ${getBadgeStyles()}`}
-                    >
-                      Selected:{" "}
-                      {newTicket.type === "FourWheels"
-                        ? "4 Wheels"
-                        : newTicket.type === "TwoWheels"
-                          ? "2 Wheels"
-                          : "Jeep"}
-                    </span>
-                  </div>
-                  <div className="text-left">
-                    <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
-                      Plate Number
-                    </label>
-                    <input
-                      ref={plateInputRef}
-                      type="text"
-                      list="plate-options"
-                      placeholder="ABC 123"
-                      required
-                      value={newTicket.plateNo}
-                      onChange={(e) =>
-                        setNewTicket({
-                          ...newTicket,
-                          plateNo: e.target.value.toUpperCase(),
-                        })
-                      }
-                      className="w-full p-5 text-2xl border-2 border-gray-300 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-600 outline-none transition-colors uppercase"
-                    />
-                    <datalist id="plate-options">
-                      {existingPlates.map((plate, index) => (
-                        <option key={index} value={plate} />
-                      ))}
-                    </datalist>
-                  </div>
-                  <div className="text-left">
-                    <label className="block text-gray-500 text-lg font-semibold mb-2 ml-1">
-                      Ticket Number
-                    </label>
-
-                    <div className="w-full p-5 text-2xl border-2 border-gray-200 rounded-xl bg-gray-100 font-bold text-gray-700">
-                      {newTicket.ticketNo}
+              <div className="text-left mt-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-gray-500 text-lg font-semibold ml-1">
+                        Ticket Number {isAutoTicket && <span className="text-emerald-500 text-sm lowercase normal-case ml-1">(Auto-counted)</span>}
+                      </label>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold uppercase tracking-wider ${!isAutoTicket ? 'text-emerald-600' : 'text-gray-400'}`}>Manual</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const nextMode = !isAutoTicket;
+                            setIsAutoTicket(nextMode);
+                            if (!nextMode) {
+                              setNewTicket({ ...newTicket, ticketNo: "" });
+                            } else {
+                              setNewTicket({ ...newTicket, ticketNo: "Loading..." });
+                              try {
+                                const res = await fetch(`${API_URL}/next-ticket`);
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setNewTicket(prev => ({ ...prev, ticketNo: data.nextTicketNo }));
+                                }
+                              } catch (error) {
+                                setNewTicket(prev => ({ ...prev, ticketNo: "T-01" }));
+                              }
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${isAutoTicket ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoTicket ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isAutoTicket ? 'text-emerald-600' : 'text-gray-400'}`}>Auto</span>
+                      </div>
                     </div>
+
+                    <input
+                      type="text"
+                      value={newTicket.ticketNo}
+                      onChange={(e) => setNewTicket({ ...newTicket, ticketNo: e.target.value })}
+                      disabled={isAutoTicket}
+                      placeholder={!isAutoTicket ? "Enter custom ticket (e.g. T-99)" : ""}
+                      className={`w-full p-5 text-2xl border-2 rounded-xl transition-all font-bold ${
+                        isAutoTicket
+                          ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
+                          : "bg-gray-50 border-gray-300 text-gray-800 focus:bg-white focus:border-blue-600 outline-none"
+                      }`}
+                    />
                   </div>
-                  <div className="flex gap-4 mt-2">
-                    <button
-                      onClick={handleBack}
-                      className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-500 border-2 border-gray-300 text-xl font-bold rounded-xl hover:bg-gray-50 transition-colors py-3"
-                    >
-                      <ArrowLeft size={24} /> Back
-                    </button>
-                    <button
-                      onClick={handleCreateTicket}
-                      className="flex-[2] bg-emerald-500 text-white text-xl font-bold rounded-xl hover:bg-emerald-600 active:scale-95 transition-all shadow-md hover:shadow-lg py-3"
-                    >
-                      ENTER TICKET
-                    </button>
-                  </div>
-                </div>
-              </div>
             )}
           </div>
         </div>

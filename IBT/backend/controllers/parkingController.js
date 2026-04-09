@@ -193,12 +193,46 @@ export const getArchivedParkingTickets = async (req, res) => {
   }
 };
 
-// --- HARD DELETE ---
+
 export const deleteParking = async (req, res) => {
   try {
     await Parking.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const getNextParkingTicketNumber = async (req, res) => {
+  try {
+    const result = await Parking.aggregate([
+      {
+        $addFields: {
+         
+          cleanString: {
+            $replaceAll: { input: "$ticketNo", find: "T-", replacement: "" }
+          }
+        }
+      },
+      {
+        $addFields: {
+          numericTicketNo: {
+            $convert: { input: "$cleanString", to: "int", onError: 0, onNull: 0 }
+          }
+        }
+      },
+      { $sort: { numericTicketNo: -1 } },
+      { $limit: 1 }
+    ]);
+
+    const maxTicket = result.length > 0 ? result[0].numericTicketNo : 0;
+    const nextNumber = maxTicket + 1;
+    
+    const formattedNext = `T-${nextNumber.toString().padStart(2, "0")}`;
+
+    res.json({ nextTicketNo: formattedNext });
+  } catch (error) {
+    console.error("Error fetching next parking ticket number:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
