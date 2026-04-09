@@ -899,27 +899,6 @@ const TerminalFees = () => {
     }
   };
 
-  const validateCollector = () => {
-    if (!collectorName || collectorName.trim() === "") {
-      showToastMessage(
-        "Please enter the Name of Collector before exporting.",
-        "error",
-      );
-      return false;
-    }
-    return true;
-  };
-
-  const getExportData = (data) => {
-    return data.map((item) => ({
-      "Ticket No": item.ticketNo || "-",
-      "Passenger Type": item.passengerType || "-",
-      Price: item.price ? `₱${item.price.toFixed(2)}` : "₱0.00",
-      Date: item.date ? new Date(item.date).toLocaleDateString() : "-",
-      Time: item.time || "-",
-    }));
-  };
-
   const handleExportExcel = async () => {
     if (!collectorName || collectorName.trim() === "") {
       setToast({
@@ -944,18 +923,16 @@ const TerminalFees = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Terminal Fees Report");
 
-      // 1. BRANDED HEADER (-1/8 height adjustment)
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, "A1:E4");
 
-      // 2. Report Title & Summary Metadata
       worksheet.mergeCells("A6:E6");
       const titleCell = worksheet.getCell("A6");
       titleCell.value = "PASSENGER REPORTS";
       titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
       titleCell.alignment = { horizontal: "center" };
 
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); 
       worksheet.addRow([
         `Date: ${new Date().toLocaleDateString()}`,
         "",
@@ -981,9 +958,8 @@ const TerminalFees = () => {
         "",
         `Total Revenue: Php ${stats.revenue.toFixed(2)}`,
       ]);
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); 
 
-      // 3. Styled Table Headers
       const headerRow = worksheet.addRow([
         "Ticket No",
         "Passenger Type",
@@ -1001,7 +977,6 @@ const TerminalFees = () => {
         cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
-      // 4. Populate Data
       filtered.forEach((item) => {
         worksheet.addRow([
           item.ticketNo || "-",
@@ -1012,7 +987,6 @@ const TerminalFees = () => {
         ]);
       });
 
-      // 5. BRANDED FOOTER (-1/8 height adjustment)
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
       await addImageToWorksheet(
@@ -1022,7 +996,6 @@ const TerminalFees = () => {
         `A${lastRowNumber}:E${lastRowNumber + 3}`,
       );
 
-      // 6. Formatting Column Widths
       worksheet.columns = [
         { width: 15 },
         { width: 25 },
@@ -1031,7 +1004,6 @@ const TerminalFees = () => {
         { width: 20 },
       ];
 
-      // 7. Write and Save
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1210,16 +1182,14 @@ const TerminalFees = () => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col gap-4 mb-6">
         
-        {/* Sub-Row A: Vehicles & Dates */}
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           
           <div className="flex flex-wrap items-center gap-3">
             <TerminalFilter activeType={activeType} onTypeChange={setActiveType} />
           </div>
 
-          {/* DATE RANGE FILTER - SUPERADMIN ONLY */}
           {role === "superadmin" && (
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
