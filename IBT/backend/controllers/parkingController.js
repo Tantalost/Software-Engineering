@@ -15,12 +15,7 @@ export const getParkingTickets = async (req, res) => {
 export const submitParkingForShift = async (req, res) => {
   try {
     const { sessionStartedAt, reportId } = req.body;
-    const shiftStart = sessionStartedAt ? new Date(sessionStartedAt) : null;
-
-    if (!shiftStart || Number.isNaN(shiftStart.getTime())) {
-      return res.status(400).json({ message: "Valid sessionStartedAt is required." });
-    }
-
+    
     const now = new Date();
     const updatePayload = {
       submitted: true,
@@ -35,7 +30,7 @@ export const submitParkingForShift = async (req, res) => {
       {
         isArchived: { $ne: true },
         submitted: { $ne: true },
-        createdAt: { $gte: shiftStart, $lte: now },
+        status: "Departed", 
       },
       { $set: updatePayload },
     );

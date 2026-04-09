@@ -436,6 +436,10 @@ const Parking = () => {
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const fourWheelCount = filtered.filter((t) => t.type === "4 Wheels").length;
   const twoWheelCount = filtered.filter((t) => t.type === "2 Wheels").length;
+  const jeepCount = filtered.filter((t) => t.type === "Jeep").length;
+  const parkedCount = filtered.filter((t) => t.status === "Parked").length;
+  const departedCount = filtered.filter((t) => t.status === "Departed").length;
+
   const revenue = filtered.reduce((sum, t) => {
     if (t.status !== "Departed") return sum;
 
@@ -940,11 +944,19 @@ const Parking = () => {
         });
       };
 
-      const shiftStart = new Date(sessionStartedAt);
-      const shiftRecords = records.filter((item) => {
-        const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
-        return createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= shiftStart;
-      });
+     const shiftRecords = records.filter((item) => item.status === "Departed");
+
+      if (shiftRecords.length === 0) {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: "No departed vehicles to submit. Parked vehicles will carry over.",
+          autoClose: true,
+          duration: 3000,
+        });
+        setIsReporting(false);
+        return;
+      }
 
       const formattedData = shiftRecords.map((item) => {
         const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
@@ -1270,11 +1282,13 @@ const Parking = () => {
         <StatCardGroupPark
           cars={fourWheelCount}
           motorcycles={twoWheelCount}
+          jeeps={jeepCount}            
+          parked={parkedCount}        
+          departed={departedCount}     
           totalVehicles={filtered.length}
           totalRevenue={revenue}
         />
       </div>
-
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
         <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
         <div className="flex items-center justify-end gap-3">
