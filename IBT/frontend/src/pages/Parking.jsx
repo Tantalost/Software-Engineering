@@ -1833,7 +1833,7 @@ const Parking = () => {
                       value={newTicket.ticketNo}
                       onChange={(e) => setNewTicket({ ...newTicket, ticketNo: e.target.value })}
                       disabled={isAutoTicket}
-                      placeholder={!isAutoTicket ? "Enter custom ticket (e.g. T-99)" : ""}
+                      placeholder={!isAutoTicket ? "Enter ticket number" : ""}
                       className={`w-full p-5 text-2xl border-2 rounded-xl transition-all font-bold ${
                         isAutoTicket
                           ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
