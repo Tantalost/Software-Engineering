@@ -544,11 +544,21 @@ export default function EmployeeManage() {
         throw new Error("Collector created but response payload is invalid.");
       }
 
-      setCollectors((prev) =>
-        [...prev, createdCollector].sort((a, b) =>
+      setCollectors((prev) => {
+        const createdId = createdCollector._id || createdCollector.id;
+        const next = [...prev];
+        const existingIndex = next.findIndex((c) => (c._id || c.id) === createdId);
+
+        if (existingIndex >= 0) {
+          next[existingIndex] = createdCollector;
+        } else {
+          next.push(createdCollector);
+        }
+
+        return next.sort((a, b) =>
           formatCollectorFullName(a).localeCompare(formatCollectorFullName(b)),
-        ),
-      );
+        );
+      });
       setCollectorForm({
         firstName: "",
         middleName: "",

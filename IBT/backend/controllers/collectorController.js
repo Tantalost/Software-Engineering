@@ -70,15 +70,33 @@ export const createCollector = async (req, res) => {
       contactNumber: payload.contactNumber,
     });
 
-    // If an inactive record already exists for this person+contact, revive it instead of failing.
+    // Merge departments for the same person+contact so one collector can work across multiple departments.
     if (existingCollector) {
+      const mergedDepartments = [
+        ...new Set([
+          ...(existingCollector.assignedDepartment || []),
+          ...(payload.assignedDepartment || []),
+        ]),
+      ];
+
       if (existingCollector.status === "Inactive") {
         existingCollector.assignedShift = payload.assignedShift;
-        existingCollector.assignedDepartment = payload.assignedDepartment;
+        existingCollector.assignedDepartment = mergedDepartments;
         existingCollector.status = "Active";
         await existingCollector.save();
         return res.status(200).json({
-          message: "Existing collector record reactivated.",
+          message: "Existing collector record reactivated and departments updated.",
+          collector: existingCollector,
+        });
+      }
+
+      const hasNewDepartment = mergedDepartments.length !== (existingCollector.assignedDepartment || []).length;
+      if (hasNewDepartment) {
+        existingCollector.assignedDepartment = mergedDepartments;
+        existingCollector.assignedShift = payload.assignedShift;
+        await existingCollector.save();
+        return res.status(200).json({
+          message: "Collector already exists. Department assignment updated.",
           collector: existingCollector,
         });
       }
@@ -99,13 +117,31 @@ export const createCollector = async (req, res) => {
         contactNumber: normalizeContact(req.body.contactNumber),
       });
 
+      const incomingDepartments = normalizeDepartments(req.body.assignedDepartment);
+      const mergedDepartments = [
+        ...new Set([
+          ...(existingCollector?.assignedDepartment || []),
+          ...incomingDepartments,
+        ]),
+      ];
+
       if (existingCollector?.status === "Inactive") {
         existingCollector.assignedShift = normalizeText(req.body.assignedShift);
-        existingCollector.assignedDepartment = normalizeDepartments(req.body.assignedDepartment);
+        existingCollector.assignedDepartment = mergedDepartments;
         existingCollector.status = "Active";
         await existingCollector.save();
         return res.status(200).json({
-          message: "Existing collector record reactivated.",
+          message: "Existing collector record reactivated and departments updated.",
+          collector: existingCollector,
+        });
+      }
+
+      if (existingCollector && mergedDepartments.length !== (existingCollector.assignedDepartment || []).length) {
+        existingCollector.assignedDepartment = mergedDepartments;
+        existingCollector.assignedShift = normalizeText(req.body.assignedShift);
+        await existingCollector.save();
+        return res.status(200).json({
+          message: "Collector already exists. Department assignment updated.",
           collector: existingCollector,
         });
       }
