@@ -107,7 +107,7 @@ if (parkingRecord.type === "4 Wheels") {
   }
 }
 
-else if (parkingRecord.type === "Two Wheels") {
+else if (parkingRecord.type === "2 Wheels") {
   const base = parkingRecord.baseRate;
 
   if (duration <= 3) {
