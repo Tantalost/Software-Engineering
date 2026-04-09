@@ -180,8 +180,6 @@ const Reports = () => {
   const [dateFilterType, setDateFilterType] = useState("All");
   const [currentDateRange, setCurrentDateRange] = useState(new Date());
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [timeRange, setTimeRange] = useState("All");
-
   const [showLogModal, setShowLogModal] = useState(false);
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -339,7 +337,7 @@ const Reports = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedDate, selectedCategory, timeRange]);
+  }, [searchQuery, dateFilterType, currentDateRange, selectedCategory]);
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
