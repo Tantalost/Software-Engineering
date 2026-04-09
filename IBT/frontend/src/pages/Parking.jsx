@@ -27,12 +27,13 @@ import {
   Archive,
   ArrowLeft,
   FileText,
-  Loader2,
   History,
   ListChecks,
   X,
-  Pencil,
   CheckCircle,
+  ChevronLeft,   
+  ChevronRight,
+  Calendar
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -43,11 +44,10 @@ const Parking = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
-  const [reportDuration, setReportDuration] = useState("Daily");
   const [activeStatus, setActiveStatus] = useState("All");
-
+  const [dateFilterType, setDateFilterType] = useState("Daily");
+  const [currentDateRange, setCurrentDateRange] = useState(new Date());
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
 
@@ -95,6 +95,72 @@ const Parking = () => {
     }
   }, [showPriceModal, priceSettings]);
 
+  const getRangeBounds = (type, date) => {
+    const start = new Date(date);
+    const end = new Date(date);
+
+    if (type === "Daily") {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Week") {
+      const day = start.getDay(); 
+      const diff = start.getDate() - day;
+      start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(diff + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Month") {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0); 
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Year") {
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(11, 31);
+      end.setHours(23, 59, 59, 999);
+    }
+    return { start, end };
+  };
+
+  const { start: filterStart, end: filterEnd } = getRangeBounds(dateFilterType, currentDateRange);
+
+  const handlePrevPeriod = () => {
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() - 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() - 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() - 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() - 1);
+    setCurrentDateRange(newDate);
+    setCurrentPage(1);
+  };
+
+  const handleNextPeriod = () => {
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() + 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() + 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() + 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() + 1);
+    setCurrentDateRange(newDate);
+    setCurrentPage(1);
+  };
+
+  const getPeriodDisplayStr = () => {
+    const { start, end } = getRangeBounds(dateFilterType, currentDateRange);
+    if (dateFilterType === "Daily") {
+      return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    } else if (dateFilterType === "Week") {
+      const startStr = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const endStr = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return `${startStr} - ${endStr}`;
+    } else if (dateFilterType === "Month") {
+      return start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    } else if (dateFilterType === "Year") {
+      return start.getFullYear().toString();
+    }
+  };
+ 
   const handleModalPriceChange = (type, value) => {
     if (!/^\d*\.?\d*$/.test(value)) return;
 
@@ -392,13 +458,7 @@ const Parking = () => {
       (ticket.ticketNo && String(ticket.ticketNo).includes(searchQuery)) ||
       (ticket.plateNo &&
         ticket.plateNo.toLowerCase().includes(searchQuery.toLowerCase()));
-    const ticketDate = ticket.timeIn
-      ? new Date(ticket.timeIn).toDateString()
-      : "";
-    const filterDate = selectedDate
-      ? new Date(selectedDate).toDateString()
-      : "";
-    const matchesDate = !selectedDate || ticketDate === filterDate;
+
     const matchesType =
       activeType === "All" ||
       ticket.type.toLowerCase() === activeType.toLowerCase();
@@ -408,24 +468,12 @@ const Parking = () => {
       (ticket.status && ticket.status.toLowerCase() === activeStatus.toLowerCase());
 
     const ticketTimeIn = ticket.timeIn ? new Date(ticket.timeIn) : null;
-    const now = new Date();
-    let matchesDuration = true;
-    if (reportDuration !== "All") {
-      if (!ticketTimeIn || Number.isNaN(ticketTimeIn.getTime())) {
-        matchesDuration = false;
-      } else {
-        const startDate = new Date(now);
-        if (reportDuration === "Daily") {
-          startDate.setHours(0, 0, 0, 0);
-          now.setHours(23, 59, 59, 999);
-        } else if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
-        else if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
-        else if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
-        matchesDuration = ticketTimeIn >= startDate && ticketTimeIn <= now;
-      }
-    }
+    
+    const matchesDateRange = ticketTimeIn 
+      ? (ticketTimeIn >= filterStart && ticketTimeIn <= filterEnd)
+      : false;
 
-   return matchesSearch && matchesType && matchesDate && matchesDuration && matchesStatus;
+    return matchesSearch && matchesType && matchesStatus && matchesDateRange;
   });
 
   const paginatedData = useMemo(() => {
@@ -982,11 +1030,9 @@ const Parking = () => {
         sessionStartedAt,
         filters: {
           searchQuery,
-          selectedDate: selectedDate
-            ? new Date(selectedDate).toLocaleDateString()
-            : "None",
+          selectedDate: getPeriodDisplayStr(), 
           activeType,
-          duration: reportDuration,
+          duration: dateFilterType,           
         },
         statistics: {
           cars: carCount,
@@ -1330,7 +1376,8 @@ const Parking = () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
         <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
-        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
+          
           <select
             value={activeStatus}
             onChange={(e) => {
@@ -1344,20 +1391,46 @@ const Parking = () => {
             <option value="Departed">Departed</option>
           </select>
 
-          <select
-            value={reportDuration}
-            onChange={(e) => {
-              setReportDuration(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
-          >
-            <option value="Daily">Daily</option>
-            <option value="Weekly">Weekly</option>
-            <option value="Monthly">Monthly</option>
-            <option value="Yearly">Yearly</option>
-            <option value="All">All Time</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+              {["Daily", "Week", "Month", "Year"].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => {
+                    setDateFilterType(type);
+                    setCurrentDateRange(new Date()); 
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${
+                    dateFilterType === type
+                      ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+              <button 
+                onClick={handlePrevPeriod} 
+                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                <Calendar size={16} className="text-slate-400" />
+                {getPeriodDisplayStr()}
+              </div>
+              <button 
+                onClick={handleNextPeriod} 
+                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
 
           <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
             Name of Collector:
