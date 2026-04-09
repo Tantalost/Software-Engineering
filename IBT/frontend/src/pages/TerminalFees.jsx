@@ -12,6 +12,9 @@ import {
   FileText,
   Settings,
   User,
+  ChevronLeft,   
+  ChevronRight,  
+  Calendar
 } from "lucide-react";
 import jsPDF from "jspdf";
 import headerImg from "../assets/Header.png";
@@ -87,7 +90,8 @@ const TerminalFees = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeType, setActiveType] = useState("All");
-  const [reportDuration, setReportDuration] = useState("Daily");
+  const [dateFilterType, setDateFilterType] = useState("Daily");
+  const [currentDateRange, setCurrentDateRange] = useState(new Date());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -120,6 +124,72 @@ const TerminalFees = () => {
   const authAdminId = localStorage.getItem("authAdminId") || "";
   const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
   const REPORTS_API_URL = `${API_URL}/reports`;
+
+  const getRangeBounds = (type, date) => {
+    const start = new Date(date);
+    const end = new Date(date);
+
+    if (type === "Daily") {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Week") {
+      const day = start.getDay(); 
+      const diff = start.getDate() - day;
+      start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(diff + 6);
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Month") {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0); 
+      end.setHours(23, 59, 59, 999);
+    } else if (type === "Year") {
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(11, 31);
+      end.setHours(23, 59, 59, 999);
+    }
+    return { start, end };
+  };
+
+  const { start: filterStart, end: filterEnd } = getRangeBounds(dateFilterType, currentDateRange);
+
+  const handlePrevPeriod = () => {
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() - 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() - 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() - 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() - 1);
+    setCurrentDateRange(newDate);
+    setCurrentPage(1);
+  };
+
+  const handleNextPeriod = () => {
+    const newDate = new Date(currentDateRange);
+    if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() + 1);
+    else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() + 7);
+    else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() + 1);
+    else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() + 1);
+    setCurrentDateRange(newDate);
+    setCurrentPage(1);
+  };
+
+  const getPeriodDisplayStr = () => {
+    const { start, end } = getRangeBounds(dateFilterType, currentDateRange);
+    if (dateFilterType === "Daily") {
+      return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    } else if (dateFilterType === "Week") {
+      const startStr = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const endStr = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return `${startStr} - ${endStr}`;
+    } else if (dateFilterType === "Month") {
+      return start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    } else if (dateFilterType === "Year") {
+      return start.getFullYear().toString();
+    }
+  };
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -285,28 +355,15 @@ const TerminalFees = () => {
       }
 
       const feeDate = fee.date ? new Date(fee.date) : null;
-      const now = new Date();
-      let matchesDuration = true;
+      let matchesDateRange = false;
 
-      if (reportDuration !== "All") {
-        if (!feeDate || Number.isNaN(feeDate.getTime())) {
-          matchesDuration = false;
-        } else {
-          const startDate = new Date(now);
-          if (reportDuration === "Daily") {
-            startDate.setHours(0, 0, 0, 0);
-            now.setHours(23, 59, 59, 999);
-          }
-          if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
-          if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
-          if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
-          matchesDuration = feeDate >= startDate && feeDate <= now;
-        }
+      if (feeDate && !Number.isNaN(feeDate.getTime())) {
+        matchesDateRange = feeDate >= filterStart && feeDate <= filterEnd;
       }
 
-      return matchesType && matchesDuration;
+      return matchesType && matchesDateRange;
     });
-  }, [records, activeType, reportDuration]);
+  }, [records, activeType, filterStart, filterEnd]);
 
   const stats = useMemo(
     () => ({
@@ -418,7 +475,8 @@ const TerminalFees = () => {
         sessionStartedAt,
         filters: {
           activeType,
-          duration: reportDuration,
+          duration: dateFilterType,
+          selectedDate: getPeriodDisplayStr(),
         },
         statistics: {
           totalPassengers: shiftRecords.length,
@@ -1102,68 +1160,22 @@ const TerminalFees = () => {
         />
       </div>
 
-      {/* --- Main container justified to the right --- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 gap-3">
-        {/* LEFT SIDE — Collector Name */}
-        <div className="flex flex-col gap-2 w-full lg:w-auto">
-          {role === "ticket" && (
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-                Name of Collector:
-              </label>
-
-              <select
-                value={collectorId}
-                onChange={(e) => {
-                  const nextId = e.target.value;
-                  const selectedCollector = collectors.find(
-                    (collector) => (collector._id || collector.id) === nextId,
-                  );
-                  handleCollectorSelection(nextId, selectedCollector || null);
-                }}
-                className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
-              >
-                <option value="">Select collector</option>
-                {collectors.map((collector) => {
-                  const middleInitial = collector.middleName
-                    ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
-                    : "";
-                  const label = [
-                    collector.firstName,
-                    middleInitial,
-                    collector.lastName,
-                    collector.suffix,
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
-
-                  return (
-                    <option
-                      key={collector._id || collector.id}
-                      value={collector._id || collector.id}
-                    >
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-end mb-6 gap-4">
+        <div className="flex flex-wrap items-center justify-start lg:justify-end gap-3 w-full lg:w-auto">
+          
           {role === "superadmin" && (
             <button
               title="Price Setting"
               onClick={handleOpenPriceModal}
               className="flex items-center justify-center cursor-pointer gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
             >
-              <Settings size={18} /> <span>Set Price</span>
+              <Settings size={18} className="text-slate-600" /> <span>Set Price</span>
             </button>
           )}
 
           <button
             onClick={handleOpenAdd}
-            className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
+            className="flex cursor-pointer items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all whitespace-nowrap"
             title="Add Ticket"
           >
             <Plus size={18} /> <span>Add Fee</span>
@@ -1192,97 +1204,149 @@ const TerminalFees = () => {
             </button>
           )}
 
-          <ExportMenu
-            onExportExcel={handleExportExcel}
-            onExportPDF={exportToPDF}
-          />
+          <ExportMenu onExportExcel={handleExportExcel} onExportPDF={exportToPDF} />
         </div>
       </div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <TerminalFilter
-            activeType={activeType}
-            onTypeChange={setActiveType}
-          />
-        </div>
 
-        <div className="flex w-full flex-col gap-3 sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-4">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-              Duration:
-            </label>
-            <select
-              value={reportDuration}
-              onChange={(e) => {
-                setReportDuration(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
-            >
-              <option value="Daily">Daily</option>
-              <option value="All">All Time</option>
-              <option value="Weekly">Weekly</option>
-              <option value="Monthly">Monthly</option>
-              <option value="Yearly">Yearly</option>
-            </select>
+      <div className="flex flex-col gap-4 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        
+        {/* Sub-Row A: Vehicles & Dates */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <TerminalFilter activeType={activeType} onTypeChange={setActiveType} />
           </div>
 
-          <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+          {/* DATE RANGE FILTER - SUPERADMIN ONLY */}
           {role === "superadmin" && (
-            <button
-              onClick={() => setShowLogModal(true)}
-              className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
-              title="View Logs"
-            >
-              <History size={18} />
-              <span className="hidden sm:inline">Logs</span>
-            </button>
-          )}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+                {["Daily", "Week", "Month", "Year"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setDateFilterType(type);
+                      setCurrentDateRange(new Date());
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                      dateFilterType === type
+                        ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
 
-          {role === "ticket" && (
-            <button
-              onClick={() => setShowLogModal(true)}
-              className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
-              title="View Logs"
-            >
-              <History size={18} />
-              <span className="hidden sm:inline">Logs</span>
-            </button>
-          )}
-          </div>
-
-          {isSelectionMode && selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-              <span className="text-xs font-semibold text-slate-600 px-1 sm:px-2 whitespace-nowrap">
-                {selectedIds.length}{" "}
-                <span className="hidden xs:inline">Selected</span>
-              </span>
-              <button
-                onClick={handleBulkDelete}
-                title={
-                  role === "ticket" ? "Request Deletion" : "Delete Selected"
-                }
-                className="rounded-lg p-1.5 sm:p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
-              >
-                <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-              <div className="hidden sm:block h-5 w-px bg-slate-300 mx-1"></div>
+              <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                <button 
+                  onClick={handlePrevPeriod} 
+                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                  <Calendar size={16} className="text-slate-400" />
+                  {getPeriodDisplayStr()}
+                </div>
+                <button 
+                  onClick={handleNextPeriod} 
+                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
           )}
+        </div>
 
-          {role == "ticket" && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          
+          <div className="flex items-center gap-2 min-h-[42px]">
+            {role === "ticket" && (
+              <button
+                onClick={toggleSelectionMode}
+                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                className={`flex items-center justify-center h-[42px] px-3 cursor-pointer rounded-xl transition-all border ${
+                  isSelectionMode
+                    ? "bg-red-500 text-white border-red-600 shadow-md"
+                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                }`}
+              >
+                {isSelectionMode ? <X size={18} className="mr-1.5"/> : <ListChecks size={18} className="mr-1.5"/>}
+                <span className="text-sm font-medium">{isSelectionMode ? "Cancel" : "Select"}</span>
+              </button>
+            )}
+
+            {isSelectionMode && selectedIds.length > 0 && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-5 bg-red-50 p-1.5 rounded-xl border border-red-100 h-[42px]">
+                <span className="text-sm font-semibold text-red-600 px-2 whitespace-nowrap">
+                  {selectedIds.length} Selected
+                </span>
+                <button
+                  onClick={handleBulkDelete}
+                  title={role === "ticket" ? "Request Deletion" : "Delete Selected"}
+                  className="rounded-lg p-1.5 bg-white text-red-500 hover:text-red-700 shadow-sm border border-red-200 transition-all cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {role === "ticket" && (
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 h-[42px]">
+                <label className="text-sm font-semibold text-slate-600 whitespace-nowrap">
+                  Collector:
+                </label>
+                <select
+                  value={collectorId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    const selectedCollector = collectors.find(
+                      (collector) => (collector._id || collector.id) === nextId,
+                    );
+                    handleCollectorSelection(nextId, selectedCollector || null);
+                  }}
+                  className="w-full sm:w-48 bg-transparent border-none text-sm font-medium text-slate-800 focus:ring-0 cursor-pointer outline-none"
+                >
+                  <option value="">Select collector...</option>
+                  {collectors.map((collector) => {
+                    const middleInitial = collector.middleName
+                      ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
+                      : "";
+                    const label = [
+                      collector.firstName,
+                      middleInitial,
+                      collector.lastName,
+                      collector.suffix,
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
+
+                    return (
+                      <option key={collector._id || collector.id} value={collector._id || collector.id}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+
             <button
-              onClick={toggleSelectionMode}
-              title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-              className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-                isSelectionMode
-                  ? "bg-red-500 text-white shadow-md"
-                  : "bg-white border-slate-300 text-slate-700 hover:border-emerald-500 hover:text-emerald-600"
-              }`}
+              onClick={() => setShowLogModal(true)}
+              className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
+              title="View Logs"
             >
-              {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+              <History size={18} />
+              <span className="hidden sm:inline">Logs</span>
             </button>
-          )}
+          </div>
+
         </div>
       </div>
 
