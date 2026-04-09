@@ -43,8 +43,8 @@ const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}
 
 const TenantLease = () => {
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedDate, setSelectedDate] = useState("");
-    const [reportDuration, setReportDuration] = useState("All");
+    const [dateFilterType, setDateFilterType] = useState("All");
+    const [currentDateRange, setCurrentDateRange] = useState(new Date());
     const [activeTab, setActiveTab] = useState("permanent");
     const [activeStatus, setActiveStatus] = useState("All");
     const [currentPage, setCurrentPage] = useState(1);
@@ -139,6 +139,76 @@ const TenantLease = () => {
     const [toggleOpRow, setToggleOpRow] = useState(null);
 
     const [emailBody, setEmailBody] = useState("");
+
+    const getRangeBounds = (type, date) => {
+        if (type === "All") return { start: null, end: null };
+        const start = new Date(date);
+        const end = new Date(date);
+
+        if (type === "Daily") {
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+        } else if (type === "Week") {
+            const day = start.getDay(); 
+            const diff = start.getDate() - day;
+            start.setDate(diff);
+            start.setHours(0, 0, 0, 0);
+            end.setDate(diff + 6);
+            end.setHours(23, 59, 59, 999);
+        } else if (type === "Month") {
+            start.setDate(1);
+            start.setHours(0, 0, 0, 0);
+            end.setMonth(end.getMonth() + 1);
+            end.setDate(0); 
+            end.setHours(23, 59, 59, 999);
+        } else if (type === "Year") {
+            start.setMonth(0, 1);
+            start.setHours(0, 0, 0, 0);
+            end.setMonth(11, 31);
+            end.setHours(23, 59, 59, 999);
+        }
+        return { start, end };
+    };
+
+    const { start: filterStart, end: filterEnd } = getRangeBounds(dateFilterType, currentDateRange);
+
+    const handlePrevPeriod = () => {
+        if (dateFilterType === "All") return;
+        const newDate = new Date(currentDateRange);
+        if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() - 1);
+        else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() - 7);
+        else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() - 1);
+        else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() - 1);
+        setCurrentDateRange(newDate);
+        setCurrentPage(1);
+    };
+
+    const handleNextPeriod = () => {
+        if (dateFilterType === "All") return;
+        const newDate = new Date(currentDateRange);
+        if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() + 1);
+        else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() + 7);
+        else if (dateFilterType === "Month") newDate.setMonth(newDate.getMonth() + 1);
+        else if (dateFilterType === "Year") newDate.setFullYear(newDate.getFullYear() + 1);
+        setCurrentDateRange(newDate);
+        setCurrentPage(1);
+    };
+
+    const getPeriodDisplayStr = () => {
+        if (dateFilterType === "All") return "All Time";
+        const { start, end } = getRangeBounds(dateFilterType, currentDateRange);
+        if (dateFilterType === "Daily") {
+            return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+        } else if (dateFilterType === "Week") {
+            const startStr = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            const endStr = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            return `${startStr} - ${endStr}`;
+        } else if (dateFilterType === "Month") {
+            return start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        } else if (dateFilterType === "Year") {
+            return start.getFullYear().toString();
+        }
+    };
 
     const [notifyDraft, setNotifyDraft] = useState({
         title: "",
@@ -448,26 +518,18 @@ const TenantLease = () => {
         const name = t.tenantName || t.name || "";
         const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || (t.referenceNo || "").toLowerCase().includes(searchQuery.toLowerCase());
         const matchesTab = activeTab === "permanent" ? (t.tenantType === "Permanent" || !t.tenantType) : t.tenantType === "Night Market";
-        const matchesDate = !selectedDate || new Date(t.StartDateTime).toDateString() === new Date(selectedDate).toDateString();
         const matchesStatus = activeStatus === "All" || t.status.toLowerCase() === activeStatus.toLowerCase();
 
         const tenantDate = t.StartDateTime ? new Date(t.StartDateTime) : null;
-        const now = new Date();
-        let matchesDuration = true;
+        let matchesDateRange = false;
 
-        if (reportDuration !== "All") {
-            if (!tenantDate || Number.isNaN(tenantDate.getTime())) {
-                matchesDuration = false;
-            } else {
-                const startDate = new Date(now);
-                if (reportDuration === "Weekly") startDate.setDate(now.getDate() - 7);
-                if (reportDuration === "Monthly") startDate.setMonth(now.getMonth() - 1);
-                if (reportDuration === "Yearly") startDate.setFullYear(now.getFullYear() - 1);
-                matchesDuration = tenantDate >= startDate && tenantDate <= now;
-            }
+        if (dateFilterType === "All") {
+            matchesDateRange = true;
+        } else if (tenantDate && !Number.isNaN(tenantDate.getTime())) {
+            matchesDateRange = tenantDate >= filterStart && tenantDate <= filterEnd;
         }
 
-        return matchesSearch && matchesTab && matchesDate && matchesStatus && matchesDuration;
+        return matchesSearch && matchesTab && matchesStatus && matchesDateRange;
     });
 
     const formatDate = (dateString) => {
@@ -716,8 +778,8 @@ const TenantLease = () => {
                     searchQuery,
                     activeTab,
                     activeStatus,
-                    dateFilter: selectedDate || "None",
-                    duration: reportDuration,
+                    dateFilter: getPeriodDisplayStr(), 
+                    duration: dateFilterType,          
                 },
                 statistics: {
                     totalRecords: records.length,
@@ -1652,7 +1714,7 @@ const TenantLease = () => {
                             />
                         </div>
                     )}
-                    <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+                   <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
                     {(role === "lease") && (
@@ -1715,8 +1777,9 @@ const TenantLease = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6">
+                
+                <div className="flex flex-wrap items-center gap-2">
                     <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
                         <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
                             <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
@@ -1738,46 +1801,78 @@ const TenantLease = () => {
                     </button>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
-                    <select
-                        value={reportDuration}
-                        onChange={(e) => {
-                            setReportDuration(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                        className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
-                    >
-                        <option value="All">All Time</option>
-                        <option value="Weekly">Weekly</option>
-                        <option value="Monthly">Monthly</option>
-                        <option value="Yearly">Yearly</option>
-                    </select>
-
+                <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
+                    
                     <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
-                    {(role === "superadmin" || role === "lease") && (
-                        <button
-                            onClick={() => setShowLogModal(true)}
-                            className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-slate-300 transition-all"
-                            title="View Logs"
-                        >
-                            <History size={18} />
-                            <span className="hidden sm:inline cursor-pointer">Logs</span>
-                        </button>
+
+                    {role === "superadmin" && (
+                        <div className="flex items-center gap-2">
+                            <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+                                {["All", "Daily", "Week", "Month", "Year"].map((type) => (
+                                    <button
+                                        key={type}
+                                        onClick={() => {
+                                            setDateFilterType(type);
+                                            setCurrentDateRange(new Date());
+                                            setCurrentPage(1);
+                                        }}
+                                        className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                                            dateFilterType === type
+                                                ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {dateFilterType !== "All" && (
+                                <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                                    <button 
+                                        onClick={handlePrevPeriod} 
+                                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                                        <Calendar size={16} className="text-slate-400" />
+                                        {getPeriodDisplayStr()}
+                                    </div>
+                                    <button 
+                                        onClick={handleNextPeriod} 
+                                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     )}
 
                     {(role === "superadmin" || role === "lease") && (
-                        <button
-                            onClick={() => setShowPaymentRecords(true)}
-                            className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-3 sm:px-4 h-10 rounded-xl shadow-sm hover:border-emerald-300 transition-all cursor-pointer"
-                            title="View Payment Records"
-                        >
-                            <Wallet size={18} />
-                            <span className="hidden sm:inline">Records</span>
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setShowLogModal(true)}
+                                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                                title="View Logs"
+                            >
+                                <History size={18} />
+                                <span className="hidden sm:inline cursor-pointer">Logs</span>
+                            </button>
+                            <button
+                                onClick={() => setShowPaymentRecords(true)}
+                                className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-300 transition-all cursor-pointer"
+                                title="View Payment Records"
+                            >
+                                <Wallet size={18} />
+                                <span className="hidden sm:inline">Records</span>
+                            </button>
+                        </>
                     )}
 
                     {isSelectionMode && selectedIds.length > 0 && (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
                             <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
                                 {selectedIds.length} Selected
                             </span>
@@ -1795,7 +1890,7 @@ const TenantLease = () => {
                         <button
                             onClick={toggleSelectionMode}
                             title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-                            className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
+                            className={`flex items-center justify-center cursor-pointer h-[42px] w-[42px] sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
                                 ? "bg-red-500 text-white shadow-md"
                                 : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                                 }`}
