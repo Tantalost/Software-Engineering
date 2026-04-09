@@ -560,6 +560,9 @@ const TenantLease = () => {
     }, [paymentViewType, paymentRefDate, paymentTypeFilter]);
    
     const validateCollector = () => {
+        if (role === "superadmin") {
+            return true;
+        }
         if (!collectorName || collectorName.trim() === "") {
             setNotificationState({
                 isOpen: true,
@@ -1578,22 +1581,24 @@ const TenantLease = () => {
 
             <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-4 gap-3">
                 <div className="flex flex-col gap-3 w-full lg:flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <label className="text-sm font-semibold text-slate-700 whitespace-nowrap shrink-0">
-                            Name of Collector:
-                        </label>
-                        <input
-                            type="text"
-                            value={collectorName}
-                            maxLength={100}
-                            onChange={(e) => {
-                                setCollectorName(e.target.value.slice(0, 100));
-                                setCollectorId("");
-                            }}
-                            placeholder="Enter collector name"
-                            className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                        />
-                    </div>
+                    {role === "lease" && (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                            <label className="text-sm font-semibold text-slate-700 whitespace-nowrap shrink-0">
+                                Name of Collector:
+                            </label>
+                            <input
+                                type="text"
+                                value={collectorName}
+                                maxLength={100}
+                                onChange={(e) => {
+                                    setCollectorName(e.target.value.slice(0, 100));
+                                    setCollectorId("");
+                                }}
+                                placeholder="Enter collector name"
+                                className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                            />
+                        </div>
+                    )}
                     <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">

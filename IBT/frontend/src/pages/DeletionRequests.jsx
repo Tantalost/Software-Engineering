@@ -345,7 +345,7 @@ const DeletionRequests = () => {
               {selectedIds.length} Selected
             </span>
             <button
-              onClick={handleBulkDelete}
+              onClick={handleBulkApprove}
               title="Delete Selected"
               className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
             >
@@ -363,7 +363,7 @@ const DeletionRequests = () => {
         <button
           onClick={toggleSelectionMode}
           title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-          className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border cursor-pointer'${
+          className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
             isSelectionMode
               ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
               : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"

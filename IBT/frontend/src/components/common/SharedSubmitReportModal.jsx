@@ -35,6 +35,8 @@ const SharedSubmitReportModal = ({
   submitLabel = "Confirm Submit",
 }) => {
   if (!isOpen) return null;
+  const role = localStorage.getItem("authRole") || "superadmin";
+  const canViewCollectorIdentity = role !== "superadmin";
 
   const handleCollectorChange = (event) => {
     const nextId = event.target.value;
@@ -106,7 +108,7 @@ const SharedSubmitReportModal = ({
               <strong>Total Records Included:</strong> {totalRecords}
               {reportType ? <div className="mt-1">Report Type: {reportType}</div> : null}
               {helperText ? <div className="mt-1">{helperText}</div> : null}
-              {collectorName ? (
+              {collectorName && canViewCollectorIdentity ? (
                 <div className="mt-2 pt-2 border-t border-blue-200">
                   <strong>Collector:</strong> {collectorName}
                 </div>

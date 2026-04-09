@@ -1130,8 +1130,6 @@ const BusTrips = () => {
   const [showPreviousShiftModal, setShowPreviousShiftModal] = useState(false);
   const [previousShiftReports, setPreviousShiftReports] = useState([]);
   const [isPreviousShiftLoading, setIsPreviousShiftLoading] = useState(false);
-  const [pendingDeletionRequests, setPendingDeletionRequests] = useState([]);
-  const [showPendingDeletionOnly, setShowPendingDeletionOnly] = useState(false);
   const [rescheduleTrip, setRescheduleTrip] = useState(null);
   const [rescheduledExpectedDeparture, setRescheduledExpectedDeparture] = useState("");
 
@@ -1152,7 +1150,6 @@ const BusTrips = () => {
   const SCHEDULE_NOT_ARRIVAL_API = `${
     import.meta.env.VITE_API_URL || "http://localhost:10000"
   }/api/schedule-not-arrivals`;
-  const DELETION_REQUESTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/deletion-requests`;
   const REPORTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
@@ -1223,25 +1220,6 @@ const BusTrips = () => {
 
     fetchCollectors();
   }, [COLLECTORS_API_URL]);
-
-  const fetchPendingDeletionRequests = async () => {
-    try {
-      const res = await fetch(DELETION_REQUESTS_API_URL);
-      if (!res.ok) return;
-      const data = await res.json();
-      const busTripRequests = (Array.isArray(data) ? data : []).filter(
-        (r) => r.itemType === "Bus Trip" && String(r.status || "pending").toLowerCase() === "pending",
-      );
-      setPendingDeletionRequests(busTripRequests);
-    } catch (error) {
-      console.error("Error fetching pending deletion requests:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (role !== "superadmin") return;
-    fetchPendingDeletionRequests();
-  }, [role]);
 
   const fetchPreviousShiftReports = async () => {
     if (role !== "bus") return;
@@ -1588,15 +1566,6 @@ const BusTrips = () => {
     });
   }, [filtered, filteredWithoutDate, selectedDate, role]);
 
-  const pendingDeletionTripIdSet = useMemo(() => {
-    const set = new Set();
-    pendingDeletionRequests.forEach((req) => {
-      const originalId = req?.originalData?._id || req?.originalData?.id;
-      if (originalId) set.add(String(originalId));
-    });
-    return set;
-  }, [pendingDeletionRequests]);
-
   const activeDispatchRecords = useMemo(
     () =>
       todayDispatchRecords.filter((trip) =>
@@ -1689,12 +1658,10 @@ const BusTrips = () => {
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
-  const visibleDispatchRecords = useMemo(() => {
-    if (role !== "superadmin" || !showPendingDeletionOnly) return activeDispatchRecords;
-    return activeDispatchRecords.filter((trip) =>
-      pendingDeletionTripIdSet.has(String(trip._id || trip.id)),
-    );
-  }, [activeDispatchRecords, role, showPendingDeletionOnly, pendingDeletionTripIdSet]);
+  const visibleDispatchRecords = useMemo(
+    () => activeDispatchRecords,
+    [activeDispatchRecords],
+  );
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -2850,9 +2817,6 @@ const BusTrips = () => {
       if (!response.ok) throw new Error("Failed to delete");
 
       await fetchBusTrips();
-      if (role === "superadmin") {
-        await fetchPendingDeletionRequests();
-      }
       setDeleteRow(null);
 
       setNotificationState({
@@ -3163,24 +3127,6 @@ const BusTrips = () => {
                     <span>Previous Shift Records</span>
                   </button>
                 </div>
-              )}
-
-              {role === "superadmin" && (
-                <button
-                  onClick={() => setShowPendingDeletionOnly((prev) => !prev)}
-                  className={`flex items-center cursor-pointer justify-center space-x-2 border font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-all ${
-                    showPendingDeletionOnly
-                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <span>
-                    Pending Deletions
-                    {pendingDeletionRequests.length > 0
-                      ? ` (${pendingDeletionRequests.length})`
-                      : ""}
-                  </span>
-                </button>
               )}
 
               {role === "superadmin" && (
