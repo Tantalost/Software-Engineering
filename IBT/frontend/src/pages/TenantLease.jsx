@@ -113,6 +113,7 @@ const TenantLease = () => {
     const [collectorName, setCollectorName] = useState("");
     const authAdminId = localStorage.getItem("authAdminId") || "";
     const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
+    const assignedShiftValue = localStorage.getItem("authShift") || "";
     const REPORTS_API_URL = `${API_URL}/reports`;
     const [sessionStartedAt, setSessionStartedAt] = useState(() => {
         const key = "shiftSessionStart:tenant";
@@ -709,6 +710,7 @@ const TenantLease = () => {
             const reportPayload = {
                 screen: "Tenant Lease Management",
                 generatedDate: new Date().toLocaleString(),
+                assignedShift: assignedShiftValue || "No assigned shift",
                 sessionStartedAt,
                 filters: {
                     searchQuery,
@@ -2274,7 +2276,7 @@ const TenantLease = () => {
                                                         ).toLocaleString()}
                                                     </td>
                                                     <td className="px-4 py-3 text-slate-700">
-                                                        {report?.data?.shift || report?.payload?.assignedShift || "-"}
+                                                        {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}
                                                     </td>
                                                     <td className="px-4 py-3 text-slate-700">
                                                         {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}

@@ -41,10 +41,18 @@ const DataRenderer = ({ reportPayload }) => {
 
   const renderStats = () => {
     if (!statistics || Object.keys(statistics).length === 0) return null;
+
+    const visibleStats = Object.entries(statistics).filter(([key]) => {
+      const normalizedKey = String(key).toLowerCase();
+      return normalizedKey !== "collectorid";
+    });
+
+    if (visibleStats.length === 0) return null;
+
     return (
       <div className="mb-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Object.entries(statistics).map(([key, value]) => (
+          {visibleStats.map(([key, value]) => (
             <div
               key={key}
               className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm"

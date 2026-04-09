@@ -87,6 +87,7 @@ const LostFound = () => {
   const role = localStorage.getItem("authRole") || "superadmin";
   const authAdminId = localStorage.getItem("authAdminId") || "";
   const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
+  const assignedShiftValue = localStorage.getItem("authShift") || "";
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
   const API_URL = `${BASE_URL}/api/lostfound`;
   const REPORTS_API_URL = `${BASE_URL}/api/reports`;
@@ -638,6 +639,7 @@ const LostFound = () => {
       const reportPayload = {
         screen: "Lost & Found Log",
         generatedDate: new Date().toLocaleString(),
+        assignedShift: assignedShiftValue || "No assigned shift",
         sessionStartedAt,
         filters: {
           searchQuery,
@@ -1664,7 +1666,7 @@ const LostFound = () => {
                             ).toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
-                            {report?.data?.shift || report?.payload?.assignedShift || "-"}
+                            {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}

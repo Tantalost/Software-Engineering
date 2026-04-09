@@ -1154,7 +1154,7 @@ const BusTrips = () => {
   const [defaultPrice, setDefaultPrice] = useState(75);
   const [predefinedTodayTrips, setPredefinedTodayTrips] = useState([]);
   const ACTIVE_DISPATCH_STATUSES = useMemo(
-    () => ["Arrived", "On Fix", "Not Departed", "Departed", "Paid"],
+    () => ["Arrived", "On Fix", "Departed", "Paid"],
     [],
   );
 
@@ -1634,7 +1634,6 @@ const BusTrips = () => {
           const loggedToday =
             status === "Arrived" ||
             status === "On Fix" ||
-            status === "Not Departed" ||
             status === "Departed" ||
             status === "Paid";
           if (!loggedToday && !notArrivePlateCompanyKeys.has(plateCompanyKey)) {
@@ -2362,6 +2361,7 @@ const BusTrips = () => {
       const reportPayload = {
         screen: "Bus Trips Management",
         adminId: authAdminId || null,
+        assignedShift: assignedShift || "No assigned shift",
         collectorId,
         collectorName: collectorName.trim(),
         sessionStartedAt,
@@ -2679,7 +2679,7 @@ const BusTrips = () => {
 
     if (existing) {
       if (
-        ["Arrived", "On Fix", "Not Departed", "Departed", "Paid"].includes(
+        ["Arrived", "On Fix", "Departed", "Paid"].includes(
           existing.status,
         )
       ) {
@@ -3747,7 +3747,7 @@ const BusTrips = () => {
                             ).toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
-                            {report?.data?.shift || "-"}
+                            {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {report?.data?.collectorName || "-"}

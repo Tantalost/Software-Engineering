@@ -286,6 +286,7 @@ const Parking = () => {
   const role = localStorage.getItem("authRole") || "superadmin";
   const authAdminId = localStorage.getItem("authAdminId") || "";
   const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
+  const assignedShiftValue = localStorage.getItem("authShift") || "";
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/parking`;
   const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
   const REPORTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
@@ -1077,6 +1078,7 @@ const Parking = () => {
       const reportPayload = {
         screen: "Parking Management",
         generatedDate: new Date().toLocaleString(),
+        assignedShift: assignedShiftValue || "No assigned shift",
         sessionStartedAt,
         filters: {
           searchQuery,
@@ -2188,7 +2190,7 @@ const Parking = () => {
             .join(" ");
           setCollectorName(displayName);
         }}
-        assignedShift="Current Shift"
+        assignedShift={assignedShiftValue || "No assigned shift"}
         totalRecords={records.length}
         helperText="Submitted shift rows are removed from active parking board."
         isSubmitting={isReporting}
@@ -2240,7 +2242,7 @@ const Parking = () => {
                             ).toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
-                            {report?.data?.shift || report?.payload?.assignedShift || "-"}
+                            {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}
