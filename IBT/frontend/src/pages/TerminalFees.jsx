@@ -1450,14 +1450,14 @@ const TerminalFees = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                  Ticket No {isAutoTicket && <span className="text-emerald-500 lowercase normal-case ml-1">(Auto-generated)</span>}
+                  Ticket No {isAutoTicket && <span className="text-emerald-500 lowercase normal-case ml-1">(Auto-counted)</span>}
                 </label>
                 <input
                   type="text"
                   value={newTicket.ticketNo}
                   onChange={(e) => setNewTicket({ ...newTicket, ticketNo: e.target.value })}
                   disabled={isAutoTicket}
-                  placeholder={!isAutoTicket ? "Enter custom ticket number" : ""}
+                  placeholder={!isAutoTicket ? "Enter ticket number" : ""}
                   className={`w-full px-3 py-2 rounded-lg font-medium border transition-all ${
                     isAutoTicket 
                       ? "bg-slate-100 text-slate-500 italic border-slate-300 cursor-not-allowed" 
