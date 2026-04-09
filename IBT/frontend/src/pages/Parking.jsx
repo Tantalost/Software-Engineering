@@ -46,6 +46,7 @@ const Parking = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [activeType, setActiveType] = useState("All");
   const [reportDuration, setReportDuration] = useState("Daily");
+  const [activeStatus, setActiveStatus] = useState("All");
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -402,6 +403,10 @@ const Parking = () => {
       activeType === "All" ||
       ticket.type.toLowerCase() === activeType.toLowerCase();
 
+    const matchesStatus = 
+      activeStatus === "All" || 
+      (ticket.status && ticket.status.toLowerCase() === activeStatus.toLowerCase());
+
     const ticketTimeIn = ticket.timeIn ? new Date(ticket.timeIn) : null;
     const now = new Date();
     let matchesDuration = true;
@@ -420,7 +425,7 @@ const Parking = () => {
       }
     }
 
-    return matchesSearch && matchesType && matchesDate && matchesDuration;
+   return matchesSearch && matchesType && matchesDate && matchesDuration && matchesStatus;
   });
 
   const paginatedData = useMemo(() => {
@@ -1312,6 +1317,19 @@ const Parking = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full mb-4">
         <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
         <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+          <select
+            value={activeStatus}
+            onChange={(e) => {
+              setActiveStatus(e.target.value);
+              setCurrentPage(1); 
+            }}
+            className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700"
+          >
+            <option value="All">All Status</option>
+            <option value="Parked">Parked</option>
+            <option value="Departed">Departed</option>
+          </select>
+
           <select
             value={reportDuration}
             onChange={(e) => {
