@@ -21,7 +21,8 @@ import {
   startOperation,
   toggleOperationStatus,
   processMoveOut,
-  rejectRenewalPayment
+  rejectRenewalPayment,
+  submitTenantsForShift
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -61,6 +62,7 @@ router.get('/overdue-settings', getOverdueSettings);
 router.put('/update-overdue-settings', updateOverdueSettings);
 router.post('/move-out', processMoveOut);
 router.put('/:id/reject-renewal', rejectRenewalPayment);
+router.put('/submit-shift', submitTenantsForShift);
 
 router.post('/', 
   upload.fields([

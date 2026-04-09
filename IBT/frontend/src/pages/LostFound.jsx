@@ -8,6 +8,7 @@ import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import DeleteModal from "../components/common/DeleteModal";
+import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
 import LogModal from "../components/common/LogModal";
 import { submitPageReport } from "../utils/reportService.js";
@@ -76,15 +77,9 @@ const LostFound = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [isReporting, setIsReporting] = useState(false);
+  const [sessionStartedAt] = useState(() => new Date().toISOString());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [readRecordIds, setReadRecordIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("lostFoundReadRecordIds") || "[]");
-    } catch {
-      return [];
-    }
-  });
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
@@ -121,10 +116,6 @@ const LostFound = () => {
   useEffect(() => {
     fetchLostFound();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("lostFoundReadRecordIds", JSON.stringify(readRecordIds));
-  }, [readRecordIds]);
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return "-";
@@ -428,6 +419,14 @@ const LostFound = () => {
     return matchesSearch && matchesDate && matchesStatus && matchesDuration;
   });
 
+  const shiftRecords = useMemo(() => {
+    const shiftStart = new Date(sessionStartedAt);
+    return records.filter((item) => {
+      const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
+      return createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= shiftStart;
+    });
+  }, [records, sessionStartedAt]);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filtered.slice(startIndex, startIndex + itemsPerPage);
@@ -555,9 +554,20 @@ const LostFound = () => {
   };
 
   const handleSubmitReport = async () => {
+    if (shiftRecords.length === 0) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No newly logged shift items found to submit.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
     setIsReporting(true);
     try {
-      const formattedData = filtered.map((item) => {
+      const formattedData = shiftRecords.map((item) => {
         const { createdAt, updatedAt, isArchived, __v, _id, ...rest } = item;
         return {
           ...rest,
@@ -577,6 +587,7 @@ const LostFound = () => {
       const reportPayload = {
         screen: "Lost & Found Log",
         generatedDate: new Date().toLocaleString(),
+        sessionStartedAt,
         filters: {
           searchQuery,
           selectedDate: selectedDate
@@ -587,37 +598,58 @@ const LostFound = () => {
         },
         statistics: {
           totalItems: records.length,
-          displayedItems: filtered.length,
-          unclaimed: filtered.filter((i) => i.status === "Unclaimed").length,
-          claimed: filtered.filter((i) => i.status === "Claimed").length,
+          displayedItems: shiftRecords.length,
+          unclaimed: shiftRecords.filter((i) => i.status === "Unclaimed").length,
+          claimed: shiftRecords.filter((i) => i.status === "Claimed").length,
         },
         data: formattedData,
       };
 
       const adminName =
         localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Lost & Found Admin";
-      await submitPageReport("Lost & Found", reportPayload, adminName);
+      const report = await submitPageReport("Lost & Found", reportPayload, adminName, {
+        reportType: "LostAndFound",
+        payload: reportPayload,
+      });
+
+      const submitShiftRes = await fetch(`${API_URL}/submit-shift`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionStartedAt,
+          reportId: report?._id || report?.id || null,
+        }),
+      });
+
+      if (!submitShiftRes.ok) {
+        throw new Error("Report created, but failed to clear submitted shift items.");
+      }
 
       sendNotification(
         "Report Submitted: Lost & Found Report",
-        "A new Lost & Found report has been generated. Submitted rows were marked as On Read.",
+        "A new Lost & Found report has been generated. Shift items were submitted and cleared from active logbook.",
         "Lost & Found",
         "superadmin",
       );
 
-      const submittedIds = filtered.map((item) => item.id).filter(Boolean);
-      setReadRecordIds((prev) => Array.from(new Set([...prev, ...submittedIds])));
+      await logActivity(
+        role,
+        "SUBMIT_REPORT",
+        `Submitted Lost & Found report with ${shiftRecords.length} shift item(s)`,
+        "LostFound",
+      );
 
       // Success Toast
       setNotificationState({
         isOpen: true,
         type: "success",
-        message: "Report submitted successfully! Rows are marked as On Read.",
+        message: "Report submitted successfully! Shift items were cleared from the active logbook.",
         autoClose: true,
         duration: 3000,
       });
 
       setShowSubmitModal(false);
+      fetchLostFound();
     } catch (error) {
       console.error(error);
       // Error Toast
@@ -960,14 +992,14 @@ const LostFound = () => {
               variant="terminal"
             columns={tableColumns}
             data={paginatedData.map((item) => {
-              const isOnRead = readRecordIds.includes(item.id);
+              const isSubmitted = Boolean(item.submitted);
               const baseData = {
                 id: item.id,
                 trackingno: item.trackingNo,
                 itemtype: item.itemType,
                 location: item.location,
                 datetime: formatDateTime(item.dateTime),
-                reportstate: isOnRead ? (
+                reportstate: isSubmitted ? (
                   <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
                     On Read
                   </span>
@@ -977,7 +1009,7 @@ const LostFound = () => {
                   </span>
                 ),
                 status: item.status,
-                __highlight: isOnRead,
+                __highlight: isSubmitted,
               };
 
               if (isSelectionMode) {
@@ -1527,45 +1559,20 @@ const LostFound = () => {
         itemName={deleteRow ? `Track #${deleteRow.trackingNo}` : ""}
       />
 
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl transform transition-all scale-100">
-            <h3 className="text-lg font-bold text-slate-800">Submit Report</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to capture and submit the current Lost &
-              Found report?
-              <br />
-              <span className="text-emerald-600 font-semibold text-xs">
-                Note: Submitted rows will remain in the table and be marked as On Read.
-              </span>
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowSubmitModal(false)}
-                title="Go Back to Table"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitReport}
-                disabled={isReporting}
-                title="Confirm Submission and Reset Table"
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isReporting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <span>Confirm Submit</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SharedSubmitReportModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onSubmit={handleSubmitReport}
+        requiresCollector={false}
+        moduleName="Lost & Found"
+        reportType="LostAndFound"
+        assignedShift={localStorage.getItem("authShift") || "Current Shift"}
+        totalRecords={shiftRecords.length}
+        helperText="Submitting will hand off this shift and clear newly logged items from the active logbook."
+        isSubmitting={isReporting}
+        submitDisabled={shiftRecords.length === 0}
+        submitLabel="Submit Report"
+      />
       <NotificationToast
         isOpen={notificationState.isOpen}
         type={notificationState.type}

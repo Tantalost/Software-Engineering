@@ -20,10 +20,56 @@ const broadcastNotification = async (title, body, data) => {
 
 export const getLostFound = async (req, res) => {
   try {
-    const items = await LostFound.find({ isArchived: { $ne: true } }).sort({ dateTime: -1 });
+    const items = await LostFound.find({
+      isArchived: { $ne: true },
+      submitted: { $ne: true },
+    }).sort({ dateTime: -1 });
     res.json(items);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const submitLostFoundForShift = async (req, res) => {
+  try {
+    const { sessionStartedAt, reportId } = req.body;
+
+    if (!sessionStartedAt) {
+      return res.status(400).json({ message: "sessionStartedAt is required." });
+    }
+
+    const shiftStart = new Date(sessionStartedAt);
+    if (Number.isNaN(shiftStart.getTime())) {
+      return res.status(400).json({ message: "Invalid sessionStartedAt." });
+    }
+
+    const now = new Date();
+    const updatePayload = {
+      submitted: true,
+      submittedAt: now,
+    };
+
+    if (reportId) {
+      updatePayload.reportId = reportId;
+    }
+
+    const result = await LostFound.updateMany(
+      {
+        createdAt: { $gte: shiftStart, $lte: now },
+        isArchived: { $ne: true },
+        submitted: { $ne: true },
+      },
+      { $set: updatePayload },
+    );
+
+    return res.status(200).json({
+      message: "Shift lost and found records marked as submitted.",
+      matchedCount: result.matchedCount || 0,
+      modifiedCount: result.modifiedCount || 0,
+      reportId: reportId || null,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 

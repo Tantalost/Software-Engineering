@@ -30,7 +30,7 @@ import TenantEmailModal from "../components/tenants/modals/TenantEmailModal";
 import ApplicationReviewModal from "../components/tenants/modals/ApplicationReviewModal";
 import BroadcastModal from "../components/tenants/modals/BroadcastModal";
 import ArchiveConfirmModal from "../components/tenants/modals/ArchiveConfirmModal";
-import SubmitReportModal from "../components/tenants/modals/SubmitReportModal";
+import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 
 import { generateRentStatementPDF, calculateDueAmount } from "../utils/tenantUtils";
 import { logActivity } from "../utils/logger";
@@ -105,16 +105,19 @@ const TenantLease = () => {
     const [paymentItemsPerPage, setPaymentItemsPerPage] = useState(25);
 
     const [isReporting, setIsReporting] = useState(false);
+    const [collectors, setCollectors] = useState([]);
+    const [collectorId, setCollectorId] = useState("");
     const [collectorName, setCollectorName] = useState("");
+    const [sessionStartedAt, setSessionStartedAt] = useState(() => {
+        const key = "shiftSessionStart:tenant";
+        const existing = localStorage.getItem(key);
+        if (existing) return existing;
+        const created = new Date().toISOString();
+        localStorage.setItem(key, created);
+        return created;
+    });
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
-    const [readRecordIds, setReadRecordIds] = useState(() => {
-        try {
-            return JSON.parse(localStorage.getItem("tenantReadRecordIds") || "[]");
-        } catch {
-            return [];
-        }
-    });
 
     const [waitlistForm, setWaitlistForm] = useState({ name: "", contact: "", email: "", preferredType: "Permanent", notes: "" });
     const [reviewData, setReviewData] = useState(null);
@@ -285,6 +288,7 @@ const TenantLease = () => {
     useEffect(() => {
         fetchTenants();
         fetchWaitlist();
+        fetchCollectors();
 
         const interval = setInterval(() => {
             fetchTenants();
@@ -293,10 +297,6 @@ const TenantLease = () => {
 
         return () => clearInterval(interval);
     }, []);
-
-    useEffect(() => {
-        localStorage.setItem("tenantReadRecordIds", JSON.stringify(readRecordIds));
-    }, [readRecordIds]);
 
     useEffect(() => {
         if (notificationState.isOpen && notificationState.autoClose) {
@@ -322,6 +322,17 @@ const TenantLease = () => {
             setRecords(formatted.filter(t => !t.isArchived && !t.isDeleted));
         } catch (err) {
             console.error("Error fetching tenants:", err);
+        }
+    };
+
+    const fetchCollectors = async () => {
+        try {
+            const res = await fetch(`${API_URL}/collectors?active=true&department=Tenant`);
+            if (!res.ok) throw new Error("Failed to fetch collectors");
+            const data = await res.json();
+            setCollectors(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error("Error fetching tenant collectors:", error);
         }
     };
 
@@ -562,26 +573,62 @@ const TenantLease = () => {
         return true;
     };
 
+    const isTenantPendingForShift = (tenant, shiftStartDate) => {
+        const createdAt = tenant?.createdAt ? new Date(tenant.createdAt) : null;
+        const updatedAt = tenant?.updatedAt ? new Date(tenant.updatedAt) : null;
+        const submittedAt = tenant?.submittedAt ? new Date(tenant.submittedAt) : null;
+
+        const hasCreatedAt = createdAt && !Number.isNaN(createdAt.getTime());
+        const hasUpdatedAt = updatedAt && !Number.isNaN(updatedAt.getTime());
+
+        const latestActivity = hasUpdatedAt
+            ? updatedAt
+            : hasCreatedAt
+                ? createdAt
+                : null;
+
+        if (!latestActivity || latestActivity < shiftStartDate) {
+            return false;
+        }
+
+        if (!submittedAt || Number.isNaN(submittedAt.getTime())) {
+            return true;
+        }
+
+        return submittedAt < shiftStartDate;
+    };
+
+    const shiftRecords = useMemo(() => {
+        const shiftStartDate = new Date(sessionStartedAt);
+        if (Number.isNaN(shiftStartDate.getTime())) return [];
+
+        return records.filter((tenant) => {
+            if (tenant?.isArchived || tenant?.isDeleted) return false;
+            return isTenantPendingForShift(tenant, shiftStartDate);
+        });
+    }, [records, sessionStartedAt]);
+
     const handleOpenSubmitModal = () => {
-        if (!collectorName || !collectorName.trim()) {
+        setShowSubmitModal(true);
+    };
+
+    const handleSubmitReport = async () => {
+        if (!collectorName.trim() || !collectorId) {
             setNotificationState({
                 isOpen: true,
                 type: "error",
-                message: "Please enter Name of Collector before submitting report.",
+                message: "Please select a collector before submitting report.",
                 autoClose: true,
                 duration: 3000,
             });
             return;
         }
-        setShowSubmitModal(true);
-    };
 
-    const handleSubmitReport = async () => {
-        if (!collectorName.trim()) {
+        if (shiftRecords.length === 0) {
             setNotificationState({
                 isOpen: true,
                 type: "error",
-                message: "Please enter Name of Collector before submitting report.",
+                message: "No new tenant transactions in the current shift to submit.",
                 autoClose: true,
                 duration: 3000,
             });
@@ -590,7 +637,7 @@ const TenantLease = () => {
 
         setIsReporting(true);
         try {
-            const formattedData = filtered.map(t => ({
+            const formattedData = shiftRecords.map(t => ({
                 "Slot": t.slotNo,
                 "Name": t.tenantName || t.name,
                 "Type": t.tenantType || "Permanent",
@@ -608,6 +655,7 @@ const TenantLease = () => {
             const reportPayload = {
                 screen: "Tenant Lease Management",
                 generatedDate: new Date().toLocaleString(),
+                sessionStartedAt,
                 filters: {
                     searchQuery,
                     activeTab,
@@ -617,20 +665,36 @@ const TenantLease = () => {
                 },
                 statistics: {
                     totalRecords: records.length,
-                    displayedRecords: filtered.length,
+                    submittedShiftRecords: shiftRecords.length,
                     totalRevenue: mapStats.totalRevenue,
                     occupancy: `${mapStats.nonAvailableSlots}/${mapStats.totalSlots}`,
                     collector: collectorName.trim(),
+                    collectorId,
                 },
                 data: formattedData
             };
 
-            await submitPageReport("Tenant Lease", reportPayload, adminName);
-            const submittedIds = filtered.map((item) => item.id).filter(Boolean);
-            setReadRecordIds((prev) => Array.from(new Set([...prev, ...submittedIds])));
+            const report = await submitPageReport("Tenant Lease", reportPayload, adminName, {
+                reportType: "Tenant",
+                payload: reportPayload,
+            });
+
+            const submitShiftRes = await fetch(`${API_URL}/tenants/submit-shift`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sessionStartedAt,
+                    reportId: report?._id || report?.id || null,
+                }),
+            });
+
+            if (!submitShiftRes.ok) {
+                throw new Error("Report created, but failed to mark tenant shift records as submitted.");
+            }
+
             await sendNotification(
                 "Report Submitted: Tenant Lease",
-                `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}. Submitted rows were marked as On Read.`,
+                `A Tenant Lease report was submitted by ${role === 'lease' ? 'Tenant Admin' : 'Admin'}. Shift transactions are officially logged and tenant records remain visible on dashboard.`,
                 "Tenants",
                 "superadmin"
             );
@@ -640,12 +704,16 @@ const TenantLease = () => {
             setNotificationState({
                 isOpen: true,
                 type: 'success',
-                message: "Report submitted successfully! Rows are marked as On Read.",
+                message: "Report submitted successfully! Tenant records remain visible for continuity.",
                 autoClose: true,
                 duration: 3000
             });
 
             setShowSubmitModal(false);
+            setSessionStartedAt(new Date().toISOString());
+            setCollectorId("");
+            setCollectorName("");
+            await fetchTenants();
 
         } catch (error) {
             console.error("Report Error:", error);
@@ -659,6 +727,29 @@ const TenantLease = () => {
         } finally {
             setIsReporting(false);
         }
+    };
+
+    const handleCollectorSelection = (nextCollectorId, selectedCollector) => {
+        setCollectorId(nextCollectorId);
+        if (!selectedCollector) {
+            setCollectorName("");
+            return;
+        }
+
+        const middleInitial = selectedCollector.middleName
+            ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
+            : "";
+
+        const displayName = [
+            selectedCollector.firstName,
+            middleInitial,
+            selectedCollector.lastName,
+            selectedCollector.suffix,
+        ]
+            .filter(Boolean)
+            .join(" ");
+
+        setCollectorName(displayName);
     };
 
     const toggleSelectionMode = () => {
@@ -1495,7 +1586,10 @@ const TenantLease = () => {
                             type="text"
                             value={collectorName}
                             maxLength={100}
-                            onChange={(e) => setCollectorName(e.target.value.slice(0, 100))}
+                            onChange={(e) => {
+                                setCollectorName(e.target.value.slice(0, 100));
+                                setCollectorId("");
+                            }}
                             placeholder="Enter collector name"
                             className="w-full sm:w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                         />
@@ -1661,7 +1755,7 @@ const TenantLease = () => {
                     variant="terminal"
                     columns={tableColumns}
                     data={paginatedData.map((t) => {
-                    const isOnRead = readRecordIds.includes(t.id);
+                    const isSubmitted = Boolean(t.submitted || t.reportId);
                     
                     const baseData = {
                         id: t.id,
@@ -1672,8 +1766,8 @@ const TenantLease = () => {
                         contactno: t.contactNo,
                         startdate: formatDate(t.StartDateTime),
                         duedate: formatDate(t.DueDateTime || t.EndDateTime),
-                        reportstate: isOnRead ? (
-                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">On Read</span>
+                        reportstate: isSubmitted ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Submitted</span>
                         ) : (
                             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">Pending</span>
                         )
@@ -1687,7 +1781,7 @@ const TenantLease = () => {
                     baseData.util = t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0";
                     baseData.totaldue = `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
                     baseData.status = t.status;
-                    baseData.__highlight = isOnRead;
+                    baseData.__highlight = isSubmitted;
                     
                     if (isSelectionMode) {
                         return {
@@ -2067,15 +2161,23 @@ const TenantLease = () => {
                 </div>
             )}
            
-            <SubmitReportModal
+            <SharedSubmitReportModal
                 isOpen={showSubmitModal}
                 onClose={() => setShowSubmitModal(false)}
                 onSubmit={handleSubmitReport}
-                isReporting={isReporting}
-                recordCount={filtered.length}
+                requiresCollector={true}
+                moduleName="Tenant/Lease"
+                reportType="Tenant"
+                collectors={collectors}
+                collectorId={collectorId}
                 collectorName={collectorName}
-                operatorName={operatorName}
-                asOfDateLabel={asOfDateLabel}
+                onCollectorChange={handleCollectorSelection}
+                assignedShift={localStorage.getItem("authShift") || "No assigned shift"}
+                totalRecords={shiftRecords.length}
+                helperText={`Operator: ${operatorName} | As of: ${asOfDateLabel}. Submitted tenant entries remain visible on dashboard.`}
+                isSubmitting={isReporting}
+                submitDisabled={!collectorId || !collectorName.trim() || shiftRecords.length === 0}
+                submitLabel="Confirm Submit"
             />
 
             <NotificationToast

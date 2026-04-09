@@ -68,6 +68,9 @@ const TenantSchema = new mongoose.Schema({
   },
 
   transferWaitlistId: String,
+  submitted: { type: Boolean, default: false },
+  submittedAt: { type: Date, default: null },
+  reportId: { type: mongoose.Schema.Types.ObjectId, ref: "Report", default: null },
   isArchived: { 
     type: Boolean, 
     default: false 

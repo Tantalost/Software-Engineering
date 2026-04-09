@@ -3,17 +3,42 @@ import {
   Menu, Bell, ChevronDown, X, AlertTriangle, Megaphone, Upload,
   Eye, Edit, Trash2, ZoomIn, ZoomOut
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import NotificationToast from "../common/NotificationToast";
 import RecoveryCodeBadge from "../common/RecoveryCodeBadge";
 
+const MODULE_ROUTE_CONFIG = {
+  bus: { route: "/buses-trips", role: "bus", sessionKey: "shiftSessionStart:bus" },
+  terminal: { route: "/tickets", role: "ticket", sessionKey: "shiftSessionStart:terminal" },
+  parking: { route: "/parking", role: "parking", sessionKey: "shiftSessionStart:parking" },
+  tenant: { route: "/tenant-lease", role: "lease", sessionKey: "shiftSessionStart:tenant" },
+  lostfound: { route: "/lost-found", role: "lostfound", sessionKey: "shiftSessionStart:lostfound" },
+};
+
+const getOrInitSessionStart = (sessionKey) => {
+  const existing = localStorage.getItem(sessionKey);
+  if (existing) return existing;
+  const created = new Date().toISOString();
+  localStorage.setItem(sessionKey, created);
+  return created;
+};
+
+const isDateOnOrAfter = (dateValue, minDate) => {
+  const date = new Date(dateValue);
+  return !Number.isNaN(date.getTime()) && date >= minDate;
+};
+
 const Topbar = ({ title, onMenuClick, logoutGuard }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [showBell, setShowBell] = useState(false);
   const [showUser, setShowUser] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutBlockedModal, setShowLogoutBlockedModal] = useState(false);
+  const [isCheckingLogoutGuard, setIsCheckingLogoutGuard] = useState(false);
+  const [logoutBlockedMessage, setLogoutBlockedMessage] = useState("");
+  const [logoutBlockedRoute, setLogoutBlockedRoute] = useState("");
 
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastTab, setBroadcastTab] = useState("create");
@@ -56,6 +81,16 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
   const userRef = useRef(null);
 
   const BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:10000").replace(/\/api\/?$/, '');
+
+  useEffect(() => {
+    const routeConfigs = Object.values(MODULE_ROUTE_CONFIG);
+    const currentConfig = routeConfigs.find((cfg) =>
+      location.pathname.startsWith(cfg.route),
+    );
+    if (currentConfig && role === currentConfig.role) {
+      getOrInitSessionStart(currentConfig.sessionKey);
+    }
+  }, [location.pathname, role]);
 
   const getImageUrl = (uri) => {
     if (!uri) return '';
@@ -280,21 +315,177 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
     navigate(route);
   };
 
-  const handleLogout = () => {
-    if (logoutGuard && logoutGuard.canLogout === false) {
-      setShowLogoutModal(false);
-      setShowLogoutBlockedModal(true);
-      return;
+  const evaluateDynamicLogoutGuard = async () => {
+    const route = location.pathname;
+
+    if (route.startsWith(MODULE_ROUTE_CONFIG.bus.route) && role === MODULE_ROUTE_CONFIG.bus.role) {
+      if (logoutGuard && logoutGuard.canLogout === false) {
+        return {
+          blocked: true,
+          message:
+            logoutGuard.message ||
+            "Please submit your Bus Admin shift report before logging out.",
+          redirectRoute: MODULE_ROUTE_CONFIG.bus.route,
+        };
+      }
+      return { blocked: false };
     }
-    setShowLogoutModal(false);
-    localStorage.removeItem("isAdminLoggedIn");
-    localStorage.removeItem("authRole");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("authName");
-    localStorage.removeItem("authAdminId");
-    localStorage.removeItem("authEmail");
-    localStorage.removeItem("authShift");
-    navigate("/login");
+
+    if (route.startsWith(MODULE_ROUTE_CONFIG.terminal.route) && role === MODULE_ROUTE_CONFIG.terminal.role) {
+      const shiftStart = new Date(getOrInitSessionStart(MODULE_ROUTE_CONFIG.terminal.sessionKey));
+      const res = await fetch(`${BASE_URL}/api/terminal-fees`);
+      if (!res.ok) return { blocked: false };
+      const data = await res.json();
+      const pending = (Array.isArray(data) ? data : []).filter((item) =>
+        isDateOnOrAfter(item?.createdAt, shiftStart),
+      );
+      if (pending.length > 0) {
+        return {
+          blocked: true,
+          message:
+            "Please submit your shift report before logging out. You still have unsubmitted Terminal Fee transactions in this shift.",
+          redirectRoute: MODULE_ROUTE_CONFIG.terminal.route,
+        };
+      }
+      return { blocked: false };
+    }
+
+    if (route.startsWith(MODULE_ROUTE_CONFIG.parking.route) && role === MODULE_ROUTE_CONFIG.parking.role) {
+      const shiftStart = new Date(getOrInitSessionStart(MODULE_ROUTE_CONFIG.parking.sessionKey));
+      const res = await fetch(`${BASE_URL}/api/parking`);
+      if (!res.ok) return { blocked: false };
+      const data = await res.json();
+      const pending = (Array.isArray(data) ? data : []).filter((item) =>
+        isDateOnOrAfter(item?.createdAt, shiftStart),
+      );
+      if (pending.length > 0) {
+        return {
+          blocked: true,
+          message:
+            "Please submit your shift report before logging out. You still have unsubmitted Parking transactions in this shift.",
+          redirectRoute: MODULE_ROUTE_CONFIG.parking.route,
+        };
+      }
+      return { blocked: false };
+    }
+
+    if (route.startsWith(MODULE_ROUTE_CONFIG.tenant.route) && role === MODULE_ROUTE_CONFIG.tenant.role) {
+      const shiftStart = new Date(getOrInitSessionStart(MODULE_ROUTE_CONFIG.tenant.sessionKey));
+      const res = await fetch(`${BASE_URL}/api/tenants?all=true`);
+      if (!res.ok) return { blocked: false };
+      const data = await res.json();
+      const pending = (Array.isArray(data) ? data : []).filter((item) => {
+        const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
+        const updatedAt = item?.updatedAt ? new Date(item.updatedAt) : null;
+        const submittedAt = item?.submittedAt ? new Date(item.submittedAt) : null;
+
+        const latestActivity =
+          updatedAt && !Number.isNaN(updatedAt.getTime())
+            ? updatedAt
+            : createdAt && !Number.isNaN(createdAt.getTime())
+              ? createdAt
+              : null;
+
+        if (!latestActivity || latestActivity < shiftStart) return false;
+
+        const alreadySubmittedThisShift =
+          submittedAt && !Number.isNaN(submittedAt.getTime()) && submittedAt >= shiftStart;
+
+        return (
+          !item?.isArchived &&
+          !item?.isDeleted &&
+          !alreadySubmittedThisShift
+        );
+      });
+      if (pending.length > 0) {
+        return {
+          blocked: true,
+          message:
+            "Please submit your shift report before logging out. You still have unsubmitted Tenant/Lease entries in this shift.",
+          redirectRoute: MODULE_ROUTE_CONFIG.tenant.route,
+        };
+      }
+      return { blocked: false };
+    }
+
+    if (route.startsWith(MODULE_ROUTE_CONFIG.lostfound.route) && role === MODULE_ROUTE_CONFIG.lostfound.role) {
+      const shiftStart = new Date(getOrInitSessionStart(MODULE_ROUTE_CONFIG.lostfound.sessionKey));
+      const res = await fetch(`${BASE_URL}/api/lostfound`);
+      if (!res.ok) return { blocked: false };
+      const data = await res.json();
+      const pending = (Array.isArray(data) ? data : []).filter((item) =>
+        isDateOnOrAfter(item?.createdAt, shiftStart),
+      );
+      if (pending.length > 0) {
+        return {
+          blocked: true,
+          message:
+            "Please submit your shift report before logging out. You still have unsubmitted Lost & Found items in this shift.",
+          redirectRoute: MODULE_ROUTE_CONFIG.lostfound.route,
+        };
+      }
+      return { blocked: false };
+    }
+
+    return { blocked: false };
+  };
+
+  const handleLogout = async () => {
+    if (isCheckingLogoutGuard) return;
+    setIsCheckingLogoutGuard(true);
+
+    try {
+      const dynamicGuard = await evaluateDynamicLogoutGuard();
+
+      if (dynamicGuard.blocked) {
+        setLogoutBlockedMessage(
+          dynamicGuard.message || "Please submit your shift report before logging out.",
+        );
+        setLogoutBlockedRoute(dynamicGuard.redirectRoute || "");
+        setShowLogoutModal(false);
+        setShowLogoutBlockedModal(true);
+        if (dynamicGuard.redirectRoute && location.pathname !== dynamicGuard.redirectRoute) {
+          navigate(dynamicGuard.redirectRoute);
+        }
+        return;
+      }
+
+      if (logoutGuard && logoutGuard.canLogout === false) {
+        setLogoutBlockedMessage(
+          logoutGuard.message || "Please submit your shift report before logging out.",
+        );
+        setLogoutBlockedRoute(location.pathname || "");
+        setShowLogoutModal(false);
+        setShowLogoutBlockedModal(true);
+        return;
+      }
+
+      setShowLogoutModal(false);
+      Object.values(MODULE_ROUTE_CONFIG).forEach((cfg) => {
+        localStorage.removeItem(cfg.sessionKey);
+      });
+      localStorage.removeItem("isAdminLoggedIn");
+      localStorage.removeItem("authRole");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authName");
+      localStorage.removeItem("authAdminId");
+      localStorage.removeItem("authEmail");
+      localStorage.removeItem("authShift");
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout guard check failed:", error);
+      setShowLogoutModal(false);
+      localStorage.removeItem("isAdminLoggedIn");
+      localStorage.removeItem("authRole");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authName");
+      localStorage.removeItem("authAdminId");
+      localStorage.removeItem("authEmail");
+      localStorage.removeItem("authShift");
+      navigate("/login");
+    } finally {
+      setIsCheckingLogoutGuard(false);
+    }
   };
 
   return (
@@ -812,8 +1003,20 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
               <AlertTriangle className="text-amber-500 mb-3" size={40} />
               <h2 className="text-lg font-semibold text-gray-800 mb-2">Confirm Logout</h2>
               <div className="flex w-full space-x-3 mt-4">
-                <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700">Cancel</button>
-                <button onClick={handleLogout} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold">Yes, Logout</button>
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  disabled={isCheckingLogoutGuard}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  disabled={isCheckingLogoutGuard}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold disabled:opacity-60"
+                >
+                  {isCheckingLogoutGuard ? "Checking..." : "Yes, Logout"}
+                </button>
               </div>
             </div>
           </div>
@@ -829,10 +1032,21 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
                 Report Required Before Logout
               </h2>
               <p className="text-sm text-gray-600">
-                {logoutGuard?.message ||
+                {logoutBlockedMessage || logoutGuard?.message ||
                   "Please submit your shift report before logging out."}
               </p>
-              <div className="flex w-full mt-4">
+              <div className="flex w-full mt-4 gap-2">
+                {logoutBlockedRoute && (
+                  <button
+                    onClick={() => {
+                      setShowLogoutBlockedModal(false);
+                      navigate(logoutBlockedRoute);
+                    }}
+                    className="w-full py-2.5 rounded-xl border border-emerald-500 text-emerald-700 font-bold"
+                  >
+                    Go to Module
+                  </button>
+                )}
                 <button
                   onClick={() => setShowLogoutBlockedModal(false)}
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold"

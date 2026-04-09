@@ -19,6 +19,19 @@ const LostFoundSchema = new mongoose.Schema({
   claimedBy: { type: String },
   claimEvidence: { type: String },
   claimedAt: { type: Date },
+  submitted: {
+    type: Boolean,
+    default: false,
+  },
+  submittedAt: {
+    type: Date,
+    default: null,
+  },
+  reportId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Report",
+    default: null,
+  },
 }, { timestamps: true });
 
 export default mongoose.model("LostFound", LostFoundSchema);

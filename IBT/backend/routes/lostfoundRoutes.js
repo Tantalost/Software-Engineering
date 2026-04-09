@@ -9,6 +9,7 @@ import {
     restoreLostFound,
     getArchivedLostFound,
     getLostFoundPhoto,
+    submitLostFoundForShift,
 } from "../controllers/lostfoundController.js";
 
 const router = express.Router();
@@ -16,6 +17,7 @@ const router = express.Router();
 // Standard Routes
 router.get("/", getLostFound);
 router.post("/", upload.single("photo"), createLostFound);
+router.put("/submit-shift", submitLostFoundForShift);
 router.put("/:id", upload.single("evidencePhoto"), updateLostFound);
 // New Soft Delete Routes
 router.get("/archived", getArchivedLostFound);

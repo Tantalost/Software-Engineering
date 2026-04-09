@@ -32,6 +32,69 @@ export const getTenants = async (req, res) => {
   }
 };
 
+export const submitTenantsForShift = async (req, res) => {
+  try {
+    const { sessionStartedAt, reportId } = req.body;
+    if (!sessionStartedAt) {
+      return res.status(400).json({ message: "sessionStartedAt is required." });
+    }
+
+    const shiftStart = new Date(sessionStartedAt);
+    if (Number.isNaN(shiftStart.getTime())) {
+      return res.status(400).json({ message: "Invalid sessionStartedAt." });
+    }
+
+    const now = new Date();
+    const candidates = await Tenant.find({
+      isArchived: { $ne: true },
+      isDeleted: { $ne: true },
+      $or: [
+        { createdAt: { $gte: shiftStart, $lte: now } },
+        { updatedAt: { $gte: shiftStart, $lte: now } },
+      ],
+    }).select("_id submittedAt");
+
+    const pendingIds = candidates
+      .filter((tenant) => {
+        if (!tenant.submittedAt) return true;
+        const submittedAt = new Date(tenant.submittedAt);
+        return Number.isNaN(submittedAt.getTime()) || submittedAt < shiftStart;
+      })
+      .map((tenant) => tenant._id);
+
+    if (pendingIds.length === 0) {
+      return res.status(200).json({
+        message: "No tenant records pending submission for this shift.",
+        matchedCount: 0,
+        modifiedCount: 0,
+        reportId: reportId || null,
+      });
+    }
+
+    const updatePayload = {
+      submitted: true,
+      submittedAt: now,
+    };
+    if (reportId) {
+      updatePayload.reportId = reportId;
+    }
+
+    const result = await Tenant.updateMany(
+      { _id: { $in: pendingIds } },
+      { $set: updatePayload },
+    );
+
+    return res.status(200).json({
+      message: "Shift tenant records marked as submitted.",
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+      reportId: reportId || null,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to submit tenant shift records.", error: error.message });
+  }
+};
+
 export const sendTenantEmail = async (req, res) => {
   try {
     const { email, subject, message } = req.body;
