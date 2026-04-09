@@ -166,7 +166,6 @@ const ManageCompaniesModal = ({
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusFrom, setNewBusFrom] = useState("");
   const [newBusTo, setNewBusTo] = useState("");
-  const [newBusDepartureTime, setNewBusDepartureTime] = useState("");
   const [newBusSeatingCapacity, setNewBusSeatingCapacity] = useState("");
   const [scheduleSlots, setScheduleSlots] = useState([defaultScheduleSlot()]);
   const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
@@ -194,7 +193,6 @@ const ManageCompaniesModal = ({
     setNewBusPlate("");
     setNewBusFrom("");
     setNewBusTo("");
-    setNewBusDepartureTime("");
     setNewBusType("Regular");
     setNewBusStopType("Regular Trip");
     setNewBusSeatingCapacity("");
@@ -394,7 +392,6 @@ const ManageCompaniesModal = ({
       route: routeString,
       busType: newBusType,
       seatingCapacity: cap,
-      departureTime: newBusDepartureTime || "",
       scheduleTimes,
       scheduleTime: scheduleTimeJoined,
     };
@@ -405,6 +402,7 @@ const ManageCompaniesModal = ({
         b.plateNumber === editBusTarget.plateNumber
           ? {
               ...busPayloadBase,
+              departureTime: b.departureTime || "",
               stopType: newBusStopType,
               // `customStopCount` is only used when stopType === "Other".
               // This UI only exposes Regular + 1..10 stop modes.
@@ -417,6 +415,7 @@ const ManageCompaniesModal = ({
         ...activeCompany.buses,
         {
           ...busPayloadBase,
+          departureTime: "",
           stopType: newBusStopType,
           customStopCount: null,
         },
@@ -586,7 +585,7 @@ const ManageCompaniesModal = ({
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
                       Bus Number
@@ -628,18 +627,6 @@ const ManageCompaniesModal = ({
                           e.target.value.replace(/[^0-9]/g, ""),
                         )
                       }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
-                      Departure Time
-                    </label>
-                    <input
-                      type="time"
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
-                      value={newBusDepartureTime}
-                      onChange={(e) => setNewBusDepartureTime(e.target.value)}
                     />
                   </div>
 
@@ -912,7 +899,6 @@ const ManageCompaniesModal = ({
                                       : bus.route || "",
                                   );
                                   setNewBusTo(toRoute ? toRoute.trim() : "");
-                                  setNewBusDepartureTime(bus.departureTime || "");
                                   setNewBusType(bus.busType || "Regular");
                                   setNewBusSeatingCapacity(
                                     bus.seatingCapacity != null
