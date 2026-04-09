@@ -31,7 +31,6 @@ import NotificationToast from "../components/common/NotificationToast";
 import {
   Archive,
   Trash2,
-  LogOut,
   CheckCircle,
   FileText,
   Loader2,
@@ -44,6 +43,7 @@ import {
   Settings,
   ChevronLeft,  
   ChevronRight,  
+  Calendar
 } from "lucide-react";
 
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
