@@ -132,7 +132,12 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                                 <option value="1-stop">1-stop</option>
                                 <option value="2-stop">2-stop</option>
                                 <option value="3-stop">3-stop</option>
+                                <option value="4-stop">4-stop</option>
                                 <option value="5-stop">5-stop</option>
+                                <option value="6-stop">6-stop</option>
+                                <option value="7-stop">7-stop</option>
+                                <option value="8-stop">8-stop</option>
+                                <option value="9-stop">9-stop</option>
                                 <option value="10-stop">10-stop</option>
                                 <option value="Other">Other</option>
                             </select>

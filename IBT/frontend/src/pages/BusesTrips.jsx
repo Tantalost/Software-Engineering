@@ -166,6 +166,7 @@ const ManageCompaniesModal = ({
   const [newBusPlate, setNewBusPlate] = useState("");
   const [newBusFrom, setNewBusFrom] = useState("");
   const [newBusTo, setNewBusTo] = useState("");
+  const [newBusDepartureTime, setNewBusDepartureTime] = useState("");
   const [newBusSeatingCapacity, setNewBusSeatingCapacity] = useState("");
   const [scheduleSlots, setScheduleSlots] = useState([defaultScheduleSlot()]);
   const [tableBusTypeFilter, setTableBusTypeFilter] = useState("All");
@@ -193,6 +194,7 @@ const ManageCompaniesModal = ({
     setNewBusPlate("");
     setNewBusFrom("");
     setNewBusTo("");
+    setNewBusDepartureTime("");
     setNewBusType("Regular");
     setNewBusStopType("Regular Trip");
     setNewBusSeatingCapacity("");
@@ -330,10 +332,17 @@ const ManageCompaniesModal = ({
           duration: 3000,
         });
       } else {
+        let errorMessage = `Failed to ${editCompanyTarget ? "update" : "create"} company`;
+        try {
+          const errData = await res.json();
+          if (errData?.message) errorMessage = errData.message;
+        } catch {
+          // Ignore body parse errors and keep fallback message.
+        }
         setNotificationState({
           isOpen: true,
           type: "error",
-          message: `Failed to ${editCompanyTarget ? "update" : "create"} company`,
+          message: errorMessage,
           autoClose: true,
           duration: 3000,
         });
@@ -385,6 +394,7 @@ const ManageCompaniesModal = ({
       route: routeString,
       busType: newBusType,
       seatingCapacity: cap,
+      departureTime: newBusDepartureTime || "",
       scheduleTimes,
       scheduleTime: scheduleTimeJoined,
     };
@@ -430,9 +440,32 @@ const ManageCompaniesModal = ({
           autoClose: true,
           duration: 3000,
         });
+      } else {
+        let errorMessage = `Failed to ${editBusTarget ? "update" : "add"} bus`;
+        try {
+          const errData = await res.json();
+          if (errData?.message) errorMessage = errData.message;
+        } catch {
+          // Ignore body parse errors and keep fallback message.
+        }
+
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: errorMessage,
+          autoClose: true,
+          duration: 3500,
+        });
       }
     } catch (err) {
       console.error(err);
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: `Error ${editBusTarget ? "updating" : "adding"} bus`,
+        autoClose: true,
+        duration: 3000,
+      });
     }
   };
 
@@ -553,7 +586,7 @@ const ManageCompaniesModal = ({
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase">
                       Bus Number
@@ -595,6 +628,18 @@ const ManageCompaniesModal = ({
                           e.target.value.replace(/[^0-9]/g, ""),
                         )
                       }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                      Departure Time
+                    </label>
+                    <input
+                      type="time"
+                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      value={newBusDepartureTime}
+                      onChange={(e) => setNewBusDepartureTime(e.target.value)}
                     />
                   </div>
 
@@ -812,6 +857,7 @@ const ManageCompaniesModal = ({
                         <th className="px-4 py-3">Bus No.</th>
                         <th className="px-4 py-3">Type</th>
                         <th className="px-4 py-3">Capacity</th>
+                        <th className="px-4 py-3">Departure</th>
                         <th className="px-4 py-3">Schedule</th>
                         <th className="px-4 py-3">Route</th>
                         <th className="px-4 py-3 text-right">Action</th>
@@ -844,6 +890,9 @@ const ManageCompaniesModal = ({
                                 ? bus.seatingCapacity
                                 : "—"}
                             </td>
+                            <td className="px-4 py-3 text-slate-600 tabular-nums">
+                              {bus.departureTime || "—"}
+                            </td>
                             <td className="px-4 py-3 text-slate-600 text-sm max-w-[220px]">
                               {formatBusScheduleDisplay(bus) || "—"}
                             </td>
@@ -863,6 +912,7 @@ const ManageCompaniesModal = ({
                                       : bus.route || "",
                                   );
                                   setNewBusTo(toRoute ? toRoute.trim() : "");
+                                  setNewBusDepartureTime(bus.departureTime || "");
                                   setNewBusType(bus.busType || "Regular");
                                   setNewBusSeatingCapacity(
                                     bus.seatingCapacity != null
@@ -1704,6 +1754,7 @@ const BusTrips = () => {
       ...prev,
       templateNo: plate,
       route: selectedBus ? selectedBus.route : "",
+      time: selectedBus?.departureTime || prev.time,
       stopType: selectedBus?.stopType || "Regular Trip",
       customStopCount: selectedBus?.customStopCount
         ? String(selectedBus.customStopCount)
