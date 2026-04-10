@@ -87,14 +87,10 @@ const DailyTripsDashboard = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left whitespace-nowrap">
           <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
+           <tr>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Bus No</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Stops</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Reference No</th>
+              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Ticket Ref</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Route</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Park est.</th>
-              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Exp. dep.</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Arrival time</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Actual dep.</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Company</th>
@@ -119,24 +115,14 @@ const DailyTripsDashboard = ({
                   <td className="px-4 py-4 text-sm font-semibold text-slate-800">
                     {trip.templateNo || trip.templateno}
                   </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    {trip.busType || "Regular"}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    {formatStopType(trip.stopType, trip.customStopCount)}
-                  </td>
+                 
                   <td className="px-4 py-4 text-sm text-slate-600 font-medium">
                     {trip.ticketReferenceNo || "—"}
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     {trip.route}
                   </td>
-                  <td className="px-4 py-4 text-sm text-slate-600">
-                    {trip.parkingEstimation || "—"}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-slate-600 font-medium">
-                    {formatTime(trip.expectedDeparture)}
-                  </td>
+                
                   <td className="px-4 py-4 text-sm text-slate-600 font-medium">
                     {formatTime(trip.time)}
                   </td>

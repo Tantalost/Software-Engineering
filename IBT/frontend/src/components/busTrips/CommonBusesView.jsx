@@ -486,6 +486,9 @@ const PredefinedArrivalsBoard = ({
               <th className="px-3 py-2.5 font-semibold whitespace-nowrap">
                 Scheduled time
               </th>
+              <th className="px-3 py-2.5 font-semibold whitespace-nowrap">
+                Bus No
+              </th>
               <th className="px-3 py-2.5 font-semibold min-w-[140px]">Route</th>
               <th className="px-3 py-2.5 font-semibold">Company</th>
               <th className="px-3 py-2.5 font-semibold text-right">Actions</th>
@@ -495,7 +498,7 @@ const PredefinedArrivalsBoard = ({
             {actionableScheduleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="px-4 py-10 text-center text-slate-500 text-sm"
                 >
                   {scheduleRows.length === 0 ? (
@@ -513,7 +516,7 @@ const PredefinedArrivalsBoard = ({
               <>
                 {actionableOverdueRows.length > 0 && (
                   <tr>
-                    <td colSpan={4} className="px-3 py-2 bg-amber-50 border-y border-amber-100">
+                    <td colSpan={5} className="px-3 py-2 bg-amber-50 border-y border-amber-100">
                       <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 uppercase tracking-wide">
                         <AlertTriangle size={12} />
                         Overdue / Pending Arrival ({actionableOverdueRows.length})
@@ -553,6 +556,11 @@ const PredefinedArrivalsBoard = ({
                         )}
                       </div>
                     </td>
+
+                    <td className="px-3 py-3 font-semibold text-slate-800">
+                      {row.plateNumber}
+                    </td>
+
                     <td className="px-3 py-3 text-slate-800 font-medium">
                       {row.route}
                     </td>
