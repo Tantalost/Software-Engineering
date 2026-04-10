@@ -12,6 +12,7 @@ import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import EditParking from "../components/parking/EditParking";
 import DeleteModal from "../components/common/DeleteModal";
+import RequestDeletionModal from "../components/common/RequestDeletionModal";
 import ParkingFilter from "../components/parking/ParkingFilter";
 import LogModal from "../components/common/LogModal";
 import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
@@ -57,6 +58,7 @@ const Parking = () => {
   const [collectorName, setCollectorName] = useState("");
   const [collectorId, setCollectorId] = useState("");
   const [collectors, setCollectors] = useState([]);
+  const [deleteRequestIds, setDeleteRequestIds] = useState([]);
   const [sessionStartedAt] = useState(() => new Date().toISOString());
 
   const [isAutoTicket, setIsAutoTicket] = useState(true); 
@@ -284,6 +286,7 @@ const Parking = () => {
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
+  const [deleteRemarks, setDeleteRemarks] = useState("");
   const [logoutRow, setLogoutRow] = useState(null);
   const [archiveRow, setArchiveRow] = useState(null);
 
@@ -318,6 +321,7 @@ const Parking = () => {
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/parking`;
   const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
   const REPORTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
+  const DELETION_REQUESTS_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/deletion-requests`;
 
   const [newTicket, setNewTicket] = useState({
     ticketNo: "",
@@ -360,6 +364,29 @@ const Parking = () => {
 
   useEffect(() => {
     fetchParkingTickets();
+  }, []);
+
+  const fetchDeleteRequests = async () => {
+    try {
+      const response = await fetch(DELETION_REQUESTS_URL);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const requestedIds = (Array.isArray(data) ? data : [])
+        .filter((request) => (request?.status || "pending") === "pending")
+        .filter((request) => request?.itemType === "Parking Ticket")
+        .map((request) => request?.originalData?._id || request?.originalData?.id)
+        .filter(Boolean)
+        .map(String);
+
+      setDeleteRequestIds(requestedIds);
+    } catch (error) {
+      console.error("Error fetching deletion requests:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeleteRequests();
   }, []);
 
   useEffect(() => {
@@ -638,29 +665,43 @@ const Parking = () => {
     setIsLoading(true);
     try {
       if (role === "parking") {
-        const requestPromises = selectedIds.map(async (id) => {
+        const newRequestIds = selectedIds.filter(
+          (id) => !deleteRequestIds.includes(String(id)),
+        );
+
+        if (newRequestIds.length === 0) {
+          setNotificationState({
+            isOpen: true,
+            type: "error",
+            message: "Selected tickets already have pending deletion requests.",
+            autoClose: true,
+            duration: 2000,
+          });
+          setSelectedIds([]);
+          setIsSelectionMode(false);
+          return;
+        }
+
+        const requestPromises = newRequestIds.map(async (id) => {
           const item = records.find((r) => r.id === id);
           if (!item) return;
 
-          fetch(
-            `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/deletion-requests`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                itemType: "Parking Ticket",
-                itemDescription: `Ticket #${item.ticketNo} - ${item.plateNo}`,
-                requestedBy: "Parking Admin",
-                originalData: item,
-                reason: "Bulk deletion request",
-              }),
-            },
-          );
+          return fetch(DELETION_REQUESTS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              itemType: "Parking Ticket",
+              itemDescription: `Ticket #${item.ticketNo} - ${item.plateNo}`,
+              requestedBy: "Parking Admin",
+              originalData: item,
+              reason: "Bulk deletion request",
+            }),
+          });
         });
 
         await sendNotification(
           "Deletion Request: Parking",
-          `Parking Admin has requested to delete ${selectedIds.length} parking records.`,
+          `Parking Admin has requested to delete ${newRequestIds.length} parking records.`,
           "Parking",
           "superadmin",
         );
@@ -669,17 +710,18 @@ const Parking = () => {
         await logActivity(
           role,
           "REQUEST_BULK_DELETE",
-          `Requested deletion for ${selectedIds.length} parking tickets`,
+          `Requested deletion for ${newRequestIds.length} parking tickets`,
           "Parking",
         );
 
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`,
+          message: `Sent deletion requests for ${newRequestIds.length} records. Superadmin notified.`,
           autoClose: true,
           duration: 2000,
         });
+        await fetchDeleteRequests();
         setSelectedIds([]);
         setIsSelectionMode(false);
       } else {
@@ -1002,6 +1044,75 @@ const Parking = () => {
       }
     } catch (error) {
       console.error("Error deleting:", error);
+    }
+  };
+
+  const handleDeleteRequestConfirm = async () => {
+    if (!deleteRow) return;
+
+    const rowId = String(deleteRow.id || deleteRow._id || "");
+    if (rowId && deleteRequestIds.includes(rowId)) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Deletion request already pending for this ticket.",
+        autoClose: true,
+        duration: 2000,
+      });
+      setDeleteRow(null);
+      setDeleteRemarks("");
+      return;
+    }
+
+    try {
+      const response = await fetch(DELETION_REQUESTS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemType: "Parking Ticket",
+          itemDescription: `Ticket #${deleteRow.ticketNo} - ${deleteRow.plateNo}`,
+          requestedBy: "Parking Admin",
+          originalData: deleteRow,
+          reason: deleteRemarks || "No remarks provided.",
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to send request");
+
+      await logActivity(
+        role,
+        "REQUEST_DELETE",
+        `Requested deletion: Ticket #${deleteRow.ticketNo}`,
+        "Parking",
+      );
+
+      await sendNotification(
+        "Deletion Request: Parking",
+        `Parking Admin requested deletion for ticket #${deleteRow.ticketNo}.`,
+        "Parking",
+        "superadmin",
+      );
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: "Deletion request sent to Superadmin.",
+        autoClose: true,
+        duration: 2000,
+      });
+
+      setDeleteRow(null);
+      setDeleteRemarks("");
+      await fetchDeleteRequests();
+    } catch (error) {
+      console.error("Error requesting deletion:", error);
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to submit deletion request.",
+        autoClose: true,
+        duration: 2000,
+      });
     }
   };
 
@@ -1726,13 +1837,19 @@ const Parking = () => {
               variant="terminal"
             columns={tableColumns}
             data={paginatedData.map((ticket) => {
+              const isDeleteRequested = deleteRequestIds.includes(String(ticket.id));
               const isOnRead = Boolean(ticket.submitted);
+              const isDeleteHighlighted = isDeleteRequested || isOnRead;
               const baseData = {
                 id: ticket.id,
                 ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : "---",
                 plateno: ticket.plateNo || "---",
                 type: ticket.type,
-                reportstate: isOnRead ? (
+                reportstate: isDeleteRequested ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                    Delete Requested
+                  </span>
+                ) : isOnRead ? (
                   <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
                     On Read
                   </span>
@@ -1749,7 +1866,8 @@ const Parking = () => {
                   : "---",
                 duration: ticket.duration || "---",
                 status: ticket.status,
-                __highlight: isOnRead,
+                __highlight: isDeleteHighlighted,
+                __highlightVariant: isDeleteRequested ? "amber" : "emerald",
               };
 
               if (isSelectionMode) {
@@ -1795,6 +1913,15 @@ const Parking = () => {
                         ? undefined
                         : () => setEditRow(selectedRecord)
                     }
+                    onDelete={
+                      role === "parking"
+                        ? () => {
+                            setDeleteRow(selectedRecord);
+                            setDeleteRemarks("");
+                          }
+                        : undefined
+                    }
+                    deleteVariant={role === "parking" ? "request" : "delete"}
                   />
                   <button
                     onClick={() => handleArchive(selectedRecord)}
@@ -2311,7 +2438,7 @@ const Parking = () => {
       )}
 
       <DeleteModal
-        isOpen={!!deleteRow}
+        isOpen={role === "superadmin" && !!deleteRow}
         onClose={() => setDeleteRow(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Record"
@@ -2323,6 +2450,24 @@ const Parking = () => {
               : "this item"
             : ""
         }
+      />
+
+      <RequestDeletionModal
+        isOpen={role === "parking" && !!deleteRow}
+        onClose={() => {
+          setDeleteRow(null);
+          setDeleteRemarks("");
+        }}
+        onConfirm={handleDeleteRequestConfirm}
+        itemIdentifier={
+          deleteRow
+            ? deleteRow.ticketNo
+              ? `Ticket #${deleteRow.ticketNo}`
+              : "this item"
+            : ""
+        }
+        remarks={deleteRemarks}
+        setRemarks={setDeleteRemarks}
       />
 
       <SharedSubmitReportModal

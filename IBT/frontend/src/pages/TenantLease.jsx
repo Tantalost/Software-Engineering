@@ -20,6 +20,7 @@ import NotificationToast from "../components/common/NotificationToast";
 
 import EditTenantLease from "../components/tenants/EditTenantLease";
 import DeleteModal from "../components/common/DeleteModal";
+import RequestDeletionModal from "../components/common/RequestDeletionModal";
 import TenantStatusFilter from "../components/tenants/TenantStatusFilter";
 import AddTenantModal from "../components/tenants/modals/AddTenantModal";
 import MoveOutModal from "../components/tenants/modals/MoveOutModal";
@@ -111,6 +112,7 @@ const TenantLease = () => {
     const [collectors, setCollectors] = useState([]);
     const [collectorId, setCollectorId] = useState("");
     const [collectorName, setCollectorName] = useState("");
+    const [deleteRequestIds, setDeleteRequestIds] = useState([]);
     const authAdminId = localStorage.getItem("authAdminId") || "";
     const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
     const assignedShiftValue = localStorage.getItem("authShift") || "";
@@ -133,6 +135,7 @@ const TenantLease = () => {
     const [viewRow, setViewRow] = useState(null);
     const [editRow, setEditRow] = useState(null);
     const [deleteRow, setDeleteRow] = useState(null);
+    const [deleteRemarks, setDeleteRemarks] = useState("");
     const [messagingRow, setMessagingRow] = useState(null);
     const [archiveRow, setArchiveRow] = useState(null);
     const [operationRow, setOperationRow] = useState(null);
@@ -413,6 +416,25 @@ const TenantLease = () => {
         }
     };
 
+    const fetchDeleteRequests = async () => {
+        try {
+            const res = await fetch(`${API_URL}/deletion-requests`);
+            if (!res.ok) return;
+
+            const data = await res.json();
+            const requestedIds = (Array.isArray(data) ? data : [])
+                .filter((request) => (request?.status || "pending") === "pending")
+                .filter((request) => request?.itemType === "Tenant Lease")
+                .map((request) => request?.originalData?._id || request?.originalData?.id)
+                .filter(Boolean)
+                .map(String);
+
+            setDeleteRequestIds(requestedIds);
+        } catch (error) {
+            console.error("Error fetching deletion requests:", error);
+        }
+    };
+
     const fetchPreviousShiftReports = async () => {
         if (role !== "lease") return;
         setIsPreviousShiftLoading(true);
@@ -431,6 +453,7 @@ const TenantLease = () => {
 
                     if (authAdminId && reportAdminId) {
                         return String(reportAdminId) === String(authAdminId);
+                            fetchDeleteRequests();
                     }
                     if (authEmail && reportEmail) {
                         return reportEmail === authEmail;
@@ -900,23 +923,42 @@ const TenantLease = () => {
         try {
             if (role === "lease") {
                 await requestBulkDeletion(API_URL, selectedIds, records);
+                const newRequestIds = selectedIds.filter(
+                    (id) => !deleteRequestIds.includes(String(id)),
+                );
+
+                if (newRequestIds.length === 0) {
+                    setNotificationState({
+                        isOpen: true,
+                        type: 'error',
+                        message: "Selected tenants already have pending deletion requests.",
+                        autoClose: true,
+                        duration: 3000,
+                    });
+                    setSelectedIds([]);
+                    setIsSelectionMode(false);
+                    return;
+                }
+
+                await requestBulkDeletion(API_URL, newRequestIds, records);
 
                 await sendNotification(
                     "Deletion Request: Tenants",
-                    `Tenant Admin has requested to delete ${selectedIds.length} tenant records.`,
+                    `Tenant Admin has requested to delete ${newRequestIds.length} tenant records.`,
                     "Tenants",
                     "superadmin"
                 );
 
-                await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${selectedIds.length} tenants`, "Tenants");
+                await logActivity(role, "REQUEST_BULK_DELETE", `Requested deletion for ${newRequestIds.length} tenants`, "Tenants");
 
                 setNotificationState({
                     isOpen: true,
                     type: 'success',
-                    message: `Sent deletion requests for ${selectedIds.length} records. Superadmin notified.`,
+                    message: `Sent deletion requests for ${newRequestIds.length} records. Superadmin notified.`,
                     autoClose: true,
                     duration: 3000
                 });
+                await fetchDeleteRequests();
                 setSelectedIds([]);
                 setIsSelectionMode(false);
             }
@@ -1338,6 +1380,76 @@ const TenantLease = () => {
             setNotificationState({ isOpen: true, type: 'error', message: `Error deleting record: ${e.message}`, autoClose: true, duration: 3000 });
         }
     };
+
+    const handleDeleteRequestConfirm = async () => {
+        if (!deleteRow) return;
+
+        const rowId = String(deleteRow._id || deleteRow.id || "");
+        if (rowId && deleteRequestIds.includes(rowId)) {
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Deletion request already pending for this tenant.",
+                autoClose: true,
+                duration: 3000,
+            });
+            setDeleteRow(null);
+            setDeleteRemarks("");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/deletion-requests`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    itemType: "Tenant Lease",
+                    itemDescription: `Slot ${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}`,
+                    requestedBy: "Tenant Admin",
+                    originalData: deleteRow,
+                    reason: deleteRemarks || "No remarks provided.",
+                }),
+            });
+
+            if (!response.ok) throw new Error("Failed to submit deletion request");
+
+            await sendNotification(
+                "Deletion Request: Tenants",
+                `Tenant Admin requested deletion for slot ${deleteRow.slotNo}.`,
+                "Tenants",
+                "superadmin",
+            );
+
+            await logActivity(
+                role,
+                "REQUEST_DELETE",
+                `Requested deletion for tenant slot ${deleteRow.slotNo}`,
+                "Tenants",
+            );
+
+            setNotificationState({
+                isOpen: true,
+                type: 'success',
+                message: "Deletion request sent to Superadmin.",
+                autoClose: true,
+                duration: 3000,
+            });
+
+            setDeleteRow(null);
+            setDeleteRemarks("");
+            await fetchDeleteRequests();
+        } catch (error) {
+            console.error("Delete request error:", error);
+            setNotificationState({
+                isOpen: true,
+                type: 'error',
+                message: "Failed to submit deletion request.",
+                autoClose: true,
+                duration: 3000,
+            });
+        }
+    };
+                    const isDeleteHighlighted = isDeleteRequested || isSubmitted;
 
     const handleBroadcast = async () => {
         let targetTenants = records;
@@ -1922,6 +2034,8 @@ const TenantLease = () => {
                     columns={tableColumns}
                     data={paginatedData.map((t) => {
                     const isSubmitted = Boolean(t.submitted || t.reportId);
+                    const isDeleteRequested = deleteRequestIds.includes(String(t.id));
+                    const isDeleteHighlighted = isDeleteRequested || isSubmitted;
                     
                     const baseData = {
                         id: t.id,
@@ -1932,7 +2046,9 @@ const TenantLease = () => {
                         contactno: t.contactNo,
                         startdate: formatDate(t.StartDateTime),
                         duedate: formatDate(t.DueDateTime || t.EndDateTime),
-                        reportstate: isSubmitted ? (
+                        reportstate: isDeleteRequested ? (
+                            <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">Delete Requested</span>
+                        ) : isSubmitted ? (
                             <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Submitted</span>
                         ) : (
                             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">Pending</span>
@@ -1947,7 +2063,8 @@ const TenantLease = () => {
                     baseData.util = t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0";
                     baseData.totaldue = `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
                     baseData.status = t.status;
-                    baseData.__highlight = isSubmitted;
+                    baseData.__highlight = isDeleteHighlighted;
+                    baseData.__highlightVariant = isDeleteRequested ? "amber" : "emerald";
                     
                     if (isSelectionMode) {
                         return {
@@ -2020,6 +2137,19 @@ const TenantLease = () => {
                             )}
 
                             <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
+                                                        <TableActions
+                                                            onView={() => setViewRow(records.find(r => r.id === row.id))}
+                                                            onEdit={() => setEditRow(records.find(r => r.id === row.id))}
+                                                            onDelete={
+                                                                role === "lease"
+                                                                    ? () => {
+                                                                        setDeleteRow(records.find(r => r.id === row.id));
+                                                                        setDeleteRemarks("");
+                                                                    }
+                                                                    : undefined
+                                                            }
+                                                            deleteVariant={role === "lease" ? "request" : "delete"}
+                                                        />
                             <button onClick={() => handleSingleExportPDF(fullRecord)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Rent Statement"><Download size={16} /></button>
                             <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
                             <button onClick={() => setArchiveRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer" title="Archive Record"><Archive size={16} /></button>
@@ -2210,12 +2340,24 @@ const TenantLease = () => {
             )}
 
             <DeleteModal
-                isOpen={!!deleteRow}
+                isOpen={role === "superadmin" && !!deleteRow}
                 onClose={() => setDeleteRow(null)}
                 onConfirm={handleDeleteConfirm}
                 title="Delete Record"
                 message="Are you sure you want to PERMANENTLY delete this record? Use Archive for soft deletion."
                 itemName={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""}
+            />
+
+            <RequestDeletionModal
+                isOpen={role === "lease" && !!deleteRow}
+                onClose={() => {
+                    setDeleteRow(null);
+                    setDeleteRemarks("");
+                }}
+                onConfirm={handleDeleteRequestConfirm}
+                itemIdentifier={deleteRow ? `Slot #${deleteRow.slotNo} - ${deleteRow.tenantName || deleteRow.name}` : ""}
+                remarks={deleteRemarks}
+                setRemarks={setDeleteRemarks}
             />
 
             <BroadcastModal

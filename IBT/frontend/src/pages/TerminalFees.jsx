@@ -121,6 +121,7 @@ const TerminalFees = () => {
   const [collectorName, setCollectorName] = useState("");
   const [collectorId, setCollectorId] = useState("");
   const [collectors, setCollectors] = useState([]);
+  const [deleteRequestIds, setDeleteRequestIds] = useState([]);
   const [sessionStartedAt] = useState(() => new Date().toISOString());
   const authAdminId = localStorage.getItem("authAdminId") || "";
   const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
@@ -233,6 +234,29 @@ const TerminalFees = () => {
     };
 
     fetchCollectors();
+  }, []);
+
+  const fetchDeleteRequests = async () => {
+    try {
+      const response = await fetch(`${API_URL}/deletion-requests`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const requestedIds = (Array.isArray(data) ? data : [])
+        .filter((request) => (request?.status || "pending") === "pending")
+        .filter((request) => request?.itemType === "Terminal Fee")
+        .map((request) => request?.originalData?._id || request?.originalData?.id)
+        .filter(Boolean)
+        .map(String);
+
+      setDeleteRequestIds(requestedIds);
+    } catch (error) {
+      console.error("Error fetching deletion requests:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeleteRequests();
   }, []);
 
   const fetchPreviousShiftReports = async () => {
@@ -588,7 +612,18 @@ const TerminalFees = () => {
     setIsLoading(true);
     try {
       if (role === "ticket") {
-        const requestPromises = selectedIds.map(async (id) => {
+        const newRequestIds = selectedIds.filter(
+          (id) => !deleteRequestIds.includes(String(id)),
+        );
+
+        if (newRequestIds.length === 0) {
+          showToastMessage("Selected tickets already have pending deletion requests.", "error");
+          setSelectedIds([]);
+          setIsSelectionMode(false);
+          return;
+        }
+
+        const requestPromises = newRequestIds.map(async (id) => {
           const item = records.find((r) => (r._id || r.id) === id);
           if (!item) return;
 
@@ -609,12 +644,13 @@ const TerminalFees = () => {
         await logActivity(
           role,
           "REQUEST_BULK_DELETE",
-          `Requested deletion for ${selectedIds.length} tickets`,
+          `Requested deletion for ${newRequestIds.length} tickets`,
           "TerminalFees",
         );
         showToastMessage(
-          `Sent deletion requests for ${selectedIds.length} records.`,
+          `Sent deletion requests for ${newRequestIds.length} records.`,
         );
+        await fetchDeleteRequests();
       } else {
         const deletePromises = selectedIds.map((id) =>
           fetch(`${API_URL}/terminal-fees/${id}`, { method: "DELETE" }),
@@ -705,6 +741,14 @@ const TerminalFees = () => {
     if (!deleteRow) return;
 
     if (role === "ticket") {
+      const rowId = String(deleteRow._id || deleteRow.id || "");
+      if (rowId && deleteRequestIds.includes(rowId)) {
+        showToastMessage("Deletion request already pending for this ticket.", "error");
+        setDeleteRow(null);
+        setDeleteRemarks("");
+        return;
+      }
+
       try {
         const res = await fetch(`${API_URL}/deletion-requests`, {
           method: "POST",
@@ -728,6 +772,7 @@ const TerminalFees = () => {
         showToastMessage("Deletion request sent to Superadmin.");
         setDeleteRow(null);
         setDeleteRemarks("");
+        await fetchDeleteRequests();
       } catch (e) {
         console.error("Error requesting deletion", e);
         showToastMessage("Failed to submit deletion request.");
@@ -1390,11 +1435,17 @@ const TerminalFees = () => {
               data={paginatedData.map((fee) => {
                 const rowId = fee._id || fee.id;
                 const isOnRead = fee.reportStatus === "On Read";
+                const isDeleteRequested = deleteRequestIds.includes(String(rowId));
+                const isDeleteHighlighted = isDeleteRequested || isOnRead;
                 const baseData = {
                   id: rowId,
                   ticketno: fee.ticketNo,
                   passengertype: fee.passengerType,
-                  reportstate: isOnRead ? (
+                  reportstate: isDeleteRequested ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                      Delete Requested
+                    </span>
+                  ) : isOnRead ? (
                     <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
                       On Read
                     </span>
@@ -1406,7 +1457,8 @@ const TerminalFees = () => {
                   time: fee.time,
                   date: fee.date,
                   price: `₱${fee.price.toFixed(2)}`,
-                  __highlight: isOnRead,
+                  __highlight: isDeleteHighlighted,
+                  __highlightVariant: isDeleteRequested ? "amber" : "emerald",
                 };
 
                 if (isSelectionMode) {
@@ -1440,6 +1492,15 @@ const TerminalFees = () => {
                     <TableActions
                       onView={() => setViewRow(selectedRecord)}
                       onEdit={() => setEditRow(selectedRecord)}
+                      onDelete={
+                        role === "ticket"
+                          ? () => {
+                              setDeleteRow(selectedRecord);
+                              setDeleteRemarks("");
+                            }
+                          : undefined
+                      }
+                      deleteVariant={role === "ticket" ? "request" : "delete"}
                     />
                     <button
                       onClick={() => setArchiveRow(selectedRecord)}
