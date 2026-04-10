@@ -209,7 +209,7 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                             <input
                                 type="text"
                                 value={form.ticketReferenceNo}
-                                onChange={(e) => setForm({...form, ticketReferenceNo: e.target.value})}
+                                readOnly
                                 placeholder="Enter reference..."
                                 className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
                             />
