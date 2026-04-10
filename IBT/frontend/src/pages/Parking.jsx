@@ -49,6 +49,9 @@ const Parking = () => {
   const [dateFilterType, setDateFilterType] = useState("Daily");
   const [currentDateRange, setCurrentDateRange] = useState(new Date());
   const [showAddModal, setShowAddModal] = useState(false);
+  const [useManualTimes, setUseManualTimes] = useState(false);
+  const [manualArrivalTime, setManualArrivalTime] = useState("");
+  const [manualDepartureTime, setManualDepartureTime] = useState("");
   const [showLogModal, setShowLogModal] = useState(false);
 
   const [collectorName, setCollectorName] = useState("");
@@ -159,6 +162,31 @@ const Parking = () => {
     } else if (dateFilterType === "Year") {
       return start.getFullYear().toString();
     }
+  };
+
+  const getLocalDateTimeValue = (date = new Date()) => {
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const calculateParkingFinalPrice = (type, baseRate, timeIn, timeOut) => {
+    const diffMs = timeOut - timeIn;
+    const durationHours = diffMs / (1000 * 60 * 60);
+
+    if (type === "4 Wheels" || type === "2 Wheels") {
+      if (durationHours <= 3) {
+        return baseRate;
+      }
+
+      const extraHours = Math.ceil(durationHours - 3);
+      return baseRate + extraHours * baseRate;
+    }
+
+    if (type === "Jeep") {
+      return baseRate;
+    }
+
+    return baseRate;
   };
  
   const handleModalPriceChange = (type, value) => {
@@ -734,6 +762,10 @@ const Parking = () => {
     const now = new Date();
     const formattedTimeIn = now.toISOString();
 
+    setUseManualTimes(false);
+    setManualArrivalTime("");
+    setManualDepartureTime("");
+
     setNewTicket({
       ticketNo: isAutoTicket ? "Loading..." : "",
       type: "4 Wheels",
@@ -781,6 +813,9 @@ const Parking = () => {
   
     const ticketNo = (newTicket.ticketNo || "").trim();
     const plateNo = (newTicket.plateNo || "").trim().toUpperCase();
+    const hasManualTimeEntry = useManualTimes;
+    const arrivalTimeValue = hasManualTimeEntry ? manualArrivalTime : getLocalDateTimeValue(new Date());
+    const departureTimeValue = hasManualTimeEntry ? manualDepartureTime : "";
 
     if (!plateNo || !ticketNo || ticketNo === "Loading...") {
       setNotificationState({
@@ -821,10 +856,46 @@ const Parking = () => {
     return;
   }
 
+  const parsedArrivalTime = new Date(arrivalTimeValue);
+  if (Number.isNaN(parsedArrivalTime.getTime())) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Please enter a valid arrival time.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
+
+  const parsedDepartureTime = departureTimeValue ? new Date(departureTimeValue) : null;
+  if (parsedDepartureTime && Number.isNaN(parsedDepartureTime.getTime())) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Please enter a valid departure time.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
+
+  if (parsedDepartureTime && parsedDepartureTime < parsedArrivalTime) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Departure time cannot be earlier than arrival time.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
+
   const payload = {
     ...newTicket,
     plateNo, 
     ticketNo,
+    timeIn: parsedArrivalTime.toISOString(),
   };
 
   try {
@@ -835,6 +906,39 @@ const Parking = () => {
     });
 
     if (response.ok) {
+      const createdTicket = await response.json();
+
+      if (parsedDepartureTime && createdTicket?._id) {
+        const finalPrice = calculateParkingFinalPrice(
+          newTicket.type,
+          Number(payload.baseRate) || 0,
+          parsedArrivalTime,
+          parsedDepartureTime,
+        );
+
+        const diffMs = parsedDepartureTime - parsedArrivalTime;
+        const durationHours = diffMs / (1000 * 60 * 60);
+        const hours = Math.floor(durationHours);
+        const minutes = Math.round((durationHours - hours) * 60);
+        const durationText = `${hours} hours ${minutes} minutes`;
+
+        const updateResponse = await fetch(`${API_URL}/${createdTicket._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            timeOut: parsedDepartureTime.toISOString(),
+            duration: durationText,
+            finalPrice,
+            status: "Departed",
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || "Manual departure save failed.");
+        }
+      }
+
       await logActivity(
         role,
         "CREATE_TICKET",
@@ -846,7 +950,9 @@ const Parking = () => {
       setNotificationState({
         isOpen: true,
         type: "success",
-        message: `Parking Ticket #${ticketNo} created successfully.`,
+        message: parsedDepartureTime
+          ? `Parking Ticket #${ticketNo} created with manual arrival and departure times.`
+          : `Parking Ticket #${ticketNo} created successfully.`,
         autoClose: true,
         duration: 2000,
       });
@@ -1881,7 +1987,12 @@ const Parking = () => {
             } rounded-2xl shadow-2xl text-center transition-all duration-300 relative`}
           >
             <button
-              onClick={() => setShowAddModal(false)}
+              onClick={() => {
+                setShowAddModal(false);
+                setUseManualTimes(false);
+                setManualArrivalTime("");
+                setManualDepartureTime("");
+              }}
               className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
             >
               ✕
@@ -1973,6 +2084,58 @@ const Parking = () => {
                       ))}
                     </datalist>
                   </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left">
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">Manual Time Entry</p>
+                          <p className="text-xs text-slate-500">
+                            Toggle this if you need to backdate arrival or departure times.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUseManualTimes((prev) => !prev)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                            useManualTimes ? "bg-emerald-500" : "bg-slate-300"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              useManualTimes ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {useManualTimes ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="text-left text-sm font-medium text-slate-600">
+                            Arrival Time
+                            <input
+                              type="datetime-local"
+                              value={manualArrivalTime}
+                              onChange={(e) => setManualArrivalTime(e.target.value)}
+                              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </label>
+
+                          <label className="text-left text-sm font-medium text-slate-600">
+                            Departure Time
+                            <input
+                              type="datetime-local"
+                              value={manualDepartureTime}
+                              onChange={(e) => setManualDepartureTime(e.target.value)}
+                              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500">
+                          Current time will be used unless you turn on manual time entry.
+                        </p>
+                      )}
+                    </div>
 
                   <div className="text-left mt-2">
                     <div className="flex items-center justify-between mb-2">
