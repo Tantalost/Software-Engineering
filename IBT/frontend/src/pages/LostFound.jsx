@@ -8,6 +8,7 @@ import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
 import DeleteModal from "../components/common/DeleteModal";
+import RequestDeletionModal from "../components/common/RequestDeletionModal";
 import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 import LostFoundStatusFilter from "../components/lostfound/LostFoundStatusFilter";
 import LogModal from "../components/common/LogModal";
@@ -76,6 +77,8 @@ const LostFound = () => {
   const [editRow, setEditRow] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [deleteRow, setDeleteRow] = useState(null);
+  const [deleteRequestRow, setDeleteRequestRow] = useState(null);
+  const [deleteRequestRemarks, setDeleteRequestRemarks] = useState("");
   const [archiveRow, setArchiveRow] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -90,7 +93,9 @@ const LostFound = () => {
   const assignedShiftValue = localStorage.getItem("authShift") || "";
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
   const API_URL = `${BASE_URL}/api/lostfound`;
+  const DELETION_REQUESTS_URL = `${BASE_URL}/api/deletion-requests`;
   const REPORTS_API_URL = `${BASE_URL}/api/reports`;
+  const [deleteRequestIds, setDeleteRequestIds] = useState([]);
 
   const getRangeBounds = (type, date) => {
     if (type === "All") return { start: null, end: null };
@@ -192,6 +197,29 @@ const LostFound = () => {
 
   useEffect(() => {
     fetchLostFound();
+  }, []);
+
+  const fetchDeleteRequests = async () => {
+    try {
+      const response = await fetch(DELETION_REQUESTS_URL);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const requestedIds = (Array.isArray(data) ? data : [])
+        .filter((request) => (request?.status || "pending") === "pending")
+        .filter((request) => request?.itemType === "Lost & Found Item")
+        .map((request) => request?.originalData?._id || request?.originalData?.id)
+        .filter(Boolean)
+        .map(String);
+
+      setDeleteRequestIds(requestedIds);
+    } catch (error) {
+      console.error("Error fetching deletion requests:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeleteRequests();
   }, []);
 
   const fetchPreviousShiftReports = async () => {
@@ -505,6 +533,61 @@ const LostFound = () => {
     }
   };
 
+  const handleDeleteRequestConfirm = async () => {
+    if (!deleteRequestRow) return;
+
+    try {
+      const response = await fetch(DELETION_REQUESTS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemType: "Lost & Found Item",
+          itemDescription: `${deleteRequestRow.trackingNo} - ${deleteRequestRow.itemType || "Item"}`,
+          requestedBy: "LostFound Admin",
+          originalData: deleteRequestRow,
+          reason: deleteRequestRemarks || "No remarks provided.",
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to send request");
+
+      await logActivity(
+        role,
+        "REQUEST_DELETE",
+        `Requested deletion: Item #${deleteRequestRow.trackingNo}`,
+        "LostFound",
+      );
+
+      sendNotification(
+        "Deletion Request: Lost & Found",
+        `Lost & Found Admin requested deletion for item #${deleteRequestRow.trackingNo}.`,
+        "Lost & Found",
+        "superadmin",
+      );
+
+      setNotificationState({
+        isOpen: true,
+        type: "success",
+        message: "Deletion request sent to Superadmin.",
+        autoClose: true,
+        duration: 3000,
+      });
+
+      setDeleteRequestRow(null);
+      setDeleteRequestRemarks("");
+      fetchDeleteRequests();
+    } catch (error) {
+      console.error("Error requesting deletion:", error);
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Failed to submit deletion request.",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+  };
+
   const filtered = records.filter((item) => {
     const matchesSearch =
       item.trackingNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -582,7 +665,7 @@ const LostFound = () => {
           const item = records.find((r) => r.id === id);
           if (!item) return;
 
-          return fetch(`${API_URL}/deletion-requests`, {
+          return fetch(DELETION_REQUESTS_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -617,6 +700,8 @@ const LostFound = () => {
           autoClose: true,
           duration: 3000,
         });
+
+        fetchDeleteRequests();
 
         setSelectedIds([]);
         setIsSelectionMode(false);
@@ -1116,13 +1201,19 @@ const LostFound = () => {
             columns={tableColumns}
             data={paginatedData.map((item) => {
               const isSubmitted = Boolean(item.submitted);
+              const isDeleteRequested = deleteRequestIds.includes(String(item.id));
+              const isDeleteHighlighted = isDeleteRequested || isSubmitted;
               const baseData = {
                 id: item.id,
                 trackingno: item.trackingNo,
                 itemtype: item.itemType,
                 location: item.location,
                 datetime: formatDateTime(item.dateTime),
-                reportstate: isSubmitted ? (
+                reportstate: isDeleteRequested ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                    Delete Requested
+                  </span>
+                ) : isSubmitted ? (
                   <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
                     On Read
                   </span>
@@ -1132,7 +1223,8 @@ const LostFound = () => {
                   </span>
                 ),
                 status: item.status,
-                __highlight: isSubmitted,
+                __highlight: isDeleteHighlighted,
+                __highlightVariant: isDeleteRequested ? "amber" : "emerald",
               };
 
               if (isSelectionMode) {
@@ -1163,7 +1255,12 @@ const LostFound = () => {
                   <TableActions
                     onView={() => setViewRow(selectedRecord)}
                     onEdit={() => setEditRow(selectedRecord)}
-                    onDelete={() => setDeleteRow(selectedRecord)}
+                    onDelete={() =>
+                      role === "lostfound"
+                        ? setDeleteRequestRow(selectedRecord)
+                        : setDeleteRow(selectedRecord)
+                    }
+                    deleteVariant={role === "lostfound" ? "request" : "delete"}
                   />
                   <button
                     onClick={() => setArchiveRow(selectedRecord)}
@@ -1680,6 +1777,18 @@ const LostFound = () => {
         title="Delete Record"
         message="Are you sure you want to remove this record?"
         itemName={deleteRow ? `Track #${deleteRow.trackingNo}` : ""}
+      />
+
+      <RequestDeletionModal
+        isOpen={!!deleteRequestRow}
+        onClose={() => {
+          setDeleteRequestRow(null);
+          setDeleteRequestRemarks("");
+        }}
+        onConfirm={handleDeleteRequestConfirm}
+        itemIdentifier={deleteRequestRow ? `Track #${deleteRequestRow.trackingNo}` : ""}
+        remarks={deleteRequestRemarks}
+        setRemarks={setDeleteRequestRemarks}
       />
 
       {showPreviousShiftModal && (

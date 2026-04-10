@@ -1,7 +1,10 @@
 import React from "react";
-import { Eye, Edit } from "lucide-react";
+import { Eye, Edit, Trash2, Flag } from "lucide-react";
 
-const TableActions = ({ onView, onEdit }) => {
+const TableActions = ({ onView, onEdit, onDelete, deleteVariant = "delete" }) => {
+  const DeleteIcon = deleteVariant === "request" ? Flag : Trash2;
+  const deleteTitle = deleteVariant === "request" ? "Request Deletion" : "Delete";
+
   return (
     <div className="flex justify-end space-x-2">
       <button
@@ -18,6 +21,15 @@ const TableActions = ({ onView, onEdit }) => {
           className="p-1.5 cursor-pointer rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
         >
           <Edit size={16} />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          title={deleteTitle}
+          className="p-1.5 cursor-pointer rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+        >
+          <DeleteIcon size={16} />
         </button>
       )}
     </div>

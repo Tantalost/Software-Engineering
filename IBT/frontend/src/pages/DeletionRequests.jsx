@@ -98,6 +98,7 @@ const DeletionRequests = () => {
   }, [requests, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(requests.length / itemsPerPage);
+  const selectableRequests = paginatedData.filter((item) => (item.status || "pending") === "pending");
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
@@ -112,17 +113,59 @@ const DeletionRequests = () => {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const ids = paginatedData.map((item) => item._id || item.id);
+      const ids = selectableRequests.map((item) => item._id || item.id);
       setSelectedIds((prev) => [...new Set([...prev, ...ids])]);
     } else {
-      const pageIds = paginatedData.map((item) => item._id || item.id);
+      const pageIds = selectableRequests.map((item) => item._id || item.id);
       setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
     }
   };
 
   const isAllSelected =
-    paginatedData.length > 0 &&
-    paginatedData.every((item) => selectedIds.includes(item._id || item.id));
+    selectableRequests.length > 0 &&
+    selectableRequests.every((item) => selectedIds.includes(item._id || item.id));
+
+  const getStatusBadge = (status) => {
+    const normalizedStatus = String(status || "pending").toLowerCase();
+
+    if (normalizedStatus === "approved") {
+      return (
+        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+          Approved
+        </span>
+      );
+    }
+
+    if (normalizedStatus === "denied") {
+      return (
+        <span className="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+          Denied
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+        Pending
+      </span>
+    );
+  };
+
+  const getDeleteEndpoint = (itemType, originalId) => {
+    if (itemType === "Terminal Fee") {
+      return `${API_URL}/terminal-fees/${originalId}`;
+    }
+
+    if (itemType === "Bus Trip") {
+      return `${API_URL}/bustrips/${originalId}`;
+    }
+
+    if (itemType === "Lost & Found Item") {
+      return `${API_URL}/lostfound/${originalId}`;
+    }
+
+    return "";
+  };
 
   // BULK APPROVE (SOFT DELETE)
   const handleBulkApprove = async () => {
@@ -139,6 +182,8 @@ const DeletionRequests = () => {
         const reqItem = requests.find((r) => (r._id || r.id) === id);
         if (!reqItem) return;
 
+        if ((reqItem.status || "pending") !== "pending") return;
+
         if (reqItem.originalData) {
           // 1. AUTO-ARCHIVE
           await fetch(ARCHIVE_URL, {
@@ -154,13 +199,7 @@ const DeletionRequests = () => {
 
           // 2. DELETE ORIGINAL RECORD
           const originalId = reqItem.originalData._id || reqItem.originalData.id;
-          let deleteEndpoint = "";
-          
-          if (reqItem.itemType === "Terminal Fee") {
-            deleteEndpoint = `${API_URL}/terminal-fees/${originalId}`;
-          } else if (reqItem.itemType === "Bus Trip") {
-            deleteEndpoint = `${API_URL}/bustrips/${originalId}`;
-          }
+          const deleteEndpoint = getDeleteEndpoint(reqItem.itemType, originalId);
 
           if (deleteEndpoint) {
             await fetch(deleteEndpoint, { method: "DELETE" });
@@ -222,13 +261,7 @@ const DeletionRequests = () => {
 
         // 2. DELETE FROM ORIGINAL TABLE
         const originalId = approveData.originalData._id || approveData.originalData.id;
-        let deleteEndpoint = "";
-        
-        if (approveData.itemType === "Terminal Fee") {
-          deleteEndpoint = `${API_URL}/terminal-fees/${originalId}`;
-        } else if (approveData.itemType === "Bus Trip") {
-          deleteEndpoint = `${API_URL}/bustrips/${originalId}`;
-        }
+        const deleteEndpoint = getDeleteEndpoint(approveData.itemType, originalId);
 
         if (deleteEndpoint) {
           await fetch(deleteEndpoint, { method: "DELETE" });
@@ -317,9 +350,10 @@ const DeletionRequests = () => {
         "Description",
         "Requested By",
         "Reason",
+        "Status",
         "Date",
       ]
-    : ["Item Type", "Description", "Requested By", "Reason", "Date"];
+    : ["Item Type", "Description", "Requested By", "Reason", "Status", "Date"];
 
   return (
     <Layout title="Deletion Requests">
@@ -386,13 +420,14 @@ const DeletionRequests = () => {
               description: req.itemDescription,
               requestedby: req.requestedBy,
               reason: req.reason || "N/A",
+              status: getStatusBadge(req.status),
               date: new Date(req.requestDate).toLocaleString(),
               id: req._id || req.id,
             };
 
             if (isSelectionMode) {
               return {
-                select: (
+                select: (req.status || "pending") === "pending" ? (
                   <div
                     className="flex items-center"
                     onClick={(e) => e.stopPropagation()}
@@ -404,17 +439,20 @@ const DeletionRequests = () => {
                       className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                     />
                   </div>
+                ) : (
+                  <div className="flex items-center">{getStatusBadge(req.status)}</div>
                 ),
                 ...baseData,
               };
             }
             return baseData;
           })}
-          emptyMessage="No pending deletion requests."
+          emptyMessage="No deletion requests found."
           actions={(row) => {
             const fullReq = requests.find(
               (r) => r._id === row.id || r.id === row.id,
             );
+            const isPending = String(fullReq?.status || "pending").toLowerCase() === "pending";
             return (
               <div className="flex justify-end space-x-2">
                 <button
@@ -424,27 +462,33 @@ const DeletionRequests = () => {
                 >
                   <Eye size={18} />
                 </button>
-                <button
-                  onClick={() => {
-                    setApproveData(fullReq);
-                    setAdminRemarks("");
-                  }}
-                  className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 cursor-pointer"
-                  title="Approve"
-                >
-                  <Check size={18} />
-                </button>
+                {isPending ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setApproveData(fullReq);
+                        setAdminRemarks("");
+                      }}
+                      className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 cursor-pointer"
+                      title="Approve"
+                    >
+                      <Check size={18} />
+                    </button>
 
-                <button
-                  onClick={() => {
-                    setDenyData(fullReq);
-                    setAdminRemarks("");
-                  }}
-                  className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 cursor-pointer"
-                  title="Deny"
-                >
-                  <X size={18} />
-                </button>
+                    <button
+                      onClick={() => {
+                        setDenyData(fullReq);
+                        setAdminRemarks("");
+                      }}
+                      className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 cursor-pointer"
+                      title="Deny"
+                    >
+                      <X size={18} />
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex items-center">{getStatusBadge(fullReq?.status)}</div>
+                )}
               </div>
             );
           }}
