@@ -5,6 +5,14 @@ const logSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  actorName: {
+    type: String,
+    default: ""
+  },
+  actorEmail: {
+    type: String,
+    default: ""
+  },
   action: {
     type: String, 
     required: true

@@ -83,7 +83,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
             <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="px-4 py-3 font-semibold text-slate-600 w-40">Timestamp</th>
-                <th className="px-4 py-3 font-semibold text-slate-600 w-32">User Role</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 w-48">User</th>
                 <th className="px-4 py-3 font-semibold text-slate-600 w-40">Action</th>
                 <th className="px-4 py-3 font-semibold text-slate-600">Details</th>
               </tr>
@@ -108,13 +108,18 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
                       })}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-md text-xs font-semibold border ${
-                        log.user === 'superadmin' 
-                        ? 'bg-purple-50 text-purple-700 border-purple-100' 
-                        : 'bg-blue-50 text-blue-700 border-blue-100'
-                      }`}>
-                        {log.user}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex w-fit px-2 py-1 rounded-md text-xs font-semibold border ${
+                          log.user === 'superadmin' 
+                          ? 'bg-purple-50 text-purple-700 border-purple-100' 
+                          : 'bg-blue-50 text-blue-700 border-blue-100'
+                        }`}>
+                          {log.user}
+                        </span>
+                        <span className="text-xs text-slate-500 truncate" title={log.actorName || log.actorEmail || "Unknown User"}>
+                          {log.actorName || log.actorEmail || "Unknown User"}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-700 text-xs uppercase tracking-wide">{log.action}</td>
                     <td className="px-4 py-3 text-slate-600">{log.details}</td>
