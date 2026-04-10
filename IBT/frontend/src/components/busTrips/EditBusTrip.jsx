@@ -210,8 +210,8 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                                 type="text"
                                 value={form.ticketReferenceNo}
                                 readOnly
-                                placeholder="Enter reference..."
-                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
+                                placeholder="No reference..."
+                                className="w-full rounded-lg border border-slate-200 bg-emerald-50 text-emerald-700 p-2.5 text-sm cursor-not-allowed font-medium outline-none"
                             />
                         </div>
 
