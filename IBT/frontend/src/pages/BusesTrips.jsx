@@ -1592,7 +1592,10 @@ const BusTrips = () => {
       const todayKey = getDateKey(new Date());
       return filteredWithoutDate.filter((trip) => {
         const tripDayKey = getDateKey(trip.date);
-        return tripDayKey === todayKey;
+        
+        const isActivelyParked = trip.status === "Arrived" || trip.status === "On Fix";
+        
+        return tripDayKey === todayKey || isActivelyParked;
       });
     }
     return filtered; 
@@ -1689,10 +1692,20 @@ const BusTrips = () => {
     .filter((t) => t.status === "Departed")
     .reduce((sum, t) => sum + (Number(t.price) || 75), 0);
 
-  const visibleDispatchRecords = useMemo(
-    () => activeDispatchRecords,
-    [activeDispatchRecords],
-  );
+  const visibleDispatchRecords = useMemo(() => {
+    return [...activeDispatchRecords].sort((a, b) => {
+      const getRank = (status) => {
+        if (status === "Arrived") return 1;
+        if (status === "On Fix") return 2;
+        if (status === "Scheduled" || status === "Pending") return 3;
+        if (status === "Not Departed") return 4;
+        if (status === "Departed" || status === "Paid") return 5;
+        return 6;
+      };
+
+      return getRank(a.status) - getRank(b.status);
+    });
+  }, [activeDispatchRecords]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
