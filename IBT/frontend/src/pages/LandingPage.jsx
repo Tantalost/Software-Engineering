@@ -168,7 +168,7 @@ const LandingPage = () => {
             
             <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300 w-64 h-64 flex items-center justify-center mb-6 shadow-inner">
               <img 
-                src="QRNew.png" 
+                src="../assets/Scan.png" 
                 alt="App QR Code" 
                 className="w-full h-full object-contain"
               />
