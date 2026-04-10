@@ -64,15 +64,20 @@ const Table = ({ columns = [], data = [], actions, variant = "default" }) => {
               data.map((row, idx) => {
                 const isEven = idx % 2 === 0;
                 const isHighlighted = row?.__highlight === true;
+                const highlightVariant = row?.__highlightVariant === "amber" ? "amber" : "emerald";
                 const rowBg = isHighlighted
-                  ? "bg-emerald-50"
+                  ? highlightVariant === "amber"
+                    ? "bg-amber-50"
+                    : "bg-emerald-50"
                   : isEven
                     ? "bg-white"
                     : isTerminal
                       ? "bg-slate-50/50"
                       : "bg-gray-50";
                 const hoverBg = isHighlighted
-                  ? "hover:bg-emerald-100"
+                  ? highlightVariant === "amber"
+                    ? "hover:bg-amber-100"
+                    : "hover:bg-emerald-100"
                   : isTerminal
                     ? "hover:bg-slate-50"
                     : "hover:bg-blue-50";

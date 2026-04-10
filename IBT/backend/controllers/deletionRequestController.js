@@ -1,9 +1,11 @@
 import DeletionRequest from "../models/DeletionRequest.js";
 import TerminalFee from "../models/TerminalFee.js"; 
+import LostFound from "../models/LostFound.js";
+import BusTrip from "../models/BusTrips.js";
 
 export const getRequests = async (req, res) => {
   try {
-    const requests = await DeletionRequest.find({ status: "pending" }).sort({ createdAt: -1 });
+    const requests = await DeletionRequest.find().sort({ createdAt: -1 });
     res.json(requests);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -33,6 +35,10 @@ export const handleRequest = async (req, res) => {
 
         if (request.itemType === "Terminal Fee") {
             await TerminalFee.findByIdAndDelete(itemId);
+      } else if (request.itemType === "Lost & Found Item") {
+        await LostFound.findByIdAndDelete(itemId);
+      } else if (request.itemType === "Bus Trip") {
+        await BusTrip.findByIdAndDelete(itemId);
         } 
 
         request.status = "approved";
