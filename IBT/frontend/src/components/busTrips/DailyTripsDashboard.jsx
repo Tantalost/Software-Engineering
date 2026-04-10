@@ -135,6 +135,9 @@ const DailyTripsDashboard = ({
                   </td>
                   
                   <td className="px-4 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      
+                    </div>
                     {isDeparted ? (
                       <span className="inline-flex items-center justify-center bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full text-xs">
                         Departed
@@ -158,97 +161,103 @@ const DailyTripsDashboard = ({
                     )}
                   </td>
 
-                  <td className="px-4 py-4 text-center">
-                    {!isCompletedState ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <TableActions
-                          onView={() => onViewTrip?.(trip)}
-                          onEdit={
-                            isAdminOperator && !isCompletedState
-                              ? () => onEditTrip?.(trip)
-                              : undefined
-                          }
-                        />
+                 <td className="px-4 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <TableActions
+                        onView={() => onViewTrip?.(trip)}
+                        onEdit={
+                          !isCompletedState
+                            ? () => onEditTrip?.(trip)
+                            : undefined
+                        }
+                      />
 
-                        {isAdminOperator && (
-                          <>
-                            <button
-                              onClick={() => onArchiveTrip?.(trip)}
-                              title="Archive"
-                              className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer"
-                            >
-                              <Archive size={16} />
-                            </button>
-
-                            {canDelete && (
+                      {!isCompletedState ? (
+                        <>
+                          {isAdminOperator && (
+                            <>
                               <button
-                                onClick={() => onDeleteTrip?.(trip)}
-                                title="Delete"
-                                className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                                onClick={() => onArchiveTrip?.(trip)}
+                                title="Archive"
+                                className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer"
                               >
-                                <Trash2 size={16} />
+                                <Archive size={16} />
                               </button>
-                            )}
-                          </>
-                        )}
 
-                        {role === "bus" && (
-                          <button
-                            onClick={() => onRequestDeleteTrip?.(trip)}
-                            title="Request Deletion"
-                            className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all cursor-pointer"
-                          >
-                            <Flag size={16} />
-                          </button>
-                        )}
+                              {canDelete && (
+                                <button
+                                  onClick={() => onDeleteTrip?.(trip)}
+                                  title="Delete"
+                                  className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </>
+                          )}
 
-                        {isScheduled && (
-                          <button
-                            onClick={() => onMarkArrived?.(trip)}
-                            title="Mark as Arrived"
-                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-semibold shadow-sm transition-all"
-                          >
-                            <CheckCircle size={14} /> Arrived
-                          </button>
-                        )}
+                          {role === "bus" && (
+                            <button
+                              onClick={() => onRequestDeleteTrip?.(trip)}
+                              title="Request Deletion"
+                              className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-all cursor-pointer"
+                            >
+                              <Flag size={16} />
+                            </button>
+                          )}
 
-                        {isArrived && (
-                          <>
+                          {isScheduled && (
+                            <button
+                              onClick={() => onMarkArrived?.(trip)}
+                              title="Mark as Arrived"
+                              className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-semibold shadow-sm transition-all"
+                            >
+                              <CheckCircle size={14} /> Arrived
+                            </button>
+                          )}
+
+                          {isArrived && (
+                            <>
+                              <button
+                                onClick={() => onToggleOnFixStatus?.(trip)}
+                                title="Mark for Maintenance"
+                                className="p-1.5 rounded-md transition-colors text-amber-500 bg-amber-50 hover:bg-amber-100"
+                              >
+                                <Wrench size={16} />
+                              </button>
+
+                              <button
+                                onClick={() => onApproveDeparture(trip)}
+                                title="Depart Bus"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-xs font-semibold shadow-sm transition-all"
+                              >
+                                <LogOut size={14} /> Depart
+                              </button>
+                            </>
+                          )}
+
+                          {isOnFix && (
                             <button
                               onClick={() => onToggleOnFixStatus?.(trip)}
-                              title="Mark for Maintenance"
-                              className="p-1.5 rounded-md transition-colors text-amber-500 bg-amber-50 hover:bg-amber-100"
+                              title="Reschedule and return to board"
+                              className="p-1.5 rounded-md transition-colors text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
                             >
-                              <Wrench size={16} />
+                              <RotateCcw size={16} />
                             </button>
-
-                            <button
-                              onClick={() => onApproveDeparture(trip)}
-                              title="Depart Bus"
-                              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-xs font-semibold shadow-sm transition-all"
-                            >
-                              <LogOut size={14} /> Depart
-                            </button>
-                          </>
-                        )}
-
-                        {isOnFix && (
-                          <button
-                            onClick={() => onToggleOnFixStatus?.(trip)}
-                            title="Reschedule and return to board"
-                            className="p-1.5 rounded-md transition-colors text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
-                          >
-                            <RotateCcw size={16} />
-                          </button>
-                        )}
-                      </div>
-                    ) : isDeparted ? (
-                       <CheckCircle size={18} className="text-emerald-500 mx-auto" />
-                    ) : isNotDeparted ? (
-                       <XCircle size={18} className="text-orange-500 mx-auto" />
-                    ) : (
-                       <Wrench size={18} className="text-red-400 mx-auto" />
-                    )}
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {isDeparted ? (
+                            <CheckCircle size={18} className="text-emerald-500" title="Departed" />
+                          ) : isNotDeparted ? (
+                            <XCircle size={18} className="text-orange-500" title="Not Departed" />
+                          ) : (
+                            <Wrench size={18} className="text-red-400" title="Maintenance" />
+                          )}
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
