@@ -102,6 +102,7 @@ const TerminalFees = () => {
   const [archiveRow, setArchiveRow] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [autoPassengerCount, setAutoPassengerCount] = useState(1);
   const [showLogModal, setShowLogModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [basePrices, setBasePrices] = useState(getInitialBasePrices);
@@ -793,6 +794,7 @@ const TerminalFees = () => {
         hour12: true,
       }),
     });
+    setAutoPassengerCount(1);
     
     setShowAddModal(true);
 
@@ -821,41 +823,72 @@ const TerminalFees = () => {
     }
 
     const ticketNoStr = String(newTicket.ticketNo).trim();
-    const isDuplicateTicket = records.some(
-      (fee) => String(fee.ticketNo).trim() === ticketNoStr
+    const isAutoMode = isAutoTicket;
+    const passengerCount = isAutoMode ? Number(autoPassengerCount) : 1;
+
+    if (isAutoMode && (!Number.isInteger(passengerCount) || passengerCount < 1)) {
+      showToastMessage("Please enter a valid passenger count.", "error");
+      return;
+    }
+
+    const ticketsToCreate = isAutoMode
+      ? Array.from({ length: passengerCount }, (_, index) => {
+          const nextTicketNo = Number(ticketNoStr) + index;
+          return Number.isNaN(nextTicketNo) ? null : nextTicketNo;
+        })
+      : [ticketNoStr];
+
+    if (ticketsToCreate.some((ticketNo) => ticketNo === null || ticketNo === "")) {
+      showToastMessage("Ticket number must be a valid number in Auto mode.", "error");
+      return;
+    }
+
+    const isDuplicateTicket = ticketsToCreate.some((ticketNo) =>
+      records.some((fee) => String(fee.ticketNo).trim() === String(ticketNo).trim()),
     );
 
     if (isDuplicateTicket) {
-      showToastMessage(
-        `Ticket Number ${ticketNoStr} already exists! `, 
-        "error"
-      );
+      showToastMessage("One or more generated ticket numbers already exist.", "error");
       return;
     }
 
     try {
-      const res = await fetch(`${API_URL}/terminal-fees`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newTicket),
-      });
+      for (const ticketNo of ticketsToCreate) {
+        const payload = {
+          ...newTicket,
+          ticketNo,
+        };
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Backend Error Details:", errorData);
-        throw new Error(
-          errorData.message || errorData.error || "Failed to save to database",
-        );
+        const res = await fetch(`${API_URL}/terminal-fees`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error("Backend Error Details:", errorData);
+          throw new Error(
+            errorData.message || errorData.error || "Failed to save to database",
+          );
+        }
       }
 
       await fetchFees();
       await logActivity(
         role,
         "CREATE_TICKET",
-        `Created Ticket #${newTicket.ticketNo} - ${newTicket.passengerType}`,
+        isAutoMode
+          ? `Created ${ticketsToCreate.length} tickets starting at #${ticketNoStr} - ${newTicket.passengerType}`
+          : `Created Ticket #${newTicket.ticketNo} - ${newTicket.passengerType}`,
         "TerminalFees",
       );
-      showToastMessage("New ticket added successfully!", "success");
+      showToastMessage(
+        isAutoMode
+          ? `Added ${ticketsToCreate.length} tickets starting at #${ticketNoStr}.`
+          : "New ticket added successfully!",
+        "success",
+      );
       setShowAddModal(false);
     } catch (error) {
       console.error("Error saving ticket:", error);
@@ -1618,6 +1651,7 @@ const TerminalFees = () => {
                     onClick={async () => {
                       const nextMode = !isAutoTicket;
                       setIsAutoTicket(nextMode);
+                      setAutoPassengerCount(1);
                       
                       if (!nextMode) {
                  
@@ -1669,6 +1703,11 @@ const TerminalFees = () => {
                       : "bg-white text-slate-800 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                   }`}
                 />
+                {isAutoTicket && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    The next generated ticket number will be the starting point for the batch.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">
@@ -1696,6 +1735,24 @@ const TerminalFees = () => {
                   ))}
                 </div>
               </div>
+              {isAutoTicket && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
+                    Number of Passengers
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={autoPassengerCount}
+                    onChange={(e) =>
+                      setAutoPassengerCount(e.target.value === "" ? "" : Number(e.target.value))
+                    }
+                    className="w-full px-3 py-2 rounded-lg font-medium border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                    placeholder="Enter passenger count"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
