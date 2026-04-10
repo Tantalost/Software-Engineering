@@ -6,7 +6,6 @@ import { saveAs } from "file-saver";
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
 import Layout from "../components/layout/Layout";
-import Table from "../components/common/Table";
 import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
 import EditBusTrip from "../components/busTrips/EditBusTrip.jsx";
@@ -14,12 +13,10 @@ import DailyTripsDashboard from "../components/busTrips/DailyTripsDashboard.jsx"
 import Pagination from "../components/common/Pagination";
 import PredefinedArrivalsBoard from "../components/busTrips/CommonBusesView.jsx";
 import RequestDeletionModal from "../components/common/RequestDeletionModal";
-
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
 import StatCardGroupBus from "../components/busTrips/StatCardGroupBus";
 import { submitPageReport } from "../utils/reportService.js";
-import TableActions from "../components/common/TableActions";
 import ViewModal from "../components/common/ViewModal";
 import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 import { logActivity } from "../utils/logger";
@@ -3119,6 +3116,7 @@ const BusTrips = () => {
                 duration: 4500,
               })
             }
+            searchQuery={searchQuery}
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3 w-full">
@@ -3638,8 +3636,8 @@ const BusTrips = () => {
                 placeholder="Enter reference number..."
                 value={ticketRefInput}
                 onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^0-9]/g, "");
-                  setTicketRefInput(numericValue);
+                  const alphaNumericValue = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+                  setTicketRefInput(alphaNumericValue);
                 }}
                 className="w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
               />

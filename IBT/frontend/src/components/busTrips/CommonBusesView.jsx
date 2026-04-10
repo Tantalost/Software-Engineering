@@ -69,10 +69,6 @@ function formatBoardDateLabel(dateKey) {
   });
 }
 
-/**
- * All company buses with schedule + route, sorted so the next clock hour
- * (current + 1) is listed first — prep window one hour ahead.
- */
 const PredefinedArrivalsBoard = ({
   records,
   companyData,
@@ -81,6 +77,7 @@ const PredefinedArrivalsBoard = ({
   onNotify,
   onNotArriveSaved,
   onNotArriveRemoved,
+  searchQuery = "",
 }) => {
   const getDateKeyRef = useRef(getDateKey);
   useEffect(() => {
@@ -88,7 +85,6 @@ const PredefinedArrivalsBoard = ({
   });
 
   const [now, setNow] = useState(() => new Date());
-  /** Calendar day this board uses — advances at local midnight / on resume so rows and remarks reset for the new day. */
   const [boardDateKey, setBoardDateKey] = useState(() =>
     getDateKey(new Date()),
   );
@@ -200,22 +196,30 @@ const PredefinedArrivalsBoard = ({
       });
     });
 
+    let filteredRows = out;
+    if (searchQuery && searchQuery.trim() !== "") {
+      const lowerQuery = searchQuery.toLowerCase();
+      filteredRows = out.filter(row => 
+        (row.plateNumber || "").toLowerCase().includes(lowerQuery) ||
+        (row.route || "").toLowerCase().includes(lowerQuery)
+      );
+    }
+
     const dist = (h) => (h - focusBucket + 24) % 24;
-    out.sort((a, b) => {
+    filteredRows.sort((a, b) => {
       const da = dist(a.hourBucket);
       const db = dist(b.hourBucket);
       if (da !== db) return da - db;
       return a.minutesFromMidnight - b.minutesFromMidnight;
     });
-    return out;
-  }, [companyData, focusBucket]);
+    return filteredRows;
+  }, [companyData, focusBucket, searchQuery]);
 
   const nearWindowScheduleRows = useMemo(() => {
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     const maxMinutes = nowMinutes + 120;
     return scheduleRows.filter((row) => {
       const rowMinutes = row.minutesFromMidnight;
-      // Handle midnight rollover for windows that cross to next day.
       if (maxMinutes < 1440) {
         return rowMinutes >= nowMinutes && rowMinutes <= maxMinutes;
       }

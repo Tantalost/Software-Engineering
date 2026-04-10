@@ -84,7 +84,6 @@ const DailyTripsDashboard = ({
         </div>
       </div>
 
-      {/* Flat Spreadsheet-Style Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left whitespace-nowrap">
           <thead className="bg-slate-50 border-b border-slate-200">
@@ -92,6 +91,7 @@ const DailyTripsDashboard = ({
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Bus No</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Stops</th>
+              <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Reference No</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Route</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Park est.</th>
               <th className="px-4 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Exp. dep.</th>
@@ -124,6 +124,9 @@ const DailyTripsDashboard = ({
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     {formatStopType(trip.stopType, trip.customStopCount)}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-slate-600 font-medium">
+                    {trip.ticketReferenceNo || "—"}
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-600">
                     {trip.route}
