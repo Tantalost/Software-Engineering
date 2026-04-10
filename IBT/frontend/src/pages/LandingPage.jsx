@@ -7,6 +7,7 @@ import newAppImg from "../assets/New_application.png";
 import busTripsImg from "../assets/bus_trips.png";
 import lostFoundImg from "../assets/lost_found.png";
 import ibtBg from "../assets/ibt_bg.png";
+import scanImage from '../assets/Scan.png';
 
 const LandingPage = () => {
   const scrollRef = useRef(null);
@@ -168,7 +169,7 @@ const LandingPage = () => {
             
             <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300 w-64 h-64 flex items-center justify-center mb-6 shadow-inner">
               <img 
-                src="../assets/Scan.png" 
+                src={scanImage} 
                 alt="App QR Code" 
                 className="w-full h-full object-contain"
               />
