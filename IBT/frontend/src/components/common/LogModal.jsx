@@ -46,7 +46,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
       return log.user === "parking" && (log.module === "Parking" || log.source === "Parking");
     }
     if (currentRole === "lostandfound") {
-      return log.user === "lostandfound" && (log.module === "LostAndFound" || log.source === "LostAndFound");
+      return log.user === "lostandfound" && (log.module === "LostFound" || log.source === "LostFound");
     }
     
     return false;
