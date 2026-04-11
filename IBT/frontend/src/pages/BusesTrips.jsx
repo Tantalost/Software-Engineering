@@ -177,9 +177,7 @@ const ManageCompaniesModal = ({
   const [deleteBusTarget, setDeleteBusTarget] = useState(null);
 
   const [newBusType, setNewBusType] = useState("Regular");
-  // Maps directly to `Company.buses[].stopType` values:
-  // - "Regular Trip" => no stop count
-  // - "1-stop" ... "10-stop" => fixed stop count
+  
   const [newBusStopType, setNewBusStopType] = useState("Regular Trip");
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
@@ -445,7 +443,7 @@ const ManageCompaniesModal = ({
           const errData = await res.json();
           if (errData?.message) errorMessage = errData.message;
         } catch {
-          // Ignore body parse errors and keep fallback message.
+          
         }
 
         setNotificationState({
@@ -905,7 +903,7 @@ const ManageCompaniesModal = ({
                                       ? String(bus.seatingCapacity)
                                       : "",
                                   );
-                              // Support existing "Other" values by mapping them into 1..10 when possible.
+                             
                               if (bus.stopType && bus.stopType !== "Other") {
                                 setNewBusStopType(bus.stopType);
                               } else if (
@@ -1103,6 +1101,12 @@ const BusTrips = () => {
     if (ap === "AM" && h === 12) h = 0;
     return h * 60 + min;
   };
+
+   const getDateKey = (dateInput) => {
+    const d = parseDateInputToLocalDate(dateInput);
+    if (!d) return "";
+    return toLocalDateKey(d);
+  };
   
   const realtimeMissedBuses = useMemo(() => {
     const todayKey = getDateKey(new Date());
@@ -1159,12 +1163,6 @@ const BusTrips = () => {
   }, [companyData, records, missedBuses]);
 
   const allMissedBusesDisplay = [...missedBuses, ...realtimeMissedBuses];
-
-  const getDateKey = (dateInput) => {
-    const d = parseDateInputToLocalDate(dateInput);
-    if (!d) return "";
-    return toLocalDateKey(d);
-  };
 
   const [dateFilterType, setDateFilterType] = useState("Daily");
   const [currentDateRange, setCurrentDateRange] = useState(new Date());
