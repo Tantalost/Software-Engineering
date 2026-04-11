@@ -7,6 +7,7 @@ import {
   MapPin,
   PhilippinePeso,
   AlertTriangle,
+  Wrench,
 } from "lucide-react";
 
 const StatCardGroupBus = ({
@@ -14,6 +15,7 @@ const StatCardGroupBus = ({
   predefinedSchedules,
   arrivedTrips,
   paidTrips,
+  maintenanceTrips,
   totalRevenue,
   missedTrips,
 }) => {
@@ -34,6 +36,10 @@ const StatCardGroupBus = ({
 
       <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
         <StatCard title="Departed" value={paidTrips} icon={CheckCircle} color="emerald" />
+      </div>
+
+      <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
+        <StatCard title="Under Maintenance" value={maintenanceTrips || 0} icon={Wrench} color="red" />
       </div>
 
       <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">

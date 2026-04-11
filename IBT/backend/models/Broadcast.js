@@ -10,14 +10,13 @@ const broadcastSchema = new mongoose.Schema({
     default: 'All' 
   },
   
-  // Due date must be within the first 5 days of the month for tenant announcements
   dueDate: { 
     type: Date,
     validate: {
       validator: function(value) {
-        if (!value) return true; // Optional field
+        if (!value) return true; 
         const day = new Date(value).getDate();
-        return day >= 1 && day <= 5; // Must be within 1st to 5th day
+        return day >= 1 && day <= 5; 
       },
       message: 'Due date must be within the first 5 days of the month'
     }
@@ -29,6 +28,8 @@ const broadcastSchema = new mongoose.Schema({
     name: { type: String }
   }],
  
+ authorRole: { type: String, default: 'superadmin' },
+  
   scheduledFor: { type: Date, default: Date.now }
 }, { timestamps: true });
 

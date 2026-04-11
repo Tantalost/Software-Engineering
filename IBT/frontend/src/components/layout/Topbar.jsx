@@ -103,7 +103,7 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
       await fetch(`${baseUrl}/api/notifications/${notifId}/read`, {
         method: 'PUT'
       });
-      // Update local state
+      
       setNotifications(prev => prev.map(n => n.id === notifId || n._id === notifId ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -118,7 +118,22 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
       if (res.ok) {
         const data = await res.json();
         const myRole = localStorage.getItem("authRole") || "superadmin";
-        const filteredData = data.filter(n => !n.targetRole || n.targetRole === "all" || n.targetRole === myRole);
+        
+        const filteredData = data.filter(n => {
+        
+          const roleMatch = !n.targetRole || n.targetRole === "all" || n.targetRole === myRole;
+          
+          if (myRole === "bus") {
+            const source = (n.source || "").toLowerCase();
+            const title = (n.title || "").toLowerCase();
+            const isBusRelated = source.includes("bus") || title.includes("bus");
+            
+            return roleMatch && isBusRelated;
+          }
+          
+          return roleMatch;
+        });
+
         setNotifications(filteredData.slice(0, 5));
         setUnreadCount(filteredData.filter(n => !n.read).length);
       }
@@ -133,7 +148,12 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
       const res = await fetch(`${BASE_URL}/api/broadcasts/admin`);
       if (res.ok) {
         const data = await res.json();
-        setAdminBroadcasts(data);
+        
+        if (role === "bus") {
+           setAdminBroadcasts(data.filter(b => b.authorRole === "bus"));
+        } else {
+           setAdminBroadcasts(data);
+        }
       }
     } catch (error) {
       console.error("Error fetching broadcasts:", error);
@@ -232,7 +252,6 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
       return showToast("error", "Please provide a subject and a message.");
     }
 
-    // Validate due date if provided
     if (dueDate && !isDueDateValid(dueDate)) {
       return showToast("error", "Due date must be within the first 5 days of the month.");
     }
@@ -241,6 +260,8 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
     formData.append('title', broadcastData.title);
     formData.append('message', broadcastData.message);
     formData.append('targetGroup', broadcastData.targetGroup);
+
+    formData.append('authorRole', role);
 
     if (dueDate) {
       formData.append('dueDate', dueDate);
@@ -660,50 +681,55 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
             {broadcastTab === "create" && (
               <>
                 <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
-                  <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Target Audience</label>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {['All', 'Permanent', 'Night Market'].map(group => (
+              
+                  {(role === "lease" || role === "superadmin") && (
+                    <>
+                      <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Target Audience</label>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {['All', 'Permanent', 'Night Market'].map(group => (
+                              <button
+                                key={group}
+                                onClick={() => setBroadcastData({ ...broadcastData, targetGroup: group })}
+                                className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap ${broadcastData.targetGroup === group ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                              >
+                                {group}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Templates</label>
                           <button
-                            key={group}
-                            onClick={() => setBroadcastData({ ...broadcastData, targetGroup: group })}
-                            className={`px-4 py-2 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap ${broadcastData.targetGroup === group ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                            onClick={applyRentReminderTemplate}
+                            className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 font-medium transition-colors cursor-pointer"
                           >
-                            {group}
+                            Permanent Rent Due (1st-5th)
                           </button>
-                        ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Templates</label>
-                      <button
-                        onClick={applyRentReminderTemplate}
-                        className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-100 font-medium transition-colors cursor-pointer"
-                      >
-                        Permanent Rent Due (1st-5th)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      Due Date <span className="text-xs text-slate-500">(Optional - for rent reminders)</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${dueDate && !isDueDateValid(dueDate) ? 'border-red-300 focus:ring-red-500/20' : 'border-gray-200'}`}
-                    />
-                    {dueDate && !isDueDateValid(dueDate) && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={12} />
-                        Due date must be within the first 5 days of the month
-                      </p>
-                    )}
-                  </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                          Due Date <span className="text-xs text-slate-500">(Optional - for rent reminders)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                          className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${dueDate && !isDueDateValid(dueDate) ? 'border-red-300 focus:ring-red-500/20' : 'border-gray-200'}`}
+                        />
+                        {dueDate && !isDueDateValid(dueDate) && (
+                          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                            <AlertTriangle size={12} />
+                            Due date must be within the first 5 days of the month
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">

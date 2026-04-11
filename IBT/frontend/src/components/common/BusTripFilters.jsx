@@ -62,7 +62,6 @@ const BusTripFilters = ({
         <option value="Arrived">Arrived</option>
         <option value="Departed">Departed</option>
         <option value="On Fix">On Fix</option>
-        <option value="Not Departed">Not Departed</option>
       </select>
       
     </div>

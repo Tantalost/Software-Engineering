@@ -220,7 +220,7 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                                 label="Status" 
                                 value={form.status} 
                                 onChange={(e) => setForm({...form, status: e.target.value})} 
-                                          options={["Scheduled", "Arrived", "On Fix", "Not Departed", "Departed"]} 
+                                          options={["Scheduled", "Arrived", "On Fix","Departed"]} 
                              />
                         </div>
                     </div>

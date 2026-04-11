@@ -40,7 +40,7 @@ import {
   Settings,
   ChevronLeft,  
   ChevronRight,  
-  Calendar
+  Calendar,
 } from "lucide-react";
 
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -335,7 +335,7 @@ const ManageCompaniesModal = ({
           const errData = await res.json();
           if (errData?.message) errorMessage = errData.message;
         } catch {
-          // Ignore body parse errors and keep fallback message.
+          
         }
         setNotificationState({
           isOpen: true,
@@ -1092,6 +1092,74 @@ const BusTrips = () => {
     return toLocalDateKey(new Date());
   };
 
+  const parseScheduleToMinutesMidnight = (str) => {
+    if (!str || typeof str !== "string") return null;
+    const m = str.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!m) return null;
+    let h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    const ap = m[3].toUpperCase();
+    if (ap === "PM" && h !== 12) h += 12;
+    if (ap === "AM" && h === 12) h = 0;
+    return h * 60 + min;
+  };
+  
+  const realtimeMissedBuses = useMemo(() => {
+    const todayKey = getDateKey(new Date());
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const statusByScheduleKey = new Map();
+    for (const r of records) {
+      if (getDateKey(r.date) !== todayKey) continue;
+      const plate = r.templateNo || r.templateno;
+      if (!plate) continue;
+      const scheduledTime = String(r.scheduledTime || "").trim();
+      if (!scheduledTime) continue;
+      const key = `${r.company}|||${r.route?.trim()}|||${scheduledTime}|||${plate}`;
+      statusByScheduleKey.set(key, r.status);
+    }
+
+    const manuallyMissedKeys = new Set(
+       missedBuses.map(m => `${m.company}|||${m.route?.trim()}|||${m.scheduleTime}|||${m.plateNumber}`)
+    );
+
+    const overdue = [];
+
+    companyData.forEach((c) => {
+      (c.buses || []).forEach((b) => {
+        if (!b?.route?.trim()) return;
+        const times = getBusScheduleTimes(b);
+        times.forEach((schedRaw) => {
+          const sched = String(schedRaw).trim();
+          const msm = parseScheduleToMinutesMidnight(sched);
+          if (msm === null) return;
+          
+          if (msm < nowMinutes) {
+             const key = `${c.name}|||${b.route.trim()}|||${sched}|||${b.plateNumber}`;
+             
+             if (!statusByScheduleKey.has(key) && !manuallyMissedKeys.has(key)) {
+                overdue.push({
+                   plateNumber: b.plateNumber,
+                   company: c.name,
+                   route: b.route.trim(),
+                   scheduleTime: sched,
+                   remark: "System Auto-Detected (Overdue)",
+                   isAutoMissed: true, 
+                });
+             }
+          }
+        });
+      });
+    });
+
+    return overdue.sort((a, b) => 
+      parseScheduleToMinutesMidnight(a.scheduleTime) - parseScheduleToMinutesMidnight(b.scheduleTime)
+    );
+  }, [companyData, records, missedBuses]);
+
+  const allMissedBusesDisplay = [...missedBuses, ...realtimeMissedBuses];
+
   const getDateKey = (dateInput) => {
     const d = parseDateInputToLocalDate(dateInput);
     if (!d) return "";
@@ -1687,6 +1755,9 @@ const BusTrips = () => {
   ).length;
   const dashboardPaidTrips = todayDispatchRecords.filter(
     (t) => t.status === "Departed",
+  ).length;
+  const dashboardMaintenanceTrips = todayDispatchRecords.filter(
+    (t) => t.status === "On Fix",
   ).length;
   const dashboardTotalRevenue = todayDispatchRecords
     .filter((t) => t.status === "Departed")
@@ -3049,6 +3120,7 @@ const BusTrips = () => {
           predefinedSchedules={dashboardPredefinedSchedules}
           arrivedTrips={dashboardArrivedTrips}
           paidTrips={dashboardPaidTrips}
+          maintenanceTrips={dashboardMaintenanceTrips}
           missedTrips={missedBuses.length}
           totalRevenue={dashboardTotalRevenue}
         />
@@ -3712,9 +3784,9 @@ const BusTrips = () => {
               </button>
             </div>
 
-            {isMissedLoading ? (
+           {isMissedLoading ? (
               <div className="py-10 text-center text-slate-500">Loading missed buses...</div>
-            ) : missedBuses.length === 0 ? (
+            ) : allMissedBusesDisplay.length === 0 ? (
               <div className="py-10 text-center text-slate-500">No missed buses for this operating day.</div>
             ) : (
               <div className="max-h-[60vh] overflow-auto">
@@ -3730,23 +3802,28 @@ const BusTrips = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {missedBuses.map((missed) => (
+                    {allMissedBusesDisplay.map((missed) => (
                       <tr
-                        key={`${missed.dateKey}-${missed.company}-${missed.route}-${missed.scheduleTime}-${missed.plateNumber}`}
+                        key={`${missed.dateKey || 'auto'}-${missed.company}-${missed.route}-${missed.scheduleTime}-${missed.plateNumber}`}
+                        className={missed.isAutoMissed ? "bg-amber-50/30" : ""}
                       >
                         <td className="px-4 py-3 font-medium text-slate-800">{missed.plateNumber}</td>
                         <td className="px-4 py-3 text-slate-600">{missed.route}</td>
                         <td className="px-4 py-3 text-slate-600">{missed.company}</td>
-                        <td className="px-4 py-3 text-slate-600">{missed.scheduleTime}</td>
-                        <td className="px-4 py-3 text-slate-600">{missed.remark || "-"}</td>
+                        <td className="px-4 py-3 text-slate-600 font-semibold">{missed.scheduleTime}</td>
+                        <td className={`px-4 py-3 ${missed.isAutoMissed ? "text-amber-600 font-medium text-xs" : "text-slate-600"}`}>
+                          {missed.remark || "-"}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => handleUndoMissedBus(missed)}
-                              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold"
-                            >
-                              Undo
-                            </button>
+                            {!missed.isAutoMissed && (
+                              <button
+                                onClick={() => handleUndoMissedBus(missed)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+                              >
+                                Undo
+                              </button>
+                            )}
                             <button
                               onClick={() => handleMarkMissedAsArrived(missed)}
                               className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold"
@@ -3805,9 +3882,8 @@ const BusTrips = () => {
                       <th className="px-4 py-3">Submitted At</th>
                       <th className="px-4 py-3">Shift</th>
                       <th className="px-4 py-3">Collector</th>
-                      <th className="px-4 py-3">Completed</th>
-                      <th className="px-4 py-3">Missed</th>
-                      <th className="px-4 py-3">Late</th>
+                      <th className="px-4 py-3">Departed Buses</th>
+                      <th className="px-4 py-3">Missed Buses</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -3835,9 +3911,6 @@ const BusTrips = () => {
                           </td>
                           <td className="px-4 py-3 text-slate-700">{completed}</td>
                           <td className="px-4 py-3 text-slate-700">{missed}</td>
-                          <td className="px-4 py-3 text-slate-700">
-                            {report?.data?.submittedLate ? "Yes" : "No"}
-                          </td>
                         </tr>
                       );
                     })}

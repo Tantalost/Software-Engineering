@@ -19,7 +19,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
       const res = await fetch(`${API_URL}/logs`);
       if (res.ok) {
         const data = await res.json();
-        // Sort by newest first if API doesn't already
+
         const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setLogs(sorted);
       }
@@ -31,6 +31,13 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
   };
 
   const currentRole = localStorage.getItem("authRole") || "superadmin";
+  
+  const cleanLogDetails = (detailsText) => {
+    if (!detailsText) return "";
+  
+    return detailsText.replace(/\b[a-fA-F0-9]{24}\b/g, "").replace(/\s+/g, ' ').trim();
+  };
+
   const displayedLogs = logs.filter((log) => {
     if (currentRole === "superadmin") return true;
     if (currentRole === "bus") {
@@ -65,7 +72,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Update the counter to use displayedLogs */}
+          
             {displayedLogs.length > 0 && (
                 <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
                     {displayedLogs.length} Records
@@ -98,7 +105,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
                     </td>
                  </tr>
               ) : displayedLogs.length > 0 ? (
-                // 3. Map over displayedLogs instead of logs
+              
                 displayedLogs.map((log) => (
                   <tr key={log._id || log.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap text-xs">
@@ -122,7 +129,7 @@ const LogModal = ({ isOpen, onClose, title = "Activity Logs" }) => {
                       </div>
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-700 text-xs uppercase tracking-wide">{log.action}</td>
-                    <td className="px-4 py-3 text-slate-600">{log.details}</td>
+                    <td className="px-4 py-3 text-slate-600">{cleanLogDetails(log.details)}</td>
                   </tr>
                 ))
               ) : (

@@ -17,7 +17,7 @@ const broadcastNotification = async (title, body, data) => {
 
 export const createBroadcast = async (req, res) => {
   try {
-    const { title, message, scheduledFor, targetGroup, dueDate } = req.body;
+    const { title, message, scheduledFor, targetGroup, dueDate, authorRole } = req.body;
     let attachments = [];
 
     if (dueDate) {
@@ -45,12 +45,14 @@ export const createBroadcast = async (req, res) => {
       });
     }
 
-    const newBroadcast = new Broadcast({ 
+   const newBroadcast = new Broadcast({ 
       title, 
       message, 
       targetGroup: targetGroup || 'All',
       dueDate: dueDate ? new Date(dueDate) : null,
       attachments,
+   
+      authorRole: authorRole || 'superadmin',
       scheduledFor: scheduledFor ? new Date(scheduledFor) : Date.now()
     });
 
@@ -121,6 +123,7 @@ export const getAdminBroadcasts = async (req, res) => {
         status: isScheduled ? 'Scheduled' : 'Posted',
         date: formattedDate,
         attachments: b.attachments || [],
+        authorRole: b.authorRole,
       };
     });
 

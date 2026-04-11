@@ -45,9 +45,16 @@ export default function Notifications() {
     const userRole = localStorage.getItem("authRole") || "superadmin";
 
     const filteredNotes = data.filter((n) => {
-      return (
-        !n.targetRole || n.targetRole === "all" || n.targetRole === userRole
-      );
+      const roleMatch = !n.targetRole || n.targetRole === "all" || n.targetRole === userRole;
+      
+      if (userRole === "bus") {
+        const source = (n.source || "").toLowerCase();
+        const title = (n.title || "").toLowerCase();
+        const isBusRelated = source.includes("bus") || title.includes("bus");
+        
+        return roleMatch && isBusRelated;
+      }
+      return roleMatch;
     });
 
     setNotes(filteredNotes);
