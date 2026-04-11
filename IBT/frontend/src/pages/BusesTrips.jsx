@@ -1108,62 +1108,6 @@ const BusTrips = () => {
     return toLocalDateKey(d);
   };
   
-  const realtimeMissedBuses = useMemo(() => {
-    const todayKey = getDateKey(new Date());
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const statusByScheduleKey = new Map();
-    for (const r of records) {
-      if (getDateKey(r.date) !== todayKey) continue;
-      const plate = r.templateNo || r.templateno;
-      if (!plate) continue;
-      const scheduledTime = String(r.scheduledTime || "").trim();
-      if (!scheduledTime) continue;
-      const key = `${r.company}|||${r.route?.trim()}|||${scheduledTime}|||${plate}`;
-      statusByScheduleKey.set(key, r.status);
-    }
-
-    const manuallyMissedKeys = new Set(
-       missedBuses.map(m => `${m.company}|||${m.route?.trim()}|||${m.scheduleTime}|||${m.plateNumber}`)
-    );
-
-    const overdue = [];
-
-    companyData.forEach((c) => {
-      (c.buses || []).forEach((b) => {
-        if (!b?.route?.trim()) return;
-        const times = getBusScheduleTimes(b);
-        times.forEach((schedRaw) => {
-          const sched = String(schedRaw).trim();
-          const msm = parseScheduleToMinutesMidnight(sched);
-          if (msm === null) return;
-          
-          if (msm < nowMinutes) {
-             const key = `${c.name}|||${b.route.trim()}|||${sched}|||${b.plateNumber}`;
-             
-             if (!statusByScheduleKey.has(key) && !manuallyMissedKeys.has(key)) {
-                overdue.push({
-                   plateNumber: b.plateNumber,
-                   company: c.name,
-                   route: b.route.trim(),
-                   scheduleTime: sched,
-                   remark: "System Auto-Detected (Overdue)",
-                   isAutoMissed: true, 
-                });
-             }
-          }
-        });
-      });
-    });
-
-    return overdue.sort((a, b) => 
-      parseScheduleToMinutesMidnight(a.scheduleTime) - parseScheduleToMinutesMidnight(b.scheduleTime)
-    );
-  }, [companyData, records, missedBuses]);
-
-  const allMissedBusesDisplay = [...missedBuses, ...realtimeMissedBuses];
-
   const [dateFilterType, setDateFilterType] = useState("Daily");
   const [currentDateRange, setCurrentDateRange] = useState(new Date());
 
@@ -1244,6 +1188,62 @@ const BusTrips = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const realtimeMissedBuses = useMemo(() => {
+    const todayKey = getDateKey(new Date());
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const statusByScheduleKey = new Map();
+    for (const r of records) {
+      if (getDateKey(r.date) !== todayKey) continue;
+      const plate = r.templateNo || r.templateno;
+      if (!plate) continue;
+      const scheduledTime = String(r.scheduledTime || "").trim();
+      if (!scheduledTime) continue;
+      const key = `${r.company}|||${r.route?.trim()}|||${scheduledTime}|||${plate}`;
+      statusByScheduleKey.set(key, r.status);
+    }
+
+    const manuallyMissedKeys = new Set(
+       missedBuses.map(m => `${m.company}|||${m.route?.trim()}|||${m.scheduleTime}|||${m.plateNumber}`)
+    );
+
+    const overdue = [];
+
+    companyData.forEach((c) => {
+      (c.buses || []).forEach((b) => {
+        if (!b?.route?.trim()) return;
+        const times = getBusScheduleTimes(b);
+        times.forEach((schedRaw) => {
+          const sched = String(schedRaw).trim();
+          const msm = parseScheduleToMinutesMidnight(sched);
+          if (msm === null) return;
+          
+          if (msm < nowMinutes) {
+             const key = `${c.name}|||${b.route.trim()}|||${sched}|||${b.plateNumber}`;
+             
+             if (!statusByScheduleKey.has(key) && !manuallyMissedKeys.has(key)) {
+                overdue.push({
+                   plateNumber: b.plateNumber,
+                   company: c.name,
+                   route: b.route.trim(),
+                   scheduleTime: sched,
+                   remark: "System Auto-Detected (Overdue)",
+                   isAutoMissed: true, 
+                });
+             }
+          }
+        });
+      });
+    });
+
+    return overdue.sort((a, b) => 
+      parseScheduleToMinutesMidnight(a.scheduleTime) - parseScheduleToMinutesMidnight(b.scheduleTime)
+    );
+  }, [companyData, records, missedBuses]);
+
+  const allMissedBusesDisplay = [...missedBuses, ...realtimeMissedBuses];
 
   const role = localStorage.getItem("authRole") || "bus";
   const authAdminId = localStorage.getItem("authAdminId") || "";
