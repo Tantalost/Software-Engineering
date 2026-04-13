@@ -98,7 +98,33 @@ const DeletionRequests = () => {
   }, [requests, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(requests.length / itemsPerPage);
-  const selectableRequests = paginatedData.filter((item) => (item.status || "pending") === "pending");
+  const normalizeStatus = (status) => {
+    if (typeof status === "string") {
+      const normalized = status.trim().toLowerCase();
+      if (["approved", "approve"].includes(normalized)) return "approved";
+      if (["denied", "deny", "disapproved", "disapprove", "rejected", "reject"].includes(normalized)) {
+        return "denied";
+      }
+      return "pending";
+    }
+
+    if (status && typeof status === "object") {
+      return normalizeStatus(
+        status.name ||
+          status.value ||
+          status.status ||
+          status.action ||
+          status.label ||
+          status.state,
+      );
+    }
+
+    return "pending";
+  };
+
+  const selectableRequests = paginatedData.filter(
+    (item) => normalizeStatus(item.status) === "pending",
+  );
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
@@ -125,30 +151,12 @@ const DeletionRequests = () => {
     selectableRequests.length > 0 &&
     selectableRequests.every((item) => selectedIds.includes(item._id || item.id));
 
-  const getStatusBadge = (status) => {
-    const normalizedStatus = String(status || "pending").toLowerCase();
+  const getStatusLabel = (status) => {
+    const normalizedStatus = normalizeStatus(status);
 
-    if (normalizedStatus === "approved") {
-      return (
-        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-          Approved
-        </span>
-      );
-    }
-
-    if (normalizedStatus === "denied") {
-      return (
-        <span className="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
-          Denied
-        </span>
-      );
-    }
-
-    return (
-      <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
-        Pending
-      </span>
-    );
+    if (normalizedStatus === "approved") return "Approved";
+    if (normalizedStatus === "denied") return "Denied";
+    return "Pending";
   };
 
   const getDeleteEndpoint = (itemType, originalId) => {
@@ -182,7 +190,7 @@ const DeletionRequests = () => {
         const reqItem = requests.find((r) => (r._id || r.id) === id);
         if (!reqItem) return;
 
-        if ((reqItem.status || "pending") !== "pending") return;
+        if (normalizeStatus(reqItem.status) !== "pending") return;
 
         if (reqItem.originalData) {
           // 1. AUTO-ARCHIVE
@@ -420,14 +428,14 @@ const DeletionRequests = () => {
               description: req.itemDescription,
               requestedby: req.requestedBy,
               reason: req.reason || "N/A",
-              status: getStatusBadge(req.status),
+              status: getStatusLabel(req.status),
               date: new Date(req.requestDate).toLocaleString(),
               id: req._id || req.id,
             };
 
             if (isSelectionMode) {
               return {
-                select: (req.status || "pending") === "pending" ? (
+                select: normalizeStatus(req.status) === "pending" ? (
                   <div
                     className="flex items-center"
                     onClick={(e) => e.stopPropagation()}
@@ -439,9 +447,7 @@ const DeletionRequests = () => {
                       className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                     />
                   </div>
-                ) : (
-                  <div className="flex items-center">{getStatusBadge(req.status)}</div>
-                ),
+                ) : null,
                 ...baseData,
               };
             }
@@ -452,7 +458,7 @@ const DeletionRequests = () => {
             const fullReq = requests.find(
               (r) => r._id === row.id || r.id === row.id,
             );
-            const isPending = String(fullReq?.status || "pending").toLowerCase() === "pending";
+            const isPending = normalizeStatus(fullReq?.status) === "pending";
             return (
               <div className="flex justify-end space-x-2">
                 <button
@@ -486,9 +492,7 @@ const DeletionRequests = () => {
                       <X size={18} />
                     </button>
                   </>
-                ) : (
-                  <div className="flex items-center">{getStatusBadge(fullReq?.status)}</div>
-                )}
+                ) : null}
               </div>
             );
           }}
