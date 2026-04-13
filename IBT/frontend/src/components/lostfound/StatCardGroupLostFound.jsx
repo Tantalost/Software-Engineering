@@ -19,26 +19,18 @@ const StatCardGroupLostFound = ({ totalItems, claimedItems, unclaimedItems }) =>
       <StatCard
         title="Claimed Items"
         value={claimedItems}
-        icon={CheckCircle}
-        mainBg="bg-emerald-50"
-        iconBg="bg-emerald-100"
-        textColor="text-emerald-700"
+        color="emerald"
+
       />
       <StatCard
         title="Unclaimed Items"
         value={unclaimedItems}
-        icon={HelpCircle}
-        mainBg="bg-amber-50"
-        iconBg="bg-amber-100"
-        textColor="text-amber-600"
+        color="red"
       />
       <StatCard
-        title="Total Items"
-        value={totalItems}
-        icon={Package}
-        mainBg="bg-cyan-50"
-        iconBg="bg-cyan-100"
-        textColor="text-cyan-700"
+        title="Total Items" 
+        value={totalItems} 
+        color="cyan" 
       />
     </div>
   );
