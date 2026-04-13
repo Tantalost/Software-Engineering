@@ -22,6 +22,12 @@ const addMonths = (date, months) => {
     return copy;
 };
 
+const toValidDate = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const splitDuration = (durationMonths) => ({
     years: Math.floor(durationMonths / 12),
     months: durationMonths % 12,
@@ -53,6 +59,51 @@ const getActiveContract = (tenant) => {
         : null;
     const byStatus = contracts.find((contract) => contract.status === 'active');
     return byId || byStatus || contracts[contracts.length - 1];
+};
+
+const resolveNextBillingDueDate = (tenant, activeContract) => {
+    const isNightMarket = tenant.tenantType === 'Night Market';
+    const paymentHistory = Array.isArray(tenant.paymentHistory) ? tenant.paymentHistory : [];
+
+    let dueCandidate = null;
+
+    if (paymentHistory.length > 0) {
+        const latestCoverageEndDate = paymentHistory
+            .map((entry) => toValidDate(entry.coverageEndDate))
+            .filter(Boolean)
+            .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+
+        if (latestCoverageEndDate) {
+            dueCandidate = latestCoverageEndDate;
+        } else {
+            const latestPaymentDate = paymentHistory
+                .map((entry) => toValidDate(entry.datePaid))
+                .filter(Boolean)
+                .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+
+            if (latestPaymentDate) {
+                dueCandidate = isNightMarket
+                    ? addDays(latestPaymentDate, 7)
+                    : addMonths(latestPaymentDate, 1);
+            }
+        }
+    }
+
+    if (!dueCandidate) {
+        const cycleStart = toValidDate(activeContract?.startDate) || toValidDate(tenant.StartDateTime);
+        if (cycleStart) {
+            dueCandidate = isNightMarket
+                ? addDays(cycleStart, 7)
+                : addMonths(cycleStart, 1);
+        }
+    }
+
+    const contractEndDate = toValidDate(activeContract?.endDate) || toValidDate(tenant.DueDateTime);
+    if (dueCandidate && contractEndDate && dueCandidate > contractEndDate) {
+        return contractEndDate;
+    }
+
+    return dueCandidate || contractEndDate;
 };
 
 const detectMimeTypeFromBuffer = (buffer) => {
@@ -269,13 +320,8 @@ export const getMyApplication = async (req, res) => {
             const calcUtil = tenant.utilityAmount || 0;
             const calcTotal = (tenant.totalAmount && tenant.totalAmount > 0) ? tenant.totalAmount : (calcRent + calcUtil);
 
-            let calcDue = tenant.DueDateTime;
-            if (!calcDue && tenant.StartDateTime) {
-                 const d = new Date(tenant.StartDateTime);
-                 if (isNightMarket) d.setDate(d.getDate() + 7);
-                 else d.setMonth(d.getMonth() + 1);
-                 calcDue = d.toISOString();
-            }
+              const calcDueDate = resolveNextBillingDueDate(tenant, activeContract);
+              const calcDue = calcDueDate ? calcDueDate.toISOString() : null;
             
             const tenantData = {
                 status: 'TENANT', 

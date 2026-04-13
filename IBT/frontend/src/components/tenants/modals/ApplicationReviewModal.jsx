@@ -66,14 +66,23 @@ const ApplicationReviewModal = ({
   const safeData = reviewData || {};
   const isPermanent = (safeData.floor === "Permanent" || safeData.tenantType === "Permanent");
   
-  const isTenantRenewal = !!(
-    safeData.renewalContractId
-    || safeData.status === "PENDING_APPROVAL"
+  const hasTenantMarkers = Boolean(
+    safeData.tenantId || safeData.slotNo || safeData.paymentHistory || safeData.DueDateTime
+  );
+
+  const isContractRenewalStatus = (
+    safeData.status === "PENDING_APPROVAL"
     || safeData.status === "pending_approval"
     || safeData.status === "APPROVED_AWAITING_START"
     || safeData.status === "approved_awaiting_start"
-    || safeData.status === "Payment Review"
-    || safeData.status === "PAYMENT_REVIEW"
+  );
+
+  const isLegacyTenantPaymentRenewal = hasTenantMarkers && (
+    safeData.status === "Payment Review" || safeData.status === "PAYMENT_REVIEW"
+  );
+
+  const isTenantRenewal = Boolean(
+    safeData.renewalContractId || isContractRenewalStatus || isLegacyTenantPaymentRenewal
   );
 
   const documents = useMemo(() => {
