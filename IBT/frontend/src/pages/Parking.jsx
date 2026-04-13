@@ -64,6 +64,11 @@ const Parking = () => {
   const [isAutoTicket, setIsAutoTicket] = useState(true); 
 
   const validateCollector = () => {
+    const currentRole = localStorage.getItem("authRole") || "superadmin";
+    if (currentRole === "superadmin") {
+      return true;
+    }
+
     if (!collectorName || collectorName.trim() === "" || !collectorId) {
       setNotificationState({
         isOpen: true,

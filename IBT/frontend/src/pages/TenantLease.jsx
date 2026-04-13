@@ -1844,7 +1844,7 @@ const TenantLease = () => {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Collector: ${collectorName.trim()}`, 15, 61);
+        doc.text(`Collector: ${collectorName.trim() || "N/A"}`, 15, 61);
 
        
         const feeBreakdown = typeof t.feeBreakdown === 'string' 
@@ -1915,7 +1915,7 @@ const TenantLease = () => {
 
             worksheet.addRow([]); 
             worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
-            worksheet.addRow([`Collector: ${collectorName.trim()}`, '', '', '', '', '', '', '', '', '']); 
+            worksheet.addRow([`Collector: ${collectorName.trim() || "N/A"}`, '', '', '', '', '', '', '', '', '']); 
             worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '']);
             worksheet.addRow([]);
 
@@ -1997,7 +1997,7 @@ const TenantLease = () => {
         doc.setFont("helvetica", "normal");
 
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Collector: ${collectorName.trim()}`, 15, 61);
+        doc.text(`Collector: ${collectorName.trim() || "N/A"}`, 15, 61);
 
         doc.text(`No. of Payments: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
         doc.text(
@@ -2212,7 +2212,10 @@ const TenantLease = () => {
                     )}
 
                     <ExportMenu
-                        onPrint={() => window.print()}
+                        onPrint={() => {
+                            if (!validateCollector()) return;
+                            window.print();
+                        }}
                         onExportExcel={handleExportExcel}
                         onExportPDF={handleExportPDF}
                     />

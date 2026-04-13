@@ -2138,7 +2138,7 @@ const BusTrips = () => {
   };
 
   const handleExportExcel = async () => {
-    if (!collectorName.trim() || !collectorId) {
+    if (role !== "superadmin" && (!collectorName.trim() || !collectorId)) {
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -2286,7 +2286,7 @@ const BusTrips = () => {
   };
 
   const handleExportPDF = () => {
-    if (!collectorName.trim() || !collectorId) {
+    if (role !== "superadmin" && (!collectorName.trim() || !collectorId)) {
       setNotificationState({
         isOpen: true,
         type: "error",

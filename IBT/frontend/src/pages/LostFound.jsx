@@ -87,6 +87,9 @@ const LostFound = () => {
   const [sessionStartedAt] = useState(() => new Date().toISOString());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [collectors, setCollectors] = useState([]);
+  const [collectorId, setCollectorId] = useState("");
+  const [collectorName, setCollectorName] = useState("");
 
   const role = localStorage.getItem("authRole") || "superadmin";
   const authAdminId = localStorage.getItem("authAdminId") || "";
@@ -222,6 +225,21 @@ const LostFound = () => {
   useEffect(() => {
     fetchDeleteRequests();
   }, []);
+
+  useEffect(() => {
+    const fetchCollectors = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/collectors?active=true`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCollectors(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching collectors:", error);
+      }
+    };
+
+    fetchCollectors();
+  }, [BASE_URL]);
 
   const fetchPreviousShiftReports = async () => {
     if (role !== "lostfound") return;
@@ -895,6 +913,23 @@ const LostFound = () => {
     }
   };
 
+  const validateCollector = () => {
+    if (role === "superadmin") return true;
+
+    if (!collectorName || collectorName.trim() === "" || !collectorId) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please select a Collector before exporting.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   const getExportData = (data) => {
     return data.map((item) => ({
       "Tracking No": item.trackingNo,
@@ -906,8 +941,16 @@ const LostFound = () => {
   };
 
   const handleExportExcel = async () => {
+    if (!validateCollector()) return;
+
     if (filtered.length === 0) {
-      showToast("info", "No records to export.");
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No records to export.",
+        autoClose: true,
+        duration: 3000,
+      });
       return;
     }
 
@@ -928,6 +971,7 @@ const LostFound = () => {
 
       worksheet.addRow([]); // Spacer
       worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', `Total Items: ${filtered.length}`]);
+      worksheet.addRow([`Collector: ${collectorName.trim() || "N/A"}`]);
       worksheet.addRow([`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`]);
       worksheet.addRow([`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`]);
       worksheet.addRow([]); // Spacer
@@ -984,8 +1028,16 @@ const LostFound = () => {
 
   // --- EXPORT TO CSV (USING EXCELJS) ---
   const handleExportCSV = async () => {
+    if (!validateCollector()) return;
+
     if (filtered.length === 0) {
-      alert("No records to export.");
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No records to export.",
+        autoClose: true,
+        duration: 3000,
+      });
       return;
     }
 
@@ -1025,8 +1077,16 @@ const LostFound = () => {
   };
 
   const handleExportPDF = () => {
+    if (!validateCollector()) return;
+
     if (filtered.length === 0) {
-      showToast("info", "No records to export.");
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No records to export.",
+        autoClose: true,
+        duration: 3000,
+      });
       return;
     }
 
@@ -1042,6 +1102,7 @@ const LostFound = () => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
+    doc.text(`Collector: ${collectorName.trim() || "N/A"}`, 15, 61);
     doc.text(`Total Items: ${filtered.length}`, pageWidth - 15, 55, {
       align: "right",
     });
@@ -1196,6 +1257,65 @@ const LostFound = () => {
                       </button>
                     </div>
                   )}
+                </div>
+              )}
+
+              {role !== "superadmin" && (
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 h-[42px]">
+                  <label className="text-sm font-semibold text-slate-600 whitespace-nowrap">
+                    Collector:
+                  </label>
+                  <select
+                    value={collectorId}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      const selectedCollector = collectors.find(
+                        (collector) => (collector._id || collector.id) === nextId,
+                      );
+                      setCollectorId(nextId);
+
+                      if (!selectedCollector) {
+                        setCollectorName("");
+                        return;
+                      }
+
+                      const middleInitial = selectedCollector.middleName
+                        ? `${String(selectedCollector.middleName).trim().charAt(0).toUpperCase()}.`
+                        : "";
+                      const label = [
+                        selectedCollector.firstName,
+                        middleInitial,
+                        selectedCollector.lastName,
+                        selectedCollector.suffix,
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+
+                      setCollectorName(label);
+                    }}
+                    className="w-full sm:w-48 bg-transparent border-none text-sm font-medium text-slate-800 focus:ring-0 cursor-pointer outline-none"
+                  >
+                    <option value="">Select collector...</option>
+                    {collectors.map((collector) => {
+                      const middleInitial = collector.middleName
+                        ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
+                        : "";
+                      const label = [
+                        collector.firstName,
+                        middleInitial,
+                        collector.lastName,
+                        collector.suffix,
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+
+                      return (
+                        <option key={collector._id || collector.id} value={collector._id || collector.id}>
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
               )}
 
