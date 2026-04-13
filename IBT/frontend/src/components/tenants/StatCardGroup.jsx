@@ -1,30 +1,42 @@
 import React from "react";
 import StatCard from "./StatCard";
-import { Package, CheckCircle, HelpCircle } from "lucide-react";
+import { Store, Grid, PhilippinePeso } from "lucide-react";
 
-const StatCardGroupLostFound = ({ totalItems, claimedItems, unclaimedItems }) => {
+const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots, totalRevenue }) => {
+  const formattedRevenue = (totalRevenue || 0).toLocaleString("en-PH", {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+  });
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
       <StatCard
-        icon={CheckCircle}
-        title="Claimed Items"
-        value={claimedItems}
+        icon={Store}
+        title="Available Slots"
+        value={availableSlots}
         color="emerald"
       />
       <StatCard
-        icon={HelpCircle}
-        title="Unclaimed Items"
-        value={unclaimedItems}
+        icon={Store}
+        title="Occupied Slots"
+        value={nonAvailableSlots}
         color="red"
       />
-      <StatCard
-        icon={Package}
-        title="Total Items" 
-        value={totalItems} 
+      <StatCard 
+        icon={Grid} 
+        title="Total Slots" 
+        value={totalSlots} 
         color="cyan" 
+      />
+      <StatCard
+        icon={PhilippinePeso}
+        value={formattedRevenue}
+        title="Total Revenue"
+        color="orange"
       />
     </div>
   );
 };
 
-export default StatCardGroupLostFound;
+export default StatCardGroup;
