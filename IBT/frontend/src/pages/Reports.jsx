@@ -703,7 +703,7 @@ const Reports = () => {
       );
       setRecords(records.filter((r) => r.id !== deleteRow.id));
       setDeleteRow(null);
-      showToast("Report deleted successfully.", "delete");
+      showToast("success", "Report deleted successfully.");
     } catch (err) {
       console.error(err);
       showToast("error", "Failed to delete report.");
@@ -894,7 +894,6 @@ const Reports = () => {
               <div className="flex justify-end items-center space-x-2">
                 <TableActions
                   onView={() => setViewRow(fullRecord)}
-                  onDelete={() => setDeleteRow(fullRecord)}
                 />
                 <button
                   onClick={() => setArchiveRow(fullRecord)}
@@ -1064,28 +1063,12 @@ const Reports = () => {
         itemName={deleteRow ? `${deleteRow.type} Report` : ""}
       />
 
-      {toast.show && (
-        <div className="fixed top-6 right-6 z-[9999] animate-in slide-in-from-right-5 fade-in duration-300">
-          <div
-            className={`min-w-[280px] max-w-sm px-5 py-4 rounded-2xl shadow-2xl border flex items-start gap-3 ${toast.type === "delete"
-              ? "bg-red-50 border-red-200 text-red-700"
-              : toast.type === "archive"
-                ? "bg-yellow-50 border-yellow-200 text-yellow-700"
-                : toast.type === "error"
-                  ? "bg-red-50 border-red-200 text-red-700"
-                  : "bg-emerald-50 border-emerald-200 text-emerald-700"
-              }`}
-          >
-            <div className="mt-0.5">
-              {toast.type === "delete" && <Trash2 size={18} />}
-              {toast.type === "archive" && <Archive size={18} />}
-              {toast.type === "success" && <FileText size={18} />}
-            </div>
-
-            <div className="text-sm font-semibold">{toast.message}</div>
-          </div>
-        </div>
-      )}
+  <NotificationToast
+  isOpen={toast.isOpen}
+  type={toast.type === "error" ? "error" : "success"}
+  message={toast.message}
+  onClose={() => setToast((prev) => ({ ...prev, isOpen: false }))}
+/>
     </Layout>
   );
 };
