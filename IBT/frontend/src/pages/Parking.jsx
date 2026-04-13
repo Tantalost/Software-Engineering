@@ -875,8 +875,13 @@ const Parking = () => {
       return;
     }
  
-  const isCurrentlyParked = records.some(
-    (record) => record.plateNo?.toUpperCase() === plateNo && record.status === "Parked"
+  // Duplicate checks are based on what is currently shown in the main table.
+  const visibleTableRows = sortedFiltered;
+
+  const isCurrentlyParked = visibleTableRows.some(
+    (record) =>
+      String(record.plateNo || "").trim().toUpperCase() === plateNo &&
+      record.status === "Parked",
   );
 
   if (isCurrentlyParked) {
@@ -890,7 +895,9 @@ const Parking = () => {
     return; 
   }
 
-  const isDuplicateTicket = records.some((ticket) => ticket.ticketNo === ticketNo);
+  const isDuplicateTicket = visibleTableRows.some(
+    (ticket) => String(ticket.ticketNo || "").trim() === ticketNo,
+  );
 
   if (isDuplicateTicket) {
     setNotificationState({
@@ -1236,6 +1243,21 @@ const Parking = () => {
     return new Date(dateString).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
+    });
+  };
+
+  const formatSubmittedDateTime = (dateString) => {
+    if (!dateString) return "-";
+    const parsedDate = new Date(dateString);
+    if (Number.isNaN(parsedDate.getTime())) return "-";
+
+    return parsedDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -2552,9 +2574,9 @@ const Parking = () => {
                       return (
                         <tr key={report._id || report.id}>
                           <td className="px-4 py-3 text-slate-700">
-                            {new Date(
+                            {formatSubmittedDateTime(
                               report?.data?.submittedAtServer || report.createdAt,
-                            ).toLocaleString()}
+                            )}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}

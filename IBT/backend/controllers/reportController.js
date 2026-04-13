@@ -113,6 +113,31 @@ const normalizeReportType = (reportType, typeLabel) => {
   return "Bus";
 };
 
+const formatTo12HourTime = (timeValue = "") => {
+  const raw = String(timeValue || "").trim();
+  if (!raw) return raw;
+
+  const already12Hour = raw.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+  if (already12Hour) {
+    const h = parseInt(already12Hour[1], 10);
+    const minute = already12Hour[2];
+    if (Number.isNaN(h) || h < 1 || h > 12) return raw;
+    const ampm = already12Hour[3].toUpperCase();
+    return `${h}:${minute} ${ampm}`;
+  }
+
+  const twentyFourHour = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (!twentyFourHour) return raw;
+
+  const hour = parseInt(twentyFourHour[1], 10);
+  const minute = twentyFourHour[2];
+  if (Number.isNaN(hour) || hour < 0 || hour > 23) return raw;
+
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const convertedHour = hour % 12 || 12;
+  return `${convertedHour}:${minute} ${ampm}`;
+};
+
 // CREATE
 export const createReport = async (req, res) => {
   try {
@@ -198,15 +223,19 @@ export const createReport = async (req, res) => {
           ? [
               ...completedTransactions.map((row) => ({
                 ...row,
-                category: "completed",
+                arrivalTime: formatTo12HourTime(row?.arrivalTime || row?.time || ""),
+                departureTime: formatTo12HourTime(row?.departureTime || ""),
               })),
               ...missedTransactions.map((row) => ({
                 ...row,
-                category: "missed",
                 status: "Not Arrive",
               })),
             ]
-          : busActionRecords;
+          : busActionRecords.map((row) => ({
+              ...row,
+              time: formatTo12HourTime(row?.time || ""),
+              departureTime: formatTo12HourTime(row?.departureTime || ""),
+            }));
 
       normalizedData = {
         screen: effectivePayload?.screen || "",
@@ -233,13 +262,11 @@ export const createReport = async (req, res) => {
             completedTransactions.length > 0 || missedTransactions.length > 0
               ? completedTransactions.length
               : finalizedActions.filter((r) => r.status === "Departed").length,
-          missedCount:
+          missedBus:
             completedTransactions.length > 0 || missedTransactions.length > 0
               ? missedTransactions.length
               : 0,
-          arrivalsLogged: finalizedActions.filter((r) => r.arrivalAdminId).length,
-          departuresLogged: finalizedActions.filter((r) => r.departureAdminId).length,
-          departedNow: finalizedActions.filter((r) => r.status === "Departed").length,
+          departedBus: finalizedActions.filter((r) => r.status === "Departed").length,
         },
         busActions: finalizedActions,
         completedTransactions,

@@ -40,12 +40,84 @@ const DataRenderer = ({ reportPayload }) => {
 
   const { statistics, data } = reportPayload;
 
+  const normalizeKey = (value) =>
+    String(value || "")
+      .replace(/[\s_-]/g, "")
+      .toLowerCase();
+
+  const formatStatLabel = (rawKey) => {
+    const key = String(rawKey || "").toLowerCase();
+    if (key === "missedcount" || key === "missedbus") return "Missed Bus";
+    if (key === "departednow" || key === "departedbus") return "Departed Bus";
+    return String(rawKey).replace(/([A-Z])/g, " $1").trim();
+  };
+
+  const formatStatValue = (key, value) => {
+    if (typeof value !== "number") return value;
+
+    const normalizedKey = normalizeKey(key);
+    const isCurrencyField =
+      normalizedKey.includes("revenue") ||
+      normalizedKey.includes("price") ||
+      normalizedKey.includes("amount") ||
+      normalizedKey.includes("fee");
+
+    if (isCurrencyField) {
+      return `₱${value.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
+
+    return value.toLocaleString();
+  };
+
+  const formatTimeWithAmPm = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "-";
+
+    const already12Hour = raw.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+    if (already12Hour) {
+      const h = parseInt(already12Hour[1], 10);
+      if (Number.isNaN(h) || h < 1 || h > 12) return raw;
+      return `${h}:${already12Hour[2]} ${already12Hour[3].toUpperCase()}`;
+    }
+
+    const twentyFourHour = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (!twentyFourHour) return raw;
+
+    const hour = parseInt(twentyFourHour[1], 10);
+    if (Number.isNaN(hour) || hour < 0 || hour > 23) return raw;
+    const minute = twentyFourHour[2];
+    const period = hour >= 12 ? "PM" : "AM";
+    const converted = hour % 12 || 12;
+    return `${converted}:${minute} ${period}`;
+  };
+
+  const formatDateTimeWithAmPm = (value) => {
+    if (value === null || value === undefined || value === "") return "-";
+
+    const parsedDate = new Date(value);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+
+    return formatTimeWithAmPm(value);
+  };
+
   const renderStats = () => {
     if (!statistics || Object.keys(statistics).length === 0) return null;
 
     const visibleStats = Object.entries(statistics).filter(([key]) => {
       const normalizedKey = String(key).toLowerCase();
-      return normalizedKey !== "collectorid";
+      return !["collectorid", "arrivalslogged", "departureslogged"].includes(normalizedKey);
     });
 
     if (visibleStats.length === 0) return null;
@@ -59,10 +131,10 @@ const DataRenderer = ({ reportPayload }) => {
               className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm"
             >
               <div className="text-xs text-slate-400 uppercase font-bold mb-1">
-                {key.replace(/([A-Z])/g, " $1").trim()}
+                {formatStatLabel(key)}
               </div>
               <div className="text-xl font-bold text-slate-800">
-                {typeof value === "number" ? value.toLocaleString() : value}
+                {formatStatValue(key, value)}
               </div>
             </div>
           ))}
@@ -82,9 +154,49 @@ const DataRenderer = ({ reportPayload }) => {
       );
     }
 
-    const headers = Object.keys(data[0]).filter(
-      (k) => k !== "id" && k !== "_id",
+    const reportScreen = String(reportPayload?.screen || "").toLowerCase();
+    const hasParkingShape = Object.keys(data[0]).some((key) =>
+      ["ticketno", "plateno", "reportid", "pricingtype", "timein", "timeout"].includes(
+        normalizeKey(key),
+      ),
     );
+    const hasTerminalShape = Object.keys(data[0]).some((key) =>
+      ["ticketno", "passengertype", "reportstatus", "time", "date", "price"].includes(
+        normalizeKey(key),
+      ),
+    );
+    const isParkingReport = reportScreen.includes("parking") || hasParkingShape;
+    const isTerminalReport = reportScreen.includes("terminal") || hasTerminalShape;
+
+    const hiddenParkingHeaders = new Set(["reportid", "pricingtype", "submitted"]);
+    const hiddenTerminalHeaders = new Set([
+      "reportstatus",
+      "submitted",
+      "submittedat",
+      "submittedatserver",
+    ]);
+
+    const headers = Object.keys(data[0]).filter((k) => {
+      const normalizedKey = normalizeKey(k);
+      if (["id", "_id", "category"].includes(normalizedKey)) return false;
+      if (isParkingReport && hiddenParkingHeaders.has(normalizedKey)) return false;
+      if (isTerminalReport && hiddenTerminalHeaders.has(normalizedKey)) return false;
+      return true;
+    });
+
+    const timeInHeader = headers.find((header) => normalizeKey(header) === "timein");
+    const timeOutHeader = headers.find((header) => normalizeKey(header) === "timeout");
+
+    if (timeInHeader && timeOutHeader) {
+      const timeInIndex = headers.indexOf(timeInHeader);
+      const timeOutIndex = headers.indexOf(timeOutHeader);
+
+      if (timeOutIndex !== timeInIndex + 1) {
+        headers.splice(timeOutIndex, 1);
+        const targetIndex = headers.indexOf(timeInHeader) + 1;
+        headers.splice(targetIndex, 0, timeOutHeader);
+      }
+    }
 
     return (
       <div>
@@ -97,7 +209,10 @@ const DataRenderer = ({ reportPayload }) => {
                     key={header}
                     className="px-4 py-3 whitespace-nowrap font-semibold border-b border-slate-200"
                   >
-                    {header.replace(/([A-Z])/g, " $1").trim()}
+                    {header
+                      .replace(/([a-z])([A-Z])/g, "$1 $2")
+                      .replace(/[_-]+/g, " ")
+                      .trim()}
                   </th>
                 ))}
               </tr>
@@ -109,6 +224,16 @@ const DataRenderer = ({ reportPayload }) => {
                     let cellVal = row[header];
                     if (typeof cellVal === "object" && cellVal !== null)
                       cellVal = JSON.stringify(cellVal);
+
+                    const normalizedHeader = normalizeKey(header);
+                    if (["arrivaltime", "departuretime", "time", "departure", "timein", "timeout"].includes(normalizedHeader)) {
+                      cellVal = formatTimeWithAmPm(cellVal);
+                    }
+
+                    if (["submittedat", "submittedatserver"].includes(normalizedHeader)) {
+                      cellVal = formatDateTimeWithAmPm(cellVal);
+                    }
+
                     return (
                       <td
                         key={`${idx}-${header}`}

@@ -482,8 +482,19 @@ const TerminalFees = () => {
       });
 
       const formattedData = shiftRecords.map((item) => {
-        const { createdAt, updatedAt, __v, _id, isArchived, status, ...rest } =
-          item;
+        const {
+          createdAt,
+          updatedAt,
+          __v,
+          _id,
+          isArchived,
+          status,
+          reportStatus,
+          submitted,
+          submittedAt,
+          submittedAtServer,
+          ...rest
+        } = item;
         return {
           ...rest,
           price:
@@ -2056,7 +2067,9 @@ const TerminalFees = () => {
                             {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">{recordCount}</td>
-                          <td className="px-4 py-3 text-slate-700">{revenue.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-slate-700">
+                            ₱{revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
                         </tr>
                       );
                     })}

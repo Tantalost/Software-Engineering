@@ -1280,16 +1280,6 @@ const LostFound = () => {
                   >
                     <Archive size={16} />
                   </button>
-
-                  {role == "superadmin" && (
-                    <button
-                      onClick={() => setDeleteRow(selectedRecord)}
-                      className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
-                      title="Permanently Delete Record"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
                 </div>
               );
             }}
