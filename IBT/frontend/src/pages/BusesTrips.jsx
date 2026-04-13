@@ -470,25 +470,25 @@ const ManageCompaniesModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-4xl h-[600px] flex rounded-2xl bg-white shadow-2xl overflow-hidden">
-        <div className="w-1/3 bg-slate-50 border-r border-slate-200 flex flex-col">
-          <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
-            <h3 className="font-bold text-slate-700">Companies</h3>
+      <div className="w-[min(96vw,1500px)] h-[min(88vh,900px)] flex rounded-2xl bg-white shadow-2xl overflow-hidden text-[15px]">
+        <div className="w-[32%] min-w-[320px] bg-slate-50 border-r border-slate-200 flex flex-col">
+          <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-white">
+            <h3 className="font-bold text-slate-700 text-lg">Companies</h3>
             <button
               onClick={() => setIsEditingCompany(true)}
-              className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition"
+              className="p-2 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition"
             >
-              <Plus size={18} />
+              <Plus size={20} />
             </button>
           </div>
 
           {isEditingCompany && (
-            <div className="p-3 bg-white border-b border-slate-100 animate-in slide-in-from-top-2">
+            <div className="p-4 bg-white border-b border-slate-100 animate-in slide-in-from-top-2">
               <input
                 autoFocus
                 type="text"
                 placeholder="Company Name"
-                className="w-full p-2 text-sm border rounded-lg mb-2 outline-none focus:border-emerald-500"
+                className="w-full p-3 text-base border rounded-lg mb-2 outline-none focus:border-emerald-500"
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
               />
@@ -496,13 +496,13 @@ const ManageCompaniesModal = ({
                 <button
                   onClick={handleSaveCompany}
                   disabled={isProcessing}
-                  className="flex-1 bg-emerald-600 text-white text-xs py-1.5 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 bg-emerald-600 text-white text-sm py-2 rounded-md hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {isProcessing ? "Saving..." : "Save"}
                 </button>
                 <button
                   onClick={() => setIsEditingCompany(false)}
-                  className="flex-1 bg-slate-200 text-slate-600 text-xs py-1.5 rounded-md hover:bg-slate-300"
+                  className="flex-1 bg-slate-200 text-slate-600 text-sm py-2 rounded-md hover:bg-slate-300"
                 >
                   Cancel
                 </button>
@@ -510,12 +510,12 @@ const ManageCompaniesModal = ({
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-2 space-y-2">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
             {companyData.map((company) => (
               <div
                 key={company._id}
                 onClick={() => setSelectedCompanyId(company._id)}
-                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                className={`group flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all border ${
                   selectedCompanyId === company._id
                     ? "bg-white border-emerald-500 shadow-md ring-1 ring-emerald-500"
                     : "bg-white border-slate-200 hover:border-emerald-300"
@@ -525,13 +525,13 @@ const ManageCompaniesModal = ({
                   <div
                     className={`p-2 rounded-lg ${selectedCompanyId === company._id ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500"}`}
                   >
-                    <Bus size={18} />
+                    <Bus size={20} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-semibold text-sm text-slate-800">
+                    <span className="font-semibold text-base text-slate-800">
                       {company.name}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-sm text-slate-500">
                       {company.buses?.length || 0} buses
                     </span>
                   </div>
@@ -565,9 +565,9 @@ const ManageCompaniesModal = ({
           </div>
         </div>
 
-        <div className="w-2/3 flex flex-col bg-white">
-          <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-            <h3 className="font-bold text-slate-800">
+        <div className="flex-1 flex flex-col bg-white">
+          <div className="p-5 border-b border-slate-200 flex justify-between items-center">
+            <h3 className="font-bold text-slate-800 text-xl">
               {activeCompany
                 ? `Manage ${activeCompany.name} Buses`
                 : "Select a Company"}
@@ -576,32 +576,32 @@ const ManageCompaniesModal = ({
               onClick={onClose}
               className="text-slate-400 hover:text-slate-600"
             >
-              <X size={24} />
+              <X size={28} />
             </button>
           </div>
 
           {activeCompany ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                    <label className="text-sm font-semibold text-slate-500 uppercase">
                       Bus Number
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. ABC-1234"
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusPlate}
                       onChange={(e) => setNewBusPlate(e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                    <label className="text-sm font-semibold text-slate-500 uppercase">
                       Bus Type
                     </label>
                     <select
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
+                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
                       value={newBusType}
                       onChange={(e) => setNewBusType(e.target.value)}
                     >
@@ -610,7 +610,7 @@ const ManageCompaniesModal = ({
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                    <label className="text-sm font-semibold text-slate-500 uppercase">
                       Seating Capacity
                     </label>
                     <input
@@ -618,7 +618,7 @@ const ManageCompaniesModal = ({
                       min="1"
                       step="1"
                       placeholder="e.g. 49"
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusSeatingCapacity}
                       onChange={(e) =>
                         setNewBusSeatingCapacity(
@@ -629,11 +629,11 @@ const ManageCompaniesModal = ({
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                    <label className="text-sm font-semibold text-slate-500 uppercase">
                       No. of Stops
                     </label>
                     <select
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
+                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
                       value={newBusStopType}
                       onChange={(e) => setNewBusStopType(e.target.value)}
                     >
@@ -654,7 +654,7 @@ const ManageCompaniesModal = ({
 
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                    <label className="text-sm font-semibold text-slate-500 uppercase">
                       Schedule times (AM/PM)
                     </label>
                     <button
@@ -665,24 +665,24 @@ const ManageCompaniesModal = ({
                           defaultScheduleSlot(),
                         ])
                       }
-                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
                     >
-                      <Plus size={14} />
+                      <Plus size={16} />
                       Add time
                     </button>
                   </div>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
+                  <p className="mt-1 text-xs text-slate-500">
                     One bus can run several trips per day — add each departure
                     time.
                   </p>
-                  <div className="mt-2 space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                  <div className="mt-2 space-y-2 max-h-[180px] overflow-y-auto pr-1">
                     {scheduleSlots.map((slot, idx) => (
                       <div
                         key={idx}
-                        className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2"
+                        className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-3"
                       >
                         <select
-                          className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[4.5rem]"
+                          className="p-2.5 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[4.8rem]"
                           value={slot.hour}
                           onChange={(e) => {
                             const v = Number(e.target.value);
@@ -707,7 +707,7 @@ const ManageCompaniesModal = ({
                           inputMode="numeric"
                           maxLength={2}
                           placeholder="00"
-                          className="w-14 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 text-center"
+                          className="w-16 p-2.5 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 text-center"
                           value={slot.minute}
                           onChange={(e) => {
                             const v = e.target.value
@@ -737,7 +737,7 @@ const ManageCompaniesModal = ({
                           }}
                         />
                         <select
-                          className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[5.5rem]"
+                          className="p-2.5 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[5.8rem]"
                           value={slot.period}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -772,26 +772,26 @@ const ManageCompaniesModal = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                   <div className="sm:col-span-5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                    <label className="text-sm font-semibold text-slate-500 uppercase">
                       Route — From
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. Zamboanga"
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusFrom}
                       onChange={(e) => setNewBusFrom(e.target.value)}
                     />
                   </div>
 
                   <div className="sm:col-span-5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">
+                    <label className="text-sm font-semibold text-slate-500 uppercase">
                       Route — To
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. Manila"
-                      className="w-full mt-1 p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusTo}
                       onChange={(e) => setNewBusTo(e.target.value)}
                     />
@@ -801,7 +801,7 @@ const ManageCompaniesModal = ({
                     <button
                       type="button"
                       onClick={handleSaveBus}
-                      className="flex-1 h-[38px] bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                      className="flex-1 h-[46px] bg-emerald-600 text-white rounded-lg text-base font-semibold hover:bg-emerald-700 transition-colors"
                     >
                       {editBusTarget ? "Save" : "Add"}
                     </button>
@@ -809,24 +809,24 @@ const ManageCompaniesModal = ({
                       <button
                         type="button"
                         onClick={resetForms}
-                        className="h-[38px] px-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
+                        className="h-[46px] px-3 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
                         title="Cancel Edit"
                       >
-                        <X size={16} />
+                        <X size={18} />
                       </button>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 bg-white border-b border-slate-100 flex justify-between items-center">
-                <h4 className="text-sm font-semibold text-slate-700">
+              <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center">
+                <h4 className="text-base font-semibold text-slate-700">
                   Registered Buses
                 </h4>
                 <select
                   value={tableBusTypeFilter}
                   onChange={(e) => setTableBusTypeFilter(e.target.value)}
-                  className="p-1.5 text-sm border border-slate-300 rounded-lg outline-none bg-slate-50"
+                  className="px-3 py-2 text-base border border-slate-300 rounded-lg outline-none bg-slate-50"
                 >
                   <option value="All">All Types</option>
                   <option value="Regular">Regular Only</option>
@@ -834,10 +834,10 @@ const ManageCompaniesModal = ({
                 </select>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-5">
                 {activeCompany.buses && activeCompany.buses.length > 0 ? (
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0">
+                  <table className="w-full text-[15px] text-left">
+                    <thead className="text-sm text-slate-500 uppercase bg-slate-50">
                       <tr>
                         <th className="px-4 py-3">Bus No.</th>
                         <th className="px-4 py-3">Type</th>
