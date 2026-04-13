@@ -405,35 +405,28 @@ const Parking = () => {
   }, []);
 
   const fetchPreviousShiftReports = async () => {
-    if (role !== "parking") return;
+    if (role !== "parking") return; 
+    
     setIsPreviousShiftLoading(true);
     try {
-      const res = await fetch(REPORTS_API_URL);
+      const res = await fetch(REPORTS_API_URL); 
       if (!res.ok) throw new Error("Failed to load reports.");
+      
       const data = await res.json();
       const ownReports = (Array.isArray(data) ? data : [])
         .filter((report) => {
-          const reportType = report?.reportType || report?.data?.reportType || "";
-          if (reportType !== "Parking") return false;
-
+          if (report.type !== "Parking") return false; 
+          
           const reportAdminId = report?.data?.adminId;
-          const reportEmail = String(report?.data?.submittedByEmail || "").toLowerCase();
-
-          if (authAdminId && reportAdminId) {
-            return String(reportAdminId) === String(authAdminId);
-          }
-          if (authEmail && reportEmail) {
-            return reportEmail === authEmail;
-          }
-          return true;
+          return authAdminId ? String(reportAdminId || "") === String(authAdminId) : true;
         })
         .sort(
           (a, b) =>
             new Date(b?.data?.submittedAtServer || b.createdAt).getTime() -
             new Date(a?.data?.submittedAtServer || a.createdAt).getTime(),
         )
-        .slice(0, 10);
-
+        .slice(0, 10); 
+        
       setPreviousShiftReports(ownReports);
     } catch (error) {
       setNotificationState({
@@ -441,7 +434,7 @@ const Parking = () => {
         type: "error",
         message: error.message || "Failed to fetch previous shift reports.",
         autoClose: true,
-        duration: 2500,
+        duration: 3500,
       });
     } finally {
       setIsPreviousShiftLoading(false);
@@ -1637,13 +1630,13 @@ const Parking = () => {
 
           {role === "parking" && (
             <button
-              onClick={() => {
-                fetchPreviousShiftReports();
-                setShowPreviousShiftModal(true);
-              }}
-              className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
-            >
-              <span>Previous Shift Records</span>
+                onClick={() => {
+                  fetchPreviousShiftReports(); 
+                    setShowPreviousShiftModal(true);
+                }}
+                className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
+                >
+                <span>Previous Shift Records</span>
             </button>
           )}
 
