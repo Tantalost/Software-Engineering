@@ -134,6 +134,7 @@ export default function EmployeeManage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [collectorDeleteTarget, setCollectorDeleteTarget] = useState(null); 
+  const [collectorStatusTarget, setCollectorStatusTarget] = useState(null);
   const [notificationState, setNotificationState] = useState({
     isOpen: false,
     type: "success",
@@ -645,6 +646,8 @@ export default function EmployeeManage() {
   };
 
   const handleToggleCollectorStatus = async (collector) => {
+    if (!collector) return;
+
     try {
       const nextStatus = collector.status === "Active" ? "Inactive" : "Active";
       const res = await fetch(
@@ -666,6 +669,8 @@ export default function EmployeeManage() {
       showToast("success", `Collector marked as ${nextStatus.toLowerCase()}.`);
     } catch (error) {
       showToast("error", error.message);
+    } finally {
+      setCollectorStatusTarget(null);
     }
   };
 
@@ -937,7 +942,7 @@ export default function EmployeeManage() {
                               Edit
                             </button>
                             <button
-                              onClick={() => handleToggleCollectorStatus(c)}
+                              onClick={() => setCollectorStatusTarget(c)}
                               className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition-all cursor-pointer"
                             >
                               {c.status === "Active" ? "Deactivate" : "Activate"}
@@ -1604,6 +1609,36 @@ export default function EmployeeManage() {
           collectorDeleteTarget ? formatCollectorFullName(collectorDeleteTarget) : ""
         }?`}
         itemName={collectorDeleteTarget ? formatCollectorFullName(collectorDeleteTarget) : ""}
+      />
+
+      <DeleteModal
+        isOpen={!!collectorStatusTarget}
+        onClose={() => setCollectorStatusTarget(null)}
+        onConfirm={() => handleToggleCollectorStatus(collectorStatusTarget)}
+        title={
+          collectorStatusTarget?.status === "Active"
+            ? "Deactivate Collector"
+            : "Activate Collector"
+        }
+        icon={
+          collectorStatusTarget?.status === "Active" ? (
+            <AlertTriangle size={28} className="text-amber-500" />
+          ) : (
+            <CheckCircle size={28} className="text-emerald-500" />
+          )
+        }
+        message={
+          collectorStatusTarget?.status === "Active"
+            ? `Are you sure you want to deactivate ${collectorStatusTarget ? formatCollectorFullName(collectorStatusTarget) : "this collector"}? They will no longer be active in the system until reactivated.`
+            : `Are you sure you want to activate ${collectorStatusTarget ? formatCollectorFullName(collectorStatusTarget) : "this collector"}? They will be restored as an active collector.`
+        }
+        itemName={collectorStatusTarget ? formatCollectorFullName(collectorStatusTarget) : ""}
+        confirmLabel={collectorStatusTarget?.status === "Active" ? "Deactivate" : "Activate"}
+        confirmButtonClassName={
+          collectorStatusTarget?.status === "Active"
+            ? "bg-amber-500 hover:bg-amber-600 focus:ring-amber-500"
+            : "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+        }
       />
 
       <NotificationToast

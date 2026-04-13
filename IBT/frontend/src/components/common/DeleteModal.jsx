@@ -7,7 +7,10 @@ const DeleteModal = ({
   onConfirm, 
   title = "Delete Item", 
   message = "Are you sure you want to delete this item? This action cannot be undone.",
-  itemName = "" 
+  itemName = "",
+  icon,
+  confirmLabel = "Delete",
+  confirmButtonClassName = "bg-red-600 hover:bg-red-700 focus:ring-red-500",
 }) => {
   if (!isOpen) return null;
 
@@ -18,7 +21,7 @@ const DeleteModal = ({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
-              <AlertTriangle size={20} />
+              {icon || <AlertTriangle size={20} />}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
@@ -52,9 +55,9 @@ const DeleteModal = ({
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 transition-all focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all focus:ring-2 focus:ring-offset-1 ${confirmButtonClassName}`}
           >
-            Delete
+            {confirmLabel}
           </button>
         </div>
       </div>
