@@ -408,26 +408,46 @@ const LostFound = () => {
   const handleSaveEdit = async (e) => {
     e.preventDefault();
 
+    if (editFormData.status === "Claimed") {
+      if (!editFormData.claimedBy || editFormData.claimedBy.trim() === "") {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: "Please enter the name of the person who claimed the item.",
+          autoClose: true,
+          duration: 4000,
+        });
+        return; 
+      }
+     
+      if (!editEvidencePhoto && !editRow?.claimEvidence) {
+        setNotificationState({
+          isOpen: true,
+          type: "error",
+          message: "Please upload photo evidence of the claim to proceed.",
+          autoClose: true,
+          duration: 4000,
+        });
+        return;
+      }
+    }
+
     try {
       const formData = new FormData();
 
-      // Append all existing text fields
       Object.keys(editFormData).forEach(key => {
-        // Don't append empty strings or nulls to avoid backend validation issues
+       
         if (editFormData[key] !== null && editFormData[key] !== undefined) {
           formData.append(key, editFormData[key]);
         }
       });
 
-      // Append the new evidence photo if the user selected one
       if (editEvidencePhoto) {
         formData.append("evidencePhoto", editEvidencePhoto);
       }
 
       const response = await fetch(`${API_URL}/${editFormData.id}`, {
         method: "PUT",
-        // Notice: We removed the "Content-Type": "application/json" header!
-        // The browser will automatically set the correct multipart/form-data header and boundaries.
         body: formData,
       });
 
@@ -1691,42 +1711,50 @@ const LostFound = () => {
                     />
                   </div>
                 </div>
+ 
+                {editFormData.status === "Claimed" && (
+                  <>
+                    <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Claimed By <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.claimedBy || ""}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            claimedBy: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                        placeholder="Name of person who claimed the item"
+                        required
+                      />
+                    </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Claimed By (if claimed)
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.claimedBy || ""}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        claimedBy: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
-                    placeholder="Name of person who claimed the item"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Claim Evidence (Upload ID/Proof)
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files && e.target.files[0];
-                      setEditEvidencePhoto(file || null);
-                    }}
-                    className="w-full text-sm text-slate-700 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    Upload a photo of the claimant's ID or proof of ownership.
-                  </p>
-                </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Claim Evidence (Upload ID/Proof) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files && e.target.files[0];
+                          setEditEvidencePhoto(file || null);
+                        }}
+                        className="w-full text-sm text-slate-700 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                        required={!editRow?.claimEvidence} 
+                      />
+                      <p className="mt-1 text-xs text-slate-500">
+                        {editRow?.claimEvidence 
+                          ? "Evidence already exists. Uploading a new file will replace the current evidence." 
+                          : "Upload a photo of the claimant's ID or proof of ownership to complete the claim."}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="flex gap-3 mt-6">
                 <button
