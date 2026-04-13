@@ -22,7 +22,20 @@ import {
   toggleOperationStatus,
   processMoveOut,
   rejectRenewalPayment,
-  submitTenantsForShift
+  submitTenantsForShift,
+  getTenantContracts,
+  addTenantContract,
+  updateTenantContract,
+  activateTenantContract,
+  deleteTenantContract,
+  getContractTemplates,
+  createContractTemplate,
+  updateContractTemplate,
+  deleteContractTemplate,
+  getDefaultContractConfig,
+  updateDefaultContractConfig,
+  approveRenewalContractRequest,
+  rejectRenewalContractRequest,
 } from "../controllers/tenantController.js";
 
 const router = express.Router();
@@ -63,6 +76,21 @@ router.put('/update-overdue-settings', updateOverdueSettings);
 router.post('/move-out', processMoveOut);
 router.put('/:id/reject-renewal', rejectRenewalPayment);
 router.put('/submit-shift', submitTenantsForShift);
+
+router.get('/contracts/default-config', getDefaultContractConfig);
+router.put('/contracts/default-config', updateDefaultContractConfig);
+router.get('/contracts/templates', getContractTemplates);
+router.post('/contracts/templates', upload.single('contract'), createContractTemplate);
+router.put('/contracts/templates/:templateId', upload.single('contract'), updateContractTemplate);
+router.delete('/contracts/templates/:templateId', deleteContractTemplate);
+
+router.get('/:id/contracts', getTenantContracts);
+router.post('/:id/contracts', upload.single('contract'), addTenantContract);
+router.put('/:id/contracts/:contractId', upload.single('contract'), updateTenantContract);
+router.put('/:id/contracts/:contractId/approve-renewal-request', approveRenewalContractRequest);
+router.put('/:id/contracts/:contractId/reject-renewal-request', rejectRenewalContractRequest);
+router.patch('/:id/contracts/:contractId/activate', activateTenantContract);
+router.delete('/:id/contracts/:contractId', deleteTenantContract);
 
 router.post('/', 
   upload.fields([

@@ -683,6 +683,50 @@ setSelectedStall(null);
     }, 100);
   };
 
+  const submitRenewalContract = async (templateId: string) => {
+    if (!user) return;
+    if (!currentApp?.tenantId && !currentApp?.id && !currentApp?._id) {
+      return Alert.alert("Missing Tenant", "Unable to determine tenant account for renewal.");
+    }
+    if (!templateId) {
+      return Alert.alert("Select Template", "Please select a contract template first.");
+    }
+    if (!files.contract) {
+      return Alert.alert("Missing Contract", "Please upload your signed renewal contract.");
+    }
+
+    setApplying(true);
+    setTimeout(async () => {
+      try {
+        const formPayload = new FormData();
+        formPayload.append('tenantId', currentApp.tenantId || currentApp.id || currentApp._id || "");
+        formPayload.append('templateId', templateId);
+
+        const encContract = await encryptFileBeforeUpload(files.contract!.uri, files.contract!.name || 'renewal-contract.pdf');
+        appendFile(formPayload, 'contract', files.contract, encContract);
+
+        const token = await AsyncStorage.getItem('token');
+        const res = await fetch(`${API_URL}/stalls/renew-contract`, {
+          method: 'POST',
+          body: formPayload,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        await handleApiError(res);
+        Alert.alert("Renewal Submitted", "Your renewal contract was sent for admin review.");
+        setFiles(prev => ({ ...prev, contract: null }));
+        fetchData(user.id);
+      } catch (error: any) {
+        Alert.alert("Submission Failed", error.message || "Could not submit renewal contract.");
+      } finally {
+        setApplying(false);
+      }
+    }, 100);
+  };
+
   const submitContract = async () => {
     if (!user || !files.contract) { return Alert.alert("Missing Contract", "Please upload the signed contract PDF."); }
     if (!currentApp) return;
@@ -854,6 +898,7 @@ setSelectedStall(null);
           paymentData={paymentData} 
           setPaymentData={setPaymentData} 
           submitRenewal={submitRenewalPayment} 
+          submitRenewalContract={submitRenewalContract}
           applying={applying} 
           files={files} 
           uploadProgress={uploadProgress} 

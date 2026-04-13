@@ -7,6 +7,53 @@ import CryptoJS from 'crypto-js';
 import path from 'path';
 
 const SECRET_KEY = process.env.ENCRYPTION_KEY || " "; 
+const CONTRACT_TEMPLATES_KEY = "tenantContractTemplates";
+const DEFAULT_CONTRACT_TEMPLATE_KEY = "tenantDefaultContractTemplateId";
+
+const addDays = (date, days) => {
+    const copy = new Date(date);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+};
+
+const addMonths = (date, months) => {
+    const copy = new Date(date);
+    copy.setMonth(copy.getMonth() + months);
+    return copy;
+};
+
+const splitDuration = (durationMonths) => ({
+    years: Math.floor(durationMonths / 12),
+    months: durationMonths % 12,
+});
+
+const normalizeContractTemplates = (rawValue) => {
+    if (!Array.isArray(rawValue)) return [];
+    return rawValue.filter((item) => item && item._id);
+};
+
+const fetchTemplateState = async () => {
+    const [templatesSetting, defaultSetting] = await Promise.all([
+        Settings.findOne({ key: CONTRACT_TEMPLATES_KEY }),
+        Settings.findOne({ key: DEFAULT_CONTRACT_TEMPLATE_KEY }),
+    ]);
+
+    return {
+        templates: normalizeContractTemplates(templatesSetting?.value),
+        defaultTemplateId: typeof defaultSetting?.value === 'string' ? defaultSetting.value : '',
+    };
+};
+
+const getActiveContract = (tenant) => {
+    const contracts = Array.isArray(tenant.contracts) ? tenant.contracts : [];
+    if (contracts.length === 0) return null;
+
+    const byId = tenant.activeContractId
+        ? contracts.find((contract) => String(contract._id) === String(tenant.activeContractId))
+        : null;
+    const byStatus = contracts.find((contract) => contract.status === 'active');
+    return byId || byStatus || contracts[contracts.length - 1];
+};
 
 const detectMimeTypeFromBuffer = (buffer) => {
     if (!buffer || buffer.length < 4) return null;
@@ -195,11 +242,23 @@ export const getMyApplication = async (req, res) => {
         const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
         const globalNightPrice = nightSetting ? Number(nightSetting.value) : 150;
         const globalPermPrice = permSetting ? Number(permSetting.value) : 6000;
+        const templateState = await fetchTemplateState();
+        const renewalTemplates = templateState.templates.map((template) => ({
+            _id: template._id,
+            name: template.name || "Contract Template",
+            contractType: template.contractType || "RENEWAL",
+            durationMonths: Number(template.durationMonths || 0),
+            duration: template.duration || splitDuration(Number(template.durationMonths || 0)),
+        }));
                 
         tenants.forEach(tenant => {
             const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
             const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
             const isNightMarket = tenant.tenantType === 'Night Market';
+            const activeContract = getActiveContract(tenant);
+            const pendingRenewalContract = (Array.isArray(tenant.contracts) ? tenant.contracts : []).find(
+                (contract) => contract.status === 'pending_approval'
+            );
             
            
             let calcRent = tenant.rentAmount;
@@ -238,7 +297,15 @@ export const getMyApplication = async (req, res) => {
                 validIdUrl: tenant.documents?.validID || "",
                 contractUrl: tenant.documents?.contract || "",
                 communityTaxUrl: tenant.documents?.communityTax || "", 
-                policeClearanceUrl: tenant.documents?.policeClearance || "" 
+                policeClearanceUrl: tenant.documents?.policeClearance || "",
+                contracts: Array.isArray(tenant.contracts) ? tenant.contracts : [],
+                activeContractId: tenant.activeContractId || null,
+                activeContract,
+                activeContractEndDate: activeContract?.endDate || null,
+                isEligibleForRenewal: Boolean(tenant.isEligibleForRenewal),
+                hasPendingRenewal: Boolean(pendingRenewalContract),
+                pendingRenewalContract: pendingRenewalContract || null,
+                renewalTemplates,
             };
 
             if (existingAppIndex >= 0) {
@@ -256,6 +323,8 @@ export const submitApplication = async (req, res) => {
     try {
         const data = req.body; 
         const files = req.files;
+        const { templates, defaultTemplateId } = await fetchTemplateState();
+        const defaultTemplate = templates.find((template) => String(template._id) === String(defaultTemplateId)) || null;
 
         if (files) {
             if (files.permit?.[0]) data.permitUrl = files.permit[0].filename;
@@ -281,7 +350,14 @@ export const submitApplication = async (req, res) => {
         
         const newApp = await TenantApplication.findOneAndUpdate(
             { userId: data.userId, targetSlot: data.targetSlot }, 
-            { ...data, status: 'VERIFICATION_PENDING', adminViewed: false },
+            {
+                ...data,
+                status: 'VERIFICATION_PENDING',
+                adminViewed: false,
+                defaultTemplateId: defaultTemplate?._id || defaultTemplateId || "",
+                defaultContractDurationMonths: Number(defaultTemplate?.durationMonths || 0),
+                defaultContractType: defaultTemplate?.contractType || 'INITIAL',
+            },
             { new: true, upsert: true }
         );
 
@@ -359,6 +435,73 @@ export const uploadContract = async (req, res) => {
       } catch (error) {
         res.status(500).json({ message: error.message });
       }
+};
+
+export const submitRenewalContractRequest = async (req, res) => {
+    try {
+        const { tenantId, templateId } = req.body;
+        const contractUrl = req.file?.filename || req.body.contractUrl || "";
+
+        if (!tenantId) return res.status(400).json({ message: "Tenant ID is required." });
+        if (!templateId) return res.status(400).json({ message: "Template selection is required." });
+        if (!contractUrl) return res.status(400).json({ message: "Signed renewal contract file is required." });
+
+        const tenant = await Tenant.findById(tenantId);
+        if (!tenant) return res.status(404).json({ message: "Tenant not found." });
+
+        const activeContract = getActiveContract(tenant);
+        if (!activeContract) {
+            return res.status(400).json({ message: "No active contract was found for this tenant." });
+        }
+
+        const hasOpenRenewal = (Array.isArray(tenant.contracts) ? tenant.contracts : []).some((contract) =>
+            ['pending_approval', 'approved_awaiting_start'].includes(contract.status)
+        );
+        if (hasOpenRenewal) {
+            return res.status(400).json({ message: "A renewal request is already in progress for this tenant." });
+        }
+
+        const { templates } = await fetchTemplateState();
+        const selectedTemplate = templates.find((template) => String(template._id) === String(templateId));
+        if (!selectedTemplate) {
+            return res.status(404).json({ message: "Selected template was not found." });
+        }
+
+        const durationMonths = Math.max(Number(selectedTemplate.durationMonths || 0), 1);
+        const startDate = addDays(new Date(activeContract.endDate), 1);
+        const endDate = addMonths(startDate, durationMonths);
+
+        tenant.contracts.push({
+            contractType: 'RENEWAL',
+            startDate,
+            endDate,
+            durationMonths,
+            duration: splitDuration(durationMonths),
+            documentUrl: contractUrl,
+            status: 'pending_approval',
+            source: 'tenant',
+            assignedAt: new Date(),
+            requestedAt: new Date(),
+            templateId: selectedTemplate._id,
+            templateName: selectedTemplate.name || 'Renewal Template',
+            notes: `Submitted from mobile renewal flow for Slot ${tenant.slotNo}.`,
+        });
+
+        tenant.isEligibleForRenewal = false;
+        await tenant.save();
+
+        await createAdminNotification(
+            "Renewal Contract Submitted",
+            `${tenant.tenantName || tenant.name} submitted a renewal contract for Slot ${tenant.slotNo}.`
+        );
+
+        return res.status(200).json({
+            message: "Renewal contract submitted for admin review.",
+            tenant,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
 };
 
 export const submitRenewalPayment = async (req, res) => {

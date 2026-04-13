@@ -14,7 +14,8 @@ import {
   submitPayment,
   uploadContract,
   getSecureDocument,
-  submitRenewalPayment 
+  submitRenewalPayment,
+  submitRenewalContractRequest,
 } from '../controllers/stallController.js';
 
 dotenv.config();
@@ -61,5 +62,6 @@ router.post('/apply',
 router.post('/pay', verifyToken, upload.single('receipt'), submitPayment);
 router.post('/upload-contract', verifyToken, upload.single('contract'), uploadContract);
 router.post('/pay-renewal', verifyToken, upload.single('receipt'), submitRenewalPayment);
+router.post('/renew-contract', verifyToken, upload.single('contract'), submitRenewalContractRequest);
 
 export default router;

@@ -25,6 +25,8 @@ import TenantStatusFilter from "../components/tenants/TenantStatusFilter";
 import AddTenantModal from "../components/tenants/modals/AddTenantModal";
 import MoveOutModal from "../components/tenants/modals/MoveOutModal";
 import TenantViewModal from "../components/tenants/modals/TenantViewModal";
+import ContractsOverviewModal from "../components/tenants/modals/ContractsOverviewModal";
+import ContractManagementModal from "../components/tenants/modals/ContractManagementModal";
 import TenantMapModal from "../components/tenants/modals/TenantMapModal";
 import WaitlistModal from "../components/tenants/modals/WaitlistModal";
 import TenantEmailModal from "../components/tenants/modals/TenantEmailModal";
@@ -90,6 +92,7 @@ const TenantLease = () => {
     const [tenantToMoveOut, setTenantToMoveOut] = useState(null);
     const [showNotify, setShowNotify] = useState(false);
     const [showMapModal, setShowMapModal] = useState(false);
+    const [showContractsOverview, setShowContractsOverview] = useState(false);
     const [showWaitlistModal, setShowWaitlistModal] = useState(false);
     const [showWaitlistForm, setShowWaitlistForm] = useState(false);
     const [showReviewModal, setShowReviewModal] = useState(false);
@@ -134,6 +137,7 @@ const TenantLease = () => {
     const [transferApplicant, setTransferApplicant] = useState(null);
 
     const [viewRow, setViewRow] = useState(null);
+    const [contractRow, setContractRow] = useState(null);
     const [editRow, setEditRow] = useState(null);
     const [deleteRow, setDeleteRow] = useState(null);
     const [deleteRemarks, setDeleteRemarks] = useState("");
@@ -726,85 +730,131 @@ const TenantLease = () => {
     const paymentProgress = useMemo(() => {
         if (!selectedPaymentTenant) return null;
 
-        const selectedYear = paymentRefDate.getFullYear();
-        const monthsShort = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-
         const toValidDate = (value) => {
             if (!value) return null;
             const parsed = new Date(value);
             return Number.isNaN(parsed.getTime()) ? null : parsed;
         };
 
-        const startDate = toValidDate(selectedPaymentTenant.StartDateTime);
-        const dueDate = toValidDate(selectedPaymentTenant.DueDateTime);
-        const startYear = startDate?.getFullYear();
-        const startMonth = startDate?.getMonth();
+        const addMonths = (date, months) => {
+            const next = new Date(date);
+            next.setMonth(next.getMonth() + months);
+            return next;
+        };
+
+        const getActiveContract = (tenant) => {
+            const contracts = Array.isArray(tenant.contracts) ? tenant.contracts : [];
+            if (contracts.length === 0) return null;
+
+            const byId = tenant.activeContractId
+                ? contracts.find((contract) => String(contract._id) === String(tenant.activeContractId))
+                : null;
+
+            const byStatus = contracts.find((contract) => contract.status === "active");
+            return byId || byStatus || contracts[contracts.length - 1];
+        };
+
+        const activeContract = getActiveContract(selectedPaymentTenant);
+
+        const contractStart =
+            toValidDate(activeContract?.startDate) ||
+            toValidDate(selectedPaymentTenant.StartDateTime) ||
+            toValidDate(selectedPaymentTenant.createdAt) ||
+            new Date();
+
+        let contractEnd =
+            toValidDate(activeContract?.endDate) ||
+            toValidDate(selectedPaymentTenant.DueDateTime);
+
+        if (!contractEnd) {
+            const durationFromContract = Number(activeContract?.durationMonths) || 0;
+            const fallbackDuration = durationFromContract > 0 ? durationFromContract : 12;
+            contractEnd = addMonths(contractStart, fallbackDuration);
+        }
+
+        if (contractEnd <= contractStart) {
+            contractEnd = addMonths(contractStart, 1);
+        }
+
         const slotCount = selectedPaymentTenant.slotNo ? String(selectedPaymentTenant.slotNo).split(",").length : 1;
         const utilityAmount = Number(selectedPaymentTenant.utilityAmount) || 0;
         const currentOutstandingAmount = Number(selectedPaymentTenant.totalAmount || selectedPaymentTenant.rentAmount || 0);
         const isNightMarketTenant = selectedPaymentTenant.tenantType === "Night Market";
         const configuredDefaultBase = isNightMarketTenant ? Number(defaultNightPrice || 150) : Number(defaultPermanentPrice || 6000);
         const futureRentAmount = configuredDefaultBase * slotCount;
-        const futureCycleAmount = futureRentAmount + utilityAmount;
+        const monthlyCharge = futureRentAmount + utilityAmount;
         const hasUnpaidCurrentCycle = String(selectedPaymentTenant.status || "").toLowerCase() !== "paid";
 
-        const dueMonthIndexForYear =
-            dueDate && dueDate.getFullYear() === selectedYear
-                ? dueDate.getMonth()
-                : null;
+        const timelineStart = new Date(contractStart.getFullYear(), contractStart.getMonth(), 1);
+        const timelineEnd = new Date(contractEnd.getFullYear(), contractEnd.getMonth(), 1);
+
+        const contractMonths = [];
+        for (let cursor = new Date(timelineStart); cursor <= timelineEnd; cursor = addMonths(cursor, 1)) {
+            const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+            const label = cursor.toLocaleString("en-US", { month: "short", year: "2-digit" }).toUpperCase();
+            contractMonths.push({ key, label, monthStart: new Date(cursor) });
+        }
 
         const paidByMonth = new globalThis.Map();
         (selectedPaymentTenant.paymentHistory || []).forEach((entry) => {
             const paidAt = toValidDate(entry?.datePaid);
-            if (!paidAt || paidAt.getFullYear() !== selectedYear) return;
-            const monthIndex = paidAt.getMonth();
-            paidByMonth.set(monthIndex, (paidByMonth.get(monthIndex) || 0) + (Number(entry.amount) || 0));
+            if (!paidAt) return;
+
+            const key = `${paidAt.getFullYear()}-${String(paidAt.getMonth() + 1).padStart(2, "0")}`;
+            if (!contractMonths.some((month) => month.key === key)) return;
+
+            paidByMonth.set(key, (paidByMonth.get(key) || 0) + (Number(entry.amount) || 0));
         });
 
         const today = new Date();
-        const todayYear = today.getFullYear();
-        const currentMonthIndex = selectedYear < todayYear ? 11 : selectedYear > todayYear ? -1 : today.getMonth();
+        const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-        const timeline = monthsShort.map((label, monthIndex) => {
-            const beforeTenantStart = startDate && (selectedYear < startYear || (selectedYear === startYear && monthIndex < startMonth));
-            const inScope = !beforeTenantStart;
-            const paidAmount = paidByMonth.get(monthIndex) || 0;
+        const timeline = contractMonths.map((month) => {
+            const paidAmount = paidByMonth.get(month.key) || 0;
             const isPaid = paidAmount > 0;
+            const isPastMonth = month.monthStart < currentMonthStart;
+            const isCurrentMonth =
+                month.monthStart.getFullYear() === currentMonthStart.getFullYear() &&
+                month.monthStart.getMonth() === currentMonthStart.getMonth();
 
-            let status = "not-applicable";
-            if (inScope) {
-                if (isPaid) status = "paid";
-                else status = "remaining";
+            let status = "remaining";
+            if (isPaid) {
+                status = "paid";
+            } else if (isPastMonth) {
+                status = "overdue";
             }
 
-            let dueAmount = 0;
-            if (status === "remaining") {
-                if (hasUnpaidCurrentCycle && dueMonthIndexForYear !== null && monthIndex <= dueMonthIndexForYear) {
-                    dueAmount = currentOutstandingAmount;
-                } else if (hasUnpaidCurrentCycle && dueMonthIndexForYear === null && monthIndex <= currentMonthIndex) {
-                    dueAmount = currentOutstandingAmount;
-                } else {
-                    dueAmount = futureCycleAmount;
-                }
+            let dueAmount = monthlyCharge;
+            if (isCurrentMonth && hasUnpaidCurrentCycle) {
+                dueAmount = currentOutstandingAmount || monthlyCharge;
             }
 
-            return { label, monthIndex, paidAmount, dueAmount, status };
+            if (status === "paid") {
+                dueAmount = 0;
+            }
+
+            return {
+                label: month.label,
+                key: month.key,
+                paidAmount,
+                dueAmount,
+                status,
+            };
         });
 
-        const totalMonths = timeline.filter((m) => m.status !== "not-applicable").length;
+        const totalMonths = timeline.length;
         const paidMonths = timeline.filter((m) => m.status === "paid").length;
         const remainingMonths = timeline.filter((m) => m.status === "remaining").length;
-        const overdueMonths = timeline.filter((m) => m.status === "remaining").length;
+        const overdueMonths = timeline.filter((m) => m.status === "overdue").length;
 
         const paidAmount = Array.from(paidByMonth.values()).reduce((sum, value) => sum + value, 0);
         const remainingAmount = timeline
-            .filter((m) => m.status === "remaining")
+            .filter((m) => m.status === "remaining" || m.status === "overdue")
             .reduce((sum, m) => sum + (Number(m.dueAmount) || 0), 0);
         const projectedAmount = paidAmount + remainingAmount;
         const progressPercent = totalMonths > 0 ? Math.round((paidMonths / totalMonths) * 100) : 0;
 
         return {
-            selectedYear,
             timeline,
             totalMonths,
             paidMonths,
@@ -814,10 +864,11 @@ const TenantLease = () => {
             projectedAmount,
             remainingAmount,
             progressPercent,
-            monthlyCharge: futureCycleAmount,
+            monthlyCharge,
             currentCycleAmount: hasUnpaidCurrentCycle ? currentOutstandingAmount : 0,
+            contractPeriodLabel: `${contractStart.toLocaleDateString()} - ${contractEnd.toLocaleDateString()}`,
         };
-    }, [selectedPaymentTenant, paymentRefDate, defaultNightPrice, defaultPermanentPrice]);
+    }, [selectedPaymentTenant, defaultNightPrice, defaultPermanentPrice]);
 
     const paginatedPayments = useMemo(() => {
         const start = (paymentCurrentPage - 1) * paymentItemsPerPage;
@@ -1360,16 +1411,29 @@ const TenantLease = () => {
         }
     };
 
-    const handleApproveRenewal = async (id) => {
+    const handleApproveRenewal = async (tenantId, contractIdArg) => {
         try {
-            const res = await fetch(`${API_URL}/tenants/${id}/approve-renewal`, { method: 'PUT' });
+            const contractId = contractIdArg
+                || (Array.isArray(records.find((tenant) => String(tenant.id) === String(tenantId))?.contracts)
+                    ? records
+                        .find((tenant) => String(tenant.id) === String(tenantId))
+                        .contracts
+                        .find((contract) => contract.status === 'pending_approval')?._id
+                    : null);
+
+            if (!contractId) {
+                setNotificationState({ isOpen: true, type: 'error', message: 'No pending renewal contract was found for this tenant.', autoClose: true, duration: 4000 });
+                return;
+            }
+
+            const res = await fetch(`${API_URL}/tenants/${tenantId}/contracts/${contractId}/approve-renewal-request`, { method: 'PUT' });
             
             const data = await res.json(); 
             
             if (res.ok) {
-                setNotificationState({ isOpen: true, type: 'success', message: "Renewal payment confirmed! Next due date updated.", autoClose: true, duration: 3000 });
+                setNotificationState({ isOpen: true, type: 'success', message: "Renewal contract approved. It will activate on its scheduled start date.", autoClose: true, duration: 3500 });
             
-                await logActivity(role, "APPROVE_RENEWAL", `Approved renewal payment for tenant ID #${id}`, "Tenants");
+                await logActivity(role, "APPROVE_RENEWAL", `Approved renewal contract request for tenant ID #${tenantId}`, "Tenants");
             
                 setShowReviewModal(false);
                 fetchTenants(); 
@@ -1381,9 +1445,22 @@ const TenantLease = () => {
         }
     };
 
-    const handleRejectRenewal = async (id, reason) => {
+    const handleRejectRenewal = async (tenantId, reason, contractIdArg) => {
         try {
-            const response = await fetch(`${API_URL}/tenants/${id}/reject-renewal`, {
+            const contractId = contractIdArg
+                || (Array.isArray(records.find((tenant) => String(tenant.id) === String(tenantId))?.contracts)
+                    ? records
+                        .find((tenant) => String(tenant.id) === String(tenantId))
+                        .contracts
+                        .find((contract) => contract.status === 'pending_approval')?._id
+                    : null);
+
+            if (!contractId) {
+                setNotificationState({ isOpen: true, type: 'error', message: 'No pending renewal contract was found for this tenant.', autoClose: true, duration: 4000 });
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/tenants/${tenantId}/contracts/${contractId}/reject-renewal-request`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rejectionReason: reason })
@@ -1393,11 +1470,11 @@ const TenantLease = () => {
                 setNotificationState({
                     isOpen: true,
                     type: 'success',
-                    message: "Renewal payment rejected. Tenant notified via email.",
+                    message: "Renewal contract rejected. Tenant notified.",
                     autoClose: true,
                     duration: 3000
                 });
-                await logActivity(role, "REJECT_RENEWAL", `Rejected renewal payment for tenant ID #${id}. Reason: ${reason}`, "Tenants");
+                await logActivity(role, "REJECT_RENEWAL", `Rejected renewal contract for tenant ID #${tenantId}. Reason: ${reason}`, "Tenants");
 
                 fetchTenants();
                 if (showReviewModal) setShowReviewModal(false);
@@ -1934,7 +2011,35 @@ const TenantLease = () => {
 
     const actionRequiredCount = waitlistData.filter(app => !app.adminViewed && app.status !== 'TENANT').length;
 
-    const renewalsPendingCount = records.filter(t => t.status === "Payment Review" || t.status === "PAYMENT_REVIEW").length;
+    const renewalContractRequests = useMemo(() => {
+        const pending = [];
+        records.forEach((tenant) => {
+            const contracts = Array.isArray(tenant.contracts) ? tenant.contracts : [];
+            contracts
+                .filter((contract) => contract.status === 'pending_approval')
+                .forEach((contract) => {
+                    pending.push({
+                        ...tenant,
+                        _id: tenant._id || tenant.id,
+                        id: tenant.id,
+                        status: 'PENDING_APPROVAL',
+                        renewalContractId: contract._id,
+                        renewalRequestedAt: contract.requestedAt || contract.assignedAt || contract.startDate,
+                        renewalTemplateName: contract.templateName || contract.contractType || 'Renewal Contract',
+                        renewalStartDate: contract.startDate,
+                        renewalEndDate: contract.endDate,
+                        contractUrl: contract.documentUrl || tenant.documents?.contract || '',
+                        documents: {
+                            ...(tenant.documents || {}),
+                            contract: contract.documentUrl || tenant.documents?.contract || '',
+                        },
+                    });
+                });
+        });
+        return pending;
+    }, [records]);
+
+    const renewalsPendingCount = renewalContractRequests.length;
 
     return (
         <Layout title="Tenants/Lease Management">
@@ -2014,6 +2119,17 @@ const TenantLease = () => {
                         >
                             <Settings size={18} />
                             <span className="hidden sm:inline">Set Price</span>
+                        </button>
+                    )}
+
+                    {role === "superadmin" && (
+                        <button
+                            onClick={() => setShowContractsOverview(true)}
+                            className="bg-white border border-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-2"
+                            title='Manage Contracts'
+                        >
+                            <FileText size={18} />
+                            <span className="hidden sm:inline">Manage Contracts</span>
                         </button>
                     )}
 
@@ -2159,7 +2275,7 @@ const TenantLease = () => {
                 <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between animate-in fade-in">
                     <div className="flex items-center gap-2 text-amber-700">
                         <ClipboardList size={20} />
-                        <span className="font-semibold">Action Required: You have {renewalsPendingCount} pending lease renewal(s) awaiting payment verification.</span>
+                        <span className="font-semibold">Action Required: You have {renewalsPendingCount} pending lease renewal contract request(s) awaiting review.</span>
                     </div>
                     <button 
                         onClick={() => { setActiveWaitlistTab("Renewals"); setShowWaitlistModal(true); }}
@@ -2331,6 +2447,41 @@ const TenantLease = () => {
             />
 
             <TenantViewModal viewRow={viewRow} onClose={() => setViewRow(null)} />
+            <ContractsOverviewModal
+                isOpen={role === "superadmin" && showContractsOverview}
+                onClose={() => setShowContractsOverview(false)}
+                tenants={records}
+                apiUrl={API_URL}
+                onNotify={(type, message) =>
+                    setNotificationState({
+                        isOpen: true,
+                        type,
+                        message,
+                        autoClose: true,
+                        duration: 3500,
+                    })
+                }
+                onManageTenant={(tenant) => {
+                    setShowContractsOverview(false);
+                    setContractRow(tenant);
+                }}
+            />
+            <ContractManagementModal
+                isOpen={role === "superadmin" && !!contractRow}
+                onClose={() => setContractRow(null)}
+                tenant={contractRow}
+                apiUrl={API_URL}
+                onSaved={fetchTenants}
+                onNotify={(type, message) =>
+                    setNotificationState({
+                        isOpen: true,
+                        type,
+                        message,
+                        autoClose: true,
+                        duration: 3500,
+                    })
+                }
+            />
             <TenantMapModal isOpen={showMapModal} onClose={() => setShowMapModal(false)} activeTab={activeTab} records={records} onSelectSlot={(tenant) => setViewRow(tenant)} />
             <LogModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} />
 
@@ -2348,7 +2499,7 @@ const TenantLease = () => {
                 onReject={handleRejectApplicant}
                 onRejectRenewal={handleRejectRenewal}
 
-                renewalsData={records.filter(t => t.status === "Payment Review" || t.status === "PAYMENT_REVIEW")}
+                renewalsData={renewalContractRequests}
                 onReviewRenewal={(record) => {
                     setReviewData(record);
                     setShowWaitlistModal(false);
@@ -2382,8 +2533,8 @@ const TenantLease = () => {
                 onRequestContract={handleRequestContract}
                 onProceedToLease={handleProceedToLease}
                 onReject={handleRejectApplicant}
-                onApproveRenewal={handleApproveRenewal} 
-                onRejectRenewal={handleRejectRenewal}
+                onApproveRenewal={(tenantId) => handleApproveRenewal(tenantId, reviewData?.renewalContractId)} 
+                onRejectRenewal={(tenantId, reason) => handleRejectRenewal(tenantId, reason, reviewData?.renewalContractId)}
             />
 
             <AddTenantModal
@@ -2905,7 +3056,7 @@ const TenantLease = () => {
                                     </h4>
                                     <p className="text-sm text-slate-500 mt-1">
                                         {selectedPaymentTenant
-                                            ? `Slot ${selectedPaymentTenant.slotNo || "N/A"} | ${(selectedPaymentTenant.tenantType || "Permanent")} | ${paymentProgress?.selectedYear || paymentRefDate.getFullYear()}`
+                                            ? `Slot ${selectedPaymentTenant.slotNo || "N/A"} | ${(selectedPaymentTenant.tenantType || "Permanent")} | Contract: ${paymentProgress?.contractPeriodLabel || "N/A"}`
                                             : "Select a tenant to view paid and remaining month visuals."}
                                     </p>
                                 </div>
@@ -2968,21 +3119,25 @@ const TenantLease = () => {
                                     </div>
 
                                     <div className="mt-4 overflow-x-auto pb-1">
-                                        <div className="min-w-[900px] grid grid-cols-12 gap-2">
+                                        <div className="min-w-max flex gap-2">
                                             {paymentProgress.timeline.map((month) => {
                                                 const baseClass = "rounded-lg border p-2 text-center min-h-[82px] flex flex-col justify-between";
                                                 const statusClass = month.status === "paid"
                                                     ? "border-emerald-200 bg-emerald-500 text-white"
-                                                    : month.status === "remaining"
+                                                    : month.status === "overdue"
+                                                        ? "border-rose-200 bg-rose-100 text-rose-800"
+                                                        : month.status === "remaining"
                                                         ? "border-amber-200 bg-amber-50 text-amber-800"
                                                             : "border-slate-200 bg-slate-50 text-slate-400";
 
                                                 return (
-                                                    <div key={month.label} className={`${baseClass} ${statusClass}`}>
+                                                    <div key={month.key} className={`${baseClass} ${statusClass} w-[90px]`}> 
                                                         <p className="text-[11px] font-black tracking-wide">{month.label}</p>
                                                         <p className="text-[10px] font-bold uppercase">
                                                             {month.status === "paid"
                                                                 ? "Paid"
+                                                                : month.status === "overdue"
+                                                                    ? "Overdue"
                                                                 : month.status === "remaining"
                                                                     ? "Due"
                                                                         : "N/A"}
@@ -3002,8 +3157,8 @@ const TenantLease = () => {
 
                                     <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
                                         <span className="px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">Paid</span>
+                                        <span className="px-2 py-1 rounded-md bg-rose-100 text-rose-700">Overdue</span>
                                         <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-700">Due / Unpaid</span>
-                                        <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">Not Applicable</span>
                                     </div>
                                 </>
                             ) : (

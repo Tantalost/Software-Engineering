@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Tenant from "../models/Tenant.js";
 import TenantApplication from "../models/TenantApplication.js";
 import sendEmail from "../utils/sendEmail.js";
@@ -19,6 +20,178 @@ const normalizeFeeBreakdown = (rawBreakdown = {}, tenantType = "Permanent") => {
     electricity,
     otherAmount,
     otherSpecify: rawBreakdown.otherSpecify || ""
+  };
+};
+
+const CONTRACT_TEMPLATES_KEY = "tenantContractTemplates";
+const DEFAULT_CONTRACT_TEMPLATE_KEY = "tenantDefaultContractTemplateId";
+
+const toValidDate = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const toNonNegativeInt = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  return Math.floor(num);
+};
+
+const toBoolean = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "1", "yes", "on"].includes(normalized);
+  }
+  return false;
+};
+
+const normalizeContractType = (value, fallback = "RENEWAL") => {
+  const normalized = String(value || "").trim().toUpperCase();
+  if (normalized === "INITIAL") return "INITIAL";
+  if (normalized === "RENEWAL") return "RENEWAL";
+  return fallback;
+};
+
+const addMonths = (date, months) => {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+};
+
+const addDays = (date, days) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const startOfDay = (date) => {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+};
+
+const daysUntil = (targetDate, fromDate = new Date()) => {
+  const diff = startOfDay(targetDate).getTime() - startOfDay(fromDate).getTime();
+  return Math.floor(diff / (24 * 60 * 60 * 1000));
+};
+
+const calculateDurationMonths = (startDate, endDate) => {
+  let months =
+    (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+    (endDate.getMonth() - startDate.getMonth());
+
+  if (endDate.getDate() >= startDate.getDate()) {
+    months += 1;
+  }
+
+  return Math.max(months, 1);
+};
+
+const splitDuration = (durationMonths) => ({
+  years: Math.floor(durationMonths / 12),
+  months: durationMonths % 12,
+});
+
+const deriveContractTiming = ({ startDate, endDate, durationYears, durationMonths, durationTotalMonths }) => {
+  const parsedStart = toValidDate(startDate);
+  if (!parsedStart) {
+    throw new Error("A valid contract start date is required.");
+  }
+
+  let totalMonths = toNonNegativeInt(durationTotalMonths);
+  if (totalMonths === 0) {
+    totalMonths = (toNonNegativeInt(durationYears) * 12) + toNonNegativeInt(durationMonths);
+  }
+
+  let parsedEnd = toValidDate(endDate);
+
+  if (!parsedEnd && totalMonths > 0) {
+    parsedEnd = addMonths(parsedStart, totalMonths);
+  }
+
+  if (!parsedEnd) {
+    throw new Error("Provide either a valid end date or a duration in months/years.");
+  }
+
+  if (parsedEnd <= parsedStart) {
+    throw new Error("Contract end date must be after the contract start date.");
+  }
+
+  if (totalMonths === 0) {
+    totalMonths = calculateDurationMonths(parsedStart, parsedEnd);
+  }
+
+  return {
+    startDate: parsedStart,
+    endDate: parsedEnd,
+    durationMonths: totalMonths,
+    duration: splitDuration(totalMonths),
+  };
+};
+
+const ensureSingleActiveContract = (tenant, targetContractId) => {
+  tenant.contracts.forEach((contract) => {
+    if (String(contract._id) === String(targetContractId)) {
+      contract.status = "active";
+      return;
+    }
+
+    if (contract.status === "active") {
+      contract.status = "superseded";
+    }
+  });
+};
+
+const syncLegacyFieldsFromActiveContract = (tenant, activeContract) => {
+  if (!activeContract) return;
+
+  tenant.activeContractId = activeContract._id;
+  tenant.StartDateTime = activeContract.startDate;
+  tenant.DueDateTime = activeContract.endDate;
+
+  tenant.documents = tenant.documents || {};
+  if (activeContract.documentUrl) {
+    tenant.documents.contract = activeContract.documentUrl;
+  }
+};
+
+const normalizeContractTemplates = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => item && item._id);
+};
+
+const fetchContractTemplateState = async () => {
+  const [templatesSetting, defaultSetting] = await Promise.all([
+    Settings.findOne({ key: CONTRACT_TEMPLATES_KEY }),
+    Settings.findOne({ key: DEFAULT_CONTRACT_TEMPLATE_KEY }),
+  ]);
+
+  const templates = normalizeContractTemplates(templatesSetting?.value);
+  const defaultTemplateId = typeof defaultSetting?.value === "string" ? defaultSetting.value : "";
+
+  return {
+    templates,
+    defaultTemplateId,
+    templatesSetting,
+    defaultSetting,
+  };
+};
+
+const buildTemplateDuration = ({ durationYears, durationMonths, durationTotalMonths }) => {
+  let totalMonths = toNonNegativeInt(durationTotalMonths);
+  if (totalMonths === 0) {
+    totalMonths = (toNonNegativeInt(durationYears) * 12) + toNonNegativeInt(durationMonths);
+  }
+
+  if (totalMonths <= 0) {
+    throw new Error("Template duration is required (months/years).");
+  }
+
+  return {
+    durationMonths: totalMonths,
+    duration: splitDuration(totalMonths),
   };
 };
 
@@ -173,6 +346,455 @@ export const getTenantById = async (req, res) => {
   }
 };
 
+export const getTenantContracts = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id).select(
+      "tenantName slotNo contracts activeContractId StartDateTime DueDateTime documents"
+    );
+
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    const sortedContracts = [...(tenant.contracts || [])].sort(
+      (a, b) => new Date(b.startDate) - new Date(a.startDate)
+    );
+
+    return res.status(200).json({
+      tenantId: tenant._id,
+      tenantName: tenant.tenantName,
+      slotNo: tenant.slotNo,
+      activeContractId: tenant.activeContractId,
+      contracts: sortedContracts,
+      legacy: {
+        StartDateTime: tenant.StartDateTime,
+        DueDateTime: tenant.DueDateTime,
+        contract: tenant.documents?.contract || "",
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const addTenantContract = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    const timing = deriveContractTiming({
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
+      durationYears: req.body.durationYears,
+      durationMonths: req.body.durationMonths,
+      durationTotalMonths: req.body.durationTotalMonths,
+    });
+
+    const shouldActivate =
+      toBoolean(req.body.makeActive) ||
+      String(req.body.status || "").toLowerCase() === "active" ||
+      !tenant.activeContractId ||
+      !Array.isArray(tenant.contracts) ||
+      tenant.contracts.length === 0;
+
+    const newContract = {
+      contractType: normalizeContractType(req.body.contractType, "RENEWAL"),
+      startDate: timing.startDate,
+      endDate: timing.endDate,
+      durationMonths: timing.durationMonths,
+      duration: timing.duration,
+      documentUrl: req.file?.filename || req.body.documentUrl || "",
+      status: shouldActivate ? "active" : (req.body.status || "inactive"),
+      source: "admin",
+      assignedAt: new Date(),
+      notes: req.body.notes || "",
+    };
+
+    tenant.contracts.push(newContract);
+    const createdContract = tenant.contracts[tenant.contracts.length - 1];
+
+    if (shouldActivate) {
+      ensureSingleActiveContract(tenant, createdContract._id);
+      syncLegacyFieldsFromActiveContract(tenant, createdContract);
+    }
+
+    await tenant.save();
+
+    return res.status(201).json({
+      message: "Contract added successfully.",
+      tenant,
+      contract: createdContract,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+export const updateTenantContract = async (req, res) => {
+  try {
+    const { id, contractId } = req.params;
+    const tenant = await Tenant.findById(id);
+
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    const contract = tenant.contracts.id(contractId);
+    if (!contract) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+
+    const hasTimingUpdate =
+      req.body.startDate !== undefined ||
+      req.body.endDate !== undefined ||
+      req.body.durationYears !== undefined ||
+      req.body.durationMonths !== undefined ||
+      req.body.durationTotalMonths !== undefined;
+
+    if (hasTimingUpdate) {
+      const timing = deriveContractTiming({
+        startDate: req.body.startDate || contract.startDate,
+        endDate: req.body.endDate || contract.endDate,
+        durationYears: req.body.durationYears,
+        durationMonths: req.body.durationMonths,
+        durationTotalMonths: req.body.durationTotalMonths,
+      });
+
+      contract.startDate = timing.startDate;
+      contract.endDate = timing.endDate;
+      contract.durationMonths = timing.durationMonths;
+      contract.duration = timing.duration;
+    }
+
+    if (req.body.contractType) {
+      contract.contractType = normalizeContractType(req.body.contractType, "RENEWAL");
+    }
+
+    if (req.body.notes !== undefined) {
+      contract.notes = req.body.notes;
+    }
+
+    if (req.file?.filename) {
+      contract.documentUrl = req.file.filename;
+    } else if (req.body.documentUrl) {
+      contract.documentUrl = req.body.documentUrl;
+    }
+
+    const wantsActive =
+      toBoolean(req.body.makeActive) ||
+      String(req.body.status || "").toLowerCase() === "active";
+
+    if (wantsActive) {
+      ensureSingleActiveContract(tenant, contract._id);
+      syncLegacyFieldsFromActiveContract(tenant, contract);
+    } else if (req.body.status) {
+      const isCurrentActive = String(tenant.activeContractId || "") === String(contract._id);
+      if (isCurrentActive && req.body.status !== "active") {
+        return res.status(400).json({ error: "Cannot deactivate the active contract. Activate another contract first." });
+      }
+      contract.status = req.body.status;
+    }
+
+    const stillActive = String(tenant.activeContractId || "") === String(contract._id) || contract.status === "active";
+    if (stillActive) {
+      syncLegacyFieldsFromActiveContract(tenant, contract);
+    }
+
+    await tenant.save();
+
+    return res.status(200).json({
+      message: "Contract updated successfully.",
+      tenant,
+      contract,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+export const activateTenantContract = async (req, res) => {
+  try {
+    const { id, contractId } = req.params;
+    const tenant = await Tenant.findById(id);
+
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    const contract = tenant.contracts.id(contractId);
+    if (!contract) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+
+    ensureSingleActiveContract(tenant, contract._id);
+    syncLegacyFieldsFromActiveContract(tenant, contract);
+
+    await tenant.save();
+
+    return res.status(200).json({
+      message: "Contract activated successfully.",
+      tenant,
+      contract,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+export const deleteTenantContract = async (req, res) => {
+  try {
+    const { id, contractId } = req.params;
+    const tenant = await Tenant.findById(id);
+
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    if (!Array.isArray(tenant.contracts) || tenant.contracts.length <= 1) {
+      return res.status(400).json({ error: "Cannot delete the last remaining contract." });
+    }
+
+    const contract = tenant.contracts.id(contractId);
+    if (!contract) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+
+    const deletingActive =
+      String(tenant.activeContractId || "") === String(contract._id) ||
+      contract.status === "active";
+
+    tenant.contracts.pull(contract._id);
+
+    if (deletingActive) {
+      const sortedRemaining = [...tenant.contracts].sort(
+        (a, b) => new Date(b.startDate) - new Date(a.startDate)
+      );
+      const replacement = sortedRemaining[0];
+
+      if (!replacement) {
+        return res.status(400).json({ error: "Cannot remove active contract without a replacement." });
+      }
+
+      ensureSingleActiveContract(tenant, replacement._id);
+      syncLegacyFieldsFromActiveContract(tenant, replacement);
+    }
+
+    await tenant.save();
+
+    return res.status(200).json({
+      message: "Contract deleted successfully.",
+      tenant,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+export const getContractTemplates = async (req, res) => {
+  try {
+    const { templates, defaultTemplateId } = await fetchContractTemplateState();
+
+    return res.status(200).json({
+      templates: [...templates].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)),
+      defaultTemplateId,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const createContractTemplate = async (req, res) => {
+  try {
+    const { templates, templatesSetting } = await fetchContractTemplateState();
+    const timing = buildTemplateDuration({
+      durationYears: req.body.durationYears,
+      durationMonths: req.body.durationMonths,
+      durationTotalMonths: req.body.durationTotalMonths,
+    });
+
+    const now = new Date();
+    const newTemplate = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      name: req.body.name || `Template ${templates.length + 1}`,
+      contractType: normalizeContractType(req.body.contractType, "INITIAL"),
+      durationMonths: timing.durationMonths,
+      duration: timing.duration,
+      documentUrl: req.file?.filename || req.body.documentUrl || "",
+      notes: req.body.notes || "",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+
+    const nextTemplates = [...templates, newTemplate];
+
+    if (templatesSetting) {
+      templatesSetting.value = nextTemplates;
+      await templatesSetting.save();
+    } else {
+      await Settings.create({ key: CONTRACT_TEMPLATES_KEY, value: nextTemplates });
+    }
+
+    return res.status(201).json({
+      message: "Contract template created.",
+      template: newTemplate,
+      templates: nextTemplates,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+export const updateContractTemplate = async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const { templates, templatesSetting } = await fetchContractTemplateState();
+
+    const index = templates.findIndex((template) => String(template._id) === String(templateId));
+    if (index === -1) {
+      return res.status(404).json({ error: "Template not found." });
+    }
+
+    const current = templates[index];
+
+    let nextDurationMonths = Number(current.durationMonths) || 0;
+    let nextDuration = current.duration || splitDuration(nextDurationMonths || 1);
+    const hasDurationUpdate =
+      req.body.durationYears !== undefined ||
+      req.body.durationMonths !== undefined ||
+      req.body.durationTotalMonths !== undefined;
+
+    if (hasDurationUpdate) {
+      const timing = buildTemplateDuration({
+        durationYears: req.body.durationYears,
+        durationMonths: req.body.durationMonths,
+        durationTotalMonths: req.body.durationTotalMonths,
+      });
+      nextDurationMonths = timing.durationMonths;
+      nextDuration = timing.duration;
+    }
+
+    const updatedTemplate = {
+      ...current,
+      name: req.body.name !== undefined ? req.body.name : current.name,
+      contractType: normalizeContractType(req.body.contractType, normalizeContractType(current.contractType, "INITIAL")),
+      durationMonths: nextDurationMonths,
+      duration: nextDuration,
+      documentUrl: req.file?.filename || req.body.documentUrl || current.documentUrl || "",
+      notes: req.body.notes !== undefined ? req.body.notes : current.notes,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const nextTemplates = [...templates];
+    nextTemplates[index] = updatedTemplate;
+
+    if (!templatesSetting) {
+      await Settings.create({ key: CONTRACT_TEMPLATES_KEY, value: nextTemplates });
+    } else {
+      templatesSetting.value = nextTemplates;
+      await templatesSetting.save();
+    }
+
+    return res.status(200).json({
+      message: "Contract template updated.",
+      template: updatedTemplate,
+      templates: nextTemplates,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+export const deleteContractTemplate = async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    const state = await fetchContractTemplateState();
+
+    const nextTemplates = state.templates.filter((template) => String(template._id) !== String(templateId));
+    if (nextTemplates.length === state.templates.length) {
+      return res.status(404).json({ error: "Template not found." });
+    }
+
+    if (state.templatesSetting) {
+      state.templatesSetting.value = nextTemplates;
+      await state.templatesSetting.save();
+    } else {
+      await Settings.create({ key: CONTRACT_TEMPLATES_KEY, value: nextTemplates });
+    }
+
+    if (String(state.defaultTemplateId || "") === String(templateId)) {
+      await Settings.findOneAndUpdate(
+        { key: DEFAULT_CONTRACT_TEMPLATE_KEY },
+        { value: "" },
+        { upsert: true }
+      );
+    }
+
+    return res.status(200).json({
+      message: "Contract template deleted.",
+      templates: nextTemplates,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+export const getDefaultContractConfig = async (req, res) => {
+  try {
+    const { templates, defaultTemplateId } = await fetchContractTemplateState();
+    const defaultTemplate = templates.find((template) => String(template._id) === String(defaultTemplateId)) || null;
+
+    return res.status(200).json({
+      defaultTemplateId,
+      defaultTemplate,
+      templates,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateDefaultContractConfig = async (req, res) => {
+  try {
+    const { templateId } = req.body;
+    const { templates } = await fetchContractTemplateState();
+
+    if (!templateId) {
+      await Settings.findOneAndUpdate(
+        { key: DEFAULT_CONTRACT_TEMPLATE_KEY },
+        { value: "" },
+        { upsert: true }
+      );
+
+      return res.status(200).json({
+        message: "Default contract cleared.",
+        defaultTemplateId: "",
+        defaultTemplate: null,
+      });
+    }
+
+    const defaultTemplate = templates.find((template) => String(template._id) === String(templateId));
+    if (!defaultTemplate) {
+      return res.status(404).json({ error: "Selected template was not found." });
+    }
+
+    await Settings.findOneAndUpdate(
+      { key: DEFAULT_CONTRACT_TEMPLATE_KEY },
+      { value: String(templateId) },
+      { upsert: true }
+    );
+
+    return res.status(200).json({
+      message: "Default contract updated.",
+      defaultTemplateId: String(templateId),
+      defaultTemplate,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
 export const createTenant = async (req, res) => {
   try {
     
@@ -234,23 +856,69 @@ export const createTenant = async (req, res) => {
     const recurringTotal = rentAmt + utilAmt; 
     const initialPaymentAmount = isPermanent ? (advancePayment + utilAmt) : recurringTotal;
 
+    const transferApplication = req.body.transferWaitlistId
+      ? await TenantApplication.findById(req.body.transferWaitlistId).lean()
+      : null;
+    const { templates, defaultTemplateId } = await fetchContractTemplateState();
+    const selectedTemplate = resolveTemplateForOnboarding({
+      templates,
+      defaultTemplateId,
+      transferApplication,
+    });
+
+    const contractStartDate =
+      toValidDate(req.body.StartDateTime) ||
+      toValidDate(transferApplication?.createdAt) ||
+      new Date();
+    const fallbackDurationMonths = toNonNegativeInt(transferApplication?.defaultContractDurationMonths) || 24;
+    const initialDurationMonths = Math.max(toNonNegativeInt(selectedTemplate?.durationMonths) || fallbackDurationMonths, 1);
+    const contractEndDate = addMonths(contractStartDate, initialDurationMonths);
+    const initialContractId = new mongoose.Types.ObjectId();
+    const initialContractDocument = contract || req.body.documents?.contract || selectedTemplate?.documentUrl || "";
+
+    const initialContract = {
+      _id: initialContractId,
+      contractType: "INITIAL",
+      startDate: contractStartDate,
+      endDate: contractEndDate,
+      durationMonths: initialDurationMonths,
+      duration: splitDuration(initialDurationMonths),
+      documentUrl: initialContractDocument,
+      status: "active",
+      source: req.body.transferWaitlistId ? "system" : "admin",
+      assignedAt: new Date(),
+      templateId: selectedTemplate?._id || transferApplication?.defaultTemplateId || "",
+      templateName: selectedTemplate?.name || "",
+      notes: req.body.transferWaitlistId
+        ? "Auto-created active contract from approved application."
+        : "Initial active contract created during onboarding.",
+    };
+
     const tenantData = {
         ...req.body,
+      StartDateTime: contractStartDate,
+      DueDateTime: contractEndDate,
         totalAmount: recurringTotal, 
         advancePaymentBalance: advancePayment,
         feeBreakdown: normalizedFeeBreakdown,
+      activeContractId: initialContractId,
+      contracts: [initialContract],
+      isEligibleForRenewal: false,
         paymentHistory: [{
             referenceNo: req.body.referenceNo || "Initial Payment",
             amount: initialPaymentAmount, 
             datePaid: new Date().toISOString(),
-            receiptUrl: proofOfReceipt || req.body.documents?.proofOfReceipt || ""
+        receiptUrl: proofOfReceipt || req.body.documents?.proofOfReceipt || "",
+        contractId: initialContractId,
+        coverageStartDate: contractStartDate,
+        coverageEndDate: addMonths(contractStartDate, 1)
         }],
         
         documents: {
             ...(req.body.documents || {}),
             businessPermit: businessPermit || req.body.documents?.businessPermit,
             validID: validID || req.body.documents?.validID,
-            contract: contract || req.body.documents?.contract,
+        contract: initialContractDocument,
             barangayClearance: barangayClearance || req.body.documents?.barangayClearance, 
             proofOfReceipt: proofOfReceipt || req.body.documents?.proofOfReceipt,
             communityTax: communityTax || req.body.documents?.communityTax,             
@@ -821,6 +1489,123 @@ IBT Management`;
   }
 };
 
+export const approveRenewalContractRequest = async (req, res) => {
+  try {
+    const { id, contractId } = req.params;
+    const tenant = await Tenant.findById(id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const contract = tenant.contracts.id(contractId);
+    if (!contract) return res.status(404).json({ error: "Renewal contract request not found." });
+
+    if (contract.status !== "pending_approval") {
+      return res.status(400).json({ error: "Only pending renewal requests can be approved." });
+    }
+
+    contract.status = "approved_awaiting_start";
+    contract.approvedAt = new Date();
+    contract.rejectedAt = null;
+    contract.rejectedReason = "";
+    tenant.isEligibleForRenewal = false;
+
+    await tenant.save();
+
+    if (tenant.email) {
+      try {
+        await sendEmail({
+          email: tenant.email,
+          subject: "Renewal Contract Approved - Awaiting Start",
+          message: `Dear ${tenant.tenantName || tenant.name},\n\nYour renewal contract request for Slot ${tenant.slotNo} has been approved.\n\nThe renewed contract will activate automatically on ${new Date(contract.startDate).toLocaleDateString()}.\n\nThank you,\nIBT Management`,
+        });
+
+        const user = await User.findOne({ email: tenant.email });
+        if (user?.expoPushToken) {
+          await sendPushNotification(
+            user.expoPushToken,
+            "Renewal Approved ✅",
+            `Your renewal for Slot ${tenant.slotNo} was approved. It will activate on ${new Date(contract.startDate).toLocaleDateString()}.`,
+            { route: "stalls" },
+          );
+        }
+      } catch (notifyError) {
+        console.error("Renewal contract approval notification failed:", notifyError.message);
+      }
+    }
+
+    return res.status(200).json({
+      message: "Renewal contract request approved.",
+      tenant,
+      contract,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const rejectRenewalContractRequest = async (req, res) => {
+  try {
+    const { id, contractId } = req.params;
+    const { rejectionReason } = req.body;
+
+    const tenant = await Tenant.findById(id);
+    if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const contract = tenant.contracts.id(contractId);
+    if (!contract) return res.status(404).json({ error: "Renewal contract request not found." });
+
+    if (contract.status !== "pending_approval") {
+      return res.status(400).json({ error: "Only pending renewal requests can be rejected." });
+    }
+
+    contract.status = "rejected";
+    contract.rejectedAt = new Date();
+    contract.rejectedReason = rejectionReason || "Invalid or incomplete renewal contract.";
+    contract.notes = `${contract.notes || ""}${contract.notes ? "\n" : ""}Rejected: ${contract.rejectedReason}`;
+
+    const activeContract =
+      (typeof tenant.getActiveContract === "function" ? tenant.getActiveContract() : null) ||
+      tenant.contracts.find((entry) => entry.status === "active");
+    const shouldReopenRenewal =
+      !!activeContract &&
+      activeContract.endDate &&
+      daysUntil(activeContract.endDate) <= 30 &&
+      daysUntil(activeContract.endDate) >= 0;
+    tenant.isEligibleForRenewal = shouldReopenRenewal;
+
+    await tenant.save();
+
+    if (tenant.email) {
+      try {
+        await sendEmail({
+          email: tenant.email,
+          subject: "Renewal Contract Rejected",
+          message: `Dear ${tenant.tenantName || tenant.name},\n\nYour submitted renewal contract for Slot ${tenant.slotNo} was rejected.\n\nReason: ${contract.rejectedReason}\n\nPlease submit a new renewal contract in the mobile app.\n\nThank you,\nIBT Management`,
+        });
+
+        const user = await User.findOne({ email: tenant.email });
+        if (user?.expoPushToken) {
+          await sendPushNotification(
+            user.expoPushToken,
+            "Renewal Rejected",
+            `Your renewal request for Slot ${tenant.slotNo} was rejected. Please submit a corrected contract.`,
+            { route: "stalls" },
+          );
+        }
+      } catch (notifyError) {
+        console.error("Renewal contract rejection notification failed:", notifyError.message);
+      }
+    }
+
+    return res.status(200).json({
+      message: "Renewal contract request rejected.",
+      tenant,
+      contract,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 export const sendRentReminder = async (req, res) => {
   try {
     const { tenantId, isOverdue } = req.body;
@@ -1187,4 +1972,11 @@ export const rejectRenewalPayment = async (req, res) => {
     console.error("Reject Renewal Error:", error);
     res.status(500).json({ error: error.message });
   }
+};
+
+const resolveTemplateForOnboarding = ({ templates, defaultTemplateId, transferApplication }) => {
+  const applicationTemplateId = transferApplication?.defaultTemplateId || "";
+  const selectedTemplateId = applicationTemplateId || defaultTemplateId;
+  if (!selectedTemplateId) return null;
+  return templates.find((template) => String(template._id) === String(selectedTemplateId)) || null;
 };
