@@ -40,12 +40,41 @@ const DataRenderer = ({ reportPayload }) => {
 
   const { statistics, data } = reportPayload;
 
+  const formatStatLabel = (rawKey) => {
+    const key = String(rawKey || "").toLowerCase();
+    if (key === "missedcount" || key === "missedbus") return "Missed Bus";
+    if (key === "departednow" || key === "departedbus") return "Departed Bus";
+    return String(rawKey).replace(/([A-Z])/g, " $1").trim();
+  };
+
+  const formatTimeWithAmPm = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "-";
+
+    const already12Hour = raw.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+    if (already12Hour) {
+      const h = parseInt(already12Hour[1], 10);
+      if (Number.isNaN(h) || h < 1 || h > 12) return raw;
+      return `${h}:${already12Hour[2]} ${already12Hour[3].toUpperCase()}`;
+    }
+
+    const twentyFourHour = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (!twentyFourHour) return raw;
+
+    const hour = parseInt(twentyFourHour[1], 10);
+    if (Number.isNaN(hour) || hour < 0 || hour > 23) return raw;
+    const minute = twentyFourHour[2];
+    const period = hour >= 12 ? "PM" : "AM";
+    const converted = hour % 12 || 12;
+    return `${converted}:${minute} ${period}`;
+  };
+
   const renderStats = () => {
     if (!statistics || Object.keys(statistics).length === 0) return null;
 
     const visibleStats = Object.entries(statistics).filter(([key]) => {
       const normalizedKey = String(key).toLowerCase();
-      return normalizedKey !== "collectorid";
+      return !["collectorid", "arrivalslogged", "departureslogged"].includes(normalizedKey);
     });
 
     if (visibleStats.length === 0) return null;
@@ -59,7 +88,7 @@ const DataRenderer = ({ reportPayload }) => {
               className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm"
             >
               <div className="text-xs text-slate-400 uppercase font-bold mb-1">
-                {key.replace(/([A-Z])/g, " $1").trim()}
+                {formatStatLabel(key)}
               </div>
               <div className="text-xl font-bold text-slate-800">
                 {typeof value === "number" ? value.toLocaleString() : value}
@@ -82,9 +111,10 @@ const DataRenderer = ({ reportPayload }) => {
       );
     }
 
-    const headers = Object.keys(data[0]).filter(
-      (k) => k !== "id" && k !== "_id",
-    );
+    const headers = Object.keys(data[0]).filter((k) => {
+      const normalizedKey = String(k).toLowerCase();
+      return normalizedKey !== "id" && normalizedKey !== "_id" && normalizedKey !== "category";
+    });
 
     return (
       <div>
@@ -109,6 +139,12 @@ const DataRenderer = ({ reportPayload }) => {
                     let cellVal = row[header];
                     if (typeof cellVal === "object" && cellVal !== null)
                       cellVal = JSON.stringify(cellVal);
+
+                    const normalizedHeader = String(header).toLowerCase();
+                    if (["arrivaltime", "departuretime", "time", "departure"].includes(normalizedHeader)) {
+                      cellVal = formatTimeWithAmPm(cellVal);
+                    }
+
                     return (
                       <td
                         key={`${idx}-${header}`}
