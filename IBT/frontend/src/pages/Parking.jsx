@@ -1317,11 +1317,14 @@ const Parking = () => {
         };
       });
 
-      const carCount = shiftRecords.filter(
+      const fourWheelsCount = shiftRecords.filter(
         (item) => item.type && item.type.toLowerCase() === "4 wheels",
       ).length;
-      const motoCount = shiftRecords.filter(
+      const twoWheelsCount = shiftRecords.filter(
         (item) => item.type && item.type.toLowerCase() === "2 wheels",
+      ).length;
+      const jeepVehicleCount = shiftRecords.filter(
+        (item) => item.type && item.type.toLowerCase() === "jeep",
       ).length;
 
       const reportPayload = {
@@ -1336,8 +1339,9 @@ const Parking = () => {
           duration: dateFilterType,           
         },
         statistics: {
-          cars: carCount,
-          motorcycles: motoCount,
+          "4 Wheels": fourWheelsCount,
+          "2 Wheels": twoWheelsCount,
+          Jeep: jeepVehicleCount,
           totalVehicles: shiftRecords.length,
           totalRevenue: shiftRecords.reduce((sum, t) => sum + (Number(t.finalPrice) || 0), 0),
           collector: collectorName.trim(),
