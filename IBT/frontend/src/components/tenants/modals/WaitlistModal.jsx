@@ -231,7 +231,11 @@ const isRenewalRecord = (app) => renewalsData.some((r) => {
                                   (app.status === 'PAYMENT_REVIEW' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-600 hover:bg-emerald-700')
                                 }`}
                               >
-                                {isRenewalRecord(app) ? <><ClipboardList size={14}/> Review Contract</> : 
+                                {isRenewalRecord(app) ? (
+                                  app.renewalReviewType === 'payment'
+                                    ? <><CreditCard size={14}/> Check Payment</>
+                                    : <><ClipboardList size={14}/> Review Contract</>
+                                ) : 
                                 (app.status === 'PAYMENT_REVIEW' ? <><CreditCard size={14}/> Check Payment</> : <><Eye size={14}/> Review Docs</>)}
                               </button>
                           </div>

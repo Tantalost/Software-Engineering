@@ -1411,7 +1411,7 @@ const TenantLease = () => {
         }
     };
 
-    const handleApproveRenewal = async (tenantId, contractIdArg) => {
+    const handleApproveRenewal = async (tenantId, contractIdArg, reviewTypeArg = "contract") => {
         try {
             const contractId = contractIdArg
                 || (Array.isArray(records.find((tenant) => String(tenant.id) === String(tenantId))?.contracts)
@@ -1421,8 +1421,20 @@ const TenantLease = () => {
                         .find((contract) => contract.status === 'pending_approval')?._id
                     : null);
 
-            if (!contractId) {
-                setNotificationState({ isOpen: true, type: 'error', message: 'No pending renewal contract was found for this tenant.', autoClose: true, duration: 4000 });
+            const isPaymentReviewFlow = reviewTypeArg === "payment" || !contractId;
+
+            if (isPaymentReviewFlow) {
+                const paymentRes = await fetch(`${API_URL}/tenants/${tenantId}/approve-renewal`, { method: 'PUT' });
+                const paymentData = await paymentRes.json();
+
+                if (paymentRes.ok) {
+                    setNotificationState({ isOpen: true, type: 'success', message: "Renewal payment confirmed. Next due date updated.", autoClose: true, duration: 3500 });
+                    await logActivity(role, "APPROVE_RENEWAL", `Approved renewal payment review for tenant ID #${tenantId}`, "Tenants");
+                    setShowReviewModal(false);
+                    fetchTenants();
+                } else {
+                    setNotificationState({ isOpen: true, type: 'error', message: `Failed: ${paymentData.error || 'Unknown error'}`, autoClose: true, duration: 5000 });
+                }
                 return;
             }
 
@@ -1445,7 +1457,7 @@ const TenantLease = () => {
         }
     };
 
-    const handleRejectRenewal = async (tenantId, reason, contractIdArg) => {
+    const handleRejectRenewal = async (tenantId, reason, contractIdArg, reviewTypeArg = "contract") => {
         try {
             const contractId = contractIdArg
                 || (Array.isArray(records.find((tenant) => String(tenant.id) === String(tenantId))?.contracts)
@@ -1455,8 +1467,30 @@ const TenantLease = () => {
                         .find((contract) => contract.status === 'pending_approval')?._id
                     : null);
 
-            if (!contractId) {
-                setNotificationState({ isOpen: true, type: 'error', message: 'No pending renewal contract was found for this tenant.', autoClose: true, duration: 4000 });
+            const isPaymentReviewFlow = reviewTypeArg === "payment" || !contractId;
+
+            if (isPaymentReviewFlow) {
+                const paymentResponse = await fetch(`${API_URL}/tenants/${tenantId}/reject-renewal`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rejectionReason: reason })
+                });
+
+                if (paymentResponse.ok) {
+                    setNotificationState({
+                        isOpen: true,
+                        type: 'success',
+                        message: "Renewal payment rejected. Tenant notified.",
+                        autoClose: true,
+                        duration: 3000
+                    });
+                    await logActivity(role, "REJECT_RENEWAL", `Rejected renewal payment review for tenant ID #${tenantId}. Reason: ${reason}`, "Tenants");
+
+                    fetchTenants();
+                    if (showReviewModal) setShowReviewModal(false);
+                } else {
+                    setNotificationState({ isOpen: true, type: 'error', message: "Failed to reject renewal payment.", autoClose: true, duration: 3000 });
+                }
                 return;
             }
 
@@ -2039,7 +2073,24 @@ const TenantLease = () => {
         return pending;
     }, [records]);
 
-    const renewalsPendingCount = renewalContractRequests.length;
+    const tenantPaymentReviewRequests = useMemo(() => {
+        return records
+            .filter((tenant) => tenant.status === 'Payment Review' || tenant.status === 'PAYMENT_REVIEW')
+            .map((tenant) => ({
+                ...tenant,
+                _id: tenant._id || tenant.id,
+                id: tenant.id,
+                renewalReviewType: 'payment',
+                renewalRequestedAt: tenant.updatedAt || tenant.StartDateTime,
+            }));
+    }, [records]);
+
+    const renewalReviewQueue = useMemo(
+        () => [...renewalContractRequests, ...tenantPaymentReviewRequests],
+        [renewalContractRequests, tenantPaymentReviewRequests]
+    );
+
+    const renewalsPendingCount = renewalReviewQueue.length;
 
     return (
         <Layout title="Tenants/Lease Management">
@@ -2499,7 +2550,7 @@ const TenantLease = () => {
                 onReject={handleRejectApplicant}
                 onRejectRenewal={handleRejectRenewal}
 
-                renewalsData={renewalContractRequests}
+                renewalsData={renewalReviewQueue}
                 onReviewRenewal={(record) => {
                     setReviewData(record);
                     setShowWaitlistModal(false);
@@ -2533,8 +2584,8 @@ const TenantLease = () => {
                 onRequestContract={handleRequestContract}
                 onProceedToLease={handleProceedToLease}
                 onReject={handleRejectApplicant}
-                onApproveRenewal={(tenantId) => handleApproveRenewal(tenantId, reviewData?.renewalContractId)} 
-                onRejectRenewal={(tenantId, reason) => handleRejectRenewal(tenantId, reason, reviewData?.renewalContractId)}
+                onApproveRenewal={(tenantId) => handleApproveRenewal(tenantId, reviewData?.renewalContractId, reviewData?.renewalReviewType || "contract")} 
+                onRejectRenewal={(tenantId, reason) => handleRejectRenewal(tenantId, reason, reviewData?.renewalContractId, reviewData?.renewalReviewType || "contract")}
             />
 
             <AddTenantModal

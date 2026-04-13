@@ -183,13 +183,18 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
+  const isPermanent = currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent";
+  const isWaitingForStartOperation = isPermanent && !currentApp.due && !currentApp.operationStartDate;
+
   useEffect(() => {
     if (!applying && paymentData?.referenceNo === '') {
         setPaymentModalVisible(false);
     }
   }, [applying, paymentData?.referenceNo]);
 
-  const dueDate = currentApp.due 
+  const dueDate = isWaitingForStartOperation
+    ? "Waiting for Start Operation"
+    : currentApp.due 
     ? new Date(currentApp.due).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -214,8 +219,6 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   const interestAmount = currentApp.interestAmount ? Number(currentApp.interestAmount) : 0;
   const advanceBalance = currentApp.advancePaymentBalance ? Number(currentApp.advancePaymentBalance) : 0;
   const advanceUsed = currentApp.advanceUsedForPenalties ? Number(currentApp.advanceUsedForPenalties) : 0;
-  const isPermanent = currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent";
-
   const feeBreakdown = typeof currentApp.feeBreakdown === 'string' 
       ? JSON.parse(currentApp.feeBreakdown || '{}') 
       : (currentApp.feeBreakdown || {});
@@ -330,7 +333,12 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>Next Payment Due</Text>
           </View>
-          <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
+          <Text variant="headlineSmall" style={{ color: isWaitingForStartOperation ? '#b45309' : colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
+          {isWaitingForStartOperation && (
+            <Text style={{ marginLeft: 34, marginTop: 4, color: '#92400e', fontStyle: 'italic' }}>
+              Billing starts the day after your operation starts.
+            </Text>
+          )}
           
           <View style={{ marginLeft: 34, marginTop: 10, backgroundColor: '#dcfce7', padding: 12, borderRadius: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>

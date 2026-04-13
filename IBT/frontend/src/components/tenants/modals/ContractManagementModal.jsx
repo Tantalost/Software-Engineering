@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, FileText, Plus, Pencil, Trash2, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { X, FileText, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
 
 const getDocUrl = (apiUrl, filename) => {
   if (!filename) return "";
@@ -103,6 +103,10 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
 
   const handleSave = async () => {
     if (!tenantId) return;
+    if (!editingContractId) {
+      onNotify?.("error", "Select a contract to edit.");
+      return;
+    }
     if (!form.startDate) {
       onNotify?.("error", "Contract start date is required.");
       return;
@@ -129,12 +133,10 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
         payload.append("contract", form.contractFile);
       }
 
-      const endpoint = editingContractId
-        ? `${apiUrl}/tenants/${tenantId}/contracts/${editingContractId}`
-        : `${apiUrl}/tenants/${tenantId}/contracts`;
+      const endpoint = `${apiUrl}/tenants/${tenantId}/contracts/${editingContractId}`;
 
       const response = await fetch(endpoint, {
-        method: editingContractId ? "PUT" : "POST",
+        method: "PUT",
         body: payload,
       });
 
@@ -143,33 +145,12 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
         throw new Error(errorData.error || "Failed to save contract.");
       }
 
-      onNotify?.("success", editingContractId ? "Contract updated." : "Contract created.");
+      onNotify?.("success", "Contract updated.");
       resetForm();
       await fetchContracts();
       await onSaved?.();
     } catch (error) {
       onNotify?.("error", error.message || "Failed to save contract.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleActivate = async (contractId) => {
-    if (!tenantId || !contractId) return;
-    setSaving(true);
-    try {
-      const response = await fetch(`${apiUrl}/tenants/${tenantId}/contracts/${contractId}/activate`, {
-        method: "PATCH",
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to activate contract.");
-      }
-      onNotify?.("success", "Active contract updated.");
-      await fetchContracts();
-      await onSaved?.();
-    } catch (error) {
-      onNotify?.("error", error.message || "Failed to activate contract.");
     } finally {
       setSaving(false);
     }
@@ -288,16 +269,6 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center justify-end gap-1">
-                              {!isActive && (
-                                <button
-                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                  title="Set Active"
-                                  onClick={() => handleActivate(contract._id)}
-                                  disabled={saving}
-                                >
-                                  <CheckCircle2 size={15} />
-                                </button>
-                              )}
                               <button
                                 className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
                                 title="Edit"
@@ -330,113 +301,119 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
           </section>
 
           <section className="xl:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h4 className="font-bold text-slate-700 mb-3">{editingContractId ? "Edit Contract" : "Add Contract"}</h4>
+            <h4 className="font-bold text-slate-700 mb-3">{editingContractId ? "Edit Contract" : "Select a Contract"}</h4>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-slate-600">Contract Type</label>
-                <select
-                  value={form.contractType}
-                  onChange={(e) => handleFormChange("contractType", normalizeContractType(e.target.value))}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="INITIAL">INITIAL</option>
-                  <option value="RENEWAL">RENEWAL</option>
-                </select>
+            {!editingContractId ? (
+              <div className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
+                Select an existing contract from the table to edit it. Only edit and delete are allowed in this module.
               </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">Contract Type</label>
+                    <select
+                      value={form.contractType}
+                      onChange={(e) => handleFormChange("contractType", normalizeContractType(e.target.value))}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="INITIAL">INITIAL</option>
+                      <option value="RENEWAL">RENEWAL</option>
+                    </select>
+                  </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-600">Start Date</label>
-                <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(e) => handleFormChange("startDate", e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">Start Date</label>
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) => handleFormChange("startDate", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-600">End Date (optional if duration provided)</label>
-                <input
-                  type="date"
-                  value={form.endDate}
-                  onChange={(e) => handleFormChange("endDate", e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">End Date (optional if duration provided)</label>
+                    <input
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) => handleFormChange("endDate", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs font-semibold text-slate-600">Years</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.durationYears}
-                    onChange={(e) => handleFormChange("durationYears", e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600">Years</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.durationYears}
+                        onChange={(e) => handleFormChange("durationYears", e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600">Months</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.durationMonths}
+                        onChange={(e) => handleFormChange("durationMonths", e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">Contract Document (PDF/Image)</label>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      onChange={(e) => handleFormChange("contractFile", e.target.files?.[0] || null)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600">Notes</label>
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) => handleFormChange("notes", e.target.value)}
+                      rows={3}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.makeActive)}
+                      onChange={(e) => handleFormChange("makeActive", e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    Set as active contract
+                  </label>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600">Months</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.durationMonths}
-                    onChange={(e) => handleFormChange("durationMonths", e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  />
+
+                <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-200 pt-3">
+                  <button
+                    onClick={resetForm}
+                    className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-white text-sm"
+                  >
+                    Cancel Edit
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-semibold disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+                    Save Changes
+                  </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-600">Contract Document (PDF/Image)</label>
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  onChange={(e) => handleFormChange("contractFile", e.target.files?.[0] || null)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-600">Notes</label>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => handleFormChange("notes", e.target.value)}
-                  rows={3}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={Boolean(form.makeActive)}
-                  onChange={(e) => handleFormChange("makeActive", e.target.checked)}
-                  className="h-4 w-4"
-                />
-                Set as active contract
-              </label>
-            </div>
-
-            <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-200 pt-3">
-              {editingContractId && (
-                <button
-                  onClick={resetForm}
-                  className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-white text-sm"
-                >
-                  Cancel Edit
-                </button>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-semibold disabled:opacity-50"
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                {editingContractId ? "Save Changes" : "Add Contract"}
-              </button>
-            </div>
+              </>
+            )}
           </section>
         </div>
       </div>

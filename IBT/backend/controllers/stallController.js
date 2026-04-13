@@ -22,6 +22,14 @@ const addMonths = (date, months) => {
     return copy;
 };
 
+const withDayInMonth = (baseDate, targetDay) => {
+    const copy = new Date(baseDate);
+    const safeDay = Math.max(1, Number(targetDay) || 1);
+    const daysInMonth = new Date(copy.getFullYear(), copy.getMonth() + 1, 0).getDate();
+    copy.setDate(Math.min(safeDay, daysInMonth));
+    return copy;
+};
+
 const toValidDate = (value) => {
     if (!value) return null;
     const parsed = new Date(value);
@@ -61,8 +69,57 @@ const getActiveContract = (tenant) => {
     return byId || byStatus || contracts[contracts.length - 1];
 };
 
-const resolveNextBillingDueDate = (tenant, activeContract) => {
+const resolvePermanentDueDate = (tenant, permanentDueDay) => {
+    const paymentHistory = Array.isArray(tenant.paymentHistory) ? tenant.paymentHistory : [];
+    const operationStartDate = toValidDate(tenant.operationStartDate);
+    const billingStartDate = operationStartDate ? addDays(operationStartDate, 1) : null;
+
+    const nonInitialPayments = paymentHistory.filter((entry) => {
+        const ref = String(entry.referenceNo || '').trim().toLowerCase();
+        return ref !== 'initial payment';
+    });
+
+    // New tenants should not have a due date until operation starts.
+    if (!billingStartDate && nonInitialPayments.length === 0) {
+        return null;
+    }
+
+    const coverageCandidates = nonInitialPayments
+        .map((entry) => toValidDate(entry.coverageEndDate))
+        .filter(Boolean)
+        .filter((date) => !billingStartDate || date >= billingStartDate)
+        .sort((a, b) => b.getTime() - a.getTime());
+
+    if (coverageCandidates.length > 0) {
+        return coverageCandidates[0];
+    }
+
+    const anchorDate = billingStartDate
+        || nonInitialPayments
+            .map((entry) => toValidDate(entry.datePaid))
+            .filter(Boolean)
+            .sort((a, b) => b.getTime() - a.getTime())[0]
+        || toValidDate(tenant.StartDateTime);
+
+    if (!anchorDate) return null;
+
+    const firstCandidate = withDayInMonth(anchorDate, permanentDueDay);
+    if (firstCandidate >= anchorDate) return firstCandidate;
+    return withDayInMonth(addMonths(anchorDate, 1), permanentDueDay);
+};
+
+const resolveNextBillingDueDate = (tenant, activeContract, permanentDueDay = 5) => {
     const isNightMarket = tenant.tenantType === 'Night Market';
+
+    if (!isNightMarket) {
+        const permanentDue = resolvePermanentDueDate(tenant, permanentDueDay);
+        const contractEndDate = toValidDate(activeContract?.endDate) || toValidDate(tenant.DueDateTime);
+        if (permanentDue && contractEndDate && permanentDue > contractEndDate) {
+            return contractEndDate;
+        }
+        return permanentDue;
+    }
+
     const paymentHistory = Array.isArray(tenant.paymentHistory) ? tenant.paymentHistory : [];
 
     let dueCandidate = null;
@@ -291,8 +348,10 @@ export const getMyApplication = async (req, res) => {
         
         const nightSetting = await Settings.findOne({ key: "defaultNightPrice" });
         const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
+        const dueDateSetting = await Settings.findOne({ key: "permanentDueDate" });
         const globalNightPrice = nightSetting ? Number(nightSetting.value) : 150;
         const globalPermPrice = permSetting ? Number(permSetting.value) : 6000;
+        const permanentDueDay = dueDateSetting ? Number(dueDateSetting.value) : 5;
         const templateState = await fetchTemplateState();
         const renewalTemplates = templateState.templates.map((template) => ({
             _id: template._id,
@@ -320,13 +379,14 @@ export const getMyApplication = async (req, res) => {
             const calcUtil = tenant.utilityAmount || 0;
             const calcTotal = (tenant.totalAmount && tenant.totalAmount > 0) ? tenant.totalAmount : (calcRent + calcUtil);
 
-              const calcDueDate = resolveNextBillingDueDate(tenant, activeContract);
+              const calcDueDate = resolveNextBillingDueDate(tenant, activeContract, permanentDueDay);
               const calcDue = calcDueDate ? calcDueDate.toISOString() : null;
             
             const tenantData = {
                 status: 'TENANT', 
                 tenantDbStatus: tenant.status, 
                 start: tenant.StartDateTime,
+                operationStartDate: tenant.operationStartDate || null,
                 due: calcDue,
                 rentAmount: calcRent,
                 utilityAmount: calcUtil,
