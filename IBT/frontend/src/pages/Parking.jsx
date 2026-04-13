@@ -582,10 +582,22 @@ const Parking = () => {
     return matchesSearch && matchesType && matchesStatus && matchesDateRange;
   });
 
+  const sortedFiltered = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const getRank = (status, isSubmitted) => {
+        if (status === "Parked") return 1;
+        if (status === "Departed" && !isSubmitted) return 2;
+        if (status === "Departed" && isSubmitted) return 3;
+        return 4;
+      };
+      return getRank(a.status, a.submitted) - getRank(b.status, b.submitted);
+    });
+  }, [filtered]);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
+    return sortedFiltered.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedFiltered, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const fourWheelCount = filtered.filter((t) => t.type === "4 Wheels").length;
@@ -1850,8 +1862,8 @@ const Parking = () => {
                     Delete Requested
                   </span>
                 ) : isOnRead ? (
-                  <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                    On Read
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-400">
+                    Submitted
                   </span>
                 ) : (
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
@@ -1866,7 +1878,6 @@ const Parking = () => {
                   : "---",
                 duration: ticket.duration || "---",
                 status: ticket.status,
-                __highlight: isDeleteHighlighted,
                 __highlightVariant: isDeleteRequested ? "amber" : "emerald",
               };
 
@@ -2533,8 +2544,7 @@ const Parking = () => {
                       <th className="px-4 py-3">Submitted At</th>
                       <th className="px-4 py-3">Shift</th>
                       <th className="px-4 py-3">Collector</th>
-                      <th className="px-4 py-3">Records</th>
-                      <th className="px-4 py-3">Revenue</th>
+                      <th className="px-4 py-3">Departed Vehicles</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2543,7 +2553,6 @@ const Parking = () => {
                         report?.data?.data?.length ??
                         report?.data?.statistics?.totalVehicles ??
                         0;
-                      const revenue = Number(report?.data?.statistics?.totalRevenue) || 0;
                       return (
                         <tr key={report._id || report.id}>
                           <td className="px-4 py-3 text-slate-700">
@@ -2558,7 +2567,6 @@ const Parking = () => {
                             {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">{recordCount}</td>
-                          <td className="px-4 py-3 text-slate-700">{revenue.toFixed(2)}</td>
                         </tr>
                       );
                     })}

@@ -4,7 +4,6 @@ export const getParkingTickets = async (req, res) => {
   try {
     const tickets = await Parking.find({
       isArchived: { $ne: true },
-      submitted: { $ne: true },
     }).sort({ createdAt: -1 });
     res.status(200).json(tickets);
   } catch (error) {
