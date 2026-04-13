@@ -7,6 +7,7 @@ import TerminalBoardShell from "../components/common/TerminalBoardShell";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
+import StatCardGroupLostFound from "../components/lostfound/StatCardGroupLostFound.jsx";
 import DeleteModal from "../components/common/DeleteModal";
 import RequestDeletionModal from "../components/common/RequestDeletionModal";
 import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
@@ -625,6 +626,9 @@ const LostFound = () => {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
+  const claimedCount = filtered.filter((i) => i.status === "Claimed").length;
+  const unclaimedCount = filtered.filter((i) => i.status === "Unclaimed").length;
+
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
     setIsSelectionMode(!isSelectionMode);
@@ -1068,6 +1072,13 @@ const LostFound = () => {
   return (
     <Layout title="Lost and Found Records">
       <div className="px-4 lg:px-8 mt-4 mb-6">
+
+        <StatCardGroupLostFound 
+          claimedItems={claimedCount}
+          unclaimedItems={unclaimedCount}
+          totalItems={filtered.length}
+        />
+
         <div className="flex flex-col gap-4 w-full">
           
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
@@ -1269,16 +1280,6 @@ const LostFound = () => {
                   >
                     <Archive size={16} />
                   </button>
-
-                  {role == "superadmin" && (
-                    <button
-                      onClick={() => setDeleteRow(selectedRecord)}
-                      className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer"
-                      title="Permanently Delete Record"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
                 </div>
               );
             }}

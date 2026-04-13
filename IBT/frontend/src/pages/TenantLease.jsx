@@ -1113,8 +1113,12 @@ const TenantLease = () => {
             const formData = new FormData();
 
             Object.keys(newTenant).forEach(key => {
-                if (key === 'documents') return;
-                formData.append(key, newTenant[key]);
+                if (key === 'documents' || key === 'id' || key === '_id') return;
+                const value = newTenant[key];
+                if (value === undefined || value === null) return;
+                if (key === 'reportId' && typeof value === 'string' && !value.trim()) return;
+                if (typeof value === 'string' && value.trim().toLowerCase() === 'null') return;
+                formData.append(key, value);
             });
 
             if (waitlistId) {
@@ -1888,34 +1892,38 @@ const TenantLease = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col xl:flex-row items-start justify-between gap-4 mb-6">
                 
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
-                        <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-                            <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
+                <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
+                            <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+                                <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
+                            </button>
+                            <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+                                <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
+                            </button>
+                        </div>
+                        <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
+                            <Map size={18} /> <span className="hidden sm:inline">View Map</span>
                         </button>
-                        <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-                            <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
+                        <button onClick={() => { setActiveWaitlistTab("All"); setShowWaitlistModal(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
+                            <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
+                            {actionRequiredCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                    {actionRequiredCount}
+                                </span>
+                            )}
                         </button>
                     </div>
-                    <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
-                        <Map size={18} /> <span className="hidden sm:inline">View Map</span>
-                    </button>
-                    <button onClick={() => { setActiveWaitlistTab("All"); setShowWaitlistModal(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
-                        <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
-                        {actionRequiredCount > 0 && (
-                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                                {actionRequiredCount}
-                            </span>
-                        )}
-                    </button>
+
+                    <div className="flex items-center">
+                        <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
+                <div className="flex flex-col items-start xl:items-end gap-3 w-full xl:w-auto">
                     
-                    <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
-
                     {role === "superadmin" && (
                         <div className="flex items-center gap-2">
                             <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
@@ -1961,54 +1969,56 @@ const TenantLease = () => {
                         </div>
                     )}
 
-                    {(role === "superadmin" || role === "lease") && (
-                        <>
-                            <button
-                                onClick={() => setShowLogModal(true)}
-                                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-slate-300 transition-all"
-                                title="View Logs"
-                            >
-                                <History size={18} />
-                                <span className="hidden sm:inline cursor-pointer">Logs</span>
-                            </button>
-                            <button
-                                onClick={() => setShowPaymentRecords(true)}
-                                className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-300 transition-all cursor-pointer"
-                                title="View Payment Records"
-                            >
-                                <Wallet size={18} />
-                                <span className="hidden sm:inline">Records</span>
-                            </button>
-                        </>
-                    )}
+                    <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3">
+                        {(role === "superadmin" || role === "lease") && (
+                            <>
+                                <button
+                                    onClick={() => setShowLogModal(true)}
+                                    className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                                    title="View Logs"
+                                >
+                                    <History size={18} />
+                                    <span className="hidden sm:inline cursor-pointer">Logs</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowPaymentRecords(true)}
+                                    className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-300 transition-all cursor-pointer"
+                                    title="View Payment Records"
+                                >
+                                    <Wallet size={18} />
+                                    <span className="hidden sm:inline">Records</span>
+                                </button>
+                            </>
+                        )}
 
-                    {isSelectionMode && selectedIds.length > 0 && (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
-                            <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-                                {selectedIds.length} Selected
-                            </span>
-                            <button
-                                onClick={handleBulkDelete}
-                                title="Request Delete"
-                                className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
-                            >
-                                <Trash2 className="h-5 w-5" />
-                            </button>
-                        </div>
-                    )}
+                        {isSelectionMode && selectedIds.length > 0 && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
+                                <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                                    {selectedIds.length} Selected
+                                </span>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    title="Request Delete"
+                                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                                >
+                                    <Trash2 className="h-5 w-5" />
+                                </button>
+                            </div>
+                        )}
 
-                    {(role === "lease") && (
-                        <button
-                            onClick={toggleSelectionMode}
-                            title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-                            className={`flex items-center justify-center cursor-pointer h-[42px] w-[42px] sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
-                                ? "bg-red-500 text-white shadow-md"
-                                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                                }`}
-                        >
-                            {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-                        </button>
-                    )}
+                        {(role === "lease") && (
+                            <button
+                                onClick={toggleSelectionMode}
+                                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                                className={`flex items-center justify-center cursor-pointer h-[42px] w-[42px] sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
+                                    ? "bg-red-500 text-white shadow-md"
+                                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                    }`}
+                            >
+                                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -2134,8 +2144,6 @@ const TenantLease = () => {
                                     </button>
                                 </div>
                             )}
-
-                            <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
                                                         <TableActions
                                                             onView={() => setViewRow(records.find(r => r.id === row.id))}
                                                             onEdit={() => setEditRow(records.find(r => r.id === row.id))}
@@ -2152,6 +2160,15 @@ const TenantLease = () => {
                             <button onClick={() => handleSingleExportPDF(fullRecord)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Rent Statement"><Download size={16} /></button>
                             <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
                             <button onClick={() => setArchiveRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer" title="Archive Record"><Archive size={16} /></button>
+                            {role === "superadmin" && (
+                                <button
+                                    onClick={() => setDeleteRow(records.find(r => r.id === row.id))}
+                                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                                    title="Delete Record"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
 
                             {fullRecord?.status !== "Moved Out" && (
                                 <button 
@@ -2285,8 +2302,12 @@ const TenantLease = () => {
 
                             const formData = new FormData();
                             Object.keys(updatedData).forEach(key => {
-                                if (key === 'documents') return;
-                                formData.append(key, updatedData[key]);
+                                if (key === 'documents' || key === 'id' || key === '_id') return;
+                                const value = updatedData[key];
+                                if (value === undefined || value === null) return;
+                                if (key === 'reportId' && typeof value === 'string' && !value.trim()) return;
+                                if (typeof value === 'string' && value.trim().toLowerCase() === 'null') return;
+                                formData.append(key, value);
                             });
 
                             if (updatedData.documents) {

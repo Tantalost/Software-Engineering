@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Bus, Clock, ListOrdered, X } from "lucide-react";
+import { Bus, Clock, ListOrdered, X } from "lucide-react";
 import { getBusScheduleTimes } from "../../utils/busSchedule.js";
 
 const SCHEDULE_NOT_ARRIVAL_API = `${
@@ -96,6 +96,7 @@ const PredefinedArrivalsBoard = ({
   const [remarksMap, setRemarksMap] = useState({});
   const [notArriveSaving, setNotArriveSaving] = useState(false);
   const [undoingKey, setUndoingKey] = useState(null);
+  const [scheduleTab, setScheduleTab] = useState("upcoming");
 
   const syncBoardDateFromClock = useCallback(() => {
     const k = getDateKeyRef.current(new Date());
@@ -291,9 +292,12 @@ const PredefinedArrivalsBoard = ({
     );
   }, [scheduleRows, now, isActionableRow]);
 
-  const actionableScheduleRows = useMemo(
-    () => [...actionableOverdueRows, ...actionableNearWindowRows],
-    [actionableOverdueRows, actionableNearWindowRows],
+  const activeScheduleRows = useMemo(
+    () =>
+      scheduleTab === "overdue"
+        ? actionableOverdueRows
+        : actionableNearWindowRows,
+    [scheduleTab, actionableOverdueRows, actionableNearWindowRows],
   );
 
   const openArrive = (row) => {
@@ -475,8 +479,35 @@ const PredefinedArrivalsBoard = ({
         </div>
 
         <div className="ml-auto text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg">
-          Showing overdue + next 2 hours
+          {scheduleTab === "overdue"
+            ? "Showing overdue / pending arrival"
+            : "Showing next 2 hours"}
         </div>
+      </div>
+
+      <div className="px-4 py-2.5 border-b border-slate-200 bg-white/80 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setScheduleTab("upcoming")}
+          className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            scheduleTab === "upcoming"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          Upcoming (Next 2 Hours) ({actionableNearWindowRows.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setScheduleTab("overdue")}
+          className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            scheduleTab === "overdue"
+              ? "border-amber-200 bg-amber-50 text-amber-800"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          Overdue / Pending Arrival ({actionableOverdueRows.length})
+        </button>
       </div>
 
       <div className="overflow-x-auto max-h-[min(70vh,520px)] overflow-y-auto">
@@ -495,7 +526,7 @@ const PredefinedArrivalsBoard = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {actionableScheduleRows.length === 0 ? (
+            {activeScheduleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={5}
@@ -508,23 +539,16 @@ const PredefinedArrivalsBoard = ({
                       in <strong>Manage Companies</strong>.
                     </>
                   ) : (
-                    <>No pending buses in the current visible window.</>
+                    <>
+                      {scheduleTab === "overdue"
+                        ? "No overdue / pending arrivals right now."
+                        : "No pending buses in the next 2 hours."}
+                    </>
                   )}
                 </td>
               </tr>
             ) : (
-              <>
-                {actionableOverdueRows.length > 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-2 bg-amber-50 border-y border-amber-100">
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 uppercase tracking-wide">
-                        <AlertTriangle size={12} />
-                        Overdue / Pending Arrival ({actionableOverdueRows.length})
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {actionableScheduleRows.map((row) => {
+              activeScheduleRows.map((row) => {
                 const isPrepHour = row.hourBucket === focusBucket;
                 const remark = remarksMap[row.rowKey];
                 const busy = confirmingKey === row.rowKey;
@@ -592,8 +616,7 @@ const PredefinedArrivalsBoard = ({
                     </td>
                   </tr>
                 );
-                })}
-              </>
+              })
             )}
           </tbody>
         </table>
