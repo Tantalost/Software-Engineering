@@ -23,10 +23,10 @@ const StatCardGroupPark = ({
     <div className="flex overflow-x-auto gap-4 mb-6 pb-4 snap-x">
       
       <div className="min-w-[240px] shrink-0 snap-start">
-        <StatCard icon={Car} title="Cars" value={cars} color="cyan" />
+        <StatCard icon={Car} title="4 Wheels" value={cars} color="cyan" />
       </div>
       <div className="min-w-[240px] shrink-0 snap-start">
-        <StatCard icon={Bike} title="Motorcycles" value={motorcycles} color="orange" />
+        <StatCard icon={Bike} title="2 Wheels" value={motorcycles} color="orange" />
       </div>
       <div className="min-w-[240px] shrink-0 snap-start">
         <StatCard icon={Bus} title="Jeeps" value={jeeps} color="green" />

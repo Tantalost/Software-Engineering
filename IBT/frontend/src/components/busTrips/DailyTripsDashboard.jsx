@@ -59,7 +59,8 @@ const DailyTripsDashboard = ({
   });
 
   const isAdminOperator = role === "admin" || role === "superadmin";
-  const canDelete = role === "superadmin" || role === "admin";
+  const canDelete = role === "superadmin";
+  const canRequestDelete = role === "bus" || role === "admin";
 
   const currentAdmin = localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin Operator";
 
@@ -196,7 +197,7 @@ const DailyTripsDashboard = ({
                             </>
                           )}
 
-                          {role === "bus" && (
+                          {canRequestDelete && (
                             <button
                               onClick={() => onRequestDeleteTrip?.(trip)}
                               title="Request Deletion"

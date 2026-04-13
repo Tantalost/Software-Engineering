@@ -120,15 +120,21 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
         const myRole = localStorage.getItem("authRole") || "superadmin";
         
         const filteredData = data.filter(n => {
-        
+         
           const roleMatch = !n.targetRole || n.targetRole === "all" || n.targetRole === myRole;
           
           if (myRole === "bus") {
             const source = (n.source || "").toLowerCase();
             const title = (n.title || "").toLowerCase();
             const isBusRelated = source.includes("bus") || title.includes("bus");
-            
             return roleMatch && isBusRelated;
+          }
+
+          if (myRole === "parking") {
+            const source = (n.source || "").toLowerCase();
+            const title = (n.title || "").toLowerCase();
+            const isParkingRelated = source.includes("parking") || title.includes("parking");
+            return roleMatch && isParkingRelated;
           }
           
           return roleMatch;
@@ -149,8 +155,8 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
       if (res.ok) {
         const data = await res.json();
         
-        if (role === "bus") {
-           setAdminBroadcasts(data.filter(b => b.authorRole === "bus"));
+        if (role === "bus" || role === "parking") {
+           setAdminBroadcasts(data.filter(b => b.authorRole === role));
         } else {
            setAdminBroadcasts(data);
         }

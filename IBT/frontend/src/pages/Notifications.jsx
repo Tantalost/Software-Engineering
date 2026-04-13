@@ -51,9 +51,16 @@ export default function Notifications() {
         const source = (n.source || "").toLowerCase();
         const title = (n.title || "").toLowerCase();
         const isBusRelated = source.includes("bus") || title.includes("bus");
-        
         return roleMatch && isBusRelated;
       }
+
+      if (userRole === "parking") {
+        const source = (n.source || "").toLowerCase();
+        const title = (n.title || "").toLowerCase();
+        const isParkingRelated = source.includes("parking") || title.includes("parking");
+        return roleMatch && isParkingRelated;
+      }
+
       return roleMatch;
     });
 

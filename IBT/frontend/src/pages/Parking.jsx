@@ -405,35 +405,28 @@ const Parking = () => {
   }, []);
 
   const fetchPreviousShiftReports = async () => {
-    if (role !== "parking") return;
+    if (role !== "parking") return; 
+    
     setIsPreviousShiftLoading(true);
     try {
-      const res = await fetch(REPORTS_API_URL);
+      const res = await fetch(REPORTS_API_URL); 
       if (!res.ok) throw new Error("Failed to load reports.");
+      
       const data = await res.json();
       const ownReports = (Array.isArray(data) ? data : [])
         .filter((report) => {
-          const reportType = report?.reportType || report?.data?.reportType || "";
-          if (reportType !== "Parking") return false;
-
+          if (report.type !== "Parking") return false; 
+          
           const reportAdminId = report?.data?.adminId;
-          const reportEmail = String(report?.data?.submittedByEmail || "").toLowerCase();
-
-          if (authAdminId && reportAdminId) {
-            return String(reportAdminId) === String(authAdminId);
-          }
-          if (authEmail && reportEmail) {
-            return reportEmail === authEmail;
-          }
-          return true;
+          return authAdminId ? String(reportAdminId || "") === String(authAdminId) : true;
         })
         .sort(
           (a, b) =>
             new Date(b?.data?.submittedAtServer || b.createdAt).getTime() -
             new Date(a?.data?.submittedAtServer || a.createdAt).getTime(),
         )
-        .slice(0, 10);
-
+        .slice(0, 10); 
+        
       setPreviousShiftReports(ownReports);
     } catch (error) {
       setNotificationState({
@@ -441,7 +434,7 @@ const Parking = () => {
         type: "error",
         message: error.message || "Failed to fetch previous shift reports.",
         autoClose: true,
-        duration: 2500,
+        duration: 3500,
       });
     } finally {
       setIsPreviousShiftLoading(false);
@@ -582,10 +575,22 @@ const Parking = () => {
     return matchesSearch && matchesType && matchesStatus && matchesDateRange;
   });
 
+  const sortedFiltered = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const getRank = (status, isSubmitted) => {
+        if (status === "Parked") return 1;
+        if (status === "Departed" && !isSubmitted) return 2;
+        if (status === "Departed" && isSubmitted) return 3;
+        return 4;
+      };
+      return getRank(a.status, a.submitted) - getRank(b.status, b.submitted);
+    });
+  }, [filtered]);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(startIndex, startIndex + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
+    return sortedFiltered.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedFiltered, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const fourWheelCount = filtered.filter((t) => t.type === "4 Wheels").length;
@@ -1625,13 +1630,13 @@ const Parking = () => {
 
           {role === "parking" && (
             <button
-              onClick={() => {
-                fetchPreviousShiftReports();
-                setShowPreviousShiftModal(true);
-              }}
-              className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
-            >
-              <span>Previous Shift Records</span>
+                onClick={() => {
+                  fetchPreviousShiftReports(); 
+                    setShowPreviousShiftModal(true);
+                }}
+                className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
+                >
+                <span>Previous Shift Records</span>
             </button>
           )}
 
@@ -1850,8 +1855,8 @@ const Parking = () => {
                     Delete Requested
                   </span>
                 ) : isOnRead ? (
-                  <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                    On Read
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-400">
+                    Submitted
                   </span>
                 ) : (
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
@@ -1866,7 +1871,6 @@ const Parking = () => {
                   : "---",
                 duration: ticket.duration || "---",
                 status: ticket.status,
-                __highlight: isDeleteHighlighted,
                 __highlightVariant: isDeleteRequested ? "amber" : "emerald",
               };
 
@@ -2533,8 +2537,7 @@ const Parking = () => {
                       <th className="px-4 py-3">Submitted At</th>
                       <th className="px-4 py-3">Shift</th>
                       <th className="px-4 py-3">Collector</th>
-                      <th className="px-4 py-3">Records</th>
-                      <th className="px-4 py-3">Revenue</th>
+                      <th className="px-4 py-3">Departed Vehicles</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2543,7 +2546,6 @@ const Parking = () => {
                         report?.data?.data?.length ??
                         report?.data?.statistics?.totalVehicles ??
                         0;
-                      const revenue = Number(report?.data?.statistics?.totalRevenue) || 0;
                       return (
                         <tr key={report._id || report.id}>
                           <td className="px-4 py-3 text-slate-700">
@@ -2558,7 +2560,6 @@ const Parking = () => {
                             {report?.data?.statistics?.collector || report?.data?.collectorName || "-"}
                           </td>
                           <td className="px-4 py-3 text-slate-700">{recordCount}</td>
-                          <td className="px-4 py-3 text-slate-700">{revenue.toFixed(2)}</td>
                         </tr>
                       );
                     })}
