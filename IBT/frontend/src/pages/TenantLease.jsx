@@ -2134,8 +2134,6 @@ const TenantLease = () => {
                                     </button>
                                 </div>
                             )}
-
-                            <TableActions onView={() => setViewRow(records.find(r => r.id === row.id))} onEdit={() => setEditRow(records.find(r => r.id === row.id))} onDelete={() => setDeleteRow(records.find(r => r.id === row.id))} />
                                                         <TableActions
                                                             onView={() => setViewRow(records.find(r => r.id === row.id))}
                                                             onEdit={() => setEditRow(records.find(r => r.id === row.id))}
@@ -2152,6 +2150,15 @@ const TenantLease = () => {
                             <button onClick={() => handleSingleExportPDF(fullRecord)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer" title="Rent Statement"><Download size={16} /></button>
                             <button onClick={() => { setMessagingRow(records.find(r => r.id === row.id)); setShowEmailModal(true); }} className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all cursor-pointer" title="Send Email"><Mail size={16} /></button>
                             <button onClick={() => setArchiveRow(records.find(r => r.id === row.id))} className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all cursor-pointer" title="Archive Record"><Archive size={16} /></button>
+                            {role === "superadmin" && (
+                                <button
+                                    onClick={() => setDeleteRow(records.find(r => r.id === row.id))}
+                                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                                    title="Delete Record"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
 
                             {fullRecord?.status !== "Moved Out" && (
                                 <button 

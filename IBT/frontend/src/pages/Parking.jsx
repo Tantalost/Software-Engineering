@@ -1246,6 +1246,21 @@ const Parking = () => {
     });
   };
 
+  const formatSubmittedDateTime = (dateString) => {
+    if (!dateString) return "-";
+    const parsedDate = new Date(dateString);
+    if (Number.isNaN(parsedDate.getTime())) return "-";
+
+    return parsedDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const handleSubmitReport = async () => {
     if (!collectorName || !collectorName.trim() || !collectorId) {
       setNotificationState({
@@ -2556,9 +2571,9 @@ const Parking = () => {
                       return (
                         <tr key={report._id || report.id}>
                           <td className="px-4 py-3 text-slate-700">
-                            {new Date(
+                            {formatSubmittedDateTime(
                               report?.data?.submittedAtServer || report.createdAt,
-                            ).toLocaleString()}
+                            )}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {report?.data?.assignedShift || report?.payload?.assignedShift || report?.data?.shift || report?.payload?.shift || "-"}
