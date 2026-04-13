@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/layout/Layout";
 import DeleteModal from "../components/common/DeleteModal";
 import {
+  CheckCircle,
   X,
   UserX,
   ShieldCheck,
@@ -132,6 +133,7 @@ export default function EmployeeManage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [collectorDeleteTarget, setCollectorDeleteTarget] = useState(null); 
+  const [adminStatusTarget, setAdminStatusTarget] = useState(null);
   const [collectorStatusTarget, setCollectorStatusTarget] = useState(null);
   const [notificationState, setNotificationState] = useState({
     isOpen: false,
@@ -514,6 +516,8 @@ export default function EmployeeManage() {
       showToast("success", `Admin marked as ${nextStatus.toLowerCase()}.`);
     } catch (error) {
       showToast("error", error.message || "Failed to update admin status.");
+    } finally {
+      setAdminStatusTarget(null);
     }
   };
 
@@ -884,7 +888,11 @@ export default function EmployeeManage() {
                               Edit
                             </button>
                             <button
-                              onClick={() => handleToggleAdminStatus(a)}
+                              onClick={() =>
+                                (a.status || "Active") === "Active"
+                                  ? setAdminStatusTarget(a)
+                                  : handleToggleAdminStatus(a)
+                              }
                               disabled={a.role === "superadmin"}
                               className={`px-3 py-1.5 rounded-lg border transition-all ${
                                 a.role === "superadmin"
@@ -1668,6 +1676,18 @@ export default function EmployeeManage() {
           collectorDeleteTarget ? formatCollectorFullName(collectorDeleteTarget) : ""
         }?`}
         itemName={collectorDeleteTarget ? formatCollectorFullName(collectorDeleteTarget) : ""}
+      />
+
+      <DeleteModal
+        isOpen={!!adminStatusTarget}
+        onClose={() => setAdminStatusTarget(null)}
+        onConfirm={() => handleToggleAdminStatus(adminStatusTarget)}
+        title="Deactivate Admin"
+        icon={<AlertTriangle size={28} className="text-amber-500" />}
+        message={`Are you sure you want to deactivate ${adminStatusTarget?.name || adminStatusTarget?.email || "this admin"}? They will no longer be able to log in until reactivated.`}
+        itemName={adminStatusTarget?.name || adminStatusTarget?.email || ""}
+        confirmLabel="Deactivate"
+        confirmButtonClassName="bg-amber-500 hover:bg-amber-600 focus:ring-amber-500"
       />
 
       <DeleteModal
