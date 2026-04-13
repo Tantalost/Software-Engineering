@@ -1682,48 +1682,60 @@ const Parking = () => {
             </select>
           </div>
 
-          {role === "superadmin" && (
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
-                {["Daily", "Week", "Month", "Year"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setDateFilterType(type);
-                      setCurrentDateRange(new Date());
-                      setCurrentPage(1);
-                    }}
-                    className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
-                      dateFilterType === type
-                        ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
-                <button 
-                  onClick={handlePrevPeriod} 
-                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                  <Calendar size={16} className="text-slate-400" />
-                  {getPeriodDisplayStr()}
+          {/* Right Side: Wrapped Date Filters and Logs Button Together */}
+          <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
+            {role === "superadmin" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+                  {["Daily", "Week", "Month", "Year"].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setDateFilterType(type);
+                        setCurrentDateRange(new Date());
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                        dateFilterType === type
+                          ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                          : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
                 </div>
-                <button 
-                  onClick={handleNextPeriod} 
-                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <ChevronRight size={18} />
-                </button>
+
+                <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                  <button 
+                    onClick={handlePrevPeriod} 
+                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                    <Calendar size={16} className="text-slate-400" />
+                    {getPeriodDisplayStr()}
+                  </div>
+                  <button 
+                    onClick={handleNextPeriod} 
+                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            <button
+              onClick={() => setShowLogModal(true)}
+              className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
+              title="View Logs"
+            >
+              <History size={18} />
+              <span className="hidden sm:inline">Logs</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1760,7 +1772,7 @@ const Parking = () => {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end w-full sm:w-auto gap-3">
             {role !== "superadmin" && (
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 h-[42px]">
                 <label className="text-sm font-semibold text-slate-600 whitespace-nowrap">
@@ -1819,15 +1831,6 @@ const Parking = () => {
                 </select>
               </div>
             )}
-
-            <button
-              onClick={() => setShowLogModal(true)}
-              className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer"
-              title="View Logs"
-            >
-              <History size={18} />
-              <span className="hidden sm:inline">Logs</span>
-            </button>
           </div>
 
         </div>

@@ -1888,34 +1888,38 @@ const TenantLease = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col xl:flex-row items-start justify-between gap-4 mb-6">
                 
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
-                        <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-                            <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
+                <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex bg-emerald-100 rounded-xl p-1 border-2 border-emerald-200">
+                            <button onClick={() => setActiveTab("permanent")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "permanent" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+                                <Store size={18} /> <span className="hidden sm:inline">Permanent</span>
+                            </button>
+                            <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
+                                <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
+                            </button>
+                        </div>
+                        <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
+                            <Map size={18} /> <span className="hidden sm:inline">View Map</span>
                         </button>
-                        <button onClick={() => setActiveTab("night")} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-sm transition-all cursor-pointer ${activeTab === "night" ? "bg-white text-emerald-700 shadow-md" : "text-emerald-600 hover:text-emerald-700"}`}>
-                            <MoonStar size={18} /> <span className="hidden sm:inline">Night Market</span>
+                        <button onClick={() => { setActiveWaitlistTab("All"); setShowWaitlistModal(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
+                            <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
+                            {actionRequiredCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                    {actionRequiredCount}
+                                </span>
+                            )}
                         </button>
                     </div>
-                    <button onClick={() => setShowMapModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
-                        <Map size={18} /> <span className="hidden sm:inline">View Map</span>
-                    </button>
-                    <button onClick={() => { setActiveWaitlistTab("All"); setShowWaitlistModal(true); }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-emerald-100 text-emerald-700 hover:bg-emerald-50 font-medium text-sm shadow-sm transition-all cursor-pointer">
-                        <ClipboardList size={18} /> <span className="hidden sm:inline">Applicants</span>
-                        {actionRequiredCount > 0 && (
-                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                                {actionRequiredCount}
-                            </span>
-                        )}
-                    </button>
+
+                    <div className="flex items-center">
+                        <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
+                <div className="flex flex-wrap items-start justify-start xl:justify-end gap-3 w-full xl:w-auto">
                     
-                    <TenantStatusFilter activeStatus={activeStatus} onStatusChange={setActiveStatus} />
-
                     {role === "superadmin" && (
                         <div className="flex items-center gap-2">
                             <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
