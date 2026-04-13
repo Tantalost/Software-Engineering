@@ -1185,6 +1185,7 @@ const BusTrips = () => {
   const [isPreviousShiftLoading, setIsPreviousShiftLoading] = useState(false);
   const [rescheduleTrip, setRescheduleTrip] = useState(null);
   const [rescheduledExpectedDeparture, setRescheduledExpectedDeparture] = useState("");
+  const [deleteRequestIds, setDeleteRequestIds] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -1250,15 +1251,16 @@ const BusTrips = () => {
   const [assignedShift, setAssignedShift] = useState(() =>
     normalizeShiftValue(localStorage.getItem("authShift") || ""),
   );
-  const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/bustrips`;
+  const BASE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
+  const API_URL = `${BASE_API_URL}/api/bustrips`;
   const PREDEFINED_TODAY_API_URL = `${API_URL}/predefined-today`;
-  const COMPANY_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
-  const ADMINS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/admins`;
-  const COLLECTORS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/collectors`;
-  const SCHEDULE_NOT_ARRIVAL_API = `${
-    import.meta.env.VITE_API_URL || "http://localhost:10000"
-  }/api/schedule-not-arrivals`;
-  const REPORTS_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
+  const COMPANY_API_URL = `${BASE_API_URL}/api/companies`;
+  const ADMINS_API_URL = `${BASE_API_URL}/api/admins`;
+  const COLLECTORS_API_URL = `${BASE_API_URL}/api/collectors`;
+  const SCHEDULE_NOT_ARRIVAL_API = `${BASE_API_URL}/api/schedule-not-arrivals`;
+  const REPORTS_API_URL = `${BASE_API_URL}/api/reports`;
+  const DELETION_REQUESTS_API_URL = `${BASE_API_URL}/api/deletion-requests`;
+  const NOTIFICATIONS_API_URL = `${BASE_API_URL}/api/notifications`;
 
   const [defaultPrice, setDefaultPrice] = useState(75);
   const [predefinedTodayTrips, setPredefinedTodayTrips] = useState([]);
@@ -1555,10 +1557,51 @@ const BusTrips = () => {
     }
   };
 
+  const fetchDeleteRequests = async () => {
+    try {
+      const response = await fetch(DELETION_REQUESTS_API_URL);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const requestedIds = (Array.isArray(data) ? data : [])
+        .filter((request) => (request?.status || "pending") === "pending")
+        .filter((request) => request?.itemType === "Bus Trip")
+        .map((request) => request?.originalData?._id || request?.originalData?.id)
+        .filter(Boolean)
+        .map(String);
+
+      setDeleteRequestIds(requestedIds);
+    } catch (error) {
+      console.error("Error fetching deletion requests:", error);
+    }
+  };
+
+  const notifySuperadmin = async (title, message, source = "Bus Trips") => {
+    try {
+      const response = await fetch(NOTIFICATIONS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          message,
+          source,
+          targetRole: "superadmin",
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to notify superadmin:", await response.text());
+      }
+    } catch (error) {
+      console.error("Failed to notify superadmin:", error);
+    }
+  };
+
   useEffect(() => {
     fetchBusTrips();
     fetchCompanies();
     fetchPredefinedTodayTrips();
+    fetchDeleteRequests();
   }, [role]);
 
   useEffect(() => {
@@ -2354,17 +2397,30 @@ const BusTrips = () => {
 
     setIsLoading(true);
 
-    const GLOBAL_API_URL = `${
-      import.meta.env.VITE_API_URL || "http://localhost:10000"
-    }/api`;
-
     try {
       if (role === "bus") {
-        const requestPromises = selectedIds.map(async (id) => {
+        const newRequestIds = selectedIds.filter(
+          (id) => !deleteRequestIds.includes(String(id)),
+        );
+
+        if (newRequestIds.length === 0) {
+          setNotificationState({
+            isOpen: true,
+            type: "warning",
+            message: "Selected records already have pending deletion requests.",
+            autoClose: true,
+            duration: 3000,
+          });
+          setSelectedIds([]);
+          setIsSelectionMode(false);
+          return;
+        }
+
+        const requestPromises = newRequestIds.map(async (id) => {
           const item = records.find((r) => r.id === id);
           if (!item) return;
 
-          return fetch(`${GLOBAL_API_URL}/deletion-requests`, {
+          return fetch(DELETION_REQUESTS_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -2379,22 +2435,31 @@ const BusTrips = () => {
           });
         });
 
-        await Promise.all(requestPromises);
+        const responses = await Promise.all(requestPromises);
+        if (responses.some((res) => res && !res.ok)) {
+          throw new Error("Failed to submit some deletion requests.");
+        }
 
         await logActivity(
           role,
           "REQUEST_BULK_DELETE",
-          `Requested deletion for ${selectedIds.length} bus trips`,
+          `Requested deletion for ${newRequestIds.length} bus trips`,
           "BusTrips",
+        );
+
+        await notifySuperadmin(
+          "Deletion Request: Bus Trips",
+          `Bus Admin requested deletion for ${newRequestIds.length} bus trip record(s).`,
         );
 
         setNotificationState({
           isOpen: true,
           type: "success",
-          message: `Sent deletion requests for ${selectedIds.length} records.`,
+          message: `Sent deletion requests for ${newRequestIds.length} records. Superadmin notified.`,
           autoClose: true,
           duration: 3000,
         });
+        await fetchDeleteRequests();
       } else {
         await Promise.all(
           selectedIds.map((id) =>
@@ -2505,6 +2570,15 @@ const BusTrips = () => {
         localStorage.getItem("authName") ||
           localStorage.getItem("authEmail") ||
           "Admin",
+        {
+          reportType: "Bus",
+          payload: reportPayload,
+        },
+      );
+
+      await notifySuperadmin(
+        "Report Submitted: Bus Trips Report",
+        "A new Bus Trips report has been submitted for shift hand-off.",
       );
 
       if (missedBuses.length > 0) {
@@ -2530,7 +2604,7 @@ const BusTrips = () => {
       setNotificationState({ 
         isOpen: true, 
         type: "success", 
-        message: "Shift Handoff Report Submitted!", 
+        message: "Shift Handoff Report Submitted! Superadmin notified.", 
         autoClose: true, 
         duration: 3000 
       });
@@ -2962,6 +3036,8 @@ const BusTrips = () => {
   const handleRequestDeletion = async () => {
     if (!deletionRequestRow) return;
     const trimmedReason = deletionReason.trim();
+    const rowId = String(deletionRequestRow._id || deletionRequestRow.id || "");
+
     if (!trimmedReason) {
       setNotificationState({
         isOpen: true,
@@ -2973,23 +3049,45 @@ const BusTrips = () => {
       return;
     }
 
+    if (rowId && deleteRequestIds.includes(rowId)) {
+      setNotificationState({
+        isOpen: true,
+        type: "warning",
+        message: "Deletion request already pending for this bus trip.",
+        autoClose: true,
+        duration: 3000,
+      });
+      setDeletionRequestRow(null);
+      setDeletionReason("");
+      return;
+    }
+
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/deletion-requests`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            itemType: "Bus Trip",
-            itemDescription: `Plate No: ${deletionRequestRow.templateNo || deletionRequestRow.templateno} - ${deletionRequestRow.company}`,
-            requestedBy: localStorage.getItem("authName") || "Bus Admin",
-            originalData: deletionRequestRow,
-            reason: trimmedReason,
-          }),
-        },
-      );
+      const response = await fetch(DELETION_REQUESTS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemType: "Bus Trip",
+          itemDescription: `Plate No: ${deletionRequestRow.templateNo || deletionRequestRow.templateno} - ${deletionRequestRow.company}`,
+          requestedBy: localStorage.getItem("authName") || "Bus Admin",
+          originalData: deletionRequestRow,
+          reason: trimmedReason,
+        }),
+      });
 
       if (!response.ok) throw new Error("Failed to submit deletion request.");
+
+      await logActivity(
+        role,
+        "REQUEST_DELETE",
+        `Requested deletion: Plate No ${deletionRequestRow.templateNo || deletionRequestRow.templateno}`,
+        "BusTrips",
+      );
+
+      await notifySuperadmin(
+        "Deletion Request: Bus Trips",
+        `Bus Admin requested deletion for plate ${deletionRequestRow.templateNo || deletionRequestRow.templateno}.`,
+      );
 
       setDeletionRequestRow(null);
       setDeletionReason("");
@@ -3000,6 +3098,7 @@ const BusTrips = () => {
         autoClose: true,
         duration: 3000,
       });
+      await fetchDeleteRequests();
     } catch (error) {
       setNotificationState({
         isOpen: true,
