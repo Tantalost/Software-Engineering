@@ -13,9 +13,9 @@ const BusTripFilters = ({
   setSelectedStatus,
 }) => {
   return (
-    <div className="flex flex-col xl:flex-row items-center gap-3 w-full">
+    <div className="flex flex-wrap items-center gap-3 w-full">
       
-      <div className="relative w-full xl:w-64 shrink-0">
+      <div className="relative w-full sm:w-64 shrink-0">
         <input
           type="text"
           value={searchQuery}
@@ -32,7 +32,7 @@ const BusTripFilters = ({
       <select
         value={selectedCompany}
         onChange={(e) => setSelectedCompany(e.target.value)}
-        className="w-full xl:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
+        className="w-full sm:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
       >
         <option value="">All Companies</option>
         {uniqueCompanies.map((company) => (
@@ -45,7 +45,7 @@ const BusTripFilters = ({
       <select
         value={selectedBusType}
         onChange={(e) => setSelectedBusType(e.target.value)}
-        className="w-full xl:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
+        className="w-full sm:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
       >
         <option value="">All Types</option>
         <option value="Regular">Regular</option>
@@ -55,15 +55,13 @@ const BusTripFilters = ({
       <select
         value={selectedStatus}
         onChange={(e) => setSelectedStatus(e.target.value)}
-        className="w-full xl:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
+        className="w-full sm:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
       >
         <option value="">All Status</option>
-        <option value="Scheduled">Scheduled</option>
+        <option value="Expected">Expected</option>
         <option value="Arrived">Arrived</option>
         <option value="Departed">Departed</option>
-        <option value="On Fix">On Fix</option>
       </select>
-      
     </div>
   );
 };
