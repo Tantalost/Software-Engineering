@@ -86,6 +86,8 @@ const TenantLease = () => {
 
     const [defaultDueDate, setDefaultDueDate] = useState("5");
     const [newDueDate, setNewDueDate] = useState("");
+    const [defaultDailyFee, setDefaultDailyFee] = useState(200);
+    const [newDailyFee, setNewDailyFee] = useState("");
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [isMoveOutModalOpen, setIsMoveOutModalOpen] = useState(false);
@@ -278,6 +280,7 @@ const TenantLease = () => {
                     setNightChargePct(data.nightMarketCharge);
                     setNightInterestPct(data.nightMarketInterest);
                     if (data.permanentDueDate !== undefined) setDefaultDueDate(data.permanentDueDate.toString());
+                    if (data.dailyFee !== undefined) setDefaultDailyFee(Number(data.dailyFee));
                 }
             } catch (error) {
                 console.error("Error fetching overdue settings:", error);
@@ -304,6 +307,14 @@ const TenantLease = () => {
             return;
         }
 
+        if (!isNightMarket) {
+            const dailyFeeValue = Number(newDailyFee || defaultDailyFee);
+            if (!Number.isFinite(dailyFeeValue) || dailyFeeValue <= 0) {
+                setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid Daily Fee greater than 0.", autoClose: true, duration: 3000 });
+                return;
+            }
+        }
+
         setIsSettingPrice(true);
 
         try {
@@ -325,7 +336,8 @@ const TenantLease = () => {
                     tenantType: isNightMarket ? "Night Market" : "Permanent",
                     chargePercentage: newChargePct ? Number(newChargePct) : (isNightMarket ? nightChargePct : permChargePct), 
                     interestPercentage: newInterestPct ? Number(newInterestPct) : (isNightMarket ? nightInterestPct : permInterestPct),
-                    permanentDueDate: (!isNightMarket && newDueDate) ? Number(newDueDate) : Number(defaultDueDate)
+                    permanentDueDate: (!isNightMarket && newDueDate) ? Number(newDueDate) : Number(defaultDueDate),
+                    dailyFee: !isNightMarket ? Number(newDailyFee || defaultDailyFee) : undefined,
                 }),
             });
 
@@ -341,6 +353,7 @@ const TenantLease = () => {
                 setPermChargePct(newChargePct ? Number(newChargePct) : permChargePct);
                 setPermInterestPct(newInterestPct ? Number(newInterestPct) : permInterestPct);
                 setDefaultDueDate(newDueDate ? newDueDate : defaultDueDate);
+                setDefaultDailyFee(Number(newDailyFee || defaultDailyFee));
                 localStorage.setItem("defaultPermanentPrice", priceValue.toString());
             }
 
@@ -2161,6 +2174,7 @@ const TenantLease = () => {
                                     setNewChargePct(permChargePct.toString());
                                     setNewInterestPct(permInterestPct.toString());
                                     setNewDueDate(defaultDueDate.toString());
+                                    setNewDailyFee(defaultDailyFee.toString());
                                 }
                                 setShowSetPriceModal(true);
                             }}
@@ -2991,6 +3005,22 @@ const TenantLease = () => {
                             {activeTab !== "night" && (
                                 <div className="pt-4 mt-4 border-t border-slate-100">
                                     <h4 className="text-sm font-bold text-blue-600 mb-3">Billing Cycle Settings</h4>
+                                    <div className="mb-4">
+                                        <label className="block text-xs font-semibold text-slate-700 mb-1">Daily Fee (per day after Start Operation)</label>
+                                        <div className="relative">
+                                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">₱</span>
+                                            <input
+                                                type="text"
+                                                value={newDailyFee}
+                                                onChange={(e) => setNewDailyFee(e.target.value.replace(/[^0-9.]/g, ""))}
+                                                className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2 rounded-lg font-semibold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                                placeholder="e.g., 100"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 mt-2 leading-tight">
+                                            This rate applies only after clicking Start Operation and is computed from the next day until the configured due date.
+                                        </p>
+                                    </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-700 mb-1">Fixed Due Date (Day of the Month)</label>
                                         <div className="relative">

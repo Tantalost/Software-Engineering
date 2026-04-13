@@ -66,6 +66,14 @@ const addDays = (date, days) => {
   return next;
 };
 
+const withDayInMonth = (baseDate, targetDay) => {
+  const copy = new Date(baseDate);
+  const safeDay = Math.max(1, Number(targetDay) || 1);
+  const daysInMonth = new Date(copy.getFullYear(), copy.getMonth() + 1, 0).getDate();
+  copy.setDate(Math.min(safeDay, daysInMonth));
+  return copy;
+};
+
 const startOfDay = (date) => {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
@@ -1643,14 +1651,16 @@ export const getOverdueSettings = async (req, res) => {
     const pInterest = await Settings.findOne({ key: "permanentInterestPercentage" });
     const nCharge = await Settings.findOne({ key: "nightMarketChargePercentage" });
     const nInterest = await Settings.findOne({ key: "nightMarketInterestPercentage" });
-    const pDueDate = await Settings.findOne({ key: "permanentDueDate" }); 
+    const pDueDate = await Settings.findOne({ key: "permanentDueDate" });
+    const pDailyFee = await Settings.findOne({ key: "permanentDailyFee" });
 
     res.status(200).json({
       permanentCharge: pCharge ? Number(pCharge.value) : 25,
       permanentInterest: pInterest ? Number(pInterest.value) : 2,
       nightMarketCharge: nCharge ? Number(nCharge.value) : 25,
       nightMarketInterest: nInterest ? Number(nInterest.value) : 2,
-      permanentDueDate: pDueDate ? Number(pDueDate.value) : 5
+      permanentDueDate: pDueDate ? Number(pDueDate.value) : 5,
+      dailyFee: pDailyFee ? Number(pDailyFee.value) : 200,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1659,7 +1669,7 @@ export const getOverdueSettings = async (req, res) => {
 
 export const updateOverdueSettings = async (req, res) => {
   try {
-    const { tenantType, chargePercentage, interestPercentage, permanentDueDate } = req.body;
+    const { tenantType, chargePercentage, interestPercentage, permanentDueDate, dailyFee } = req.body;
     
     const isNightMarket = tenantType === "Night Market";
     const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
@@ -1677,6 +1687,14 @@ export const updateOverdueSettings = async (req, res) => {
       await Settings.findOneAndUpdate(
         { key: interestKey },
         { value: Number(interestPercentage) },
+        { upsert: true }
+      );
+    }
+
+    if (!isNightMarket && dailyFee !== undefined) {
+      await Settings.findOneAndUpdate(
+        { key: "permanentDailyFee" },
+        { value: Number(dailyFee) },
         { upsert: true }
       );
     }
@@ -1723,13 +1741,43 @@ export const updateOverdueSettings = async (req, res) => {
 
 export const startOperation = async (req, res) => {
   try {
-    const tenant = await Tenant.findByIdAndUpdate(
-      req.params.id,
-      { operationStartDate: new Date() }, 
-      { new: true }
-    );
+    const tenant = await Tenant.findById(req.params.id);
     
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    const operationStartDate = new Date();
+    tenant.operationStartDate = operationStartDate;
+
+    const isPermanentTenant = tenant.tenantType === "Permanent" || !tenant.tenantType;
+
+    if (isPermanentTenant) {
+      const dueDateSetting = await Settings.findOne({ key: "permanentDueDate" });
+      const dailyFeeSetting = await Settings.findOne({ key: "permanentDailyFee" });
+      const targetDay = dueDateSetting ? Number(dueDateSetting.value) : 5;
+      const dailyFee = dailyFeeSetting ? Number(dailyFeeSetting.value) : 200;
+
+      const billingStartDate = addDays(startOfDay(operationStartDate), 1);
+      let dueDate = withDayInMonth(billingStartDate, targetDay);
+      if (dueDate < billingStartDate) {
+        dueDate = withDayInMonth(addMonths(billingStartDate, 1), targetDay);
+      }
+
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const dayDiff = Math.floor((startOfDay(dueDate).getTime() - billingStartDate.getTime()) / msPerDay);
+      const billableDays = Math.max(0, dayDiff + 1);
+      const slotCount = tenant.slotNo
+        ? String(tenant.slotNo).split(",").map((slot) => slot.trim()).filter(Boolean).length
+        : 1;
+
+      const proratedRent = Math.max(0, Number(dailyFee) || 0) * Math.max(1, slotCount) * billableDays;
+      const utilityAmount = Number(tenant.utilityAmount) || 0;
+
+      tenant.rentAmount = proratedRent;
+      tenant.totalAmount = proratedRent + utilityAmount;
+      tenant.DueDateTime = dueDate;
+    }
+
+    await tenant.save();
 
     if (tenant.email) {
         try {
