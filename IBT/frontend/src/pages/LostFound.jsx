@@ -337,6 +337,18 @@ const LostFound = () => {
 
   const handleCreateItem = async (e) => {
     e.preventDefault();
+    
+    if (!newItemPhoto) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "A photo of the found item is required.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("trackingNo", newItem.trackingNo);
@@ -1404,13 +1416,14 @@ const LostFound = () => {
                   </div>
                 </div>
 
-                <div>
+               <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Item Photo (Admin Verification Only)
+                    Item Photo (Admin Verification Only) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="file"
                     accept="image/*"
+                    required
                     onChange={(e) => {
                       const file = e.target.files && e.target.files[0];
                       setNewItemPhoto(file || null);
@@ -1418,10 +1431,10 @@ const LostFound = () => {
                     className="w-full text-sm text-slate-700 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
                   />
                   <p className="mt-1 text-xs text-slate-500">
-                    This photo is visible only to Lost &amp; Found administrators for verification during claiming.
+                    This photo is <strong className="text-slate-700">required</strong> and visible only to Lost &amp; Found administrators for verification during claiming.
                   </p>
                 </div>
-
+                
                 <input type="hidden" name="status" value={newItem.status} />
               </div>
               <div className="flex gap-3 mt-6">
