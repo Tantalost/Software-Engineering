@@ -413,11 +413,22 @@ const TenantLease = () => {
             if (!res.ok) throw new Error("Failed to fetch tenants");
             const data = await res.json();
             const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
-            formatted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            const normalized = formatted.map((tenant) => {
+                const isPermanentTenant = (tenant.tenantType || "Permanent") === "Permanent";
+                if (isPermanentTenant && !tenant.operationStartDate) {
+                    return {
+                        ...tenant,
+                        rentAmount: 0,
+                        totalAmount: Number(tenant.utilityAmount || 0),
+                    };
+                }
+                return tenant;
+            });
+            normalized.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
             
-            setAllTenantRecords(formatted);
+            setAllTenantRecords(normalized);
             
-            setRecords(formatted.filter(t => !t.isArchived && !t.isDeleted));
+            setRecords(normalized.filter(t => !t.isArchived && !t.isDeleted));
         } catch (err) {
             console.error("Error fetching tenants:", err);
         }

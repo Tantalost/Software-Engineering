@@ -166,12 +166,17 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     let calculatedRent = 0;
     let lockedAdvance = 0;
     let calculatedDueDate = "";
+    const hasStartedOperation = Boolean(initialData?.operationStartDate);
+    const existingProratedRent = Number(initialData?.rentAmount || 0);
     
     const slotCount = formData.slotNo ? formData.slotNo.split(',').length : 1;
 
     if (formData.tenantType === "Permanent") {
       const baseRent = defaultPermanentPrice; 
       lockedAdvance = baseRent * slotCount;   
+
+      // Permanent proration starts only after Start Operation.
+      calculatedRent = hasStartedOperation ? existingProratedRent : 0;
 
       if (startDate) {
         const d = new Date(startDate);
@@ -182,12 +187,6 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             nextDue.setMonth(nextDue.getMonth() + 1);
         }
         calculatedDueDate = formatDateTimeForInput(nextDue);
-
-        const diffDays = Math.ceil((nextDue.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-        
-        const dailyRate = baseRent / 30;
-        calculatedRent = diffDays * dailyRate * slotCount;
-
       }
     } else {
       calculatedRent = defaultNightPrice * slotCount; 
@@ -203,7 +202,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     setAdvancePayment(lockedAdvance);
     setDueDate(calculatedDueDate);
 
-  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice, defaultDueDate]);
+  }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice, defaultDueDate, initialData]);
 
   useEffect(() => {
     const isNightMarket = formData.tenantType === "Night Market";

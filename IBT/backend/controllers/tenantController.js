@@ -858,10 +858,12 @@ export const createTenant = async (req, res) => {
 
     const isPermanent = req.body.tenantType === "Permanent";
     const advancePayment = isPermanent ? Number(req.body.advancePaymentBalance || 0) : 0;
-    
+
     const rentAmt = Number(req.body.rentAmount) || 0;
+    // Permanent rent should begin only after Start Operation computes proration.
+    const normalizedRentAmt = isPermanent ? 0 : rentAmt;
     const utilAmt = req.body.utilityAmount || 0;
-    const recurringTotal = rentAmt + utilAmt; 
+    const recurringTotal = normalizedRentAmt + utilAmt;
     const initialPaymentAmount = isPermanent ? (advancePayment + utilAmt) : recurringTotal;
 
     const transferApplication = req.body.transferWaitlistId
@@ -904,6 +906,7 @@ export const createTenant = async (req, res) => {
 
     const tenantData = {
         ...req.body,
+      rentAmount: normalizedRentAmt,
       StartDateTime: contractStartDate,
       DueDateTime: contractEndDate,
         totalAmount: recurringTotal, 
@@ -1327,7 +1330,8 @@ export const updateAllPermanentPrices = async (req, res) => {
     for (const t of tenants) {
         if (t.status === "Paid") {
             const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
-            const newRent = priceValue * slotCount;
+        const hasStartedOperation = Boolean(toValidDate(t.operationStartDate));
+        const newRent = hasStartedOperation ? (priceValue * slotCount) : 0;
             const newTotal = newRent + (t.utilityAmount || 0);
 
             await Tenant.updateOne(

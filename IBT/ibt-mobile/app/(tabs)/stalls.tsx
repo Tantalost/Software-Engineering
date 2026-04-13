@@ -107,6 +107,15 @@ export default function StallsPage() {
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
 
   const calculateProratedRent = (basePrice: number, isNightMarket: boolean) => {
+    if (!isNightMarket) {
+      return {
+        diffDays: 0,
+        proratedRent: 0,
+        targetDay: dynamicDueDate,
+        dailyRate: dynamicDailyFee,
+      };
+    }
+
     const now = new Date();
     let nextDue = new Date(now.getFullYear(), now.getMonth(), dynamicDueDate);
     
@@ -116,7 +125,7 @@ export default function StallsPage() {
     const diffTime = nextDue.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    const dailyRate = isNightMarket ? (basePrice / 30) : dynamicDailyFee;
+    const dailyRate = basePrice / 30;
     
     return { diffDays, proratedRent: diffDays * dailyRate, targetDay: dynamicDueDate, dailyRate };
   };

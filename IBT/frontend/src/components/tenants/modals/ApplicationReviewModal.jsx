@@ -308,26 +308,8 @@ const ApplicationReviewModal = ({
                           <>
                               {(() => {
                                   const advance = typeof defaultPermanentPrice !== 'undefined' ? Number(defaultPermanentPrice) : 6000;
-                                  
-                                  let upcomingRent = Number(reviewData.rentAmount || 0); 
-                                  
-                                  if (upcomingRent === 0) {
-                                      const targetDay = Number(defaultDueDate) || 5;
-                                      const d = reviewData.createdAt ? new Date(reviewData.createdAt) : new Date();
-                                      let nextDue = new Date(d.getFullYear(), d.getMonth(), targetDay);
-                                      
-                                      if (d.getDate() >= targetDay) {
-                                          nextDue.setMonth(nextDue.getMonth() + 1);
-                                      }
-                                      
-                                      const diffDays = Math.max(0, Math.ceil((nextDue.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
-                                      const dailyRate = advance / 30;
-                                      
-                                      const slotString = reviewData.targetSlot || reviewData.slotNo || "";
-                                      const slotCount = slotString ? slotString.split(',').length : 1;
-                                      
-                                      upcomingRent = diffDays * dailyRate * slotCount;
-                                  }
+                                  const hasStartedOperation = Boolean(reviewData.operationStartDate);
+                                  const upcomingRent = hasStartedOperation ? Number(reviewData.rentAmount || 0) : 0;
                                   
                                   return (
                                       <>

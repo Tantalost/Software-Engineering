@@ -84,6 +84,11 @@ const resolvePermanentDueDate = (tenant, permanentDueDay) => {
         return ref !== 'initial payment';
     });
 
+    const currentDue = toValidDate(tenant.DueDateTime);
+    if (currentDue && currentDue >= billingStartDate) {
+        return currentDue;
+    }
+
     const coverageCandidates = nonInitialPayments
         .map((entry) => toValidDate(entry.coverageEndDate))
         .filter(Boolean)
@@ -94,11 +99,13 @@ const resolvePermanentDueDate = (tenant, permanentDueDay) => {
         return coverageCandidates[0];
     }
 
-    const anchorDate = billingStartDate
-        || nonInitialPayments
-            .map((entry) => toValidDate(entry.datePaid))
-            .filter(Boolean)
-            .sort((a, b) => b.getTime() - a.getTime())[0]
+    const latestPaidAt = nonInitialPayments
+        .map((entry) => toValidDate(entry.datePaid))
+        .filter(Boolean)
+        .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+
+    const anchorDate = latestPaidAt
+        || billingStartDate
         || toValidDate(tenant.StartDateTime);
 
     if (!anchorDate) return null;
