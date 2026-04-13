@@ -104,6 +104,7 @@ const TenantLease = () => {
     const [paymentViewType, setPaymentViewType] = useState("Week");
     const [paymentRefDate, setPaymentRefDate] = useState(new Date());
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("All");
+    const [selectedPaymentTenantId, setSelectedPaymentTenantId] = useState("");
 
     const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);     
     const [paymentItemsPerPage, setPaymentItemsPerPage] = useState(25);
@@ -655,7 +656,7 @@ const TenantLease = () => {
         });
 
         return { dateRange: { start, end }, filteredPayments: filtered };
-    }, [records, paymentViewType, paymentRefDate, paymentTypeFilter]);
+    }, [allTenantRecords, paymentViewType, paymentRefDate, paymentTypeFilter]);
 
     const handleShiftDate = (direction) => {
         setPaymentRefDate(prev => {
@@ -685,6 +686,138 @@ const TenantLease = () => {
     const totalCollected = useMemo(() => {
         return filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     }, [filteredPayments]);
+
+    const paymentTenantOptions = useMemo(() => {
+        const tenantMap = new globalThis.Map();
+
+        allTenantRecords
+            .filter((tenant) => {
+                if (paymentTypeFilter === "All") return true;
+                return (tenant.tenantType || "Permanent") === paymentTypeFilter;
+            })
+            .forEach((tenant) => {
+                const rawId = tenant._id || tenant.id || tenant.referenceNo || `${tenant.tenantName || tenant.name}-${tenant.slotNo || "slot"}`;
+                const stableId = String(rawId);
+                if (!tenantMap.has(stableId)) {
+                    tenantMap.set(stableId, tenant);
+                }
+            });
+
+        return Array.from(tenantMap.entries()).map(([id, tenant]) => ({ id, tenant }));
+    }, [allTenantRecords, paymentTypeFilter]);
+
+    useEffect(() => {
+        if (paymentTenantOptions.length === 0) {
+            setSelectedPaymentTenantId("");
+            return;
+        }
+
+        setSelectedPaymentTenantId((prev) => {
+            if (paymentTenantOptions.some((item) => item.id === prev)) return prev;
+            return paymentTenantOptions[0].id;
+        });
+    }, [paymentTenantOptions]);
+
+    const selectedPaymentTenant = useMemo(() => {
+        if (!selectedPaymentTenantId) return null;
+        return paymentTenantOptions.find((item) => item.id === selectedPaymentTenantId)?.tenant || null;
+    }, [paymentTenantOptions, selectedPaymentTenantId]);
+
+    const paymentProgress = useMemo(() => {
+        if (!selectedPaymentTenant) return null;
+
+        const selectedYear = paymentRefDate.getFullYear();
+        const monthsShort = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+        const toValidDate = (value) => {
+            if (!value) return null;
+            const parsed = new Date(value);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+
+        const startDate = toValidDate(selectedPaymentTenant.StartDateTime);
+        const dueDate = toValidDate(selectedPaymentTenant.DueDateTime);
+        const startYear = startDate?.getFullYear();
+        const startMonth = startDate?.getMonth();
+        const slotCount = selectedPaymentTenant.slotNo ? String(selectedPaymentTenant.slotNo).split(",").length : 1;
+        const utilityAmount = Number(selectedPaymentTenant.utilityAmount) || 0;
+        const currentOutstandingAmount = Number(selectedPaymentTenant.totalAmount || selectedPaymentTenant.rentAmount || 0);
+        const isNightMarketTenant = selectedPaymentTenant.tenantType === "Night Market";
+        const configuredDefaultBase = isNightMarketTenant ? Number(defaultNightPrice || 150) : Number(defaultPermanentPrice || 6000);
+        const futureRentAmount = configuredDefaultBase * slotCount;
+        const futureCycleAmount = futureRentAmount + utilityAmount;
+        const hasUnpaidCurrentCycle = String(selectedPaymentTenant.status || "").toLowerCase() !== "paid";
+
+        const dueMonthIndexForYear =
+            dueDate && dueDate.getFullYear() === selectedYear
+                ? dueDate.getMonth()
+                : null;
+
+        const paidByMonth = new globalThis.Map();
+        (selectedPaymentTenant.paymentHistory || []).forEach((entry) => {
+            const paidAt = toValidDate(entry?.datePaid);
+            if (!paidAt || paidAt.getFullYear() !== selectedYear) return;
+            const monthIndex = paidAt.getMonth();
+            paidByMonth.set(monthIndex, (paidByMonth.get(monthIndex) || 0) + (Number(entry.amount) || 0));
+        });
+
+        const today = new Date();
+        const todayYear = today.getFullYear();
+        const currentMonthIndex = selectedYear < todayYear ? 11 : selectedYear > todayYear ? -1 : today.getMonth();
+
+        const timeline = monthsShort.map((label, monthIndex) => {
+            const beforeTenantStart = startDate && (selectedYear < startYear || (selectedYear === startYear && monthIndex < startMonth));
+            const inScope = !beforeTenantStart;
+            const paidAmount = paidByMonth.get(monthIndex) || 0;
+            const isPaid = paidAmount > 0;
+
+            let status = "not-applicable";
+            if (inScope) {
+                if (isPaid) status = "paid";
+                else status = "remaining";
+            }
+
+            let dueAmount = 0;
+            if (status === "remaining") {
+                if (hasUnpaidCurrentCycle && dueMonthIndexForYear !== null && monthIndex <= dueMonthIndexForYear) {
+                    dueAmount = currentOutstandingAmount;
+                } else if (hasUnpaidCurrentCycle && dueMonthIndexForYear === null && monthIndex <= currentMonthIndex) {
+                    dueAmount = currentOutstandingAmount;
+                } else {
+                    dueAmount = futureCycleAmount;
+                }
+            }
+
+            return { label, monthIndex, paidAmount, dueAmount, status };
+        });
+
+        const totalMonths = timeline.filter((m) => m.status !== "not-applicable").length;
+        const paidMonths = timeline.filter((m) => m.status === "paid").length;
+        const remainingMonths = timeline.filter((m) => m.status === "remaining").length;
+        const overdueMonths = timeline.filter((m) => m.status === "remaining").length;
+
+        const paidAmount = Array.from(paidByMonth.values()).reduce((sum, value) => sum + value, 0);
+        const remainingAmount = timeline
+            .filter((m) => m.status === "remaining")
+            .reduce((sum, m) => sum + (Number(m.dueAmount) || 0), 0);
+        const projectedAmount = paidAmount + remainingAmount;
+        const progressPercent = totalMonths > 0 ? Math.round((paidMonths / totalMonths) * 100) : 0;
+
+        return {
+            selectedYear,
+            timeline,
+            totalMonths,
+            paidMonths,
+            remainingMonths,
+            overdueMonths,
+            paidAmount,
+            projectedAmount,
+            remainingAmount,
+            progressPercent,
+            monthlyCharge: futureCycleAmount,
+            currentCycleAmount: hasUnpaidCurrentCycle ? currentOutstandingAmount : 0,
+        };
+    }, [selectedPaymentTenant, paymentRefDate, defaultNightPrice, defaultPermanentPrice]);
 
     const paginatedPayments = useMemo(() => {
         const start = (paymentCurrentPage - 1) * paymentItemsPerPage;
@@ -2761,6 +2894,123 @@ const TenantLease = () => {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                <div>
+                                    <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Tenant Payment Visual</p>
+                                    <h4 className="text-lg font-bold text-slate-800 mt-1">
+                                        {selectedPaymentTenant ? (selectedPaymentTenant.tenantName || selectedPaymentTenant.name) : "No tenant selected"}
+                                    </h4>
+                                    <p className="text-sm text-slate-500 mt-1">
+                                        {selectedPaymentTenant
+                                            ? `Slot ${selectedPaymentTenant.slotNo || "N/A"} | ${(selectedPaymentTenant.tenantType || "Permanent")} | ${paymentProgress?.selectedYear || paymentRefDate.getFullYear()}`
+                                            : "Select a tenant to view paid and remaining month visuals."}
+                                    </p>
+                                </div>
+
+                                <div className="w-full lg:w-80">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Tenant</label>
+                                    <select
+                                        value={selectedPaymentTenantId}
+                                        onChange={(e) => setSelectedPaymentTenantId(e.target.value)}
+                                        className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    >
+                                        {paymentTenantOptions.length === 0 && <option value="">No tenants found</option>}
+                                        {paymentTenantOptions.map((option) => {
+                                            const tenantName = option.tenant.tenantName || option.tenant.name || "Unnamed Tenant";
+                                            const slotNo = option.tenant.slotNo || "N/A";
+                                            return (
+                                                <option key={option.id} value={option.id}>
+                                                    {tenantName} (Slot {slotNo})
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {selectedPaymentTenant && paymentProgress ? (
+                                <>
+                                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-emerald-700">Paid</p>
+                                            <p className="text-xl font-black text-emerald-800">{paymentProgress.paidMonths}/{paymentProgress.totalMonths} months</p>
+                                            <p className="text-xs font-semibold text-emerald-700 mt-1">₱{paymentProgress.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                        </div>
+                                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-amber-700">Remaining</p>
+                                            <p className="text-xl font-black text-amber-800">{paymentProgress.remainingMonths} months</p>
+                                            <p className="text-xs font-semibold text-amber-700 mt-1">₱{paymentProgress.remainingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                            {paymentProgress.currentCycleAmount > 0 && (
+                                                <p className="text-[11px] text-amber-700 mt-1">Current cycle due: ₱{paymentProgress.currentCycleAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                            )}
+                                        </div>
+                                        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-rose-700">Overdue</p>
+                                            <p className="text-xl font-black text-rose-800">{paymentProgress.overdueMonths} month(s)</p>
+                                            <p className="text-xs font-semibold text-rose-700 mt-1">Monthly Due: ₱{paymentProgress.monthlyCharge.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <div className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5">
+                                            <span>Lease Progress ({paymentProgress.progressPercent}% Paid)</span>
+                                            <span>{paymentProgress.paidMonths} of {paymentProgress.totalMonths} month(s)</span>
+                                        </div>
+                                        <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                                            <div
+                                                className="h-full bg-emerald-500 transition-all"
+                                                style={{ width: `${paymentProgress.progressPercent}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 overflow-x-auto pb-1">
+                                        <div className="min-w-[900px] grid grid-cols-12 gap-2">
+                                            {paymentProgress.timeline.map((month) => {
+                                                const baseClass = "rounded-lg border p-2 text-center min-h-[82px] flex flex-col justify-between";
+                                                const statusClass = month.status === "paid"
+                                                    ? "border-emerald-200 bg-emerald-500 text-white"
+                                                    : month.status === "remaining"
+                                                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                                                            : "border-slate-200 bg-slate-50 text-slate-400";
+
+                                                return (
+                                                    <div key={month.label} className={`${baseClass} ${statusClass}`}>
+                                                        <p className="text-[11px] font-black tracking-wide">{month.label}</p>
+                                                        <p className="text-[10px] font-bold uppercase">
+                                                            {month.status === "paid"
+                                                                ? "Paid"
+                                                                : month.status === "remaining"
+                                                                    ? "Due"
+                                                                        : "N/A"}
+                                                        </p>
+                                                        <p className="text-[10px] font-semibold">
+                                                            {month.status === "paid"
+                                                                ? `₱${month.paidAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                                : month.status === "remaining"
+                                                                    ? `₱${(month.dueAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                                    : ""}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
+                                        <span className="px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">Paid</span>
+                                        <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-700">Due / Unpaid</span>
+                                        <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">Not Applicable</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+                                    No payment timeline available for this filter.
+                                </div>
+                            )}
                         </div>
                         
                         <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
