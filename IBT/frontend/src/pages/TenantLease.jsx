@@ -1113,8 +1113,12 @@ const TenantLease = () => {
             const formData = new FormData();
 
             Object.keys(newTenant).forEach(key => {
-                if (key === 'documents') return;
-                formData.append(key, newTenant[key]);
+                if (key === 'documents' || key === 'id' || key === '_id') return;
+                const value = newTenant[key];
+                if (value === undefined || value === null) return;
+                if (key === 'reportId' && typeof value === 'string' && !value.trim()) return;
+                if (typeof value === 'string' && value.trim().toLowerCase() === 'null') return;
+                formData.append(key, value);
             });
 
             if (waitlistId) {
@@ -2292,8 +2296,12 @@ const TenantLease = () => {
 
                             const formData = new FormData();
                             Object.keys(updatedData).forEach(key => {
-                                if (key === 'documents') return;
-                                formData.append(key, updatedData[key]);
+                                if (key === 'documents' || key === 'id' || key === '_id') return;
+                                const value = updatedData[key];
+                                if (value === undefined || value === null) return;
+                                if (key === 'reportId' && typeof value === 'string' && !value.trim()) return;
+                                if (typeof value === 'string' && value.trim().toLowerCase() === 'null') return;
+                                formData.append(key, value);
                             });
 
                             if (updatedData.documents) {
