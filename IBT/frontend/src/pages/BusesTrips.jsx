@@ -3228,18 +3228,17 @@ const BusTrips = () => {
           
           <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
             
-            <div className="flex-1 w-full">
-              <BusTripFilters
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                selectedCompany={selectedCompany}
-                setSelectedCompany={setSelectedCompany}
-                uniqueCompanies={availableCompanies}
-                selectedBusType={selectedBusType}
-                setSelectedBusType={setSelectedBusType}
-                selectedStatus={selectedStatus}
-                setSelectedStatus={setSelectedStatus}
-              />
+            <div className="flex-1 w-full xl:max-w-[400px] shrink-0">
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full pl-10 pr-4 h-[42px] border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 text-slate-700 placeholder-slate-400 transition-all outline-none"
+                />
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-[18px] h-[18px]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
             </div>
 
             {role === "superadmin" && (
@@ -3438,6 +3437,19 @@ const BusTrips = () => {
               )}
             </div>
           </div>
+
+          <div className="w-full pt-4 mt-2 border-t border-slate-100">
+            <BusTripFilters
+              selectedCompany={selectedCompany}
+              setSelectedCompany={setSelectedCompany}
+              uniqueCompanies={availableCompanies}
+              selectedBusType={selectedBusType}
+              setSelectedBusType={setSelectedBusType}
+              selectedStatus={selectedStatus}
+              setSelectedStatus={setSelectedStatus}
+            />
+          </div>
+
         </div>
       </div>
 

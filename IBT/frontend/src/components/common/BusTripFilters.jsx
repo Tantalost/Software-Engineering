@@ -1,9 +1,7 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const BusTripFilters = ({
-  searchQuery,
-  setSearchQuery,
   selectedCompany,
   setSelectedCompany,
   uniqueCompanies,
@@ -13,57 +11,63 @@ const BusTripFilters = ({
   setSelectedStatus,
 }) => {
   return (
-    <div className="flex flex-col xl:flex-row items-center gap-3 w-full">
+    <div className="flex flex-wrap items-center gap-3 w-full">
       
-      <div className="relative w-full xl:w-64 shrink-0">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search..."
-          className="w-full pl-10 pr-4 h-[42px] border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 text-slate-700 placeholder-slate-400 transition-all outline-none"
-        />
-        <Search
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-          size={18}
-        />
+      <div className="relative w-full sm:w-auto shrink-0">
+        <select
+          value={selectedCompany}
+          onChange={(e) => setSelectedCompany(e.target.value)}
+          className="w-full appearance-none h-[42px] pl-3 pr-12 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
+        >
+          <option value="">All Companies</option>
+          {uniqueCompanies.map((company) => (
+            <option key={company} value={company}>
+              {company}
+            </option>
+          ))}
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">
+          <div className="border-l border-slate-200 pl-2 h-5 flex items-center justify-center">
+            <ChevronDown size={16} className="text-slate-500" />
+          </div>
+        </div>
       </div>
 
-      <select
-        value={selectedCompany}
-        onChange={(e) => setSelectedCompany(e.target.value)}
-        className="w-full xl:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
-      >
-        <option value="">All Companies</option>
-        {uniqueCompanies.map((company) => (
-          <option key={company} value={company}>
-            {company}
-          </option>
-        ))}
-      </select>
+      <div className="relative w-full sm:w-auto shrink-0">
+        <select
+          value={selectedBusType}
+          onChange={(e) => setSelectedBusType(e.target.value)}
+          className="w-full appearance-none h-[42px] pl-3 pr-12 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
+        >
+          <option value="">All Types</option>
+          <option value="Regular">Regular</option>
+          <option value="Aircon">Aircon</option>
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">
+          <div className="border-l border-slate-200 pl-2 h-5 flex items-center justify-center">
+            <ChevronDown size={16} className="text-slate-500" />
+          </div>
+        </div>
+      </div>
 
-      <select
-        value={selectedBusType}
-        onChange={(e) => setSelectedBusType(e.target.value)}
-        className="w-full xl:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
-      >
-        <option value="">All Types</option>
-        <option value="Regular">Regular</option>
-        <option value="Aircon">Aircon</option>
-      </select>
+      <div className="relative w-full sm:w-auto shrink-0">
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className="w-full appearance-none h-[42px] pl-3 pr-12 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
+        >
+          <option value="">All Status</option>
+          <option value="Expected">Expected</option>
+          <option value="Arrived">Arrived</option>
+          <option value="Departed">Departed</option>
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">
+          <div className="border-l border-slate-200 pl-2 h-5 flex items-center justify-center">
+            <ChevronDown size={16} className="text-slate-500" />
+          </div>
+        </div>
+      </div>
 
-      <select
-        value={selectedStatus}
-        onChange={(e) => setSelectedStatus(e.target.value)}
-        className="w-full xl:w-auto h-[42px] px-3 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
-      >
-        <option value="">All Status</option>
-        <option value="Scheduled">Scheduled</option>
-        <option value="Arrived">Arrived</option>
-        <option value="Departed">Departed</option>
-        <option value="On Fix">On Fix</option>
-      </select>
-      
     </div>
   );
 };
