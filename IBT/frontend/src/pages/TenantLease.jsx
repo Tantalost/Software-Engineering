@@ -641,7 +641,7 @@ const TenantLease = () => {
 
    const { dateRange, filteredPayments } = useMemo(() => {
         let all = [];
-        allTenantRecords.forEach(t => {
+        records.forEach(t => {
             if (t.paymentHistory && Array.isArray(t.paymentHistory)) {
                 t.paymentHistory.forEach(p => {
                     all.push({
@@ -684,7 +684,7 @@ const TenantLease = () => {
         });
 
         return { dateRange: { start, end }, filteredPayments: filtered };
-    }, [allTenantRecords, paymentViewType, paymentRefDate, paymentTypeFilter]);
+    }, [records, paymentViewType, paymentRefDate, paymentTypeFilter]);
 
     const handleShiftDate = (direction) => {
         setPaymentRefDate(prev => {
