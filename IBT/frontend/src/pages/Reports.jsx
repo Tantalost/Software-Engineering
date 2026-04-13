@@ -534,7 +534,7 @@ const Reports = () => {
 
         const dataHeaderRow = wsData.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").trim()));
         dataHeaderRow.eachCell((cell) => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } }; // Emerald Green for Data
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
           cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
         });
 
