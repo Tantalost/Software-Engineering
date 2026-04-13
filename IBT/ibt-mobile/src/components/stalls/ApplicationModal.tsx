@@ -105,7 +105,7 @@ export default function ApplicationModal({
                        <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold', textAlign: 'center'}}>
                           ₱{modalBilling.baseRent.toLocaleString()} (Advance) + ₱{modalBilling.proratedRent.toLocaleString()} (Prorated) {"\n"}
                           <Text style={{fontSize: 10, fontStyle: 'italic', color: 'grey'}}>
-                            *Prorated rent is {modalBilling.diffDays} days @ ₱200/day until due date.
+                            *Prorated rent is {modalBilling.diffDays} days @ ₱{Number(modalBilling.dailyRate || 0).toLocaleString()}/day until due date.
                           </Text>
                        </Text>
                     )}
@@ -141,7 +141,7 @@ export default function ApplicationModal({
                        <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold', textAlign: 'center'}}>
                           ₱{modalBilling.baseRent.toLocaleString()} (Advance) + ₱{modalBilling.proratedRent.toLocaleString()} (Prorated) {"\n"}
                           <Text style={{fontSize: 10, fontStyle: 'italic', color: 'grey'}}>
-                            *Prorated rent is {modalBilling.diffDays} days @ ₱200/day until due date.
+                            *Prorated rent is {modalBilling.diffDays} days @ ₱{Number(modalBilling.dailyRate || 0).toLocaleString()}/day until due date.
                           </Text>
                        </Text>
                     )}

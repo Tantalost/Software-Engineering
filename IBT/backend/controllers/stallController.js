@@ -74,15 +74,15 @@ const resolvePermanentDueDate = (tenant, permanentDueDay) => {
     const operationStartDate = toValidDate(tenant.operationStartDate);
     const billingStartDate = operationStartDate ? addDays(operationStartDate, 1) : null;
 
+    // Permanent billing should not start until operations are officially started.
+    if (!billingStartDate) {
+        return null;
+    }
+
     const nonInitialPayments = paymentHistory.filter((entry) => {
         const ref = String(entry.referenceNo || '').trim().toLowerCase();
         return ref !== 'initial payment';
     });
-
-    // New tenants should not have a due date until operation starts.
-    if (!billingStartDate && nonInitialPayments.length === 0) {
-        return null;
-    }
 
     const coverageCandidates = nonInitialPayments
         .map((entry) => toValidDate(entry.coverageEndDate))
@@ -365,6 +365,8 @@ export const getMyApplication = async (req, res) => {
             const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
             const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
             const isNightMarket = tenant.tenantType === 'Night Market';
+            const isPermanent = !isNightMarket;
+            const hasStartedOperation = Boolean(toValidDate(tenant.operationStartDate));
             const activeContract = getActiveContract(tenant);
             const pendingRenewalContract = (Array.isArray(tenant.contracts) ? tenant.contracts : []).find(
                 (contract) => contract.status === 'pending_approval'
@@ -373,18 +375,31 @@ export const getMyApplication = async (req, res) => {
            
             let calcRent = tenant.rentAmount;
             if (!calcRent || calcRent === 0) {
-                 calcRent = isNightMarket ? (globalNightPrice * slotCount) : (globalPermPrice * slotCount);
+                calcRent = isNightMarket ? (globalNightPrice * slotCount) : (globalPermPrice * slotCount);
+            }
+
+            if (isPermanent && !hasStartedOperation) {
+                calcRent = 0;
             }
             
             const calcUtil = tenant.utilityAmount || 0;
-            const calcTotal = (tenant.totalAmount && tenant.totalAmount > 0) ? tenant.totalAmount : (calcRent + calcUtil);
+            let calcTotal = (tenant.totalAmount && tenant.totalAmount > 0) ? tenant.totalAmount : (calcRent + calcUtil);
+            if (isPermanent && !hasStartedOperation) {
+                calcTotal = 0;
+            }
 
-              const calcDueDate = resolveNextBillingDueDate(tenant, activeContract, permanentDueDay);
-              const calcDue = calcDueDate ? calcDueDate.toISOString() : null;
+            const calcDueDate = resolveNextBillingDueDate(tenant, activeContract, permanentDueDay);
+            const calcDue = (isPermanent && !hasStartedOperation)
+                ? null
+                : (calcDueDate ? calcDueDate.toISOString() : null);
+
+            const effectiveTenantStatus = (isPermanent && !hasStartedOperation)
+                ? 'Not Started Operations'
+                : tenant.status;
             
             const tenantData = {
                 status: 'TENANT', 
-                tenantDbStatus: tenant.status, 
+                tenantDbStatus: effectiveTenantStatus,
                 start: tenant.StartDateTime,
                 operationStartDate: tenant.operationStartDate || null,
                 due: calcDue,
@@ -396,7 +411,7 @@ export const getMyApplication = async (req, res) => {
 
                 paymentHistory: tenant.paymentHistory || [], 
                 paymentReference: tenant.referenceNo, 
-                paymentAmount: tenant.totalAmount || tenant.rentAmount,
+                paymentAmount: calcTotal,
                 receiptUrl: tenant.documents?.proofOfReceipt || "",
    
                 permitUrl: tenant.documents?.businessPermit || "",

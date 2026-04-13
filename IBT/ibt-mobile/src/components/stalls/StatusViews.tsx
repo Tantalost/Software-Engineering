@@ -193,7 +193,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   }, [applying, paymentData?.referenceNo]);
 
   const dueDate = isWaitingForStartOperation
-    ? "Waiting for Start Operation"
+    ? "Not Started Operations"
     : currentApp.due 
     ? new Date(currentApp.due).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -251,7 +251,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
           <Icon name={isOverdueState ? "alert-circle" : "check-decagram"} size={80} color={isOverdueState ? '#dc2626' : colors.success} />
           <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: isOverdueState ? '#dc2626' : colors.success }}>
-            {isOverdueState ? 'Overdue Account' : 'Active Tenant'}
+            {isOverdueState ? 'Overdue Account' : (isWaitingForStartOperation ? 'Not Started Operations' : 'Active Tenant')}
           </Text>
           <Text variant="titleMedium" style={{ marginTop: 5, color: colors.textDark, fontWeight: 'bold' }}>
             Slot: {currentApp.targetSlot}
@@ -520,15 +520,15 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               clearPaymentData(); 
               setPaymentModalVisible(true); 
             }} 
-            style={{ backgroundColor: currentApp.tenantDbStatus === 'Payment Review' ? '#ffbf49' : colors.success }} 
+            style={{ backgroundColor: (currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation) ? '#ffbf49' : colors.success }} 
             labelStyle={{ 
             color: colors.white, 
             fontWeight: 'bold',
             fontSize: 16 
             }} 
-            disabled={currentApp.tenantDbStatus === 'Payment Review'} 
+            disabled={currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation} 
           >
-          {currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment'}
+          {isWaitingForStartOperation ? 'Operation Not Started' : (currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment')}
         </Button>
         </Card.Content>
       </Card>
