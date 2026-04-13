@@ -875,8 +875,13 @@ const Parking = () => {
       return;
     }
  
-  const isCurrentlyParked = records.some(
-    (record) => record.plateNo?.toUpperCase() === plateNo && record.status === "Parked"
+  // Duplicate checks are based on what is currently shown in the main table.
+  const visibleTableRows = sortedFiltered;
+
+  const isCurrentlyParked = visibleTableRows.some(
+    (record) =>
+      String(record.plateNo || "").trim().toUpperCase() === plateNo &&
+      record.status === "Parked",
   );
 
   if (isCurrentlyParked) {
@@ -890,7 +895,9 @@ const Parking = () => {
     return; 
   }
 
-  const isDuplicateTicket = records.some((ticket) => ticket.ticketNo === ticketNo);
+  const isDuplicateTicket = visibleTableRows.some(
+    (ticket) => String(ticket.ticketNo || "").trim() === ticketNo,
+  );
 
   if (isDuplicateTicket) {
     setNotificationState({

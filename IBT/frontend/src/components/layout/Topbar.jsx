@@ -382,9 +382,13 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
       const res = await fetch(`${BASE_URL}/api/parking`);
       if (!res.ok) return { blocked: false };
       const data = await res.json();
-      const pending = (Array.isArray(data) ? data : []).filter((item) =>
-        isDateOnOrAfter(item?.createdAt, shiftStart),
-      );
+      const pending = (Array.isArray(data) ? data : []).filter((item) => {
+        // Parking handoff submits departed rows only; parked rows are carried over.
+        const isInShift = isDateOnOrAfter(item?.createdAt, shiftStart);
+        const isDeparted = String(item?.status || "").toLowerCase() === "departed";
+        const isSubmitted = Boolean(item?.submitted);
+        return isInShift && isDeparted && !isSubmitted;
+      });
       if (pending.length > 0) {
         return {
           blocked: true,
