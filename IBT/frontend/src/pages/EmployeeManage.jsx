@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/layout/Layout";
 import DeleteModal from "../components/common/DeleteModal";
 import {
-  CheckCircle,
-  XCircle,
   X,
   UserX,
   ShieldCheck,
@@ -204,6 +202,7 @@ export default function EmployeeManage() {
             data.map((a) => ({
               ...a,
               name: a.name || roleLabels[a.role] || "Admin",
+              status: a.status || "Active",
             })),
           );
         } // <--- THIS WAS THE MISSING BRACE!
@@ -481,6 +480,39 @@ export default function EmployeeManage() {
       showToast("error", error.message);
     } finally {
       setDeleteTarget(null);
+    }
+  };
+
+  const handleToggleAdminStatus = async (admin) => {
+    const adminId = admin.id || admin._id;
+    if (!adminId) return;
+
+    try {
+      const nextStatus = (admin.status || "Active") === "Active" ? "Inactive" : "Active";
+      const res = await fetch(`${API_BASE_URL}/api/admins/${adminId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to update admin status.");
+
+      setAdmins((prev) =>
+        prev.map((a) => {
+          const id = a.id || a._id;
+          return id === adminId
+            ? {
+                ...a,
+                ...data.admin,
+                status: (data.admin && data.admin.status) || nextStatus,
+              }
+            : a;
+        }),
+      );
+
+      showToast("success", `Admin marked as ${nextStatus.toLowerCase()}.`);
+    } catch (error) {
+      showToast("error", error.message || "Failed to update admin status.");
     }
   };
 
@@ -796,19 +828,20 @@ export default function EmployeeManage() {
                     <th className="px-6 py-3">Email</th>
                     <th className="px-6 py-3">Role</th>
                     <th className="px-6 py-3">Shift</th>
+                    <th className="px-6 py-3">Status</th>
                     <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading && admins.length === 0 ? (
                     <tr>
-                      <td className="px-6 py-4" colSpan={5}>
+                      <td className="px-6 py-4" colSpan={6}>
                         Loading...
                       </td>
                     </tr>
                   ) : admins.length === 0 ? (
                     <tr>
-                      <td className="px-6 py-4" colSpan={5}>
+                      <td className="px-6 py-4" colSpan={6}>
                         No admins found.
                       </td>
                     </tr>
@@ -827,12 +860,38 @@ export default function EmployeeManage() {
                           {a.role === "superadmin" ? "N/A" : (a.assignedShift || "-")}
                         </td>
                         <td className="px-6 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              (a.status || "Active") === "Active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {a.status || "Active"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3">
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => openEditModal(a)}
                               className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all cursor-pointer"
                             >
                               Edit
+                            </button>
+                            <button
+                              onClick={() => handleToggleAdminStatus(a)}
+                              disabled={a.role === "superadmin"}
+                              className={`px-3 py-1.5 rounded-lg border transition-all ${
+                                a.role === "superadmin"
+                                  ? "border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed"
+                                  : "border-slate-200 text-slate-700 bg-white hover:bg-slate-50 cursor-pointer"
+                              }`}
+                            >
+                              {a.role === "superadmin"
+                                ? "Protected"
+                                : (a.status || "Active") === "Active"
+                                  ? "Deactivate"
+                                  : "Activate"}
                             </button>
                             <button
                               onClick={() => setDeleteTarget(a)}

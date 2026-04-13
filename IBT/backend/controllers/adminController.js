@@ -22,6 +22,7 @@ const sanitizeAdmin = (admin) => ({
   email: admin.email,
   role: admin.role,
   assignedShift: admin.assignedShift || null,
+  status: admin.status || "Active",
   createdAt: admin.createdAt,
   updatedAt: admin.updatedAt,
 });
@@ -118,6 +119,7 @@ export const createAdmin = async (req, res) => {
       email: email.toLowerCase(), 
       role, 
       assignedShift: normalizedShift,
+      status: "Active",
       passwordHash
     });
 
@@ -184,7 +186,7 @@ export const sendOtp = async (req, res) => {
 export const updateAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, middleName, suffix, email, password, otp, assignedShift } = req.body;
+    const { firstName, lastName, middleName, suffix, email, password, otp, assignedShift, status } = req.body;
 
     const admin = await Admin.findById(id);
     if (!admin) return res.status(404).json({ message: "Admin not found." });
@@ -194,6 +196,17 @@ export const updateAdmin = async (req, res) => {
     if (middleName !== undefined) admin.middleName = middleName;
     if (suffix !== undefined) admin.suffix = suffix;
     if (email) admin.email = email.toLowerCase();
+
+    if (status !== undefined) {
+      const normalizedStatus = String(status).trim();
+      if (!["Active", "Inactive"].includes(normalizedStatus)) {
+        return res.status(400).json({ message: "Invalid status value." });
+      }
+      if (admin.role === "superadmin") {
+        return res.status(403).json({ message: "Super Admin status cannot be changed." });
+      }
+      admin.status = normalizedStatus;
+    }
 
     if (assignedShift !== undefined) {
       const normalizedShift = normalizeAssignedShift(assignedShift);
@@ -244,6 +257,10 @@ export const loginAdmin = async (req, res) => {
 
     const admin = await Admin.findOne({ email: email.toLowerCase() });
     if (!admin) return res.status(401).json({ message: "Invalid credentials." });
+
+    if (admin.status === "Inactive") {
+      return res.status(403).json({ message: "Account is inactive. Please contact Super Admin." });
+    }
 
     const isMatch = await bcrypt.compare(password, admin.passwordHash);
     if (!isMatch) {

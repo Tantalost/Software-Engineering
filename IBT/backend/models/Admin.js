@@ -38,6 +38,12 @@ const adminSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      trim: true,
+      default: "Active",
+    },
     passwordHash: {
       type: String,
       required: true,
