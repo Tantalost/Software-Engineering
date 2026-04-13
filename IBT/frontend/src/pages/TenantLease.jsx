@@ -1922,7 +1922,7 @@ const TenantLease = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-start justify-start xl:justify-end gap-3 w-full xl:w-auto">
+                <div className="flex flex-col items-start xl:items-end gap-3 w-full xl:w-auto">
                     
                     {role === "superadmin" && (
                         <div className="flex items-center gap-2">
@@ -1969,54 +1969,56 @@ const TenantLease = () => {
                         </div>
                     )}
 
-                    {(role === "superadmin" || role === "lease") && (
-                        <>
-                            <button
-                                onClick={() => setShowLogModal(true)}
-                                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-slate-300 transition-all"
-                                title="View Logs"
-                            >
-                                <History size={18} />
-                                <span className="hidden sm:inline cursor-pointer">Logs</span>
-                            </button>
-                            <button
-                                onClick={() => setShowPaymentRecords(true)}
-                                className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-300 transition-all cursor-pointer"
-                                title="View Payment Records"
-                            >
-                                <Wallet size={18} />
-                                <span className="hidden sm:inline">Records</span>
-                            </button>
-                        </>
-                    )}
+                    <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3">
+                        {(role === "superadmin" || role === "lease") && (
+                            <>
+                                <button
+                                    onClick={() => setShowLogModal(true)}
+                                    className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-slate-300 transition-all"
+                                    title="View Logs"
+                                >
+                                    <History size={18} />
+                                    <span className="hidden sm:inline cursor-pointer">Logs</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowPaymentRecords(true)}
+                                    className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold px-3 sm:px-4 h-[42px] rounded-xl shadow-sm hover:border-emerald-300 transition-all cursor-pointer"
+                                    title="View Payment Records"
+                                >
+                                    <Wallet size={18} />
+                                    <span className="hidden sm:inline">Records</span>
+                                </button>
+                            </>
+                        )}
 
-                    {isSelectionMode && selectedIds.length > 0 && (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
-                            <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-                                {selectedIds.length} Selected
-                            </span>
-                            <button
-                                onClick={handleBulkDelete}
-                                title="Request Delete"
-                                className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
-                            >
-                                <Trash2 className="h-5 w-5" />
-                            </button>
-                        </div>
-                    )}
+                        {isSelectionMode && selectedIds.length > 0 && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
+                                <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                                    {selectedIds.length} Selected
+                                </span>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    title="Request Delete"
+                                    className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all"
+                                >
+                                    <Trash2 className="h-5 w-5" />
+                                </button>
+                            </div>
+                        )}
 
-                    {(role === "lease") && (
-                        <button
-                            onClick={toggleSelectionMode}
-                            title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-                            className={`flex items-center justify-center cursor-pointer h-[42px] w-[42px] sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
-                                ? "bg-red-500 text-white shadow-md"
-                                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                                }`}
-                        >
-                            {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-                        </button>
-                    )}
+                        {(role === "lease") && (
+                            <button
+                                onClick={toggleSelectionMode}
+                                title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+                                className={`flex items-center justify-center cursor-pointer h-[42px] w-[42px] sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode
+                                    ? "bg-red-500 text-white shadow-md"
+                                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                                    }`}
+                            >
+                                {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
