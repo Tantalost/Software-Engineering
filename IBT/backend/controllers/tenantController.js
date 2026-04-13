@@ -1321,42 +1321,16 @@ export const updateAllPermanentPrices = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    const tenants = await Tenant.find({ 
-      $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }], 
-      isArchived: { $ne: true } 
+    const startedPaidTenantsCount = await Tenant.countDocuments({
+      $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }],
+      isArchived: { $ne: true },
+      status: "Paid",
+      operationStartDate: { $exists: true, $ne: null }
     });
-    let updatedCount = 0;
 
-    for (const t of tenants) {
-        if (t.status === "Paid") {
-            const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
-        const hasStartedOperation = Boolean(toValidDate(t.operationStartDate));
-        const newRent = hasStartedOperation ? (priceValue * slotCount) : 0;
-            const newTotal = newRent + (t.utilityAmount || 0);
-
-            await Tenant.updateOne(
-                { _id: t._id },
-                { $set: { rentAmount: newRent, totalAmount: newTotal } }
-            );
-            updatedCount++;
-
-            if (t.email) {
-                try {
-                    const user = await User.findOne({ email: t.email });
-                    if (user && user.expoPushToken) {
-                        await sendPushNotification(
-                            user.expoPushToken,
-                            "Rent Price Updated!",
-                            `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
-                            { route: 'stalls' }
-                        );
-                    }
-                } catch (notifyErr) {
-                    console.error("Push failed:", notifyErr.message);
-                }
-            }
-        }
-    }
+    // Do not overwrite current due-cycle amounts for existing permanent tenants.
+    // The new global price will be picked up on the next approved payment cycle.
+    const updatedCount = 0;
 
     const applicationResult = await TenantApplication.updateMany(
       { 
@@ -1367,8 +1341,9 @@ export const updateAllPermanentPrices = async (req, res) => {
     );
 
     res.status(200).json({
-      message: `Updated global permanent price. Modified ${updatedCount} active tenants.`,
+      message: `Updated global permanent price. Existing tenants keep their current next due amount; new price applies starting the following billing cycle.`,
       tenantModifiedCount: updatedCount,
+      tenantDeferredCount: startedPaidTenantsCount,
       applicationModifiedCount: applicationResult.modifiedCount
     });
   } catch (error) {

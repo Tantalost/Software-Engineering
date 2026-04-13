@@ -72,12 +72,16 @@ const filteredData = baseFilteredData.filter((app) => {
 });
 
 
-const isRenewalRecord = (app) => renewalsData.some((r) => {
+const isRenewalRecord = (app) => {
+  if (app?.reviewSource === 'renewal') return true;
+
+  return renewalsData.some((r) => {
   if (r.renewalContractId && app.renewalContractId) {
     return String(r.renewalContractId) === String(app.renewalContractId);
   }
   return (r._id || r.id) === (app._id || app.id);
-});
+  });
+};
 
   const handleOpenReject = (appId, isRenewal = false) => {
     setRejectionReason("");

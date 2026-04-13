@@ -718,7 +718,7 @@ const TenantLease = () => {
     const paymentTenantOptions = useMemo(() => {
         const tenantMap = new globalThis.Map();
 
-        allTenantRecords
+        records
             .filter((tenant) => {
                 if (paymentTypeFilter === "All") return true;
                 return (tenant.tenantType || "Permanent") === paymentTypeFilter;
@@ -732,7 +732,7 @@ const TenantLease = () => {
             });
 
         return Array.from(tenantMap.entries()).map(([id, tenant]) => ({ id, tenant }));
-    }, [allTenantRecords, paymentTypeFilter]);
+    }, [records, paymentTypeFilter]);
 
     useEffect(() => {
         if (paymentTenantOptions.length === 0) {
@@ -2080,6 +2080,7 @@ const TenantLease = () => {
                         ...tenant,
                         _id: tenant._id || tenant.id,
                         id: tenant.id,
+                        reviewSource: 'renewal',
                         status: 'PENDING_APPROVAL',
                         renewalContractId: contract._id,
                         renewalRequestedAt: contract.requestedAt || contract.assignedAt || contract.startDate,
@@ -2104,6 +2105,7 @@ const TenantLease = () => {
                 ...tenant,
                 _id: tenant._id || tenant.id,
                 id: tenant.id,
+                reviewSource: 'renewal',
                 renewalReviewType: 'payment',
                 renewalRequestedAt: tenant.updatedAt || tenant.StartDateTime,
             }));
