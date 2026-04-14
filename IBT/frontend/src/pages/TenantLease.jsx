@@ -3359,9 +3359,9 @@ const TenantLease = () => {
                                             <p className="text-[11px] uppercase tracking-wide font-bold text-sky-700">Transactions</p>
                                             <p className="text-2xl font-black text-sky-800">{filteredPayments.length}</p>
                                         </div>
-                                        <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
-                                            <p className="text-[11px] uppercase tracking-wide font-bold text-violet-700">Paying Tenants</p>
-                                            <p className="text-2xl font-black text-violet-800">{uniquePayingTenants}</p>
+                                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-emerald-700">Paying Tenants</p>
+                                            <p className="text-2xl font-black text-emerald-800">{uniquePayingTenants}</p>
                                         </div>
                                     </div>
                                 </div>
