@@ -55,6 +55,44 @@ const getInitialBasePrices = () => {
     discounted: 10.0,
   };
 };
+
+const toLocalDateInput = (dateValue = new Date()) => {
+  const date = new Date(dateValue);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseRecordDate = (value) => {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === "string") {
+    const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+      const year = Number(dateOnlyMatch[1]);
+      const month = Number(dateOnlyMatch[2]);
+      const day = Number(dateOnlyMatch[3]);
+      const parsedDate = new Date(year, month - 1, day);
+      return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+    }
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getRecordSortTimestamp = (record) => {
+  const primary = parseRecordDate(record?.createdAt) || parseRecordDate(record?.updatedAt);
+  if (primary) return primary.getTime();
+  const fallback = parseRecordDate(record?.date);
+  return fallback ? fallback.getTime() : 0;
+};
+
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
   if (!imageSrc) return;
   try {
@@ -212,7 +250,9 @@ const TerminalFees = () => {
       const res = await fetch(`${API_URL}/terminal-fees`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      setRecords(data);
+      const normalizedData = Array.isArray(data) ? data : [];
+      normalizedData.sort((a, b) => getRecordSortTimestamp(b) - getRecordSortTimestamp(a));
+      setRecords(normalizedData);
     } catch (err) {
       console.error("Error fetching fees:", err);
       showToastMessage("Error loading data from server");
@@ -384,7 +424,7 @@ const TerminalFees = () => {
         matchesType = pType.includes(aType);
       }
 
-     const feeDate = fee.date ? new Date(fee.date) : null;
+      const feeDate = parseRecordDate(fee.date);
       let matchesDateRange = false;
 
       if (dateFilterType === "All") {
@@ -856,7 +896,7 @@ const TerminalFees = () => {
       ticketNo: isAutoTicket ? "Loading..." : "", 
       passengerType: "Regular",
       price: basePrices.regular,
-      date: now.toISOString().split("T")[0],
+      date: toLocalDateInput(now),
       time: now.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -926,6 +966,7 @@ const TerminalFees = () => {
         const payload = {
           ...newTicket,
           ticketNo,
+          date: newTicket.date || toLocalDateInput(new Date()),
         };
 
         const res = await fetch(`${API_URL}/terminal-fees`, {
@@ -958,6 +999,7 @@ const TerminalFees = () => {
           : "New ticket added successfully!",
         "success",
       );
+      setCurrentPage(1);
       setShowAddModal(false);
     } catch (error) {
       console.error("Error saving ticket:", error);

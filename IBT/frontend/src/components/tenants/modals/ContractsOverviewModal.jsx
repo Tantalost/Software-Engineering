@@ -114,10 +114,24 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
     fetchDefaultConfig();
   }, [isOpen]);
 
+  const initialTemplates = useMemo(() => {
+    return templates.filter((template) => normalizeContractType(template?.contractType) === "INITIAL");
+  }, [templates]);
+
+  useEffect(() => {
+    if (!defaultTemplateId) return;
+    const existsInInitialTemplates = initialTemplates.some(
+      (template) => String(template._id) === String(defaultTemplateId)
+    );
+    if (!existsInInitialTemplates) {
+      setDefaultTemplateId("");
+    }
+  }, [initialTemplates, defaultTemplateId]);
+
   const selectedDefaultTemplate = useMemo(() => {
     if (!defaultTemplateId) return null;
-    return templates.find((template) => String(template._id) === String(defaultTemplateId)) || null;
-  }, [templates, defaultTemplateId]);
+    return initialTemplates.find((template) => String(template._id) === String(defaultTemplateId)) || null;
+  }, [initialTemplates, defaultTemplateId]);
 
   const handleSaveDefaultTemplate = async () => {
     setSavingDefault(true);
@@ -243,7 +257,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                         className="w-full h-11 rounded-lg border border-slate-300 px-3 pr-10 text-sm appearance-none cursor-pointer bg-white"
                       >
                         <option value="">No default template</option>
-                        {templates.map((template) => (
+                        {initialTemplates.map((template) => (
                           <option key={template._id} value={template._id}>
                             {normalizeContractType(template.contractType)} ({template.duration?.years || 0}y {template.duration?.months || 0}m)
                           </option>

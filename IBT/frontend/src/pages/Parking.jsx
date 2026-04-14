@@ -1345,6 +1345,17 @@ const handleSafeLogout = () => {
   };
 
   const handleSubmitReport = async () => {
+  if (records.length === 0) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "No parking data found in the main table. You cannot submit a report yet.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
+
   if (!collectorName || !collectorName.trim() || !collectorId) {
     setNotificationState({
       isOpen: true,
@@ -1725,6 +1736,37 @@ const handleSafeLogout = () => {
     });
   }, [records, role]);
 
+  const hasParkingMainTableData = useMemo(() => {
+    return records.length > 0;
+  }, [records]);
+
+  const parkingLogoutGuardMessage = useMemo(() => {
+    if (!hasParkingMainTableData) {
+      return "You cannot log out yet because there is no data in the Parking main table.";
+    }
+
+    if (hasPendingParkingShiftReport) {
+      return "Please submit your shift report before logging out. You still have unsubmitted Parking transactions in this shift.";
+    }
+
+    return "Please complete your required Parking shift actions before logging out.";
+  }, [hasParkingMainTableData, hasPendingParkingShiftReport]);
+
+  const handleOpenSubmitModal = () => {
+    if (records.length === 0) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No parking data found in the main table. Add records before submitting a report.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    setShowSubmitModal(true);
+  };
+
   return (
     <Layout
       title="Parking Management"
@@ -1732,9 +1774,8 @@ const handleSafeLogout = () => {
         role !== "superadmin"
           ? {
               logoutGuard: {
-                canLogout: !hasPendingParkingShiftReport,
-                message:
-                  "Please submit your shift report before logging out. You still have unsubmitted Parking transactions in this shift.",
+                canLogout: hasParkingMainTableData && !hasPendingParkingShiftReport,
+                message: parkingLogoutGuardMessage,
               },
             }
           : undefined
@@ -1761,7 +1802,7 @@ const handleSafeLogout = () => {
         <div className="flex flex-wrap items-center justify-start lg:justify-end gap-3 w-full lg:w-auto">
           {role === "parking" && (
             <button
-              onClick={() => setShowSubmitModal(true)}
+              onClick={handleOpenSubmitModal}
               disabled={isReporting}
               className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
             >
