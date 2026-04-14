@@ -58,7 +58,7 @@ const Sidebar = ({ sidebarExpanded, setSidebarExpanded, onMobileClose }) => {
                     <div className="flex items-center space-x-3">
                         <button
                             onClick={handleMenuClick}
-                            className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 shrink-0"
+                            className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 shrink-0"
                         >
                             <Menu className="text-white" size={24} />
                         </button>
