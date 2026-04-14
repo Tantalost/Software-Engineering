@@ -306,33 +306,33 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
       </Card>
 
       {(isEligibleForRenewal || hasPendingRenewal) && (
-        <Card style={{ marginBottom: 20, backgroundColor: '#eff6ff', borderColor: '#93c5fd', borderWidth: 1 }}>
+        <Card style={{ marginBottom: 20, backgroundColor: '#eff6ff', borderColor: '#bbf7d0', borderWidth: 1 }}>
           <Card.Content>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <Icon name="file-document-edit-outline" size={24} color="#1d4ed8" style={{ marginRight: 10 }} />
-              <Text variant="titleMedium" style={{ color: '#1d4ed8', fontWeight: 'bold' }}>
+              <Icon name="file-document-edit-outline" size={24} color='#166534' style={{ marginRight: 10 }} />
+              <Text variant="titleMedium" style={{ color: '#166534', fontWeight: 'bold' }}>
                 Contract Renewal
               </Text>
             </View>
 
             {hasPendingRenewal ? (
-              <Text style={{ color: '#1e3a8a' }}>
+              <Text style={{ color: '#166534' }}>
                 Your renewal contract request is pending admin review. Please wait for approval.
               </Text>
             ) : (
               <>
-                <Text style={{ color: '#1e3a8a', marginBottom: 8 }}>
+                <Text style={{ color: '#166534', marginBottom: 8 }}>
                   You are eligible to renew your contract.
                 </Text>
                 {activeContractEndDate && (
-                  <Text style={{ color: '#1e3a8a', marginBottom: 12, fontWeight: 'bold' }}>
+                  <Text style={{ color: '#000000', marginBottom: 12, fontWeight: 'bold' }}>
                     Active contract ends on {activeContractEndDate.toLocaleDateString()} ({renewalDaysLeft} day{renewalDaysLeft === 1 ? '' : 's'} left)
                   </Text>
                 )}
 
-                <Text style={{ color: '#1e3a8a', marginBottom: 6, fontWeight: 'bold' }}>Select Renewal Template</Text>
+                <Text style={{ color: '#0a0a0a', marginBottom: 6, fontWeight: 'bold' }}>Select Renewal Template</Text>
                 {renewalTemplates.length === 0 ? (
-                  <Text style={{ color: '#1e3a8a', marginBottom: 12 }}>
+                  <Text style={{ color: '#333333', marginBottom: 12 }}>
                     No renewal template is available right now. Please contact the admin office.
                   </Text>
                 ) : (
@@ -343,8 +343,8 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                         key={String(template._id)}
                         mode={selected ? 'contained' : 'outlined'}
                         onPress={() => setSelectedTemplateId(String(template._id))}
-                        style={{ marginBottom: 8, borderColor: '#1d4ed8' }}
-                        textColor={selected ? '#ffffff' : '#1d4ed8'}
+                        style={{ marginBottom: 8, borderColor: '#166534' }}
+                        textColor={selected ? '#080808' : '#166534'}
                       >
                         {template.name} ({getTemplateDurationLabel(template)})
                       </Button>
@@ -359,8 +359,8 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                   onPress={() => submitRenewalContract(selectedTemplateId)}
                   loading={applying}
                   disabled={renewalTemplates.length === 0 || !selectedTemplateId || !files?.contract}
-                  style={{ marginTop: 12, borderColor: '#1d4ed8', borderWidth: applying ? 0 : 1, backgroundColor: applying ? '#1d4ed8' : 'transparent' }}
-                  textColor={applying ? '#ffffff' : '#1d4ed8'}
+                  style={{ marginTop: 12, borderColor: '#166534', borderWidth: applying ? 0 : 1, backgroundColor: applying ? '#bbf7d0': 'transparent' }}
+                  textColor={applying ? '#020202' : '#166534'}
                 >
                   Submit Renewal Contract
                 </Button>
