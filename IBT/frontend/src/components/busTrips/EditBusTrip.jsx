@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Select from "../common/Select";
 import { ChevronDown } from "lucide-react";
 
 const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
@@ -242,12 +241,22 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                         </div>
 
                         <div className="md:col-span-2">
-                             <Select 
-                                label="Status" 
-                                value={form.status} 
-                                onChange={(e) => setForm({...form, status: e.target.value})} 
-                                          options={["Scheduled", "Arrived", "On Fix","Departed"]} 
-                             />
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                            <div className="relative mt-1">
+                                <select
+                                    value={form.status}
+                                    onChange={(e) => setForm({...form, status: e.target.value})}
+                                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none appearance-none cursor-pointer bg-white"
+                                >
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Arrived">Arrived</option>
+                                    <option value="On Fix">On Fix</option>
+                                    <option value="Departed">Departed</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                    <ChevronDown size={16} />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
