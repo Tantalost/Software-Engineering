@@ -1012,6 +1012,12 @@ export const updateTenant = async (req, res) => {
 
     const updateData = { ...req.body };
 
+    // Contract subdocuments are managed via dedicated /contracts endpoints.
+    // Ignore any contracts payload sent through generic tenant edit to avoid cast errors.
+    if (updateData.contracts !== undefined) {
+      delete updateData.contracts;
+    }
+
     if (updateData.feeBreakdown) {
         try {
             updateData.feeBreakdown = typeof updateData.feeBreakdown === 'string' 

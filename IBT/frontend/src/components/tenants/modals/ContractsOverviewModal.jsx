@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, FileText, Search, Settings, Loader2 } from "lucide-react";
+import { X, FileText, Search, Loader2 } from "lucide-react";
 import AvailableContractsModal from "./AvailableContractsModal";
 
 const toDateLabel = (value) => {
@@ -172,6 +172,10 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
     }, 0);
   }, [rows]);
 
+  const activeContractsCount = useMemo(() => {
+    return rows.reduce((count, { active }) => (active ? count + 1 : count), 0);
+  }, [rows]);
+
   if (!isOpen) return null;
 
   return (
@@ -193,14 +197,21 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
         </div>
 
         <div className="p-4 border-b border-slate-100 bg-slate-50/60">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <div className="flex items-start justify-between gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">Default Contract For Mobile Applicants</p>
                 <h4 className="text-lg font-bold text-slate-800">New Tenant Application Contract</h4>
                 <p className="text-sm text-slate-500 mt-1">This default template is shown/used for incoming mobile applications.</p>
               </div>
-              <Settings size={20} className="text-indigo-500 mt-1" />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowTemplatesModal(true)}
+                  className="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-2 text-sm font-semibold hover:bg-emerald-100"
+                >
+                  View All Available Contracts
+                </button>
+              </div>
             </div>
 
             {loadingDefault ? (
@@ -209,13 +220,13 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
               </div>
             ) : (
               <>
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="md:col-span-2">
+                <div className="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3 items-end">
+                  <div className="xl:col-span-2">
                     <label className="text-xs font-semibold text-slate-600">Default Template</label>
                     <select
                       value={defaultTemplateId}
                       onChange={(e) => setDefaultTemplateId(e.target.value)}
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      className="mt-1 w-full h-11 rounded-lg border border-slate-300 px-3 text-sm"
                     >
                       <option value="">No default template</option>
                       {templates.map((template) => (
@@ -229,7 +240,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                     <button
                       onClick={handleSaveDefaultTemplate}
                       disabled={savingDefault || loadingDefault}
-                      className="w-full rounded-lg bg-indigo-600 text-white px-3 py-2.5 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60"
+                      className="w-full h-11 rounded-lg bg-indigo-600 text-white px-3 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60"
                     >
                       {savingDefault ? "Saving..." : "Save Default"}
                     </button>
@@ -238,140 +249,156 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
 
                 <div className="mt-3 text-sm text-slate-600">
                   {selectedDefaultTemplate ? (
-                    <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3">
-                      <p><span className="font-semibold">Type:</span> {normalizeContractType(selectedDefaultTemplate.contractType)}</p>
-                      <p><span className="font-semibold">Duration:</span> {(selectedDefaultTemplate.duration?.years || 0)}y {(selectedDefaultTemplate.duration?.months || 0)}m ({selectedDefaultTemplate.durationMonths || 0} months)</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider font-bold text-indigo-700">Type</p>
+                        <p className="font-semibold text-slate-700">{normalizeContractType(selectedDefaultTemplate.contractType)}</p>
+                      </div>
+                      <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 md:col-span-2">
+                        <p className="text-[11px] uppercase tracking-wider font-bold text-indigo-700">Duration</p>
+                        <p className="font-semibold text-slate-700">{(selectedDefaultTemplate.duration?.years || 0)}y {(selectedDefaultTemplate.duration?.months || 0)}m ({selectedDefaultTemplate.durationMonths || 0} months)</p>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-slate-500">No default contract template selected yet.</p>
+                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-slate-500">
+                      No default contract template selected yet.
+                    </div>
                   )}
-                </div>
-
-                <div className="mt-4">
-                  <button
-                    onClick={() => setShowTemplatesModal(true)}
-                    className="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-4 py-2 text-sm font-semibold hover:bg-emerald-100"
-                  >
-                    View All Available Contracts
-                  </button>
                 </div>
               </>
             )}
           </div>
         </div>
 
-        <div className="p-4 border-b border-slate-100">
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-2">Tenant Contracts Overview</p>
-          <div className="relative max-w-md">
-            <Search size={16} className="absolute left-3 top-3 text-slate-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by tenant, slot, type, contract..."
-              className="w-full rounded-xl border border-slate-300 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+        <div className="p-4 border-b border-slate-100 bg-white">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-2">Tenant Contracts Overview</p>
+              <div className="relative w-full max-w-md">
+                <Search size={16} className="absolute left-3 top-3 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by tenant, slot, type, contract..."
+                  className="w-full rounded-xl border border-slate-300 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Showing</p>
+                <p className="text-sm font-semibold text-slate-700">{rows.length} of {tenants.length}</p>
+              </div>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Active Contracts</p>
+                <p className="text-sm font-semibold text-emerald-800">{activeContractsCount}</p>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Renewal Watch</p>
+                <p className="text-sm font-semibold text-amber-800">{oneMonthLeftCount} tenant{oneMonthLeftCount === 1 ? "" : "s"}</p>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 mt-2">
-            Showing {rows.length} of {tenants.length} tenants
-          </p>
-          <p className="text-xs text-amber-700 mt-1 font-semibold">
-            Renewal watch (1 month left): {oneMonthLeftCount} tenant{oneMonthLeftCount === 1 ? "" : "s"}
-          </p>
         </div>
 
-        <div className="overflow-auto p-4">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600 sticky top-0">
-              <tr>
-                <th className="text-left px-3 py-2">Tenant</th>
-                <th className="text-left px-3 py-2">Slot</th>
-                <th className="text-left px-3 py-2">Type</th>
-                <th className="text-left px-3 py-2">Active Contract</th>
-                <th className="text-left px-3 py-2">Duration</th>
-                <th className="text-left px-3 py-2">Period</th>
-                <th className="text-left px-3 py-2">Renewal Watch</th>
-                <th className="text-left px-3 py-2">Document</th>
-                <th className="text-right px-3 py-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ tenant, active }) => {
-                const docUrl = getDocUrl(apiUrl, active?.documentUrl || "");
-                const renewalMeta = getRenewalCountdown(active?.endDate);
-                return (
-                  <tr
-                    key={tenant._id || tenant.id}
-                    className={`border-t border-slate-100 ${renewalMeta.isWithinOneMonth ? "bg-amber-50/60" : ""}`}
-                  >
-                    <td className="px-3 py-2 font-semibold text-slate-800">{tenant.tenantName || tenant.name || "-"}</td>
-                    <td className="px-3 py-2 text-slate-600">{tenant.slotNo || "-"}</td>
-                    <td className="px-3 py-2 text-slate-600">{tenant.tenantType || "-"}</td>
-                    <td className="px-3 py-2">
-                      {active ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-1 text-[11px] font-bold">
-                          {normalizeContractType(active.contractType)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">No active contract</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-slate-600">
-                      {active
-                        ? `${active.duration?.years || 0}y ${active.duration?.months || 0}m${active.durationMonths ? ` (${active.durationMonths}m)` : ""}`
-                        : "-"}
-                    </td>
-                    <td className="px-3 py-2 text-slate-600">
-                      {active ? `${toDateLabel(active.startDate)} - ${toDateLabel(active.endDate)}` : "-"}
-                    </td>
-                    <td className="px-3 py-2">
-                      {!active || renewalMeta.daysLeft === null ? (
-                        <span className="text-slate-400">-</span>
-                      ) : renewalMeta.isExpired ? (
-                        <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-1 text-[11px] font-bold">
-                          Expired {Math.abs(renewalMeta.daysLeft)}d ago
-                        </span>
-                      ) : renewalMeta.isWithinOneMonth ? (
-                        <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2 py-1 text-[11px] font-bold">
-                          1 month left ({renewalMeta.daysLeft}d)
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-2 py-1 text-[11px] font-semibold">
-                          {renewalMeta.daysLeft}d left
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {docUrl ? (
-                        <a
-                          href={docUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold"
-                        >
-                          <FileText size={14} />
-                          View
-                        </a>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <button
-                        onClick={() => onManageTenant?.(tenant)}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold"
-                      >
-                        Manage
-                      </button>
-                    </td>
+        <div className="flex-1 min-h-0 p-4 pt-3">
+          <div className="h-full overflow-auto rounded-xl border border-slate-200 bg-white">
+            {rows.length > 0 ? (
+              <table className="min-w-[980px] w-full text-sm">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
+                  <tr>
+                    <th className="text-left px-3 py-2.5">Tenant</th>
+                    <th className="text-left px-3 py-2.5">Slot</th>
+                    <th className="text-left px-3 py-2.5">Type</th>
+                    <th className="text-left px-3 py-2.5">Active Contract</th>
+                    <th className="text-left px-3 py-2.5">Duration</th>
+                    <th className="text-left px-3 py-2.5">Period</th>
+                    <th className="text-left px-3 py-2.5">Renewal Watch</th>
+                    <th className="text-left px-3 py-2.5">Document</th>
+                    <th className="text-right px-3 py-2.5">Action</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {rows.length === 0 && (
-            <div className="text-center text-slate-500 py-10">No tenants found for your search.</div>
-          )}
+                </thead>
+                <tbody>
+                  {rows.map(({ tenant, active }) => {
+                    const docUrl = getDocUrl(apiUrl, active?.documentUrl || "");
+                    const renewalMeta = getRenewalCountdown(active?.endDate);
+                    return (
+                      <tr
+                        key={tenant._id || tenant.id}
+                        className={`border-t border-slate-100 even:bg-slate-50/40 ${renewalMeta.isWithinOneMonth ? "bg-amber-50/60" : ""}`}
+                      >
+                        <td className="px-3 py-2.5 font-semibold text-slate-800">{tenant.tenantName || tenant.name || "-"}</td>
+                        <td className="px-3 py-2.5 text-slate-600">{tenant.slotNo || "-"}</td>
+                        <td className="px-3 py-2.5 text-slate-600">{tenant.tenantType || "-"}</td>
+                        <td className="px-3 py-2.5">
+                          {active ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-1 text-[11px] font-bold">
+                              {normalizeContractType(active.contractType)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">No active contract</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-600">
+                          {active
+                            ? `${active.duration?.years || 0}y ${active.duration?.months || 0}m${active.durationMonths ? ` (${active.durationMonths}m)` : ""}`
+                            : "-"}
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
+                          {active ? `${toDateLabel(active.startDate)} - ${toDateLabel(active.endDate)}` : "-"}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {!active || renewalMeta.daysLeft === null ? (
+                            <span className="text-slate-400">-</span>
+                          ) : renewalMeta.isExpired ? (
+                            <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-1 text-[11px] font-bold whitespace-nowrap">
+                              Expired {Math.abs(renewalMeta.daysLeft)}d ago
+                            </span>
+                          ) : renewalMeta.isWithinOneMonth ? (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2 py-1 text-[11px] font-bold whitespace-nowrap">
+                              1 month left ({renewalMeta.daysLeft}d)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-2 py-1 text-[11px] font-semibold whitespace-nowrap">
+                              {renewalMeta.daysLeft}d left
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {docUrl ? (
+                            <a
+                              href={docUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold"
+                            >
+                              <FileText size={14} />
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <button
+                            onClick={() => onManageTenant?.(tenant)}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold"
+                          >
+                            Manage
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <div className="h-full min-h-[220px] flex items-center justify-center text-slate-500 px-6 text-center">
+                No tenants found for your search.
+              </div>
+            )}
+          </div>
         </div>
 
         <AvailableContractsModal
