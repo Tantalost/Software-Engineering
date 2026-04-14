@@ -3355,9 +3355,9 @@ const TenantLease = () => {
                                             <p className="text-[11px] uppercase tracking-wide font-bold text-emerald-700">Total Collected</p>
                                             <p className="text-2xl font-black text-emerald-800">₱{totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                         </div>
-                                        <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
-                                            <p className="text-[11px] uppercase tracking-wide font-bold text-sky-700">Transactions</p>
-                                            <p className="text-2xl font-black text-sky-800">{filteredPayments.length}</p>
+                                        <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-cyan-700">Transactions</p>
+                                            <p className="text-2xl font-black text-cyan-800">{filteredPayments.length}</p>
                                         </div>
                                         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                                             <p className="text-[11px] uppercase tracking-wide font-bold text-emerald-700">Paying Tenants</p>
