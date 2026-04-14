@@ -3254,21 +3254,6 @@ const BusTrips = () => {
                     </button>
                   </div>
                 )}
-
-                {dateFilterType !== "All" && (
-                  <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
-                    <button onClick={handlePrevPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
-                      <ChevronLeft size={18} />
-                    </button>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                      <Calendar size={16} className="text-slate-400" />
-                      {getPeriodDisplayStr()}
-                    </div>
-                    <button onClick={handleNextPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
