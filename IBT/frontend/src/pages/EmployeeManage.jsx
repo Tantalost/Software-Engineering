@@ -11,7 +11,8 @@ import {
   EyeOff,
   KeyRound,
   AlertTriangle,
-  Copy
+  Copy,
+  ChevronDown
 } from "lucide-react";
 import NotificationToast from "../components/common/NotificationToast";
 
@@ -1172,23 +1173,29 @@ export default function EmployeeManage() {
                     <label className="mb-1 block text-xs font-medium text-slate-600">
                       Role *
                     </label>
-                    <select
-                      value={createForm.role}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, role: e.target.value })
-                      }
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
-                    >
-                      {/* FILTER APPLIED HERE: Prevents "Super Admin" from being an option */}
-                      {Object.keys(roleLabels)
-                        .filter((role) => role !== "superadmin")
-                        .map((role) => (
-                          <option key={role} value={role}>
-                            {roleLabels[role]}
-                          </option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={createForm.role}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, role: e.target.value })
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 pr-10 text-sm text-slate-700 shadow-sm outline-none appearance-none cursor-pointer"
+                      >
+                       
+                        {Object.keys(roleLabels)
+                          .filter((role) => role !== "superadmin")
+                          .map((role) => (
+                            <option key={role} value={role}>
+                              {roleLabels[role]}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-9 border-l border-slate-200 text-slate-500 my-1">
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
                   </div>
+
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">
                       Assigned Shift *
