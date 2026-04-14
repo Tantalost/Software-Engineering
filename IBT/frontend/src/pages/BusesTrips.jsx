@@ -470,8 +470,8 @@ const ManageCompaniesModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-[min(96vw,1500px)] h-[min(88vh,900px)] flex rounded-2xl bg-white shadow-2xl overflow-hidden text-[15px]">
-        <div className="w-[32%] min-w-[320px] bg-slate-50 border-r border-slate-200 flex flex-col">
+      <div className="w-[min(96vw,1500px)] h-[min(88vh,900px)] flex flex-col md:flex-row rounded-2xl bg-white shadow-2xl overflow-hidden text-[15px]">
+        <div className="w-full md:w-[32%] md:min-w-[320px] h-[40%] md:h-full bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
           <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-white">
             <h3 className="font-bold text-slate-700 text-lg">Companies</h3>
             <button
@@ -581,8 +581,8 @@ const ManageCompaniesModal = ({
           </div>
 
           {activeCompany ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4 shrink-0">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-500 uppercase">
@@ -600,14 +600,19 @@ const ManageCompaniesModal = ({
                     <label className="text-sm font-semibold text-slate-500 uppercase">
                       Bus Type
                     </label>
-                    <select
-                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
-                      value={newBusType}
-                      onChange={(e) => setNewBusType(e.target.value)}
-                    >
-                      <option value="Regular">Regular</option>
-                      <option value="Aircon">Aircon</option>
-                    </select>
+                    <div className="relative mt-1">
+                      <select
+                        className="w-full p-3 pr-12 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white appearance-none cursor-pointer"
+                        value={newBusType}
+                        onChange={(e) => setNewBusType(e.target.value)}
+                      >
+                        <option value="Regular">Regular</option>
+                        <option value="Aircon">Aircon</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-2">
+                        <ChevronDown size={18} />
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-500 uppercase">
@@ -632,23 +637,28 @@ const ManageCompaniesModal = ({
                     <label className="text-sm font-semibold text-slate-500 uppercase">
                       No. of Stops
                     </label>
-                    <select
-                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
-                      value={newBusStopType}
-                      onChange={(e) => setNewBusStopType(e.target.value)}
-                    >
-                      <option value="Regular Trip">Regular trip (Default)</option>
-                      <option value="1-stop">1</option>
-                      <option value="2-stop">2</option>
-                      <option value="3-stop">3</option>
-                      <option value="4-stop">4</option>
-                      <option value="5-stop">5</option>
-                      <option value="6-stop">6</option>
-                      <option value="7-stop">7</option>
-                      <option value="8-stop">8</option>
-                      <option value="9-stop">9</option>
-                      <option value="10-stop">10</option>
-                    </select>
+                    <div className="relative mt-1">
+                      <select
+                        className="w-full p-3 pr-12 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white appearance-none cursor-pointer"
+                        value={newBusStopType}
+                        onChange={(e) => setNewBusStopType(e.target.value)}
+                      >
+                        <option value="Regular Trip">Regular trip (Default)</option>
+                        <option value="1-stop">1</option>
+                        <option value="2-stop">2</option>
+                        <option value="3-stop">3</option>
+                        <option value="4-stop">4</option>
+                        <option value="5-stop">5</option>
+                        <option value="6-stop">6</option>
+                        <option value="7-stop">7</option>
+                        <option value="8-stop">8</option>
+                        <option value="9-stop">9</option>
+                        <option value="10-stop">10</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-2">
+                        <ChevronDown size={18} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -819,22 +829,27 @@ const ManageCompaniesModal = ({
                 </div>
               </div>
 
-              <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center">
+              <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h4 className="text-base font-semibold text-slate-700">
                   Registered Buses
                 </h4>
-                <select
-                  value={tableBusTypeFilter}
-                  onChange={(e) => setTableBusTypeFilter(e.target.value)}
-                  className="px-3 py-2 text-base border border-slate-300 rounded-lg outline-none bg-slate-50"
-                >
-                  <option value="All">All Types</option>
-                  <option value="Regular">Regular Only</option>
-                  <option value="Aircon">Aircon Only</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={tableBusTypeFilter}
+                    onChange={(e) => setTableBusTypeFilter(e.target.value)}
+                    className="pl-3 pr-10 py-2 text-base text-slate-700 font-medium border border-slate-300 rounded-xl outline-none bg-white appearance-none cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
+                  >
+                    <option value="All">All Types</option>
+                    <option value="Regular">Regular Only</option>
+                    <option value="Aircon">Aircon Only</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-8 border-l border-slate-200 text-slate-500 my-1.5">
+                    <ChevronDown size={16} />
+                  </div>
+                </div>
               </div>
-
-              <div className="flex-1 overflow-y-auto p-5">
+              
+              <div className="p-5">
                 {activeCompany.buses && activeCompany.buses.length > 0 ? (
                   <table className="w-full text-[15px] text-left">
                     <thead className="text-sm text-slate-500 uppercase bg-slate-50">
@@ -2228,8 +2243,8 @@ const BusTrips = () => {
           item.ticketReferenceNo || "-",
           item.route || "-",
           `Php ${(item.price || 75).toFixed(2)}`,
-          item.time || "-",
-          item.departureTime || "-",
+          formatTime(item.time) || "-",
+          formatTime(item.departureTime) || "-",
           item.company || "-",
           item.status || "-",
         ]);
@@ -2366,8 +2381,8 @@ const BusTrips = () => {
         item.ticketReferenceNo || "-",
         item.route || "-",
         `Php ${(item.price || 75).toFixed(2)}`,
-        item.time || "-",
-        item.departureTime || "-",
+        formatTime(item.time) || "-",
+        formatTime(item.departureTime) || "-",
         item.company || "-",
         item.status || "-",
       ]),
@@ -3218,7 +3233,7 @@ const BusTrips = () => {
           arrivedTrips={dashboardArrivedTrips}
           paidTrips={dashboardPaidTrips}
           maintenanceTrips={dashboardMaintenanceTrips}
-          missedTrips={missedBuses.length}
+          missedTrips={allMissedBusesDisplay.length}
           totalRevenue={dashboardTotalRevenue}
         />
       </div>
@@ -3226,7 +3241,7 @@ const BusTrips = () => {
       <div className="px-4 lg:px-8">
         <div className="flex flex-col gap-4 w-full mb-4">
           
-          <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
             
             <div className="flex-1 w-full xl:max-w-[400px] shrink-0">
               <div className="relative w-full">
@@ -3241,44 +3256,24 @@ const BusTrips = () => {
               </div>
             </div>
 
-            {role === "superadmin" && (
-              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
-                <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
-                  {["All", "Daily", "Week", "Month", "Year"].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setDateFilterType(type);
-                        setCurrentDateRange(new Date());
-                        setCurrentPage(1);
-                      }}
-                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
-                        dateFilterType === type
-                          ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
-                          : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-
-                {dateFilterType !== "All" && (
-                  <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
-                    <button onClick={handlePrevPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
-                      <ChevronLeft size={18} />
-                    </button>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                      <Calendar size={16} className="text-slate-400" />
-                      {getPeriodDisplayStr()}
-                    </div>
-                    <button onClick={handleNextPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
+           {role === "superadmin" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setShowManageCompaniesModal(true)}
+                  className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
+                >
+                  <Bus size={18} />
+                  <span>Manage Companies</span>
+                </button>
+                <button
+                  onClick={() => setShowMissedModal(true)}
+                  className="flex items-center cursor-pointer justify-center space-x-2 border border-amber-200 bg-white text-amber-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition-all"
+                  >
+                  <span>View Missed Buses</span>
+                </button>
               </div>
             )}
+
           </div>
 
           <PredefinedArrivalsBoard
@@ -3396,16 +3391,6 @@ const BusTrips = () => {
                 </button>
               )}
 
-              {role === "superadmin" && (
-                <button
-                  onClick={() => setShowManageCompaniesModal(true)}
-                  className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
-                >
-                  <Bus size={18} />
-                  <span>Manage Companies</span>
-                </button>
-              )}
-
               <button
                 onClick={handleAddClick}
                 className="flex items-center cursor-pointer justify-center bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all"
@@ -3438,16 +3423,59 @@ const BusTrips = () => {
             </div>
           </div>
 
-          <div className="w-full pt-4 mt-2 border-t border-slate-100">
-            <BusTripFilters
-              selectedCompany={selectedCompany}
-              setSelectedCompany={setSelectedCompany}
-              uniqueCompanies={availableCompanies}
-              selectedBusType={selectedBusType}
-              setSelectedBusType={setSelectedBusType}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-            />
+          <div className="w-full pt-4 mt-2 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div className="flex-1 overflow-x-auto w-full">
+              <BusTripFilters
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedCompany={selectedCompany}
+                setSelectedCompany={setSelectedCompany}
+                uniqueCompanies={availableCompanies}
+                selectedBusType={selectedBusType}
+                setSelectedBusType={setSelectedBusType}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
+              />
+            </div>
+            
+            {role === "superadmin" && (
+              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto shrink-0">
+                <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+                  {["All", "Daily", "Week", "Month", "Year"].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setDateFilterType(type);
+                        setCurrentDateRange(new Date());
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                        dateFilterType === type
+                          ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                          : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
+                {dateFilterType !== "All" && (
+                  <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                    <button onClick={handlePrevPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                      <ChevronLeft size={18} />
+                    </button>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                      <Calendar size={16} className="text-slate-400" />
+                      {getPeriodDisplayStr()}
+                    </div>
+                    <button onClick={handleNextPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>

@@ -1146,19 +1146,18 @@ const TerminalFees = () => {
     doc.text("PASSENGER REPORTS", pageWidth / 2, 45, { align: "center" });
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+    
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
     doc.text(`Collector: ${collectorName || "N/A"}`, margin, 61);
-    doc.text(`No. Regular: ${stats.regular}`, 75, 67);
-    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, 75, 73);
-    doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, {
-      align: "right",
-    });
-    doc.text(`Revenue: Php ${stats.revenue.toFixed(2)}`, tableRightEdge, 61, {
-      align: "right",
-    });
+    
+    doc.text(`No. Regular: ${stats.regular}`, pageWidth / 2, 55, { align: "center" });
+    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, pageWidth / 2, 61, { align: "center" });
+    
+    doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, { align: "right" });
+    doc.text(`Revenue: Php ${stats.revenue.toFixed(2)}`, tableRightEdge, 61, { align: "right" });
 
     autoTable(doc, {
-      startY: 80,
+      startY: 70,
       margin: { left: margin, right: margin, bottom: 35 },
       head: [["Ticket No", "Passenger Type", "Price", "Time", "Date"]],
       body: filtered.map((item) => [
