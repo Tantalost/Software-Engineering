@@ -113,6 +113,12 @@ export const PaymentUnlockedView = ({ currentApp, currentBilling, paymentData, s
                           (Includes ₱{currentBilling.baseRent.toLocaleString(undefined, {minimumFractionDigits: 2})} Advance Payment)
                         </Text>
                     )}
+
+                    {!currentBilling.isPermanent && (
+                        <Text style={{fontSize: 11, color: colors.primary, fontWeight: 'bold', marginBottom: 5, textAlign: 'center'}}>
+                          (Base: ₱{currentBilling.dailyRate.toLocaleString(undefined, {minimumFractionDigits: 2})}/day x {currentBilling.diffDays} day{currentBilling.diffDays === 1 ? '' : 's'}; Weekly after this: ₱{(currentBilling.weeklyRent || 0).toLocaleString(undefined, {minimumFractionDigits: 2})})
+                        </Text>
+                    )}
                     
                     <Text style={styles.totalNote}>(NO PARTIAL PAYMENT)</Text></View>
                 </Card.Content>
@@ -184,10 +190,29 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const isPermanent = currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent";
+  const isNightMarket = currentApp.floor === "Night Market" || currentApp.tenantType === "Night Market";
   const isPausedForExtendedNonPayment = Boolean(currentApp.isOperationPaused) && (
     String(currentApp.operationPauseReason || '').toUpperCase() === 'NON_PAYMENT_2_MONTHS' ||
     (currentApp.tenantDbStatus === 'Not Started Operations' && Number(currentApp.overdueCycleCount || 0) >= 2)
   );
+  const isNightMarketTerminationPause = isNightMarket
+    && Boolean(currentApp.isOperationPaused)
+    && String(currentApp.tenantDbStatus || '').toUpperCase() !== 'PAYMENT REVIEW'
+    && String(currentApp.operationPauseReason || '').toUpperCase() === 'NIGHT_MARKET_NON_PAYMENT';
+
+  const parsedNightMarketTerminationAt = currentApp?.nightMarketTerminationAt
+    ? new Date(currentApp.nightMarketTerminationAt)
+    : null;
+  const nightMarketTerminationAt = parsedNightMarketTerminationAt && !Number.isNaN(parsedNightMarketTerminationAt.getTime())
+    ? parsedNightMarketTerminationAt
+    : null;
+
+  const rawNightMarketDaysLeft = Number(currentApp?.nightMarketTerminationDaysLeft);
+  const nightMarketTerminationDaysLeft = Number.isFinite(rawNightMarketDaysLeft)
+    ? rawNightMarketDaysLeft
+    : (nightMarketTerminationAt
+      ? Math.ceil((new Date(nightMarketTerminationAt).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
+      : null);
   const isWaitingForStartOperation = currentApp.tenantDbStatus === 'Not Started Operations' || (isPermanent && !currentApp.due && !currentApp.operationStartDate);
 
   useEffect(() => {
@@ -238,14 +263,18 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   };
 
   const renewalTemplates = Array.isArray(currentApp?.renewalTemplates) ? currentApp.renewalTemplates : [];
-  const isEligibleForRenewal = Boolean(currentApp?.isEligibleForRenewal);
   const hasPendingRenewal = Boolean(currentApp?.hasPendingRenewal);
-  const activeContractEndDate = currentApp?.activeContractEndDate
+  const parsedContractEndDate = currentApp?.activeContractEndDate
     ? new Date(currentApp.activeContractEndDate)
+    : null;
+  const activeContractEndDate = parsedContractEndDate && !Number.isNaN(parsedContractEndDate.getTime())
+    ? parsedContractEndDate
     : null;
   const renewalDaysLeft = activeContractEndDate
     ? Math.ceil((new Date(activeContractEndDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
     : null;
+  const isWithinRenewalWindow = renewalDaysLeft !== null && renewalDaysLeft >= 0 && renewalDaysLeft <= 30;
+  const isEligibleForRenewal = Boolean(currentApp?.isEligibleForRenewal) || isWithinRenewalWindow;
 
   const getTemplateDurationLabel = (template: any) => {
     const duration = template?.duration;
@@ -366,6 +395,30 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                 </Button>
               </>
             )}
+          </Card.Content>
+        </Card>
+      )}
+
+      {isNightMarketTerminationPause && nightMarketTerminationAt && nightMarketTerminationDaysLeft !== null && (
+        <Card style={{ marginBottom: 20, backgroundColor: '#fff7ed', borderColor: '#fdba74', borderWidth: 1 }}>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Icon name="alert-octagon-outline" size={22} color="#c2410c" style={{ marginRight: 8 }} />
+              <Text variant="titleMedium" style={{ color: '#9a3412', fontWeight: 'bold' }}>
+                Night Market Payment Warning
+              </Text>
+            </View>
+            <Text style={{ color: '#7c2d12', marginBottom: 6 }}>
+              Operations are currently paused due to unpaid weekly dues.
+            </Text>
+            <Text style={{ color: '#7c2d12', fontWeight: 'bold' }}>
+              {nightMarketTerminationDaysLeft > 0
+                ? `Pay within ${nightMarketTerminationDaysLeft} day${nightMarketTerminationDaysLeft === 1 ? '' : 's'} to avoid termination.`
+                : 'Termination is due today if payment remains unsettled.'}
+            </Text>
+            <Text style={{ color: '#9a3412', marginTop: 6 }}>
+              Termination date: {nightMarketTerminationAt.toLocaleDateString()}
+            </Text>
           </Card.Content>
         </Card>
       )}

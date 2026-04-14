@@ -102,6 +102,7 @@ export default function StallsPage() {
 
   const [dynamicPermanentPrice, setDynamicPermanentPrice] = useState(6000);
   const [dynamicNightPrice, setDynamicNightPrice] = useState(150);
+  const [dynamicNightWeeklyRent, setDynamicNightWeeklyRent] = useState(1050);
 
   const [dynamicDueDate, setDynamicDueDate] = useState(5);
   const [dynamicDailyFee, setDynamicDailyFee] = useState(200);
@@ -122,70 +123,77 @@ export default function StallsPage() {
 
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
 
-  const calculateProratedRent = (basePrice: number, isNightMarket: boolean) => {
+  const calculateProratedRent = (basePrice: number, weeklyRent: number, isNightMarket: boolean) => {
     if (!isNightMarket) {
       return {
         diffDays: 0,
         proratedRent: 0,
         targetDay: dynamicDueDate,
         dailyRate: dynamicDailyFee,
+        periodLabel: BILLING_CONFIG.Permanent.periodLabel,
       };
     }
 
     const now = new Date();
-    let nextDue = new Date(now.getFullYear(), now.getMonth(), dynamicDueDate);
-    
-    if (now.getDate() >= dynamicDueDate) {
-        nextDue.setMonth(nextDue.getMonth() + 1);
-    }
-    const diffTime = nextDue.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    const dailyRate = basePrice / 30;
-    
-    return { diffDays, proratedRent: diffDays * dailyRate, targetDay: dynamicDueDate, dailyRate };
+    const diffDays = Math.max(1, 7 - now.getDay());
+    const dailyRate = basePrice;
+
+    return {
+      diffDays,
+      proratedRent: dailyRate * diffDays,
+      targetDay: dynamicDueDate,
+      dailyRate,
+      periodLabel: `${diffDays} DAY${diffDays === 1 ? '' : 'S'}`,
+      weeklyRent,
+    };
   };
 
   const currentBilling = useMemo(() => {
     const floorType = currentApp ? currentApp.floor : selectedFloor;
     const isNightMarket = floorType === 'Night Market';
     const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
+    const weeklyRent = isNightMarket ? dynamicNightWeeklyRent : dynamicPermanentPrice;
     
-    const { diffDays, proratedRent, dailyRate } = calculateProratedRent(basePrice, isNightMarket);
+    const { diffDays, proratedRent, dailyRate, periodLabel } = calculateProratedRent(basePrice, weeklyRent, isNightMarket);
     
-    const totalAmount = basePrice; 
+    const totalAmount = isNightMarket ? proratedRent : basePrice;
 
     return {
       ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
+      periodLabel,
       amountLabel: `₱${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
       rawAmount: totalAmount,
       baseRent: basePrice,
+      weeklyRent,
       proratedRent, 
       dailyRate,
       diffDays,
       isPermanent: !isNightMarket
     };
-  }, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice, dynamicDueDate, dynamicDailyFee]);
+  }, [selectedFloor, currentApp, dynamicNightPrice, dynamicNightWeeklyRent, dynamicPermanentPrice, dynamicDueDate, dynamicDailyFee]);
 
   const modalBilling = useMemo(() => {
       const isNightMarket = selectedFloor === 'Night Market';
       const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
+      const weeklyRent = isNightMarket ? dynamicNightWeeklyRent : dynamicPermanentPrice;
       
-      const { diffDays, proratedRent, dailyRate } = calculateProratedRent(basePrice, isNightMarket);
+      const { diffDays, proratedRent, dailyRate, periodLabel } = calculateProratedRent(basePrice, weeklyRent, isNightMarket);
       
-      const totalAmount = basePrice;
+      const totalAmount = isNightMarket ? proratedRent : basePrice;
       
       return {
         ...BILLING_CONFIG[isNightMarket ? 'NightMarket' : 'Permanent'],
+        periodLabel,
         amountLabel: `₱${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
         rawAmount: totalAmount,
         baseRent: basePrice,
+        weeklyRent,
         proratedRent,
           dailyRate,
         diffDays,
         isPermanent: !isNightMarket
       };
-        }, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice, dynamicDueDate, dynamicDailyFee]);
+        }, [selectedFloor, dynamicNightPrice, dynamicNightWeeklyRent, dynamicPermanentPrice, dynamicDueDate, dynamicDailyFee]);
 
   const handlePhoneChange = (text: string) => {
     let cleaned = text.replace(/[^0-9]/g, '');
@@ -302,6 +310,7 @@ export default function StallsPage() {
         if (nightRes.ok) {
           const nightData = await nightRes.json();
           setDynamicNightPrice(nightData.defaultPrice);
+          setDynamicNightWeeklyRent(Number(nightData.weeklyRent || Number(nightData.defaultPrice || 150) * 7));
         }
 
         const settingsRes = await fetch(`${API_URL}/tenants/overdue-settings`);
@@ -313,6 +322,9 @@ export default function StallsPage() {
           if (selectedFloor === 'Night Market') {
              setDynamicChargePct(settingsData.nightMarketCharge || 25);
              setDynamicInterestPct(settingsData.nightMarketInterest || 2);
+             if (settingsData.nightMarketWeeklyRent !== undefined) {
+              setDynamicNightWeeklyRent(Number(settingsData.nightMarketWeeklyRent) || 1050);
+             }
           } else {
              setDynamicChargePct(settingsData.permanentCharge || 25);
              setDynamicInterestPct(settingsData.permanentInterest || 2);

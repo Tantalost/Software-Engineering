@@ -70,8 +70,10 @@ const TenantLease = () => {
     const [activeWaitlistTab, setActiveWaitlistTab] = useState("All");
 
     const [defaultNightPrice, setDefaultNightPrice] = useState(150);
+    const [defaultNightWeeklyRent, setDefaultNightWeeklyRent] = useState(1050);
     const [showSetPriceModal, setShowSetPriceModal] = useState(false);
     const [newNightPrice, setNewNightPrice] = useState("");
+    const [newNightWeeklyRent, setNewNightWeeklyRent] = useState("");
     const [isSettingPrice, setIsSettingPrice] = useState(false);
     const [defaultPermanentPrice, setDefaultPermanentPrice] = useState(6000);
     const [newPermanentPrice, setNewPermanentPrice] = useState("");
@@ -80,9 +82,11 @@ const TenantLease = () => {
     const [permInterestPct, setPermInterestPct] = useState(2);
     const [nightChargePct, setNightChargePct] = useState(25);
     const [nightInterestPct, setNightInterestPct] = useState(2);
+    const [nightMaxTerminationDays, setNightMaxTerminationDays] = useState(3);
     
     const [newChargePct, setNewChargePct] = useState("");
     const [newInterestPct, setNewInterestPct] = useState("");
+    const [newNightMaxTerminationDays, setNewNightMaxTerminationDays] = useState("");
 
     const [defaultDueDate, setDefaultDueDate] = useState("5");
     const [newDueDate, setNewDueDate] = useState("");
@@ -246,12 +250,20 @@ const TenantLease = () => {
                 if (response.ok) {
                     const data = await response.json();
                     setDefaultNightPrice(data.defaultPrice);
+                    setDefaultNightWeeklyRent(Number(data.weeklyRent || Number(data.defaultPrice || 150) * 7));
                     localStorage.setItem("defaultNightPrice", data.defaultPrice.toString());
+                    localStorage.setItem("defaultNightWeeklyRent", Number(data.weeklyRent || Number(data.defaultPrice || 150) * 7).toString());
                 }
             } catch (error) {
                 console.error("Error fetching default night price:", error);
                 const saved = localStorage.getItem("defaultNightPrice");
                 if (saved) setDefaultNightPrice(Number(saved));
+                const savedWeeklyRent = localStorage.getItem("defaultNightWeeklyRent");
+                if (savedWeeklyRent) {
+                    setDefaultNightWeeklyRent(Number(savedWeeklyRent));
+                } else if (saved) {
+                    setDefaultNightWeeklyRent(Number(saved) * 7);
+                }
             }
         };
 
@@ -279,6 +291,7 @@ const TenantLease = () => {
                     setPermInterestPct(data.permanentInterest);
                     setNightChargePct(data.nightMarketCharge);
                     setNightInterestPct(data.nightMarketInterest);
+                    setNightMaxTerminationDays(data.nightMarketMaxTerminationDays || 3);
                     if (data.permanentDueDate !== undefined) setDefaultDueDate(data.permanentDueDate.toString());
                     if (data.dailyFee !== undefined) setDefaultDailyFee(Number(data.dailyFee));
                 }
@@ -294,16 +307,23 @@ const TenantLease = () => {
 
     const handleSetPrice = async () => {
         const isNightMarket = activeTab === "night";
-        const currentNewPrice = isNightMarket ? newNightPrice : newPermanentPrice;
+        const currentBasePriceInput = isNightMarket ? newNightPrice : newPermanentPrice;
+        const currentNightWeeklyRentInput = newNightWeeklyRent;
 
-        if (!currentNewPrice || isNaN(currentNewPrice)) {
+        if (!currentBasePriceInput || isNaN(currentBasePriceInput)) {
             setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid price.", autoClose: true, duration: 3000 });
             return;
         }
 
-        const priceValue = Number(currentNewPrice);
-        if (priceValue <= 0) {
+        const basePriceValue = Number(currentBasePriceInput);
+        if (basePriceValue <= 0) {
             setNotificationState({ isOpen: true, type: 'error', message: "Price must be greater than 0.", autoClose: true, duration: 3000 });
+            return;
+        }
+
+        const weeklyRentValue = isNightMarket ? Number(currentNightWeeklyRentInput) : null;
+        if (isNightMarket && (!currentNightWeeklyRentInput || !Number.isFinite(weeklyRentValue) || weeklyRentValue <= 0)) {
+            setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid Night Market weekly rent greater than 0.", autoClose: true, duration: 3000 });
             return;
         }
 
@@ -311,6 +331,12 @@ const TenantLease = () => {
             const dailyFeeValue = Number(newDailyFee || defaultDailyFee);
             if (!Number.isFinite(dailyFeeValue) || dailyFeeValue <= 0) {
                 setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid Daily Fee greater than 0.", autoClose: true, duration: 3000 });
+                return;
+            }
+        } else {
+            const maxTerminationDays = Number(newNightMaxTerminationDays || nightMaxTerminationDays);
+            if (!Number.isFinite(maxTerminationDays) || maxTerminationDays < 1) {
+                setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid Max Days Before Termination (minimum 1 day).", autoClose: true, duration: 3000 });
                 return;
             }
         }
@@ -323,7 +349,15 @@ const TenantLease = () => {
             const response = await fetch(`${API_URL}${endpoint}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ newPrice: priceValue }),
+                body: JSON.stringify(
+                    isNightMarket
+                        ? {
+                            newPrice: basePriceValue,
+                            newBasePrice: basePriceValue,
+                            newWeeklyRent: weeklyRentValue,
+                        }
+                        : { newPrice: basePriceValue }
+                ),
             });
 
             if (!response.ok) throw new Error("Failed to update rent prices");
@@ -336,6 +370,7 @@ const TenantLease = () => {
                     tenantType: isNightMarket ? "Night Market" : "Permanent",
                     chargePercentage: newChargePct ? Number(newChargePct) : (isNightMarket ? nightChargePct : permChargePct), 
                     interestPercentage: newInterestPct ? Number(newInterestPct) : (isNightMarket ? nightInterestPct : permInterestPct),
+                    nightMarketMaxTerminationDays: isNightMarket ? Number(newNightMaxTerminationDays || nightMaxTerminationDays) : undefined,
                     permanentDueDate: (!isNightMarket && newDueDate) ? Number(newDueDate) : Number(defaultDueDate),
                     dailyFee: !isNightMarket ? Number(newDailyFee || defaultDailyFee) : undefined,
                 }),
@@ -344,17 +379,20 @@ const TenantLease = () => {
             if (!overdueResponse.ok) throw new Error("Failed to update overdue settings");
 
             if (isNightMarket) {
-                setDefaultNightPrice(priceValue);
+                setDefaultNightPrice(basePriceValue);
+                setDefaultNightWeeklyRent(weeklyRentValue);
                 setNightChargePct(newChargePct ? Number(newChargePct) : nightChargePct);
                 setNightInterestPct(newInterestPct ? Number(newInterestPct) : nightInterestPct);
-                localStorage.setItem("defaultNightPrice", priceValue.toString());
+                setNightMaxTerminationDays(Number(newNightMaxTerminationDays || nightMaxTerminationDays));
+                localStorage.setItem("defaultNightPrice", basePriceValue.toString());
+                localStorage.setItem("defaultNightWeeklyRent", weeklyRentValue.toString());
             } else {
-                setDefaultPermanentPrice(priceValue);
+                setDefaultPermanentPrice(basePriceValue);
                 setPermChargePct(newChargePct ? Number(newChargePct) : permChargePct);
                 setPermInterestPct(newInterestPct ? Number(newInterestPct) : permInterestPct);
                 setDefaultDueDate(newDueDate ? newDueDate : defaultDueDate);
                 setDefaultDailyFee(Number(newDailyFee || defaultDailyFee));
-                localStorage.setItem("defaultPermanentPrice", priceValue.toString());
+                localStorage.setItem("defaultPermanentPrice", basePriceValue.toString());
             }
 
             await fetchTenants();
@@ -362,7 +400,9 @@ const TenantLease = () => {
             await logActivity(
                 role,
                 "SET_FEES_AND_PENALTIES",
-                `Updated rent to ₱${priceValue} and adjusted overdue settings.`,
+                isNightMarket
+                    ? `Updated Night Market base price to ₱${basePriceValue} and weekly rent to ₱${weeklyRentValue}.`
+                    : `Updated Permanent rent to ₱${basePriceValue} and adjusted overdue settings.`,
                 "Tenants",
             );
 
@@ -414,12 +454,15 @@ const TenantLease = () => {
             const data = await res.json();
             const formatted = data.map(d => ({ ...d, id: d._id || d.id }));
             const normalized = formatted.map((tenant) => {
-                const isPermanentTenant = (tenant.tenantType || "Permanent") === "Permanent";
-                if (isPermanentTenant && !tenant.operationStartDate) {
+                const tenantType = tenant.tenantType || "Permanent";
+                const isStartRequiredType = tenantType === "Permanent" || tenantType === "Night Market";
+                if (isStartRequiredType && !tenant.operationStartDate) {
                     return {
                         ...tenant,
                         rentAmount: 0,
-                        totalAmount: Number(tenant.utilityAmount || 0),
+                        totalAmount: 0,
+                        DueDateTime: null,
+                        status: "Not Started Operations",
                     };
                 }
                 return tenant;
@@ -832,8 +875,8 @@ const TenantLease = () => {
         const utilityAmount = Number(selectedPaymentTenant.utilityAmount) || 0;
         const currentOutstandingAmount = Number(selectedPaymentTenant.totalAmount || selectedPaymentTenant.rentAmount || 0);
         const isNightMarketTenant = selectedPaymentTenant.tenantType === "Night Market";
-        const configuredDefaultBase = isNightMarketTenant ? Number(defaultNightPrice || 150) : Number(defaultPermanentPrice || 6000);
-        const futureRentAmount = configuredDefaultBase * slotCount;
+        const configuredRecurringRate = isNightMarketTenant ? Number(defaultNightWeeklyRent || 1050) : Number(defaultPermanentPrice || 6000);
+        const futureRentAmount = configuredRecurringRate * slotCount;
         const monthlyCharge = futureRentAmount + utilityAmount;
         const hasUnpaidCurrentCycle = String(selectedPaymentTenant.status || "").toLowerCase() !== "paid";
 
@@ -1060,7 +1103,7 @@ const TenantLease = () => {
             currentCycleAmount: hasUnpaidCurrentCycle ? currentOutstandingAmount : 0,
             contractPeriodLabel: `${contractStart.toLocaleDateString()} - ${contractEnd.toLocaleDateString()}`,
         };
-    }, [selectedPaymentTenant, defaultNightPrice, defaultPermanentPrice, defaultDueDate, defaultDailyFee]);
+    }, [selectedPaymentTenant, defaultNightWeeklyRent, defaultPermanentPrice, defaultDueDate, defaultDailyFee]);
 
     const paginatedPayments = useMemo(() => {
         const start = (paymentCurrentPage - 1) * paymentItemsPerPage;
@@ -2352,8 +2395,10 @@ const TenantLease = () => {
                             onClick={() => {
                                 if (activeTab === "night") {
                                     setNewNightPrice(defaultNightPrice.toString());
+                                    setNewNightWeeklyRent(defaultNightWeeklyRent.toString());
                                     setNewChargePct(nightChargePct.toString());
                                     setNewInterestPct(nightInterestPct.toString());
+                                    setNewNightMaxTerminationDays(nightMaxTerminationDays.toString());
                                 } else {
                                     setNewPermanentPrice(defaultPermanentPrice.toString());
                                     setNewChargePct(permChargePct.toString());
@@ -2801,6 +2846,7 @@ const TenantLease = () => {
                 tenants={records}
                 activeTab={activeTab}
                 defaultNightPrice={defaultNightPrice}
+                defaultNightWeeklyRent={defaultNightWeeklyRent}
                 defaultPermanentPrice={defaultPermanentPrice}
                 defaultDueDate={defaultDueDate}
                 initialData={transferApplicant ? {
@@ -3140,7 +3186,9 @@ const TenantLease = () => {
                         <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Global {activeTab === "night" ? "Night Market" : "Permanent"} Fee
+                                    {activeTab === "night"
+                                        ? "Night Market Base Price (Per Day, per slot)"
+                                        : "Global Permanent Fee"}
                                 </label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
@@ -3161,6 +3209,29 @@ const TenantLease = () => {
                                         placeholder="0.00"
                                     />
                                 </div>
+
+                                {activeTab === "night" && (
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-semibold text-slate-700 mb-1">
+                                            Night Market Weekly Rent (Per Slot)
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-500">
+                                                ₱
+                                            </span>
+                                            <input
+                                                type="text"
+                                                value={newNightWeeklyRent}
+                                                onChange={(e) => setNewNightWeeklyRent(e.target.value.replace(/[^0-9.]/g, ""))}
+                                                className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 mt-2 leading-tight">
+                                            First due after Start Operation is computed as Base Price x remaining days until week-end; succeeding dues use this weekly rent.
+                                        </p>
+                                    </div>
+                                )}
 
                             <div className="pt-4 mt-4 border-t border-slate-100">
                                 <h4 className="text-sm font-bold text-red-600 mb-3">Overdue Penalty Settings</h4>
@@ -3193,6 +3264,34 @@ const TenantLease = () => {
                                 <p className="text-[10px] text-slate-500 mt-2 leading-tight">
                                     Changes here apply to the next overdue cycle and to new tenants. Existing overdue balances keep their current charge and interest rates until that cycle is cleared.
                                 </p>
+
+                                {activeTab === "night" && (
+                                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                        <label className="block text-xs font-semibold text-amber-800 mb-1">Max Days Before Termination</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={newNightMaxTerminationDays}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value;
+                                                    if (raw === "") {
+                                                        setNewNightMaxTerminationDays("");
+                                                        return;
+                                                    }
+                                                    const parsed = Math.max(1, Math.floor(Number(raw) || 1));
+                                                    setNewNightMaxTerminationDays(parsed.toString());
+                                                }}
+                                                className="w-full bg-white border border-amber-300 px-3 py-2 rounded-lg font-semibold text-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                                                placeholder="e.g., 3"
+                                            />
+                                            <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-xs font-semibold text-amber-700">days</span>
+                                        </div>
+                                        <p className="text-[10px] text-amber-700 mt-2 leading-tight">
+                                            Night Market operations are paused immediately when weekly dues are missed. If still unpaid after this grace period, the tenant account is terminated automatically.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {activeTab !== "night" && (
@@ -3250,7 +3349,7 @@ const TenantLease = () => {
                             </button>
                             <button
                                 onClick={handleSetPrice}
-                                disabled={isSettingPrice || (activeTab === "night" ? !newNightPrice : !newPermanentPrice)}
+                                disabled={isSettingPrice || (activeTab === "night" ? (!newNightPrice || !newNightWeeklyRent) : !newPermanentPrice)}
                                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                             >
                                 {isSettingPrice ? (

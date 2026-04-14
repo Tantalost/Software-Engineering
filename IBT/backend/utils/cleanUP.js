@@ -52,6 +52,8 @@ const addDays = (date, days) => {
     return next;
 };
 
+const NIGHT_MARKET_NON_PAYMENT_REASON = 'NIGHT_MARKET_NON_PAYMENT';
+
 const getSlotCount = (slotNo) => {
     if (!slotNo) return 1;
     const count = String(slotNo)
@@ -70,10 +72,10 @@ const getNextDueDate = ({ tenantType, fromDueDate, permanentDueDay }) => {
     return withDayInMonth(addMonths(base, 1), permanentDueDay);
 };
 
-const resolveNextCycleRent = ({ tenant, permanentBasePrice, nightBasePrice }) => {
+const resolveNextCycleRent = ({ tenant, permanentBasePrice, nightWeeklyRent }) => {
     const slotCount = getSlotCount(tenant.slotNo);
     const isNightMarket = tenant.tenantType === 'Night Market';
-    const basePrice = isNightMarket ? nightBasePrice : permanentBasePrice;
+    const basePrice = isNightMarket ? nightWeeklyRent : permanentBasePrice;
     const computed = toFiniteNumber(basePrice, 0) * slotCount;
     if (computed > 0) return computed;
     return Math.max(0, toFiniteNumber(tenant.rentAmount, 0));
@@ -87,7 +89,9 @@ const loadOverdueRuntimeConfig = async () => {
         nightInterest,
         permanentDueDate,
         permanentPrice,
-        nightPrice,
+        nightBasePrice,
+        nightWeeklyRent,
+        nightMarketMaxTerminationDays,
     ] = await Promise.all([
         Settings.findOne({ key: 'permanentChargePercentage' }),
         Settings.findOne({ key: 'permanentInterestPercentage' }),
@@ -96,7 +100,12 @@ const loadOverdueRuntimeConfig = async () => {
         Settings.findOne({ key: 'permanentDueDate' }),
         Settings.findOne({ key: 'defaultPermanentPrice' }),
         Settings.findOne({ key: 'defaultNightPrice' }),
+        Settings.findOne({ key: 'nightMarketWeeklyRent' }),
+        Settings.findOne({ key: 'nightMarketMaxTerminationDays' }),
     ]);
+
+    const resolvedNightBasePrice = toFiniteNumber(nightBasePrice?.value, 150);
+    const resolvedNightWeeklyRent = toFiniteNumber(nightWeeklyRent?.value, resolvedNightBasePrice * 7);
 
     return {
         permanentChargePct: toFiniteNumber(permanentCharge?.value, 25),
@@ -105,7 +114,9 @@ const loadOverdueRuntimeConfig = async () => {
         nightInterestPct: toFiniteNumber(nightInterest?.value, 2),
         permanentDueDay: Math.max(1, Math.min(31, toFiniteNumber(permanentDueDate?.value, 5))),
         permanentBasePrice: toFiniteNumber(permanentPrice?.value, 6000),
-        nightBasePrice: toFiniteNumber(nightPrice?.value, 150),
+        nightBasePrice: resolvedNightBasePrice,
+        nightWeeklyRent: resolvedNightWeeklyRent,
+        nightMarketTerminationGraceDays: Math.max(1, Math.floor(toFiniteNumber(nightMarketMaxTerminationDays?.value, 3))),
     };
 };
 
@@ -128,17 +139,178 @@ export const processTenantOverdueLifecycle = async () => {
         DueDateTime: { $lt: now },
     });
 
+    const nightMarketGraceTenants = await Tenant.find({
+        isArchived: { $ne: true },
+        tenantType: 'Night Market',
+        status: { $nin: ['Moved Out', 'MOVED OUT'] },
+        isOperationPaused: true,
+        operationPauseReason: NIGHT_MARKET_NON_PAYMENT_REASON,
+        nightMarketTerminationAt: { $ne: null },
+    });
+
+    const tenantMap = new Map();
+    for (const tenant of dueTenants) {
+        tenantMap.set(String(tenant._id), tenant);
+    }
+    for (const tenant of nightMarketGraceTenants) {
+        tenantMap.set(String(tenant._id), tenant);
+    }
+
+    const terminateNightMarketTenant = async (tenant, originalSlotNo) => {
+        tenant.status = 'Moved Out';
+        tenant.isArchived = true;
+        if (typeof tenant.slotNo === 'string' && !tenant.slotNo.includes('(Archived)')) {
+            tenant.slotNo = `${tenant.slotNo} (Archived)`;
+        }
+
+        if (Array.isArray(tenant.contracts) && tenant.contracts.length > 0) {
+            tenant.contracts.forEach((contract) => {
+                if (['active', 'pending_approval', 'approved_awaiting_start'].includes(contract.status)) {
+                    contract.status = 'terminated';
+                }
+            });
+        }
+
+        tenant.activeContractId = null;
+        tenant.isEligibleForRenewal = false;
+        tenant.renewalEligibilityNotifiedAt = null;
+        tenant.renewalEligibilityEmailNotifiedAt = null;
+        tenant.nightMarketTerminationAt = null;
+        tenant.nightMarketTerminationWarningNotifiedAt = null;
+
+        await tenant.save();
+
+        try {
+            await TenantApplication.findOneAndUpdate(
+                { targetSlot: originalSlotNo, status: 'TENANT' },
+                { status: 'MOVED OUT' },
+                { strict: false }
+            );
+        } catch (applicationUpdateError) {
+            console.error('[OVERDUE CRON] failed to sync Night Market move-out status:', applicationUpdateError.message);
+        }
+
+        if (tenant.email) {
+            try {
+                const subject = 'Night Market Lease Terminated Due To Non-Payment';
+                const message = `Dear ${tenant.tenantName || tenant.name},\n\nYour Night Market operations for Slot ${originalSlotNo} have been terminated because payment remained unpaid beyond the configured grace period (${config.nightMarketTerminationGraceDays} day${config.nightMarketTerminationGraceDays === 1 ? '' : 's'} after due date).\n\nPlease coordinate with IBT Management if you need assistance.\n\nThank you,\nIBT Management`;
+
+                await sendEmail({
+                    email: tenant.email,
+                    subject,
+                    message,
+                });
+
+                const user = await User.findOne({ email: tenant.email });
+                if (user?.expoPushToken) {
+                    await sendPushNotification(
+                        user.expoPushToken,
+                        'Night Market Lease Terminated',
+                        `Slot ${originalSlotNo} was terminated after ${config.nightMarketTerminationGraceDays} day${config.nightMarketTerminationGraceDays === 1 ? '' : 's'} unpaid grace period.`,
+                        { route: 'stalls' },
+                    );
+                }
+            } catch (notifyError) {
+                console.error('[OVERDUE CRON] Night Market termination notification failed:', notifyError.message);
+            }
+        }
+    };
+
     let affectedTenants = 0;
     let appliedCycles = 0;
 
-    for (const tenant of dueTenants) {
+    for (const tenant of tenantMap.values()) {
         const normalizedStatus = String(tenant.status || '').toLowerCase();
         const wasOverdue = normalizedStatus === 'overdue';
         const isNightMarket = tenant.tenantType === 'Night Market';
+        const hasStartedOperation = Boolean(tenant.operationStartDate && !Number.isNaN(new Date(tenant.operationStartDate).getTime()));
         const isNightMarketPaymentReview = isNightMarket && normalizedStatus === 'payment review';
+        const currentDueDate = tenant.DueDateTime ? new Date(tenant.DueDateTime) : null;
+        const isCurrentlyPastDue = currentDueDate && !Number.isNaN(currentDueDate.getTime())
+            ? currentDueDate < now
+            : false;
+
+        if (isNightMarket && !hasStartedOperation) {
+            let touched = false;
+
+            if (tenant.status !== 'Paid') {
+                tenant.status = 'Paid';
+                touched = true;
+            }
+            if (Math.max(0, toFiniteNumber(tenant.rentAmount, 0)) !== 0) {
+                tenant.rentAmount = 0;
+                touched = true;
+            }
+            if (Math.max(0, toFiniteNumber(tenant.totalAmount, 0)) !== 0) {
+                tenant.totalAmount = 0;
+                touched = true;
+            }
+            if (tenant.DueDateTime) {
+                tenant.DueDateTime = null;
+                touched = true;
+            }
+            if (Math.max(0, toFiniteNumber(tenant.chargeAmount, 0)) !== 0) {
+                tenant.chargeAmount = 0;
+                touched = true;
+            }
+            if (Math.max(0, toFiniteNumber(tenant.interestAmount, 0)) !== 0) {
+                tenant.interestAmount = 0;
+                touched = true;
+            }
+            if (Math.max(0, toFiniteNumber(tenant.overdueCycleCount, 0)) !== 0) {
+                tenant.overdueCycleCount = 0;
+                touched = true;
+            }
+            if (tenant.overdueChargePercentage !== null || tenant.overdueInterestPercentage !== null || tenant.lastOverdueAppliedAt) {
+                tenant.overdueChargePercentage = null;
+                tenant.overdueInterestPercentage = null;
+                tenant.lastOverdueAppliedAt = null;
+                touched = true;
+            }
+            if (tenant.isOperationPaused || tenant.operationPauseReason || tenant.lastPausedDate) {
+                tenant.isOperationPaused = false;
+                tenant.operationPauseReason = null;
+                tenant.lastPausedDate = null;
+                touched = true;
+            }
+            if (tenant.nightMarketTerminationAt || tenant.nightMarketTerminationWarningNotifiedAt) {
+                tenant.nightMarketTerminationAt = null;
+                tenant.nightMarketTerminationWarningNotifiedAt = null;
+                touched = true;
+            }
+
+            if (touched) {
+                await tenant.save();
+                affectedTenants += 1;
+            }
+
+            continue;
+        }
 
         // Tenant submitted payment but is still under treasury review; do not auto-terminate yet.
         if (isNightMarketPaymentReview) {
+            continue;
+        }
+
+        const hasNightMarketCountdown = isNightMarket
+            && Boolean(tenant.isOperationPaused)
+            && String(tenant.operationPauseReason || '').toUpperCase() === NIGHT_MARKET_NON_PAYMENT_REASON
+            && Boolean(tenant.nightMarketTerminationAt);
+
+        if (hasNightMarketCountdown) {
+            const terminationAt = new Date(tenant.nightMarketTerminationAt);
+            if (!Number.isNaN(terminationAt.getTime())) {
+                const daysToTermination = daysUntil(terminationAt, now);
+                if (daysToTermination <= 0) {
+                    const originalSlotNo = tenant.slotNo;
+                    await terminateNightMarketTenant(tenant, originalSlotNo);
+                    affectedTenants += 1;
+                    continue;
+                }
+            }
+        }
+
+        if (!isCurrentlyPastDue) {
             continue;
         }
 
@@ -160,6 +332,7 @@ export const processTenantOverdueLifecycle = async () => {
         let runningCharge = wasOverdue ? Math.max(0, toFiniteNumber(tenant.chargeAmount, 0)) : 0;
         let runningInterest = wasOverdue ? Math.max(0, toFiniteNumber(tenant.interestAmount, 0)) : 0;
         let cycleRentAmount = Math.max(0, toFiniteNumber(tenant.rentAmount, 0));
+        const overdueAnchorDate = currentDueDate && !Number.isNaN(currentDueDate.getTime()) ? currentDueDate : now;
 
         let dueCursor = new Date(tenant.DueDateTime);
         if (Number.isNaN(dueCursor.getTime())) {
@@ -187,7 +360,7 @@ export const processTenantOverdueLifecycle = async () => {
             cycleRentAmount = resolveNextCycleRent({
                 tenant,
                 permanentBasePrice: config.permanentBasePrice,
-                nightBasePrice: config.nightBasePrice,
+                nightWeeklyRent: config.nightWeeklyRent,
             });
         }
 
@@ -209,46 +382,28 @@ export const processTenantOverdueLifecycle = async () => {
         tenant.DueDateTime = dueCursor;
         tenant.rentAmount = cycleRentAmount;
 
-        const shouldTerminateNightMarketLease = isNightMarket && nextOverdueCycleCount >= 1;
+        if (isNightMarket) {
+            const currentReason = String(tenant.operationPauseReason || '').toUpperCase();
+            const shouldInitializeCountdown = currentReason !== NIGHT_MARKET_NON_PAYMENT_REASON || !tenant.nightMarketTerminationAt;
 
-        if (shouldTerminateNightMarketLease) {
-            const originalSlotNo = tenant.slotNo;
-
-            tenant.status = 'Moved Out';
-            tenant.isArchived = true;
-            if (typeof tenant.slotNo === 'string' && !tenant.slotNo.includes('(Archived)')) {
-                tenant.slotNo = `${tenant.slotNo} (Archived)`;
+            if (shouldInitializeCountdown) {
+                tenant.nightMarketTerminationAt = addDays(startOfDay(overdueAnchorDate), config.nightMarketTerminationGraceDays);
+                tenant.nightMarketTerminationWarningNotifiedAt = null;
+                tenant.lastPausedDate = new Date();
             }
 
-            if (Array.isArray(tenant.contracts) && tenant.contracts.length > 0) {
-                tenant.contracts.forEach((contract) => {
-                    if (['active', 'pending_approval', 'approved_awaiting_start'].includes(contract.status)) {
-                        contract.status = 'terminated';
-                    }
-                });
-            }
+            tenant.isOperationPaused = true;
+            tenant.operationPauseReason = NIGHT_MARKET_NON_PAYMENT_REASON;
 
-            tenant.activeContractId = null;
-            tenant.isEligibleForRenewal = false;
-            tenant.renewalEligibilityNotifiedAt = null;
-            tenant.renewalEligibilityEmailNotifiedAt = null;
+            const terminationAt = new Date(tenant.nightMarketTerminationAt);
+            const daysToTermination = Number.isNaN(terminationAt.getTime())
+                ? config.nightMarketTerminationGraceDays
+                : daysUntil(terminationAt, now);
 
-            await tenant.save();
-
-            try {
-                await TenantApplication.findOneAndUpdate(
-                    { targetSlot: originalSlotNo, status: 'TENANT' },
-                    { status: 'MOVED OUT' },
-                    { strict: false }
-                );
-            } catch (applicationUpdateError) {
-                console.error('[OVERDUE CRON] failed to sync Night Market move-out status:', applicationUpdateError.message);
-            }
-
-            if (tenant.email) {
+            if (!tenant.nightMarketTerminationWarningNotifiedAt && daysToTermination > 0 && tenant.email) {
                 try {
-                    const subject = 'Lease Terminated Due To 1 Week Non-Payment';
-                    const message = `Dear ${tenant.tenantName || tenant.name},\n\nYour Night Market lease for Slot ${originalSlotNo} has been terminated because payment was not settled within one week after due date.\n\nPlease coordinate with IBT Management if you need assistance.\n\nThank you,\nIBT Management`;
+                    const subject = 'Night Market Payment Overdue - Termination Warning';
+                    const message = `Dear ${tenant.tenantName || tenant.name},\n\nYour weekly Night Market payment for Slot ${tenant.slotNo} is overdue, and operations are now paused.\n\nPlease settle your balance within ${daysToTermination} day${daysToTermination === 1 ? '' : 's'} to avoid termination.\n\nThank you,\nIBT Management`;
 
                     await sendEmail({
                         email: tenant.email,
@@ -260,20 +415,34 @@ export const processTenantOverdueLifecycle = async () => {
                     if (user?.expoPushToken) {
                         await sendPushNotification(
                             user.expoPushToken,
-                            'Night Market Lease Terminated',
-                            `Slot ${originalSlotNo} was terminated due to one week non-payment.`,
+                            'Night Market Payment Overdue',
+                            `Slot ${tenant.slotNo} is paused. Pay within ${daysToTermination} day${daysToTermination === 1 ? '' : 's'} to avoid termination.`,
                             { route: 'stalls' },
                         );
                     }
+
+                    tenant.nightMarketTerminationWarningNotifiedAt = new Date();
                 } catch (notifyError) {
-                    console.error('[OVERDUE CRON] Night Market termination notification failed:', notifyError.message);
+                    console.error('[OVERDUE CRON] Night Market grace warning notification failed:', notifyError.message);
                 }
             }
 
+            if (daysToTermination <= 0) {
+                const originalSlotNo = tenant.slotNo;
+                await terminateNightMarketTenant(tenant, originalSlotNo);
+                affectedTenants += 1;
+                appliedCycles += tenantCycleCount;
+                continue;
+            }
+
+            await tenant.save();
             affectedTenants += 1;
             appliedCycles += tenantCycleCount;
             continue;
         }
+
+        tenant.nightMarketTerminationAt = null;
+        tenant.nightMarketTerminationWarningNotifiedAt = null;
 
         let wasAutoPausedNow = false;
         const hasOperationStarted = Boolean(tenant.operationStartDate);
@@ -431,8 +600,14 @@ export const processContractRenewalLifecycle = async () => {
 
         const hasOpenRenewal = contracts.some((contract) => ['pending_approval', 'approved_awaiting_start'].includes(contract.status));
         const remainingDays = daysUntil(activeContract.endDate, today);
-        const shouldFlagEligibility = remainingDays === 30 && !hasOpenRenewal;
-        const shouldSendEligibilityEmail = shouldFlagEligibility && !tenant.renewalEligibilityEmailNotifiedAt;
+        const isWithinRenewalWindow = remainingDays >= 0 && remainingDays <= 30;
+        const shouldFlagEligibility = isWithinRenewalWindow && !hasOpenRenewal;
+        const shouldSendEligibilityEmail = remainingDays === 30 && !hasOpenRenewal && !tenant.renewalEligibilityEmailNotifiedAt;
+
+        if ((!shouldFlagEligibility || hasOpenRenewal) && tenant.isEligibleForRenewal) {
+            tenant.isEligibleForRenewal = false;
+            touched = true;
+        }
 
         if (shouldFlagEligibility && !tenant.isEligibleForRenewal) {
             tenant.isEligibleForRenewal = true;
@@ -447,7 +622,7 @@ export const processContractRenewalLifecycle = async () => {
                         await sendPushNotification(
                             user.expoPushToken,
                             'Renewal Available',
-                            `Your contract for Slot ${tenant.slotNo} ends in 30 days. Submit your renewal contract in the app.`,
+                            `Your contract for Slot ${tenant.slotNo} ends in ${remainingDays} day${remainingDays === 1 ? '' : 's'}. Submit your renewal contract in the app.`,
                             { route: 'stalls' },
                         );
                     }

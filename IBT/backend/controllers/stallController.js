@@ -36,6 +36,17 @@ const toValidDate = (value) => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const startOfDay = (value) => {
+    const copy = new Date(value);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+};
+
+const daysUntil = (targetDate, fromDate = new Date()) => {
+    const diff = startOfDay(targetDate).getTime() - startOfDay(fromDate).getTime();
+    return Math.floor(diff / (24 * 60 * 60 * 1000));
+};
+
 const isPausedForExtendedNonPayment = (tenant) => {
     if (!tenant?.isOperationPaused) return false;
 
@@ -378,11 +389,17 @@ export const getMyApplication = async (req, res) => {
         });
         
         const nightSetting = await Settings.findOne({ key: "defaultNightPrice" });
+        const nightWeeklySetting = await Settings.findOne({ key: "nightMarketWeeklyRent" });
         const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
         const dueDateSetting = await Settings.findOne({ key: "permanentDueDate" });
+        const nightMaxTerminationSetting = await Settings.findOne({ key: "nightMarketMaxTerminationDays" });
         const globalNightPrice = nightSetting ? Number(nightSetting.value) : 150;
+        const globalNightWeeklyRent = nightWeeklySetting ? Number(nightWeeklySetting.value) : (globalNightPrice * 7);
         const globalPermPrice = permSetting ? Number(permSetting.value) : 6000;
         const permanentDueDay = dueDateSetting ? Number(dueDateSetting.value) : 5;
+        const nightMarketMaxTerminationDays = nightMaxTerminationSetting
+            ? Math.max(1, Math.floor(Number(nightMaxTerminationSetting.value) || 0))
+            : 3;
         const templateState = await fetchTemplateState();
         const renewalTemplates = templateState.templates.map((template) => ({
             _id: template._id,
@@ -400,34 +417,40 @@ export const getMyApplication = async (req, res) => {
             const isPermanent = !isNightMarket;
             const hasStartedOperation = Boolean(toValidDate(tenant.operationStartDate));
             const isBlockedByExtendedNonPayment = isPausedForExtendedNonPayment(tenant);
+            const isWaitingForStartOperation = !hasStartedOperation;
             const activeContract = isNightMarket ? null : getActiveContract(tenant);
             const tenantContracts = isNightMarket ? [] : (Array.isArray(tenant.contracts) ? tenant.contracts : []);
             const pendingRenewalContract = isNightMarket
                 ? null
                 : tenantContracts.find((contract) => contract.status === 'pending_approval');
+            const activeContractEndDate = isNightMarket ? null : toValidDate(activeContract?.endDate);
+            const renewalDaysLeft = activeContractEndDate ? daysUntil(activeContractEndDate) : null;
+            const isWithinRenewalWindow = renewalDaysLeft !== null && renewalDaysLeft >= 0 && renewalDaysLeft <= 30;
+            const nightMarketTerminationAt = isNightMarket ? toValidDate(tenant.nightMarketTerminationAt) : null;
+            const nightMarketTerminationDaysLeft = nightMarketTerminationAt ? daysUntil(nightMarketTerminationAt) : null;
             
            
             let calcRent = tenant.rentAmount;
             if (!calcRent || calcRent === 0) {
-                calcRent = isNightMarket ? (globalNightPrice * slotCount) : (globalPermPrice * slotCount);
+                calcRent = isNightMarket ? (globalNightWeeklyRent * slotCount) : (globalPermPrice * slotCount);
             }
 
-            if (isPermanent && !hasStartedOperation) {
+            if (isWaitingForStartOperation) {
                 calcRent = 0;
             }
             
             const calcUtil = tenant.utilityAmount || 0;
             let calcTotal = (tenant.totalAmount && tenant.totalAmount > 0) ? tenant.totalAmount : (calcRent + calcUtil);
-            if (isPermanent && !hasStartedOperation) {
+            if (isWaitingForStartOperation) {
                 calcTotal = 0;
             }
 
             const calcDueDate = resolveNextBillingDueDate(tenant, activeContract, permanentDueDay);
-            const calcDue = (isPermanent && (!hasStartedOperation || isBlockedByExtendedNonPayment))
+            const calcDue = (isWaitingForStartOperation || (isPermanent && isBlockedByExtendedNonPayment))
                 ? null
                 : (calcDueDate ? calcDueDate.toISOString() : null);
 
-            const effectiveTenantStatus = (isPermanent && (!hasStartedOperation || isBlockedByExtendedNonPayment))
+            const effectiveTenantStatus = (isWaitingForStartOperation || (isPermanent && isBlockedByExtendedNonPayment))
                 ? 'Not Started Operations'
                 : tenant.status;
             
@@ -439,6 +462,11 @@ export const getMyApplication = async (req, res) => {
                 isOperationPaused: Boolean(tenant.isOperationPaused),
                 operationPauseReason: tenant.operationPauseReason || null,
                 overdueCycleCount: Number(tenant.overdueCycleCount || 0),
+                nightMarketTerminationAt: nightMarketTerminationAt ? nightMarketTerminationAt.toISOString() : null,
+                nightMarketTerminationDaysLeft,
+                nightMarketMaxTerminationDays,
+                nightMarketBasePrice: globalNightPrice,
+                nightMarketWeeklyRent: globalNightWeeklyRent,
                 due: calcDue,
                 rentAmount: calcRent,
                 utilityAmount: calcUtil,
@@ -459,8 +487,8 @@ export const getMyApplication = async (req, res) => {
                 contracts: tenantContracts,
                 activeContractId: isNightMarket ? null : (tenant.activeContractId || null),
                 activeContract,
-                activeContractEndDate: isNightMarket ? null : (activeContract?.endDate || null),
-                isEligibleForRenewal: isNightMarket ? false : Boolean(tenant.isEligibleForRenewal),
+                activeContractEndDate: isNightMarket ? null : (activeContractEndDate || null),
+                isEligibleForRenewal: isNightMarket ? false : (!pendingRenewalContract && isWithinRenewalWindow),
                 hasPendingRenewal: Boolean(pendingRenewalContract),
                 pendingRenewalContract: pendingRenewalContract || null,
                 renewalTemplates: isNightMarket ? [] : renewalTemplates,
@@ -629,6 +657,14 @@ export const submitRenewalContractRequest = async (req, res) => {
         );
         if (hasOpenRenewal) {
             return res.status(400).json({ message: "A renewal request is already in progress for this tenant." });
+        }
+
+        const remainingDays = daysUntil(activeContract.endDate);
+        if (remainingDays < 0) {
+            return res.status(400).json({ message: "This contract has already ended. Please contact the admin office for assistance." });
+        }
+        if (remainingDays > 30) {
+            return res.status(400).json({ message: "Renewal submission is allowed only when your contract has 30 days left or less." });
         }
 
         const { templates } = await fetchTemplateState();

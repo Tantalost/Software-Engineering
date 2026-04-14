@@ -96,13 +96,15 @@ const TenantSchema = new mongoose.Schema({
   operationPauseReason: {
     type: String,
     validate: {
-      validator: (value) => value == null || ["MANUAL", "NON_PAYMENT_2_MONTHS"].includes(value),
+      validator: (value) => value == null || ["MANUAL", "NON_PAYMENT_2_MONTHS", "NIGHT_MARKET_NON_PAYMENT"].includes(value),
       message: "Invalid operation pause reason",
     },
     default: null,
   },
   lastPausedDate: Date,                               
   totalPausedDays: { type: Number, default: 0 },
+  nightMarketTerminationAt: { type: Date, default: null },
+  nightMarketTerminationWarningNotifiedAt: { type: Date, default: null },
   status: { type: String, default: "Paid" }, 
 
   paymentHistory: [{

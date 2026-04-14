@@ -6,7 +6,7 @@ import CryptoJS from "crypto-js";
 
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
 
-const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 1120, defaultPermanentPrice = 6000, defaultDueDate = 5 }) => {
+const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 150, defaultNightWeeklyRent = 1050, defaultPermanentPrice = 6000, defaultDueDate = 5 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
@@ -189,11 +189,15 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
         calculatedDueDate = formatDateTimeForInput(nextDue);
       }
     } else {
-      calculatedRent = defaultNightPrice * slotCount; 
+      const nightBasePerDay = Number(defaultNightPrice || 0);
+      const parsedStart = startDate ? new Date(startDate) : new Date();
+      const startDay = Number.isNaN(parsedStart.getTime()) ? new Date().getDay() : parsedStart.getDay();
+      const remainingDaysInWeek = Math.max(1, 7 - startDay);
+      calculatedRent = nightBasePerDay * slotCount * remainingDaysInWeek;
       lockedAdvance = 0;
       if (startDate) {
         const d = new Date(startDate);
-        d.setDate(d.getDate() + 7); 
+        d.setDate(d.getDate() + remainingDaysInWeek);
         calculatedDueDate = formatDateTimeForInput(d);
       }
     }
@@ -603,6 +607,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Rental Fee (x{formData.slotNo ? formData.slotNo.split(',').length : 1})</label>
                   <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={rentAmount} /></div>
+                  {formData.tenantType === "Night Market" && (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      First due uses Base Price x remaining days to week-end. Weekly rent after this cycle: ₱{Number(defaultNightWeeklyRent || 0).toLocaleString()} per slot.
+                    </p>
+                  )}
                 </div>
 
                 {formData.tenantType === "Permanent" && (

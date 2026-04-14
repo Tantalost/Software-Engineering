@@ -66,6 +66,34 @@ const addDays = (date, days) => {
   return next;
 };
 
+const NIGHT_MARKET_BASE_PRICE_KEY = "defaultNightPrice";
+const NIGHT_MARKET_WEEKLY_RENT_KEY = "nightMarketWeeklyRent";
+
+const getSlotCount = (slotNo) => {
+  if (!slotNo) return 1;
+  const count = String(slotNo)
+    .split(",")
+    .map((slot) => slot.trim())
+    .filter(Boolean).length;
+  return Math.max(1, count);
+};
+
+const getNightMarketPricing = async () => {
+  const [baseSetting, weeklySetting] = await Promise.all([
+    Settings.findOne({ key: NIGHT_MARKET_BASE_PRICE_KEY }),
+    Settings.findOne({ key: NIGHT_MARKET_WEEKLY_RENT_KEY }),
+  ]);
+
+  const basePrice = baseSetting ? Number(baseSetting.value) : 150;
+  const fallbackWeeklyRent = Math.max(0, basePrice) * 7;
+  const weeklyRent = weeklySetting ? Number(weeklySetting.value) : fallbackWeeklyRent;
+
+  return {
+    basePrice: Number.isFinite(basePrice) ? Math.max(0, basePrice) : 150,
+    weeklyRent: Number.isFinite(weeklyRent) ? Math.max(0, weeklyRent) : fallbackWeeklyRent,
+  };
+};
+
 const withDayInMonth = (baseDate, targetDay) => {
   const copy = new Date(baseDate);
   const safeDay = Math.max(1, Number(targetDay) || 1);
@@ -1000,7 +1028,7 @@ export const createTenant = async (req, res) => {
 
     const subject = "Final Approval - Welcome to IBT Stalls!";
     const paymentRuleLine = isNightMarket
-      ? `4. Weekly rent is due every 7 days from your approved start date.\n5. Non-payment for one week is grounds for lease termination.`
+      ? `4. Weekly rent is due every 7 days from your approved start date.\n5. Missed weekly payments trigger operation pause and may lead to termination after the configured grace period.`
       : `4. Monthly rent is due on the ${new Date(savedTenant.StartDateTime).getDate()}th of every month.`;
 
     const message = `
@@ -1255,9 +1283,8 @@ Thank you`;
 
 export const getDefaultNightPrice = async (req, res) => {
   try {
-    const priceSetting = await Settings.findOne({ key: "defaultNightPrice" });
-    const defaultPrice = priceSetting ? Number(priceSetting.value) : 150; 
-    res.status(200).json({ defaultPrice });
+    const { basePrice, weeklyRent } = await getNightMarketPricing();
+    res.status(200).json({ defaultPrice: basePrice, weeklyRent });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1266,18 +1293,41 @@ export const getDefaultNightPrice = async (req, res) => {
 
 export const updateAllNightMarketPrices = async (req, res) => {
   try {
-    const { newPrice } = req.body;
+    const { newPrice, newBasePrice, newWeeklyRent } = req.body;
 
-    if (!newPrice || isNaN(newPrice) || newPrice < 0) {
-      return res.status(400).json({ error: "Valid price is required." });
+    const rawBasePrice = newBasePrice !== undefined ? newBasePrice : newPrice;
+    if (rawBasePrice === undefined || rawBasePrice === null || rawBasePrice === "") {
+      return res.status(400).json({ error: "Night Market base price is required." });
     }
 
-    const priceValue = parseFloat(newPrice);
-    const priceString = priceValue.toString(); 
+    const parsedBasePrice = Number(rawBasePrice);
+    if (!Number.isFinite(parsedBasePrice) || parsedBasePrice <= 0) {
+      return res.status(400).json({ error: "Valid Night Market base price is required." });
+    }
+
+    const currentPricing = await getNightMarketPricing();
+    const resolvedWeeklyRent =
+      newWeeklyRent !== undefined && newWeeklyRent !== null && String(newWeeklyRent).trim() !== ""
+        ? Number(newWeeklyRent)
+        : currentPricing.weeklyRent;
+
+    if (!Number.isFinite(resolvedWeeklyRent) || resolvedWeeklyRent <= 0) {
+      return res.status(400).json({ error: "Valid Night Market weekly rent is required." });
+    }
+
+    const basePriceValue = Number(parsedBasePrice);
+    const weeklyRentValue = Number(resolvedWeeklyRent);
+    const basePriceString = basePriceValue.toString();
 
     await Settings.findOneAndUpdate(
-      { key: "defaultNightPrice" },
-      { key: "defaultNightPrice", value: priceValue },
+      { key: NIGHT_MARKET_BASE_PRICE_KEY },
+      { key: NIGHT_MARKET_BASE_PRICE_KEY, value: basePriceValue },
+      { upsert: true, new: true }
+    );
+
+    await Settings.findOneAndUpdate(
+      { key: NIGHT_MARKET_WEEKLY_RENT_KEY },
+      { key: NIGHT_MARKET_WEEKLY_RENT_KEY, value: weeklyRentValue },
       { upsert: true, new: true }
     );
 
@@ -1287,8 +1337,8 @@ export const updateAllNightMarketPrices = async (req, res) => {
     for (const t of tenants) {
         
         if (t.status === "Paid") {
-            const slotCount = t.slotNo ? t.slotNo.split(',').length : 1;
-            const newRent = priceValue * slotCount;
+          const slotCount = getSlotCount(t.slotNo);
+          const newRent = weeklyRentValue * slotCount;
             const newTotal = newRent + (t.utilityAmount || 0);
 
             await Tenant.updateOne(
@@ -1304,7 +1354,7 @@ export const updateAllNightMarketPrices = async (req, res) => {
                         await sendPushNotification(
                             user.expoPushToken,
                             "Rent Price Updated!",
-                            `Notice: Your upcoming rental fee for Slot ${t.slotNo} has been adjusted to ₱${newRent.toLocaleString()}.`,
+                            `Notice: Your upcoming weekly rental fee for Slot ${t.slotNo} is now ₱${newRent.toLocaleString()}.`,
                             { route: 'stalls' }
                         );
                     }
@@ -1320,13 +1370,15 @@ export const updateAllNightMarketPrices = async (req, res) => {
         $or: [{ floor: "Night Market" }, { preferredType: "Night Market" }], 
         status: { $in: ['VERIFICATION_PENDING', 'PAYMENT_UNLOCKED'] } 
       },
-      { paymentAmount: priceString }
+      { paymentAmount: basePriceString }
     );
 
     res.status(200).json({
-      message: `Updated global night market price. Modified ${updatedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
+      message: `Updated Night Market base and weekly rates. Modified ${updatedCount} active tenants and ${applicationResult.modifiedCount} pending applications.`,
       tenantModifiedCount: updatedCount,
-      applicationModifiedCount: applicationResult.modifiedCount 
+      applicationModifiedCount: applicationResult.modifiedCount,
+      basePrice: basePriceValue,
+      weeklyRent: weeklyRentValue,
     });
 
   } catch (error) {
@@ -1430,12 +1482,18 @@ export const approveRenewalPayment = async (req, res) => {
         currentDue.setDate(Math.min(targetDay, daysInNextMonth));
     }
 
-    const priceKey = isNightMarket ? "defaultNightPrice" : "defaultPermanentPrice";
-    const defaultPriceSetting = await Settings.findOne({ key: priceKey });
-    const defaultPrice = defaultPriceSetting ? Number(defaultPriceSetting.value) : (isNightMarket ? 150 : 6000);
+    const slotCount = getSlotCount(tenant.slotNo);
+    let nextRentAmount = 0;
 
-    const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
-    const nextRentAmount = defaultPrice * slotCount;
+    if (isNightMarket) {
+      const { weeklyRent } = await getNightMarketPricing();
+      nextRentAmount = weeklyRent * slotCount;
+    } else {
+      const defaultPriceSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
+      const defaultPrice = defaultPriceSetting ? Number(defaultPriceSetting.value) : 6000;
+      nextRentAmount = defaultPrice * slotCount;
+    }
+
     const nextTotalAmount = nextRentAmount + (tenant.utilityAmount || 0);
     
     const paymentRecord = {
@@ -1444,6 +1502,16 @@ export const approveRenewalPayment = async (req, res) => {
         datePaid: new Date().toISOString(),
         receiptUrl: tenant.documents?.proofOfReceipt || tenant.receiptUrl || "" 
     };
+
+    const nightMarketReset = isNightMarket
+      ? {
+          isOperationPaused: false,
+          operationPauseReason: null,
+          lastPausedDate: null,
+          nightMarketTerminationAt: null,
+          nightMarketTerminationWarningNotifiedAt: null,
+        }
+      : {};
 
     const updatedTenant = await Tenant.findByIdAndUpdate(
       req.params.id,
@@ -1459,6 +1527,7 @@ export const approveRenewalPayment = async (req, res) => {
           overdueCycleCount: 0,
           lastOverdueAppliedAt: null,
           advanceUsedForPenalties: 0,        
+          ...nightMarketReset,
           $push: { paymentHistory: paymentRecord },
           $unset: { 
               referenceNo: "",
@@ -1679,10 +1748,12 @@ export const sendRentReminder = async (req, res) => {
 
 export const getOverdueSettings = async (req, res) => {
   try {
+    const { weeklyRent: nightMarketWeeklyRent } = await getNightMarketPricing();
     const pCharge = await Settings.findOne({ key: "permanentChargePercentage" });
     const pInterest = await Settings.findOne({ key: "permanentInterestPercentage" });
     const nCharge = await Settings.findOne({ key: "nightMarketChargePercentage" });
     const nInterest = await Settings.findOne({ key: "nightMarketInterestPercentage" });
+    const nMaxTerminationDays = await Settings.findOne({ key: "nightMarketMaxTerminationDays" });
     const pDueDate = await Settings.findOne({ key: "permanentDueDate" });
     const pDailyFee = await Settings.findOne({ key: "permanentDailyFee" });
 
@@ -1691,6 +1762,8 @@ export const getOverdueSettings = async (req, res) => {
       permanentInterest: pInterest ? Number(pInterest.value) : 2,
       nightMarketCharge: nCharge ? Number(nCharge.value) : 25,
       nightMarketInterest: nInterest ? Number(nInterest.value) : 2,
+      nightMarketWeeklyRent,
+      nightMarketMaxTerminationDays: nMaxTerminationDays ? Number(nMaxTerminationDays.value) : 3,
       permanentDueDate: pDueDate ? Number(pDueDate.value) : 5,
       dailyFee: pDailyFee ? Number(pDailyFee.value) : 200,
     });
@@ -1701,7 +1774,7 @@ export const getOverdueSettings = async (req, res) => {
 
 export const updateOverdueSettings = async (req, res) => {
   try {
-    const { tenantType, chargePercentage, interestPercentage, permanentDueDate, dailyFee } = req.body;
+    const { tenantType, chargePercentage, interestPercentage, permanentDueDate, dailyFee, nightMarketMaxTerminationDays } = req.body;
     
     const isNightMarket = tenantType === "Night Market";
     const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
@@ -1750,6 +1823,15 @@ export const updateOverdueSettings = async (req, res) => {
       await Settings.findOneAndUpdate(
         { key: interestKey },
         { value: Number(interestPercentage) },
+        { upsert: true }
+      );
+    }
+
+    if (isNightMarket && nightMarketMaxTerminationDays !== undefined) {
+      const parsedMaxDays = Math.max(1, Math.floor(Number(nightMarketMaxTerminationDays) || 0));
+      await Settings.findOneAndUpdate(
+        { key: "nightMarketMaxTerminationDays" },
+        { value: parsedMaxDays },
         { upsert: true }
       );
     }
@@ -1820,6 +1902,7 @@ export const startOperation = async (req, res) => {
     tenant.operationPauseReason = null;
     tenant.lastPausedDate = null;
 
+    const isNightMarketTenant = tenant.tenantType === "Night Market";
     const isPermanentTenant = tenant.tenantType === "Permanent" || !tenant.tenantType;
 
     if (isPermanentTenant) {
@@ -1843,6 +1926,20 @@ export const startOperation = async (req, res) => {
 
       const proratedRent = Math.max(0, Number(dailyFee) || 0) * Math.max(1, slotCount) * billableDays;
       const utilityAmount = Number(tenant.utilityAmount) || 0;
+
+      tenant.rentAmount = proratedRent;
+      tenant.totalAmount = proratedRent + utilityAmount;
+      tenant.DueDateTime = dueDate;
+    }
+
+    if (isNightMarketTenant) {
+      const { basePrice } = await getNightMarketPricing();
+      const slotCount = getSlotCount(tenant.slotNo);
+      const operationStartDay = startOfDay(operationStartDate);
+      const remainingDaysInWeek = Math.max(1, 7 - operationStartDay.getDay());
+      const dueDate = addDays(operationStartDay, remainingDaysInWeek);
+      const utilityAmount = Number(tenant.utilityAmount) || 0;
+      const proratedRent = Math.max(0, Number(basePrice) || 0) * slotCount * remainingDaysInWeek;
 
       tenant.rentAmount = proratedRent;
       tenant.totalAmount = proratedRent + utilityAmount;
