@@ -68,6 +68,10 @@ const TenantSchema = new mongoose.Schema({
 
   chargeAmount: { type: Number, default: 0 },   
   interestAmount: { type: Number, default: 0 }, 
+  overdueChargePercentage: { type: Number, default: null },
+  overdueInterestPercentage: { type: Number, default: null },
+  overdueCycleCount: { type: Number, default: 0 },
+  lastOverdueAppliedAt: { type: Date, default: null },
   
   totalAmount: Number, 
 
