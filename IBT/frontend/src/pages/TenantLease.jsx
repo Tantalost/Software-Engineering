@@ -2665,11 +2665,12 @@ const TenantLease = () => {
 
                             const formData = new FormData();
                             Object.keys(updatedData).forEach(key => {
-                                if (key === 'documents' || key === 'id' || key === '_id') return;
+                                if (key === 'documents' || key === 'id' || key === '_id' || key === 'contracts') return;
                                 const value = updatedData[key];
                                 if (value === undefined || value === null) return;
                                 if (key === 'reportId' && typeof value === 'string' && !value.trim()) return;
                                 if (typeof value === 'string' && value.trim().toLowerCase() === 'null') return;
+                                if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob)) return;
                                 formData.append(key, value);
                             });
 
@@ -3087,8 +3088,8 @@ const TenantLease = () => {
             )}
 
             {showPaymentRecords && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-6xl xl:max-w-[1240px] rounded-xl bg-white p-4 sm:p-5 lg:p-6 shadow-xl flex flex-col h-[92vh] max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95">
                         <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
                             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 <Wallet size={20} className="text-emerald-600" />
@@ -3139,6 +3140,17 @@ const TenantLease = () => {
                                         {t}
                                     </button>
                                 ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
+                            <div>
+                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected ({paymentViewType})</p>
+                                <p className="text-3xl font-black text-emerald-800">₱{totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Transactions</p>
+                                <p className="text-2xl font-black text-emerald-800">{filteredPayments.length}</p>
                             </div>
                         </div>
 
@@ -3263,18 +3275,7 @@ const TenantLease = () => {
                             )}
                         </div>
                         
-                        <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
-                            <div>
-                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected ({paymentViewType})</p>
-                                <p className="text-3xl font-black text-emerald-800">₱{totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Transactions</p>
-                                <p className="text-2xl font-black text-emerald-800">{filteredPayments.length}</p>
-                            </div>
-                        </div>
-
-                        <div className="overflow-y-auto border border-slate-200 rounded-xl flex-1 custom-scrollbar">
+                        <div className="overflow-y-auto border border-slate-200 rounded-xl flex-1 min-h-0 custom-scrollbar">
                             <table className="w-full text-left border-collapse text-sm">
                                 <thead className="bg-slate-50 sticky top-0 shadow-sm z-10">
                                     <tr>
@@ -3307,7 +3308,7 @@ const TenantLease = () => {
                          </table>
                         </div>
 
-                        <div className="pt-4 border-t border-slate-100 mt-2 shrink-0">
+                        <div className="pt-4 border-t border-slate-100 mt-2 shrink-0 flex justify-center [&>div]:mt-0 [&>div]:w-full [&>div]:max-w-full">
                             <Pagination
                                 currentPage={paymentCurrentPage}
                                 totalPages={Math.max(1, Math.ceil(filteredPayments.length / paymentItemsPerPage))}
