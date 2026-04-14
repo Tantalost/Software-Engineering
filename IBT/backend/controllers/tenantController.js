@@ -1044,79 +1044,59 @@ export const updateTenant = async (req, res) => {
     updateData.feeBreakdown = normalizedFeeBreakdown;
     updateData.utilityAmount = Number(normalizedFeeBreakdown.electricity || 0) + Number(normalizedFeeBreakdown.otherAmount || 0);
  
-    if (updateData.status === "Overdue") {
-        const isNightMarket = effectiveTenantType === "Night Market";
-        const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
-        const interestKey = isNightMarket ? "nightMarketInterestPercentage" : "permanentInterestPercentage";
+    const currentStatus = String(oldTenant.status || "").toLowerCase();
+    const requestedStatus = String(updateData.status !== undefined ? updateData.status : oldTenant.status || "").toLowerCase();
+    const wasOverdue = currentStatus === "overdue";
+    const nextIsOverdue = requestedStatus === "overdue";
 
-        const chargeSetting = await Settings.findOne({ key: chargeKey });
-        const interestSetting = await Settings.findOne({ key: interestKey });
+    const rent = Number(updateData.rentAmount !== undefined ? updateData.rentAmount : (oldTenant.rentAmount || 0));
+    const util = updateData.utilityAmount !== undefined ? Number(updateData.utilityAmount) : Number(oldTenant.utilityAmount || 0);
 
-        let cPct = chargeSetting ? Number(chargeSetting.value) : 25;
-        let iPct = interestSetting ? Number(interestSetting.value) : 2;
+    if (nextIsOverdue && !wasOverdue) {
+      const isNightMarket = effectiveTenantType === "Night Market";
+      const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
+      const interestKey = isNightMarket ? "nightMarketInterestPercentage" : "permanentInterestPercentage";
 
-        const rent = Number(updateData.rentAmount !== undefined ? updateData.rentAmount : (oldTenant.rentAmount || 0));
-        const util = updateData.utilityAmount !== undefined ? Number(updateData.utilityAmount) : Number(oldTenant.utilityAmount || 0);
+      const chargeSetting = await Settings.findOne({ key: chargeKey });
+      const interestSetting = await Settings.findOne({ key: interestKey });
 
-        let finalCharge = 0;
-        let finalInterest = 0;
-        let finalTotal = 0;
+      const cPct = chargeSetting ? Number(chargeSetting.value) : 25;
+      const iPct = interestSetting ? Number(interestSetting.value) : 2;
 
-        if (oldTenant.status !== "Overdue") {
-           
-            const n = rent + (rent * (cPct / 100));
-            const x = n * (iPct / 100);
-            const dueBalance = x + n;
-            
-            finalCharge = rent * (cPct / 100);
-            finalInterest = x;
-            finalTotal = dueBalance + util; 
-       } else {
-        
-            const oldTotal = Number(oldTenant.totalAmount || 0);
-            const oldCharge = Number(oldTenant.chargeAmount || 0);
-            const oldInterest = Number(oldTenant.interestAmount || 0);
-            const oldUtil = Number(oldTenant.utilityAmount || 0);
-            const oldRent = Number(oldTenant.rentAmount || 0);
+      const cycleCharge = rent * (cPct / 100);
+      const grossRentWithCharge = rent + cycleCharge;
+      const cycleInterest = grossRentWithCharge * (iPct / 100);
 
-           
-            if (rent === oldRent && util === oldUtil) {
-                finalCharge = oldCharge;
-                finalInterest = oldInterest;
-                finalTotal = oldTotal;
-            } else {
-               
-                if (oldRent > 0 && oldCharge > 0) {
-                    cPct = (oldCharge / oldRent) * 100;
-                }
+      updateData.chargeAmount = cycleCharge;
+      updateData.interestAmount = cycleInterest;
+      updateData.totalAmount = grossRentWithCharge + cycleInterest + util;
+      updateData.overdueChargePercentage = cPct;
+      updateData.overdueInterestPercentage = iPct;
+      updateData.overdueCycleCount = 1;
+      updateData.lastOverdueAppliedAt = new Date();
+    } else if (nextIsOverdue && wasOverdue) {
+      const oldUtil = Number(oldTenant.utilityAmount || 0);
+      const outstandingWithoutUtility = Math.max(0, Number(oldTenant.totalAmount || 0) - oldUtil);
 
-                const pureHistoricalDebt = oldTotal - oldCharge - oldInterest - oldUtil - oldRent;
-                const rentBase = pureHistoricalDebt + oldRent;
-                const oldCompoundingBase = rentBase + oldCharge;
-
-                if (oldCompoundingBase > 0 && oldInterest > 0) {
-                    iPct = (oldInterest / oldCompoundingBase) * 100;
-                }
-
-                const newRentBase = pureHistoricalDebt + rent;
-                const newSurcharge = rent * (cPct / 100);
-                const compoundingBase = newRentBase + newSurcharge;
-                const newInterest = compoundingBase * (iPct / 100);
-
-                finalCharge = newSurcharge;
-                finalInterest = newInterest;
-                finalTotal = compoundingBase + newInterest + util; 
-            }
-        }
-
-        updateData.chargeAmount = finalCharge;
-        updateData.interestAmount = finalInterest;
-        updateData.totalAmount = finalTotal;
-       
+      updateData.chargeAmount = Number(oldTenant.chargeAmount || 0);
+      updateData.interestAmount = Number(oldTenant.interestAmount || 0);
+      updateData.totalAmount = outstandingWithoutUtility + util;
+      updateData.overdueChargePercentage = Number.isFinite(Number(oldTenant.overdueChargePercentage))
+        ? Number(oldTenant.overdueChargePercentage)
+        : null;
+      updateData.overdueInterestPercentage = Number.isFinite(Number(oldTenant.overdueInterestPercentage))
+        ? Number(oldTenant.overdueInterestPercentage)
+        : null;
+      updateData.overdueCycleCount = Number(oldTenant.overdueCycleCount || 0);
+      updateData.lastOverdueAppliedAt = oldTenant.lastOverdueAppliedAt || null;
     } else {
-        updateData.chargeAmount = 0;
-        updateData.interestAmount = 0;
-        updateData.totalAmount = Number(updateData.rentAmount !== undefined ? updateData.rentAmount : (oldTenant.rentAmount || 0)) + updateData.utilityAmount;
+      updateData.chargeAmount = 0;
+      updateData.interestAmount = 0;
+      updateData.totalAmount = rent + util;
+      updateData.overdueChargePercentage = null;
+      updateData.overdueInterestPercentage = null;
+      updateData.overdueCycleCount = 0;
+      updateData.lastOverdueAppliedAt = null;
     }
 
     const getFile = (fieldName) => {
@@ -1413,6 +1393,10 @@ export const approveRenewalPayment = async (req, res) => {
           totalAmount: nextTotalAmount,  
           chargeAmount: 0,               
           interestAmount: 0,    
+          overdueChargePercentage: null,
+          overdueInterestPercentage: null,
+          overdueCycleCount: 0,
+          lastOverdueAppliedAt: null,
           advanceUsedForPenalties: 0,        
           $push: { paymentHistory: paymentRecord },
           $unset: { 
@@ -1653,6 +1637,37 @@ export const updateOverdueSettings = async (req, res) => {
     const isNightMarket = tenantType === "Night Market";
     const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
     const interestKey = isNightMarket ? "nightMarketInterestPercentage" : "permanentInterestPercentage";
+
+    const currentChargeSetting = await Settings.findOne({ key: chargeKey });
+    const currentInterestSetting = await Settings.findOne({ key: interestKey });
+    const currentChargePct = currentChargeSetting ? Number(currentChargeSetting.value) : 25;
+    const currentInterestPct = currentInterestSetting ? Number(currentInterestSetting.value) : 2;
+
+    if (chargePercentage !== undefined || interestPercentage !== undefined) {
+      const tenantTypeFilter = isNightMarket
+        ? { tenantType: "Night Market" }
+        : { $or: [{ tenantType: "Permanent" }, { tenantType: { $exists: false } }] };
+
+      await Tenant.updateMany(
+        {
+          ...tenantTypeFilter,
+          isArchived: { $ne: true },
+          status: "Overdue",
+          $or: [
+            { overdueChargePercentage: { $exists: false } },
+            { overdueChargePercentage: null },
+            { overdueInterestPercentage: { $exists: false } },
+            { overdueInterestPercentage: null },
+          ],
+        },
+        {
+          $set: {
+            overdueChargePercentage: currentChargePct,
+            overdueInterestPercentage: currentInterestPct,
+          },
+        },
+      );
+    }
 
     if (chargePercentage !== undefined) {
       await Settings.findOneAndUpdate(
@@ -1957,11 +1972,21 @@ export const rejectRenewalPayment = async (req, res) => {
 
     const isPastDue = tenant.DueDateTime && new Date(tenant.DueDateTime) < new Date();
     const revertedStatus = isPastDue ? "Overdue" : "Paid";
+    const statusUpdate = { status: revertedStatus };
+
+    if (revertedStatus !== "Overdue") {
+      statusUpdate.chargeAmount = 0;
+      statusUpdate.interestAmount = 0;
+      statusUpdate.overdueChargePercentage = null;
+      statusUpdate.overdueInterestPercentage = null;
+      statusUpdate.overdueCycleCount = 0;
+      statusUpdate.lastOverdueAppliedAt = null;
+    }
 
     const updatedTenant = await Tenant.findByIdAndUpdate(
       req.params.id,
       { 
-          status: revertedStatus, 
+          ...statusUpdate,
           $unset: { 
               paymentReference: "", 
               referenceNo: "",

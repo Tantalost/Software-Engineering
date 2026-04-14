@@ -958,25 +958,22 @@ const LostFound = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Lost and Found Report");
 
-      // 1. ADJUSTED HEADER IMAGE (-1/8 height)
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:F4');
 
-      // 2. Title and Summary Metadata
       worksheet.mergeCells('A6:F6');
       const titleCell = worksheet.getCell('A6');
       titleCell.value = 'LOST & FOUND REPORTS';
-      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } }; // IBT Red
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } }; 
       titleCell.alignment = { horizontal: 'center' };
 
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); 
       worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', `Total Items: ${filtered.length}`]);
       worksheet.addRow([`Collector: ${collectorName.trim() || "N/A"}`]);
       worksheet.addRow([`Claimed: ${filtered.filter(i => i.status === "Claimed").length}`]);
-      worksheet.addRow([`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`]);
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([`Unclaimed: ${filtered.filter(i => i.status === "Unclaimed").length}`]); 
+      worksheet.addRow([]); 
 
-      // 3. Table Headers
       const headerRow = worksheet.addRow(["Tracking No", "Item Type", "Location", "Date & Time", "Status"]);
       headerRow.eachCell((cell) => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
@@ -984,7 +981,6 @@ const LostFound = () => {
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       });
 
-      // 4. Populate Data
       filtered.forEach(item => {
         const row = worksheet.addRow([
           item.trackingNo,
@@ -1103,18 +1099,13 @@ const LostFound = () => {
     doc.setFont("helvetica", "normal");
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
     doc.text(`Collector: ${collectorName.trim() || "N/A"}`, 15, 61);
-    doc.text(`Total Items: ${filtered.length}`, pageWidth - 15, 55, {
-      align: "right",
-    });
-    doc.text(
-      `Claimed: ${filtered.filter((i) => i.status === "Claimed").length}`,
-      pageWidth - 15,
-      61,
-      { align: "right" },
-    );
+    
+    doc.text(`Total Items: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
+    doc.text(`Claimed: ${filtered.filter((i) => i.status === "Claimed").length}`, pageWidth - 15, 61, { align: "right" });
+    doc.text(`Unclaimed: ${filtered.filter((i) => i.status === "Unclaimed").length}`, pageWidth - 15, 67, { align: "right" });
 
     autoTable(doc, {
-      startY: 70,
+      startY: 75, 
       margin: { bottom: 35 },
       head: [["Tracking No", "Item Type", "Location", "Date & Time", "Status"]],
       body: filtered.map(item => [

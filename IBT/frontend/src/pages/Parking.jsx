@@ -294,6 +294,7 @@ const Parking = () => {
   const [deleteRow, setDeleteRow] = useState(null);
   const [deleteRemarks, setDeleteRemarks] = useState("");
   const [logoutRow, setLogoutRow] = useState(null);
+  const [departReference, setDepartReference] = useState("");
   const [archiveRow, setArchiveRow] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -319,7 +320,7 @@ const Parking = () => {
   const [showPreviousShiftModal, setShowPreviousShiftModal] = useState(false);
   const [previousShiftReports, setPreviousShiftReports] = useState([]);
   const [isPreviousShiftLoading, setIsPreviousShiftLoading] = useState(false);
-
+  
   const role = localStorage.getItem("authRole") || "superadmin";
   const authAdminId = localStorage.getItem("authAdminId") || "";
   const authEmail = (localStorage.getItem("authEmail") || "").toLowerCase();
@@ -1187,16 +1188,55 @@ const Parking = () => {
   const confirmLogout = async () => {
     if (!logoutRow) return;
 
+    const refInput = departReference.trim();
+
+    if (!refInput) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Reference No. is required to process payment.",
+        autoClose: true,
+        duration: 2000,
+      });
+      return;
+    }
+
+    const isDuplicateRef = records.some(
+      (record) => String(record.referenceNo).trim() === refInput && record.status === "Departed"
+    );
+
+    if (isDuplicateRef) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: `Reference No. "${refInput}" has already been used!`,
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!departReference.trim()) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Reference No. is required to process payment.",
+        autoClose: true,
+        duration: 2000,
+      });
+      return;
+    }
+
     try {
       console.log("Processing departure for ID:", logoutRow.id);
 
       const response = await fetch(`${API_URL}/${logoutRow.id}/depart`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referenceNo: refInput }) 
       });
 
       const data = await response.json();
-      console.log("Response:", data);
 
       if (!response.ok) {
         throw new Error(data.message || "Failed request");
@@ -1211,6 +1251,7 @@ const Parking = () => {
 
       fetchParkingTickets();
       setLogoutRow(null);
+      setDepartReference(""); 
 
       setNotificationState({
         isOpen: true,
@@ -1468,12 +1509,12 @@ const Parking = () => {
         "",
         `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
       ]);
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); 
 
-      // 3. Styled Table Headers (IBT Red)
       const headerRow = worksheet.addRow([
         "Ticket No.",
         "Plate No.",
+        "Reference No.",
         "Type",
         "Fee",
         "Total",
@@ -1488,18 +1529,17 @@ const Parking = () => {
         cell.alignment = { vertical: "middle", horizontal: "center" };
       });
 
-      // 4. Populate Vehicle Data
       filtered.forEach((item) => {
         worksheet.addRow([
           item.ticketNo || "-",
           item.plateNo || "-",
+          item.referenceNo || "-",
           item.type || "-",
           `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
           `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         ]);
       });
 
-      // 5. BRANDED FOOTER (-1/8 height adjustment)
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
       await addImageToWorksheet(
@@ -1509,16 +1549,15 @@ const Parking = () => {
         `A${lastRowNumber}:E${lastRowNumber + 3}`,
       );
 
-      // 6. Formatting Column Widths
       worksheet.columns = [
-        { width: 15 }, // Ticket No
-        { width: 15 }, // Plate No
-        { width: 15 }, // Type
-        { width: 15 }, // Fee
-        { width: 20 }, // Total
+        { width: 15 }, 
+        { width: 15 }, 
+        { width: 18 }, 
+        { width: 15 }, 
+        { width: 15 }, 
+        { width: 20 }, 
       ];
 
-      // 7. Generate and Download
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1567,27 +1606,28 @@ const Parking = () => {
     const revenueText = `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     doc.text(revenueText, pageWidth - 15, 67, { align: "right" });
 
-    // DATA TABLE
     autoTable(doc, {
       startY: 70,
-      margin: { left: 15, right: 15, bottom: 35 }, // Ensure table stays within page margins
-      head: [["Ticket No.", "Plate No.", "Type", "Fee", "Total"]], // Removed "Duration"
+      margin: { left: 15, right: 15, bottom: 35 },
+      head: [["Ticket No.", "Plate No.", "Reference No.", "Type", "Fee", "Total"]],
       body: filtered.map((item) => [
         item.ticketNo || "-",
         item.plateNo || "-",
+        item.referenceNo || "-",
         item.type || "-",
         `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
         `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
       ]),
-      headStyles: { fillColor: [16, 185, 129] }, // Red branding
+      headStyles: { fillColor: [16, 185, 129] }, 
       styles: { fontSize: 9, halign: "center" },
       columnStyles: {
-        0: { halign: "left" }, // Ticket No
-        1: { halign: "left" }, // Plate No
+        0: { halign: "left" },
+        1: { halign: "left" }, 
+        2: {halign: "left"},
+        3: { halign: "center" },
       },
       didDrawPage: (data) => {
-        // 4. FOOTER IMAGE ON EVERY PAGE
-        doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+       doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
       },
     });
 
@@ -1606,7 +1646,7 @@ const Parking = () => {
         </div>,
         "Ticket No",
         "Plate No",
-        "Type",
+        "Reference No",
         "Report State",
         "Fee/Hr",
         "Total",
@@ -1618,7 +1658,7 @@ const Parking = () => {
     : [
         "Ticket No",
         "Plate No",
-        "Type",
+        "Reference No",
         "Report State",
         "Fee/Hr",
         "Total",
@@ -1892,7 +1932,7 @@ const Parking = () => {
                 id: ticket.id,
                 ticketno: ticket.ticketNo ? `#${ticket.ticketNo}` : "---",
                 plateno: ticket.plateNo || "---",
-                type: ticket.type,
+                referenceno: ticket.referenceNo || "-",
                 reportstate: isDeleteRequested ? (
                   <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
                     Delete Requested
@@ -2409,21 +2449,41 @@ const Parking = () => {
             <h3 className="text-lg font-bold text-slate-800">
               Confirm Departure
             </h3>
-            <p className="text-slate-600 mt-2 text-sm">
+            <p className="text-slate-600 mt-2 text-sm mb-4">
               Ticket <strong>{logoutRow.ticketNo}</strong> is leaving.
               <br />
               The system will calculate the total price based on duration.
             </p>
-            <div className="mt-6 flex gap-3">
+            
+            <div className="text-left mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
+                Reference No. <span className="text-slate-400 font-normal">(Required)</span>
+              </label>
+              <input
+                type="text"
+                value={departReference}
+                onChange={(e) => setDepartReference(e.target.value)}
+                placeholder="Enter receipt/reference number..."
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
               <button
-                onClick={() => setLogoutRow(null)}
-                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium"
+                onClick={() => {
+                  setLogoutRow(null);
+                  setDepartReference("");
+                }}
+                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmLogout}
-                className="flex-1 py-2.5 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-700 shadow-lg"
+                disabled={!departReference.trim()}
+                className={`flex-1 py-2.5 rounded-lg text-white font-medium shadow-lg transition-all ${
+                  departReference.trim() ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"
+                }`}
               >
                 Process Payment
               </button>

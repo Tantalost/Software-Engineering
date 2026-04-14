@@ -70,6 +70,43 @@ export const createParking = async (req, res) => {
 
 export const departParking = async (req, res) => {
   try {
+    const { timeOut, duration, finalPrice, referenceNo } = req.body; 
+
+    const updatedParking = await Parking.findByIdAndUpdate(
+      req.params.id,
+      { 
+        status: "Departed", 
+        timeOut, 
+        duration, 
+        finalPrice,
+        referenceNo: referenceNo || "-" 
+      },
+      { new: true }
+    );
+
+    if (referenceNo && referenceNo !== "-") {
+      const existingRef = await Parking.findOne({ 
+        referenceNo: referenceNo.trim(), 
+        status: "Departed" 
+      });
+      
+      if (existingRef) {
+        return res.status(400).json({ message: "This Reference Number already exists in the database." });
+      }
+    }
+
+    const parkingRecord = await Parking.findById(id);
+
+    if (!parkingRecord) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    res.status(200).json(updatedParking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+
+  try {
     console.log("DEPART API HIT:", req.params.id);
     const { id } = req.params;
     const parkingRecord = await Parking.findById(id);

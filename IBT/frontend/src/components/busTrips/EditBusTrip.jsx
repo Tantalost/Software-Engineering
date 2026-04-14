@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Select from "../common/Select";
+import { ChevronDown } from "lucide-react";
 
 const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
     const formatDateForInput = (isoDate) => {
@@ -64,47 +64,62 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                     
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Company</label>
-                        <select
-                            value={form.company}
-                            onChange={(e) => setForm({ ...form, company: e.target.value, busType: "", templateNo: "", route: "" })}
-                            className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
-                        >
-                            <option value="">Select Company</option>
-                            {companyData.map((comp) => (
-                                <option key={comp._id} value={comp.name}>{comp.name}</option>
-                            ))}
-                        </select>
+                        <div className="relative mt-1">
+                            <select
+                                value={form.company}
+                                onChange={(e) => setForm({ ...form, company: e.target.value, busType: "", templateNo: "", route: "" })}
+                                className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none appearance-none cursor-pointer bg-white"
+                            >
+                                <option value="">Select Company</option>
+                                {companyData.map((comp) => (
+                                    <option key={comp._id} value={comp.name}>{comp.name}</option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                <ChevronDown size={16} />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Bus Type</label>
-                            <select
-                                value={form.busType}
-                                onChange={(e) => setForm({ ...form, busType: e.target.value, templateNo: "", route: "" })}
-                                disabled={!form.company}
-                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none disabled:bg-slate-100"
-                            >
-                                <option value="">Select Type</option>
-                                <option value="Aircon">Aircon</option>
-                                <option value="Regular">Regular</option>
-                            </select>
+                            <div className="relative mt-1">
+                                <select
+                                    value={form.busType}
+                                    onChange={(e) => setForm({ ...form, busType: e.target.value, templateNo: "", route: "" })}
+                                    disabled={!form.company}
+                                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm outline-none appearance-none cursor-pointer bg-white disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                >
+                                    <option value="">Select Type</option>
+                                    <option value="Aircon">Aircon</option>
+                                    <option value="Regular">Regular</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                    <ChevronDown size={16} />
+                                </div>
+                            </div>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Template No</label>
-                            <select
-                                value={form.templateNo}
-                                onChange={handlePlateChange}
-                                disabled={!form.busType}
-                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none disabled:bg-slate-100"
-                            >
-                                <option value="">Select Template</option>
-                                {availableBuses.map((bus) => (
-                                    <option key={bus.plateNumber} value={bus.plateNumber}>{bus.plateNumber}</option>
-                                ))}
-                            </select>
+                            <div className="relative mt-1">
+                                <select
+                                    value={form.templateNo}
+                                    onChange={handlePlateChange}
+                                    disabled={!form.busType}
+                                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none appearance-none cursor-pointer bg-white disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                >
+                                    <option value="">Select Template</option>
+                                    {availableBuses.map((bus) => (
+                                        <option key={bus.plateNumber} value={bus.plateNumber}>{bus.plateNumber}</option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                    <ChevronDown size={16} />
+                                </div>
+                            </div>
                         </div>
 
                         <div>
@@ -119,28 +134,33 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Stop Type</label>
-                            <select
-                                value={form.stopType}
-                                onChange={(e) => setForm({
-                                    ...form,
-                                    stopType: e.target.value,
-                                    customStopCount: e.target.value === "Other" ? form.customStopCount : "",
-                                })}
-                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none"
-                            >
-                                <option value="Regular Trip">Regular Trip</option>
-                                <option value="1-stop">1-stop</option>
-                                <option value="2-stop">2-stop</option>
-                                <option value="3-stop">3-stop</option>
-                                <option value="4-stop">4-stop</option>
-                                <option value="5-stop">5-stop</option>
-                                <option value="6-stop">6-stop</option>
-                                <option value="7-stop">7-stop</option>
-                                <option value="8-stop">8-stop</option>
-                                <option value="9-stop">9-stop</option>
-                                <option value="10-stop">10-stop</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <div className="relative mt-1">
+                                <select
+                                    value={form.stopType}
+                                    onChange={(e) => setForm({
+                                        ...form,
+                                        stopType: e.target.value,
+                                        customStopCount: e.target.value === "Other" ? form.customStopCount : "",
+                                    })}
+                                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm outline-none appearance-none cursor-pointer bg-white"
+                                >
+                                    <option value="Regular Trip">Regular Trip</option>
+                                    <option value="1-stop">1-stop</option>
+                                    <option value="2-stop">2-stop</option>
+                                    <option value="3-stop">3-stop</option>
+                                    <option value="4-stop">4-stop</option>
+                                    <option value="5-stop">5-stop</option>
+                                    <option value="6-stop">6-stop</option>
+                                    <option value="7-stop">7-stop</option>
+                                    <option value="8-stop">8-stop</option>
+                                    <option value="9-stop">9-stop</option>
+                                    <option value="10-stop">10-stop</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                    <ChevronDown size={16} />
+                                </div>
+                            </div>
                         </div>
 
                         <div>
@@ -180,18 +200,23 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Parking Est.</label>
-                            <select
-                                value={form.parkingEstimation}
-                                onChange={(e) => setForm({...form, parkingEstimation: e.target.value})}
-                                className="w-full rounded-lg border border-slate-300 p-2.5 text-sm focus:border-emerald-500 outline-none"
-                            >
-                                <option value="10 minutes">10 minutes</option>
-                                <option value="20 minutes">20 minutes</option>
-                                <option value="30 minutes">30 minutes</option>
-                                <option value="40 minutes">40 minutes</option>
-                                <option value="50 minutes">50 minutes</option>
-                                <option value="1 hr">1 hr</option>
-                            </select>
+                            <div className="relative mt-1">
+                                <select
+                                    value={form.parkingEstimation}
+                                    onChange={(e) => setForm({...form, parkingEstimation: e.target.value})}
+                                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none appearance-none cursor-pointer bg-white"
+                                >
+                                    <option value="10 minutes">10 minutes</option>
+                                    <option value="20 minutes">20 minutes</option>
+                                    <option value="30 minutes">30 minutes</option>
+                                    <option value="40 minutes">40 minutes</option>
+                                    <option value="50 minutes">50 minutes</option>
+                                    <option value="1 hr">1 hr</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                    <ChevronDown size={16} />
+                                </div>
+                            </div>
                         </div>
 
                         <div>
@@ -216,12 +241,22 @@ const EditBusTrip = ({ row, onClose, onSave, companyData = [] }) => {
                         </div>
 
                         <div className="md:col-span-2">
-                             <Select 
-                                label="Status" 
-                                value={form.status} 
-                                onChange={(e) => setForm({...form, status: e.target.value})} 
-                                          options={["Scheduled", "Arrived", "On Fix","Departed"]} 
-                             />
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                            <div className="relative mt-1">
+                                <select
+                                    value={form.status}
+                                    onChange={(e) => setForm({...form, status: e.target.value})}
+                                    className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none appearance-none cursor-pointer bg-white"
+                                >
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Arrived">Arrived</option>
+                                    <option value="On Fix">On Fix</option>
+                                    <option value="Departed">Departed</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                    <ChevronDown size={16} />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

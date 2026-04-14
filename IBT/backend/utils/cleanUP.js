@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import TenantApplication from '../models/TenantApplication.js';
 import BusTrip from '../models/BusTrips.js';
 import Tenant from '../models/Tenant.js';
+import Settings from '../models/Settings.js';
 import User from '../models/User.js';
 import sendPushNotification from './sendPushNotification.js';
 import sendEmail from './sendEmail.js';
@@ -24,6 +25,195 @@ const startOfDay = (date) => {
 const daysUntil = (targetDate, fromDate = new Date()) => {
     const diff = startOfDay(targetDate).getTime() - startOfDay(fromDate).getTime();
     return Math.floor(diff / (24 * 60 * 60 * 1000));
+};
+
+const toFiniteNumber = (value, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const addMonths = (date, months) => {
+    const next = new Date(date);
+    next.setMonth(next.getMonth() + months);
+    return next;
+};
+
+const withDayInMonth = (baseDate, targetDay) => {
+    const copy = new Date(baseDate);
+    const safeDay = Math.max(1, toFiniteNumber(targetDay, 1));
+    const daysInMonth = new Date(copy.getFullYear(), copy.getMonth() + 1, 0).getDate();
+    copy.setDate(Math.min(safeDay, daysInMonth));
+    return copy;
+};
+
+const addDays = (date, days) => {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+};
+
+const getSlotCount = (slotNo) => {
+    if (!slotNo) return 1;
+    const count = String(slotNo)
+        .split(',')
+        .map((slot) => slot.trim())
+        .filter(Boolean).length;
+    return Math.max(1, count);
+};
+
+const getNextDueDate = ({ tenantType, fromDueDate, permanentDueDay }) => {
+    const base = new Date(fromDueDate);
+    if (tenantType === 'Night Market') {
+        return addDays(base, 7);
+    }
+
+    return withDayInMonth(addMonths(base, 1), permanentDueDay);
+};
+
+const resolveNextCycleRent = ({ tenant, permanentBasePrice, nightBasePrice }) => {
+    const slotCount = getSlotCount(tenant.slotNo);
+    const isNightMarket = tenant.tenantType === 'Night Market';
+    const basePrice = isNightMarket ? nightBasePrice : permanentBasePrice;
+    const computed = toFiniteNumber(basePrice, 0) * slotCount;
+    if (computed > 0) return computed;
+    return Math.max(0, toFiniteNumber(tenant.rentAmount, 0));
+};
+
+const loadOverdueRuntimeConfig = async () => {
+    const [
+        permanentCharge,
+        permanentInterest,
+        nightCharge,
+        nightInterest,
+        permanentDueDate,
+        permanentPrice,
+        nightPrice,
+    ] = await Promise.all([
+        Settings.findOne({ key: 'permanentChargePercentage' }),
+        Settings.findOne({ key: 'permanentInterestPercentage' }),
+        Settings.findOne({ key: 'nightMarketChargePercentage' }),
+        Settings.findOne({ key: 'nightMarketInterestPercentage' }),
+        Settings.findOne({ key: 'permanentDueDate' }),
+        Settings.findOne({ key: 'defaultPermanentPrice' }),
+        Settings.findOne({ key: 'defaultNightPrice' }),
+    ]);
+
+    return {
+        permanentChargePct: toFiniteNumber(permanentCharge?.value, 25),
+        permanentInterestPct: toFiniteNumber(permanentInterest?.value, 2),
+        nightChargePct: toFiniteNumber(nightCharge?.value, 25),
+        nightInterestPct: toFiniteNumber(nightInterest?.value, 2),
+        permanentDueDay: Math.max(1, Math.min(31, toFiniteNumber(permanentDueDate?.value, 5))),
+        permanentBasePrice: toFiniteNumber(permanentPrice?.value, 6000),
+        nightBasePrice: toFiniteNumber(nightPrice?.value, 150),
+    };
+};
+
+export const processTenantOverdueLifecycle = async () => {
+    if (mongoose.connection.readyState !== 1) {
+        return {
+            skipped: true,
+            reason: 'db-not-connected',
+            affectedTenants: 0,
+            appliedCycles: 0,
+        };
+    }
+
+    const config = await loadOverdueRuntimeConfig();
+    const now = new Date();
+
+    const dueTenants = await Tenant.find({
+        isArchived: { $ne: true },
+        status: { $nin: ['Moved Out', 'MOVED OUT'] },
+        DueDateTime: { $lt: now },
+    });
+
+    let affectedTenants = 0;
+    let appliedCycles = 0;
+
+    for (const tenant of dueTenants) {
+        const wasOverdue = String(tenant.status || '').toLowerCase() === 'overdue';
+        const isNightMarket = tenant.tenantType === 'Night Market';
+        const configuredChargePct = isNightMarket ? config.nightChargePct : config.permanentChargePct;
+        const configuredInterestPct = isNightMarket ? config.nightInterestPct : config.permanentInterestPct;
+
+        const appliedChargePct = wasOverdue && Number.isFinite(Number(tenant.overdueChargePercentage))
+            ? Number(tenant.overdueChargePercentage)
+            : configuredChargePct;
+        const appliedInterestPct = wasOverdue && Number.isFinite(Number(tenant.overdueInterestPercentage))
+            ? Number(tenant.overdueInterestPercentage)
+            : configuredInterestPct;
+
+        const utilityAmount = Math.max(0, toFiniteNumber(tenant.utilityAmount, 0));
+        let dueWithoutUtility = wasOverdue
+            ? Math.max(0, toFiniteNumber(tenant.totalAmount, 0) - utilityAmount)
+            : 0;
+
+        let runningCharge = wasOverdue ? Math.max(0, toFiniteNumber(tenant.chargeAmount, 0)) : 0;
+        let runningInterest = wasOverdue ? Math.max(0, toFiniteNumber(tenant.interestAmount, 0)) : 0;
+        let cycleRentAmount = Math.max(0, toFiniteNumber(tenant.rentAmount, 0));
+
+        let dueCursor = new Date(tenant.DueDateTime);
+        if (Number.isNaN(dueCursor.getTime())) {
+            dueCursor = now;
+        }
+
+        let tenantCycleCount = 0;
+        while (dueCursor < now && tenantCycleCount < 36) {
+            const cycleCharge = cycleRentAmount * (appliedChargePct / 100);
+            const newGrossRent = cycleRentAmount + cycleCharge;
+            const compoundingBase = dueWithoutUtility + newGrossRent;
+            const cycleInterest = compoundingBase * (appliedInterestPct / 100);
+
+            dueWithoutUtility = compoundingBase + cycleInterest;
+            runningCharge += cycleCharge;
+            runningInterest += cycleInterest;
+            tenantCycleCount += 1;
+
+            dueCursor = getNextDueDate({
+                tenantType: tenant.tenantType,
+                fromDueDate: dueCursor,
+                permanentDueDay: config.permanentDueDay,
+            });
+
+            cycleRentAmount = resolveNextCycleRent({
+                tenant,
+                permanentBasePrice: config.permanentBasePrice,
+                nightBasePrice: config.nightBasePrice,
+            });
+        }
+
+        if (tenantCycleCount === 0) {
+            continue;
+        }
+
+        tenant.status = 'Overdue';
+        tenant.overdueChargePercentage = appliedChargePct;
+        tenant.overdueInterestPercentage = appliedInterestPct;
+        tenant.overdueCycleCount = Math.max(0, toFiniteNumber(tenant.overdueCycleCount, 0)) + tenantCycleCount;
+        tenant.lastOverdueAppliedAt = now;
+
+        tenant.chargeAmount = runningCharge;
+        tenant.interestAmount = runningInterest;
+        tenant.totalAmount = dueWithoutUtility + utilityAmount;
+        tenant.DueDateTime = dueCursor;
+        tenant.rentAmount = cycleRentAmount;
+
+        await tenant.save();
+
+        affectedTenants += 1;
+        appliedCycles += tenantCycleCount;
+    }
+
+    if (affectedTenants > 0) {
+        console.log(`[OVERDUE CRON] Updated ${affectedTenants} tenant(s) across ${appliedCycles} overdue cycle(s).`);
+    }
+
+    return {
+        skipped: false,
+        affectedTenants,
+        appliedCycles,
+    };
 };
 
 export const processContractRenewalLifecycle = async () => {
@@ -298,6 +488,14 @@ export const startCleanUP = () => {
             await processContractRenewalLifecycle();
         } catch (error) {
             console.error('[RENEWAL CRON ERROR]:', error);
+        }
+    });
+
+    cron.schedule('3 0 * * *', async () => {
+        try {
+            await processTenantOverdueLifecycle();
+        } catch (error) {
+            console.error('[OVERDUE CRON ERROR]:', error);
         }
     });
 

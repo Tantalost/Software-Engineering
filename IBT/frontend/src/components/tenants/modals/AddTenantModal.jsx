@@ -575,7 +575,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 </div>
                 {productCategory === "other" && (
                   <div className="flex flex-col gap-1 animate-fadeIn">
-                    <label className="text-xs font-semibold text-slate-600">Specify Product</label>
+                    <label className="text-xs font-semibold text-slate-600">Specify Category</label>
                     <input type="text" required placeholder="Enter product details..." className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={otherProductDetails} onChange={(e) => setOtherProductDetails(e.target.value)} />
                   </div>
                 )}

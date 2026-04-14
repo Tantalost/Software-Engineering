@@ -1,5 +1,5 @@
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Alert, ScrollView, TouchableOpacity, View, Platform, RefreshControl } from 'react-native';
 import { Card, SegmentedButtons, Text, Button, ActivityIndicator } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,6 +50,11 @@ import {
 } from '@/src/components/stalls/StatusViews';
 
 const SECRET_KEY = process.env.EXPO_PUBLIC_ENCRYPTION_KEY || " ";
+
+const normalizeId = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  return typeof value === 'string' ? value : String(value);
+};
 
 export default function StallsPage() {
 
@@ -103,6 +108,9 @@ export default function StallsPage() {
     permit: null, validId: null, clearance: null, receipt: null, contract: null,
     communityTax: null, policeClearance: null
   });
+
+  const activeUserIdRef = useRef<string>('');
+  const fetchSequenceRef = useRef(0);
 
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
 
@@ -189,6 +197,9 @@ export default function StallsPage() {
       const storedUser = await AsyncStorage.getItem('ibt_user');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
+        const resolvedUserId = normalizeId(parsedUser?.id || parsedUser?._id);
+        const normalizedUser = resolvedUserId ? { ...parsedUser, id: resolvedUserId } : parsedUser;
+        activeUserIdRef.current = resolvedUserId;
         
         const safeContact = parsedUser.contact || parsedUser.contactNo || "";
         let cleanedPhone = safeContact.replace(/[^0-9]/g, '');
@@ -206,13 +217,17 @@ export default function StallsPage() {
           contact: safeContact
         }));
         
-        if (!user || user.id !== parsedUser.id) {
-          setUser(parsedUser);
-          fetchData(parsedUser.id);
+        if (!user || normalizeId(user.id) !== resolvedUserId) {
+          setMyApplications([]);
+          setViewIndex(-1);
+          setUser(normalizedUser);
+          fetchData(resolvedUserId || undefined);
         }
       } else {
+        activeUserIdRef.current = '';
         setUser(null);
         setMyApplications([]);
+        setViewIndex(-1);
       }
     } catch (e) {
       console.error("Auth Load Error", e);
@@ -222,12 +237,18 @@ export default function StallsPage() {
   const handleLoginSuccess = async (userData: any) => {
     try {
       setTimeout(async () => {
-        await AsyncStorage.setItem('ibt_user', JSON.stringify(userData));
+        const resolvedUserId = normalizeId(userData?.id || userData?._id);
+        const normalizedUser = resolvedUserId ? { ...userData, id: resolvedUserId } : userData;
+
+        await AsyncStorage.setItem('ibt_user', JSON.stringify(normalizedUser));
         if (userData?.token) {
           await AsyncStorage.setItem('token', userData.token);
         }
 
-        setUser(userData);
+        activeUserIdRef.current = resolvedUserId;
+        setMyApplications([]);
+        setViewIndex(-1);
+        setUser(normalizedUser);
         setShowLogin(false);
 
         const safeContact = userData.contact || userData.contactNo || "";
@@ -246,7 +267,7 @@ export default function StallsPage() {
           contact: safeContact 
         }));
 
-        fetchData(userData.id);
+        fetchData(resolvedUserId || undefined);
       }, 150);
     } catch (error) {
       console.error("Error recovering session:", error);
@@ -254,6 +275,9 @@ export default function StallsPage() {
   };
 
   const fetchData = async (userId: string | undefined, isBackgroundRefresh = false) => {
+    const requestUserId = normalizeId(userId);
+    const requestId = ++fetchSequenceRef.current;
+
     if (!isBackgroundRefresh) setLoading(true);
 
     try {
@@ -311,10 +335,10 @@ export default function StallsPage() {
         console.log("Error fetching pending slots:", err);
       }
 
-      if (userId) {
+      if (requestUserId) {
         const rawUser = await AsyncStorage.getItem('ibt_user');
         const token = await AsyncStorage.getItem('token') || (rawUser ? JSON.parse(rawUser).token : '');
-        const myAppRes = await fetch(`${API_URL}/stalls/my-application/${userId}?_t=${timestamp}`, {
+        const myAppRes = await fetch(`${API_URL}/stalls/my-application/${requestUserId}?_t=${timestamp}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -339,6 +363,10 @@ export default function StallsPage() {
           return true;
         });
 
+        if (requestId !== fetchSequenceRef.current || requestUserId !== activeUserIdRef.current) {
+          return;
+        }
+
         setMyApplications(apps);
 
         if (viewIndex >= 0) {
@@ -347,6 +375,12 @@ export default function StallsPage() {
             setViewIndex(-1);
           }
         }
+      } else {
+        if (requestId !== fetchSequenceRef.current || activeUserIdRef.current) {
+          return;
+        }
+        setMyApplications([]);
+        setViewIndex(-1);
       }
 
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Input from "../common/Input";
-import Select from "../common/Select";
+import { ChevronDown } from "lucide-react";
 
 const CAR_RATE = 20;
 const MOTOR_RATE = 10;
@@ -84,12 +84,24 @@ const EditParking = ({ row, onClose, onSave }) => {
             onChange={(e) => set("plateNo", e.target.value.toUpperCase())}
           />
 
-          <Select
-            label="Type"
-            value={form.type}
-            onChange={(e) => set("type", e.target.value)}
-            options={["Car", "Motorcycle"]}
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Type
+            </label>
+            <div className="relative">
+              <select
+                value={form.type}
+                onChange={(e) => set("type", e.target.value)}
+                className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none appearance-none cursor-pointer bg-white"
+              >
+                <option value="Car">Car</option>
+                <option value="Motorcycle">Motorcycle</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                <ChevronDown size={16} />
+              </div>
+            </div>
+          </div>
 
           <Input
             label="Base Rate (₱)"
@@ -113,12 +125,22 @@ const EditParking = ({ row, onClose, onSave }) => {
           </div>
 
           <div className="md:col-span-2">
-            <Select
-              label="Status"
-              value={form.status}
-              onChange={(e) => set("status", e.target.value)}
-              options={["Parked", "Departed"]}
-            />
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Status
+            </label>
+            <div className="relative">
+              <select
+                value={form.status}
+                onChange={(e) => set("status", e.target.value)}
+                className="w-full rounded-lg border border-slate-300 p-2.5 pr-10 text-sm focus:border-emerald-500 outline-none appearance-none cursor-pointer bg-white"
+              >
+                <option value="Parked">Parked</option>
+                <option value="Departed">Departed</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                <ChevronDown size={16} />
+              </div>
+            </div>
           </div>
         </div>
 

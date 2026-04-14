@@ -1915,7 +1915,6 @@ const TenantLease = () => {
 
             worksheet.addRow([]); 
             worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
-            worksheet.addRow([`Collector: ${collectorName.trim() || "N/A"}`, '', '', '', '', '', '', '', '', '']); 
             worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '']);
             worksheet.addRow([]);
 
@@ -1997,7 +1996,6 @@ const TenantLease = () => {
         doc.setFont("helvetica", "normal");
 
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-        doc.text(`Collector: ${collectorName.trim() || "N/A"}`, 15, 61);
 
         doc.text(`No. of Payments: ${filtered.length}`, pageWidth - 15, 55, { align: "right" });
         doc.text(
@@ -2010,7 +2008,7 @@ const TenantLease = () => {
        autoTable(doc, {
             startY: 70,
             margin: { bottom: 35, left: 10, right: 10 }, 
-            head: [["Slot", "Name", "Email", "Contact", "Rent", "Elec", "Other", "Util Total", "Total Due"]],
+            head: [["Slot", "Name", "Email", "Contact", "Rent", "Electricity", "Others", "Utilities Total", "Total Due"]],
             body: filtered.map((t) => {
                 const feeBreakdown = typeof t.feeBreakdown === 'string' 
                     ? JSON.parse(t.feeBreakdown || '{}') 
@@ -3014,7 +3012,7 @@ const TenantLease = () => {
                                     </div>
                                 </div>
                                 <p className="text-[10px] text-slate-500 mt-2 leading-tight">
-                                    Updating these percentages will immediately recalculate the total due for all currently overdue tenants.
+                                    Changes here apply to the next overdue cycle and to new tenants. Existing overdue balances keep their current charge and interest rates until that cycle is cleared.
                                 </p>
                             </div>
 
