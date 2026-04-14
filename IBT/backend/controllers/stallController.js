@@ -330,25 +330,38 @@ export const getPendingStalls = async (req, res) => {
 
 export const getMyApplication = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const tokenUserId = String(req.user?.id || '').trim();
+        const paramUserId = String(req.params?.userId || '').trim();
+        const userId = tokenUserId || paramUserId;
+
+        const parseSlotLabels = (value) => String(value || '')
+            .split(',')
+            .map((slot) => slot.trim())
+            .filter(Boolean);
+
+        const hasSlotOverlap = (left, rightSet) => {
+            const leftSlots = parseSlotLabels(left);
+            return leftSlots.some((slot) => rightSet.has(slot));
+        };
+
+        if (!userId) {
+            return res.status(400).json({ message: 'Missing user identifier.' });
+        }
         
         let applications = await TenantApplication.find({ userId }).lean();
-        
-        const approvedSlots = applications
-            .filter(app => app.status === 'TENANT')
-            .map(app => app.targetSlot);
 
-        const tenants = await Tenant.find({ 
+        const tenants = await Tenant.find({
             isArchived: { $ne: true },
-            $or: [
-                { uid: userId },
-                { slotNo: { $in: approvedSlots } }
-            ]
+            uid: userId,
         }).lean();
+
+        const tenantSlotSet = new Set(
+            tenants.flatMap((tenant) => parseSlotLabels(tenant.slotNo))
+        );
 
         let combinedApps = applications.filter(app => {
             if (app.status === 'TENANT') {
-                return tenants.some(t => t.slotNo && t.slotNo.includes(app.targetSlot));
+                return hasSlotOverlap(app.targetSlot, tenantSlotSet);
             }
             return true;
         });
@@ -369,7 +382,8 @@ export const getMyApplication = async (req, res) => {
         }));
                 
         tenants.forEach(tenant => {
-            const existingAppIndex = combinedApps.findIndex(app => tenant.slotNo && tenant.slotNo.includes(app.targetSlot));
+            const tenantSlots = new Set(parseSlotLabels(tenant.slotNo));
+            const existingAppIndex = combinedApps.findIndex(app => hasSlotOverlap(app.targetSlot, tenantSlots));
             const slotCount = tenant.slotNo ? tenant.slotNo.split(',').length : 1;
             const isNightMarket = tenant.tenantType === 'Night Market';
             const isPermanent = !isNightMarket;
@@ -434,6 +448,7 @@ export const getMyApplication = async (req, res) => {
                 hasPendingRenewal: Boolean(pendingRenewalContract),
                 pendingRenewalContract: pendingRenewalContract || null,
                 renewalTemplates,
+                userId: tenant.uid || userId,
             };
 
             if (existingAppIndex >= 0) {

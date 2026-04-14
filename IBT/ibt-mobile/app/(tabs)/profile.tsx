@@ -33,6 +33,14 @@ type ApplicationData = {
   [key: string]: any;
 };
 
+const normalizeComparableContact = (value: unknown): string => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('63')) return digits.slice(2);
+  if (digits.startsWith('0')) return digits.slice(1);
+  return digits;
+};
+
 export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
@@ -104,6 +112,39 @@ export default function ProfileScreen() {
       } else if (data && data.targetSlot) {
         apps = [data];
       }
+
+      const normalizedUserId = String(userId || '').trim();
+      const currentUserEmail = String(user?.email || '').trim().toLowerCase();
+      const currentUserContact = normalizeComparableContact(user?.contact || '');
+      const parseSlots = (value: unknown) => String(value || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+      const isOwnedByCurrentAccount = (app: any) => {
+        const ownerId = String(app?.userId || app?.uid || '').trim();
+        if (ownerId) return ownerId === normalizedUserId;
+
+        const ownerEmail = String(app?.email || '').trim().toLowerCase();
+        if (ownerEmail && currentUserEmail) return ownerEmail === currentUserEmail;
+
+        const ownerContact = normalizeComparableContact(app?.contact || app?.contactNo);
+        if (ownerContact && currentUserContact) return ownerContact === currentUserContact;
+
+        return false;
+      };
+
+      const trustedOwnedSlots = new Set(
+        apps
+          .filter((app) => isOwnedByCurrentAccount(app))
+          .flatMap((app) => parseSlots(app?.targetSlot))
+      );
+
+      apps = apps.filter((app) => {
+        if (isOwnedByCurrentAccount(app)) return true;
+
+        if (String(app?.status || '').toUpperCase() !== 'TENANT') return true;
+
+        const appSlots = parseSlots(app?.targetSlot);
+        return appSlots.some((slot) => trustedOwnedSlots.has(slot));
+      });
 
       const validApps = apps.filter(app => 
         app && 
