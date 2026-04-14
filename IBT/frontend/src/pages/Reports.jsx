@@ -39,6 +39,8 @@ const formatStatisticsLabel = (rawKey) => {
   if (normalized === "motorcycles") return "2 Wheels";
   if (normalized === "missedcount" || normalized === "missedbus") return "Missed Bus";
   if (normalized === "departednow" || normalized === "departedbus") return "Departed Bus";
+  if (normalized === "priceamount") return "Price Amount";
+  if (normalized === "totalrevenue") return "Total Revenue";
 
   return String(rawKey).replace(/([A-Z])/g, " $1").trim();
 };
@@ -92,6 +94,96 @@ const formatExportCurrency = (value) => {
 const getExportCollectorName = () =>
   localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin";
 
+const isBusSingleReport = (report) => {
+  const reportType = String(report?.type || "").toLowerCase();
+  if (reportType.includes("bus")) return true;
+
+  const rows = Array.isArray(report?.data?.data) ? report.data.data : [];
+  if (rows.length === 0) return false;
+
+  const keys = Object.keys(rows[0]).map((key) => normalizeExportKey(key));
+  return ["templateno", "arrivaltime", "departuretime", "company", "route"].some((key) => keys.includes(key));
+};
+
+const normalizeBusReportRowsForExport = (report) => {
+  const sourceRows = Array.isArray(report?.data?.data) ? report.data.data : [];
+
+  return sourceRows.map((row) => ({
+    busNo:
+      row?.templateNo ||
+      row?.templateno ||
+      row?.plateNumber ||
+      row?.busNo ||
+      row?.busno ||
+      "-",
+    company: row?.company || "-",
+    route: row?.route || "-",
+    arrivalTime: row?.arrivalTime || row?.time || row?.scheduleTime || "-",
+    departureTime: row?.departureTime || row?.departure || "-",
+    price: row?.price ?? row?.amount ?? row?.fee ?? row?.finalPrice ?? "-",
+    status: row?.status || "-",
+  }));
+};
+
+const getBusPriceAndRevenueMetrics = (report) => {
+  const stats = report?.data?.statistics || {};
+  const normalizedRows = normalizeBusReportRowsForExport(report);
+
+  const statsPrice = parseExportAmount(
+    stats?.priceAmount ?? stats?.price ?? stats?.fee ?? stats?.defaultPrice,
+  );
+
+  const rowPrice = normalizedRows
+    .map((row) => parseExportAmount(row?.price))
+    .find((value) => !Number.isNaN(value) && value > 0);
+
+  const fallbackLocalPrice = parseExportAmount(localStorage.getItem("defaultBusPrice"));
+
+  const priceAmount =
+    (!Number.isNaN(statsPrice) && statsPrice > 0 && statsPrice) ||
+    (!Number.isNaN(rowPrice) && rowPrice > 0 && rowPrice) ||
+    (!Number.isNaN(fallbackLocalPrice) && fallbackLocalPrice > 0 && fallbackLocalPrice) ||
+    0;
+
+  const explicitRevenue = parseExportAmount(stats?.totalRevenue ?? stats?.revenue);
+
+  const rowsRevenue = normalizedRows.reduce((sum, row) => {
+    const value = parseExportAmount(row?.price);
+    if (Number.isNaN(value) || value <= 0) return sum;
+
+    const status = String(row?.status || "").toLowerCase();
+    if (!status || status === "-" || status.includes("departed") || status.includes("paid")) {
+      return sum + value;
+    }
+
+    return sum;
+  }, 0);
+
+  const departedCount = normalizedRows.filter((row) => {
+    const status = String(row?.status || "").toLowerCase();
+    return status.includes("departed") || status.includes("paid");
+  }).length;
+
+  const totalRevenue =
+    (rowsRevenue > 0 && rowsRevenue) ||
+    (!Number.isNaN(explicitRevenue) && explicitRevenue > 0 && explicitRevenue) ||
+    (departedCount > 0 ? departedCount * priceAmount : 0);
+
+  return { priceAmount, totalRevenue };
+};
+
+const getSingleReportExportDataset = (report) => {
+  if (isBusSingleReport(report)) {
+    const headers = ["busNo", "company", "route", "arrivalTime", "departureTime"];
+    const rows = normalizeBusReportRowsForExport(report);
+    return { headers, rows };
+  }
+
+  const headers = getSingleReportExportHeaders(report);
+  const rows = Array.isArray(report?.data?.data) ? report.data.data : [];
+  return { headers, rows };
+};
+
 const isParkingSingleReport = (report) => {
   const reportType = String(report?.type || "").toLowerCase();
   if (reportType.includes("parking")) return true;
@@ -139,16 +231,26 @@ const getParkingTotalRevenue = (report) => {
 const getSingleReportStatisticEntries = (report) => {
   const stats = report?.data?.statistics || {};
   const isParking = isParkingSingleReport(report);
+  const isBus = isBusSingleReport(report);
 
   const hiddenMetricKeys = new Set(["collectorid", "arrivalslogged", "departureslogged"]);
   const parkingSpecificHiddenKeys = new Set(["collector", "collectorname"]);
+  const busSpecificHiddenKeys = new Set(["totalactions", "price", "priceamount", "totalrevenue", "revenue"]);
 
   let entries = Object.entries(stats).filter(([key]) => {
     const normalized = normalizeExportKey(key);
     if (hiddenMetricKeys.has(normalized)) return false;
     if (isParking && parkingSpecificHiddenKeys.has(normalized)) return false;
+    if (isBus && busSpecificHiddenKeys.has(normalized)) return false;
     return true;
   });
+
+  if (isBus) {
+    const { priceAmount, totalRevenue } = getBusPriceAndRevenueMetrics(report);
+    entries.push(["priceAmount", priceAmount]);
+    entries.push(["totalRevenue", totalRevenue]);
+    return entries;
+  }
 
   if (!isParking) return entries;
 
@@ -934,7 +1036,7 @@ const Reports = () => {
 
       if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
         const wsData = workbook.addWorksheet("Data Records");
-        const headers = getSingleReportExportHeaders(report);
+        const { headers, rows: exportRows } = getSingleReportExportDataset(report);
 
         const dataHeaderRow = wsData.addRow(
           headers.map((h) =>
@@ -949,7 +1051,7 @@ const Reports = () => {
           cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
         });
 
-        report.data.data.forEach((row) => {
+        exportRows.forEach((row) => {
           wsData.addRow(
             headers.map((header) => formatSingleReportCellValue(header, row[header])),
           );
@@ -1045,8 +1147,7 @@ const Reports = () => {
       doc.setFontSize(11);
       doc.text("Detailed Transaction Records", 15, currentY);
 
-      const rawData = report.data.data;
-      const headers = getSingleReportExportHeaders(report);
+      const { headers, rows: exportRows } = getSingleReportExportDataset(report);
 
       const formattedHeaders = headers.map((h) =>
         String(h)
@@ -1056,7 +1157,7 @@ const Reports = () => {
           .toUpperCase(),
       );
 
-      const rows = rawData.map((row) =>
+      const rows = exportRows.map((row) =>
         headers.map((header) => formatSingleReportCellValue(header, row[header])),
       );
 

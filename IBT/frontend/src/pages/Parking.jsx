@@ -1716,7 +1716,7 @@ const handleSafeLogout = () => {
       ];
 
   const hasPendingParkingShiftReport = useMemo(() => {
-    if (role !== "parking") return false;
+    if (role === "superadmin") return false;
 
     return records.some((item) => {
       const isDeparted = String(item?.status || "").toLowerCase() === "departed";
@@ -1729,7 +1729,7 @@ const handleSafeLogout = () => {
     <Layout
       title="Parking Management"
       topbarProps={
-        role === "parking"
+        role !== "superadmin"
           ? {
               logoutGuard: {
                 canLogout: !hasPendingParkingShiftReport,
