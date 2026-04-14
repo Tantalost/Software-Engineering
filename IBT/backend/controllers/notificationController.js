@@ -10,7 +10,8 @@ export const getNotifications = async (req, res) => {
             date: n.date,
             read: n.read,
             source: n.source,
-            targetRole: n.targetRole 
+            targetRole: n.targetRole,
+            referenceId: n.referenceId
         }));
         res.status(200).json(formatted);
     } catch (err) {
@@ -25,6 +26,7 @@ export const createNotification = async (req, res) => {
             message: req.body.message,
             source: req.body.source,
             targetRole: req.body.targetRole || "all", 
+            referenceId: req.body.referenceId,
             date: new Date().toISOString().split('T')[0]
         });
         const saved = await newNote.save();

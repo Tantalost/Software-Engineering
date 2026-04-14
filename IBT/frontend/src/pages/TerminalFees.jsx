@@ -561,6 +561,8 @@ const TerminalFees = () => {
             message:
               "A new Terminal Fees report has been generated. Shift rows were submitted and cleared from active board.",
             source: "Terminal Fees",
+            targetRole: "superadmin",               
+            referenceId: report?._id || report?.id 
           }),
         },
       );

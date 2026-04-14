@@ -22,25 +22,27 @@ const notificationSchema = new mongoose.Schema({
     enum: ["all", "superadmin", "tenant"], 
     default: "all" 
   },
-  // Allows targeting a specific mobile user if needed
+ 
   targetUserId: { 
     type: String,
     required: false
   },
-  // Uses YYYY-MM-DD format as standard
+
+  referenceId: { type: String, required: false },
+  
   date: { 
     type: String, 
     default: () => new Date().toISOString().split('T')[0] 
   },
-  // Due date for broadcast announcements (must be within days 1-5 of month)
+ 
   dueDate: {
     type: Date,
     required: false
   }
 }, { 
-  timestamps: true // Adds createdAt and updatedAt for better sorting
+  timestamps: true 
 });
 
-// Defensive export to prevent OverwriteModelError
+
 const Notification = mongoose.models.Notification || mongoose.model("Notification", notificationSchema);
 export default Notification;

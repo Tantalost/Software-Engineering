@@ -326,6 +326,11 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
     const source = (notif.source || "").toLowerCase();
     const title = (notif.title || "").toLowerCase();
 
+    if (title.includes("report submitted") || title.includes("report")) {
+      navigate("/reports", { state: { openReportId: notif.referenceId } });
+      return; 
+    }
+
     if (source.includes("terminal") || title.includes("terminal")) {
       route = "/terminal-fees";
     } else if (source.includes("bus") || title.includes("bus")) {

@@ -1615,6 +1615,7 @@ const BusTrips = () => {
           message,
           source,
           targetRole: "superadmin",
+          referenceId,
         }),
       });
 
@@ -2593,7 +2594,7 @@ const BusTrips = () => {
         })),
       };
       
-      await submitPageReport(
+      const createdReport = await submitPageReport(
         "Bus Trips",
         reportPayload,
         localStorage.getItem("authName") ||
@@ -2605,9 +2606,13 @@ const BusTrips = () => {
         },
       );
 
+      const newReportId = createdReport?._id || createdReport?.id;
+
       await notifySuperadmin(
         "Report Submitted: Bus Trips Report",
         "A new Bus Trips report has been submitted for shift hand-off.",
+        "Bus Trips",
+        newReportId  
       );
 
       if (missedBuses.length > 0) {
