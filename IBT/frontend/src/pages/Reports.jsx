@@ -46,17 +46,44 @@ const formatStatisticsLabel = (rawKey) => {
 const normalizeExportKey = (key) =>
   String(key || "").replace(/[\s_-]/g, "").toLowerCase();
 
-const isExportCurrencyField = (key) =>
-  ["price", "finalprice", "amount", "revenue", "fee", "total"].some((term) =>
-    normalizeExportKey(key).includes(term),
-  );
+const isExportCurrencyField = (key) => {
+  const normalized = normalizeExportKey(key);
+
+  if (["totalvehicles", "vehicles", "vehiclecount", "count", "quantity", "qty"].some((term) => normalized.includes(term))) {
+    return false;
+  }
+
+  return [
+    "price",
+    "finalprice",
+    "baseprice",
+    "baserate",
+    "amount",
+    "revenue",
+    "fee",
+    "totalrevenue",
+    "totalamount",
+    "total",
+  ].some((term) => normalized.includes(term));
+};
+
+const parseExportAmount = (value) => {
+  if (value === null || value === undefined || value === "") return NaN;
+  if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+
+  const cleaned = String(value).replace(/[^\d.-]/g, "").trim();
+  if (!cleaned) return NaN;
+
+  const parsed = Number(cleaned);
+  return Number.isNaN(parsed) ? NaN : parsed;
+};
 
 const formatExportCurrency = (value) => {
   if (value === null || value === undefined || value === "") return "-";
-  const numeric = Number(String(value).replace(/[₱,]/g, "").trim());
+  const numeric = parseExportAmount(value);
   return Number.isNaN(numeric)
     ? value
-    : `₱${numeric.toLocaleString(undefined, {
+    : `Php ${numeric.toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`;
@@ -64,6 +91,181 @@ const formatExportCurrency = (value) => {
 
 const getExportCollectorName = () =>
   localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin";
+
+const isParkingSingleReport = (report) => {
+  const reportType = String(report?.type || "").toLowerCase();
+  if (reportType.includes("parking")) return true;
+
+  const rows = Array.isArray(report?.data?.data) ? report.data.data : [];
+  if (rows.length === 0) return false;
+
+  const keys = Object.keys(rows[0]).map((key) => normalizeExportKey(key));
+  return ["ticketno", "plateno", "timein", "timeout"].some((key) => keys.includes(key));
+};
+
+const getParkingCollectorName = (report) => {
+  const stats = report?.data?.statistics || {};
+  return stats.collector || stats.collectorName || "-";
+};
+
+const getParkingTotalVehicles = (report) => {
+  const rows = Array.isArray(report?.data?.data) ? report.data.data : [];
+  if (rows.length > 0) return rows.length;
+
+  const totalVehicles = parseExportAmount(report?.data?.statistics?.totalVehicles);
+  return Number.isNaN(totalVehicles) ? 0 : totalVehicles;
+};
+
+const getParkingTotalRevenue = (report) => {
+  const rows = Array.isArray(report?.data?.data) ? report.data.data : [];
+
+  if (rows.length > 0) {
+    return rows.reduce((sum, row) => {
+      const amount =
+        parseExportAmount(row?.finalPrice) ||
+        parseExportAmount(row?.total) ||
+        parseExportAmount(row?.price) ||
+        parseExportAmount(row?.amount) ||
+        0;
+      return sum + amount;
+    }, 0);
+  }
+
+  const rawRevenue = report?.data?.statistics?.totalRevenue ?? report?.data?.statistics?.revenue;
+  const revenue = parseExportAmount(rawRevenue);
+  return Number.isNaN(revenue) ? 0 : revenue;
+};
+
+const getSingleReportStatisticEntries = (report) => {
+  const stats = report?.data?.statistics || {};
+  const isParking = isParkingSingleReport(report);
+
+  const hiddenMetricKeys = new Set(["collectorid", "arrivalslogged", "departureslogged"]);
+  const parkingSpecificHiddenKeys = new Set(["collector", "collectorname"]);
+
+  let entries = Object.entries(stats).filter(([key]) => {
+    const normalized = normalizeExportKey(key);
+    if (hiddenMetricKeys.has(normalized)) return false;
+    if (isParking && parkingSpecificHiddenKeys.has(normalized)) return false;
+    return true;
+  });
+
+  if (!isParking) return entries;
+
+  const totalVehicles = getParkingTotalVehicles(report);
+  const totalRevenue = getParkingTotalRevenue(report);
+  let hasTotalVehicles = false;
+  let hasTotalRevenue = false;
+
+  entries = entries.map(([key, value]) => {
+    const normalized = normalizeExportKey(key);
+
+    if (normalized === "totalvehicles") {
+      hasTotalVehicles = true;
+      return [key, totalVehicles];
+    }
+
+    if (normalized === "totalrevenue" || normalized === "revenue") {
+      hasTotalRevenue = true;
+      return [key, totalRevenue];
+    }
+
+    return [key, value];
+  });
+
+  if (!hasTotalVehicles) {
+    entries.push(["totalVehicles", totalVehicles]);
+  }
+
+  if (!hasTotalRevenue) {
+    entries.push(["totalRevenue", totalRevenue]);
+  }
+
+  return entries;
+};
+
+const getSingleReportExportHeaders = (report) => {
+  const rows = Array.isArray(report?.data?.data) ? report.data.data : [];
+  if (rows.length === 0) return [];
+
+  const isParking = isParkingSingleReport(report);
+  const hiddenFields = new Set([
+    "reportid",
+    "submitted",
+    "submittedat",
+    "submittedatserver",
+    "id",
+    "_id",
+    "status",
+  ]);
+
+  if (isParking) {
+    hiddenFields.add("pricingtype");
+  }
+
+  const headers = Object.keys(rows[0]).filter(
+    (key) => !hiddenFields.has(normalizeExportKey(key)),
+  );
+
+  const priorityOrder = [
+    "ticketno",
+    "plateno",
+    "vehicletype",
+    "passengertype",
+    "timein",
+    "timeout",
+    "time",
+    "date",
+    "baserate",
+    "baseprice",
+    "finalprice",
+    "price",
+  ];
+
+  headers.sort((a, b) => {
+    const aIndex = priorityOrder.indexOf(normalizeExportKey(a));
+    const bIndex = priorityOrder.indexOf(normalizeExportKey(b));
+
+    if (aIndex === -1 && bIndex === -1) return 0;
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
+
+  return headers;
+};
+
+const formatSingleReportCellValue = (key, value) => {
+  const normalized = normalizeExportKey(key);
+
+  if (value === null || value === undefined || value === "") return "-";
+
+  if (isExportCurrencyField(key)) {
+    const parsed = parseExportAmount(value);
+    return Number.isNaN(parsed) ? value : formatExportCurrency(parsed);
+  }
+
+  if (["time", "timein", "timeout", "arrivaltime", "departuretime", "departure"].includes(normalized)) {
+    const asDate = new Date(value);
+    if (!Number.isNaN(asDate.getTime())) {
+      return asDate.toLocaleString("en-US", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+  }
+
+  if (normalized === "date") {
+    const asDate = new Date(value);
+    if (!Number.isNaN(asDate.getTime())) return asDate.toLocaleDateString();
+  }
+
+  return value;
+};
 
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload)
@@ -498,6 +700,35 @@ const Reports = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
+
+  const fetchAllReportsForExport = async () => {
+    const response = await fetch(API_URL);
+    if (!response.ok) throw new Error("Failed to fetch all reports for export");
+
+    const data = await response.json();
+    return (Array.isArray(data) ? data : []).map((item) => ({
+      ...item,
+      id: item._id || item.id,
+    }));
+  };
+
+  const getOverallExportRows = async () => {
+    const hasSearch = Boolean(String(searchQuery || "").trim());
+    const isAllCategory = selectedCategory === "All";
+    const isAllDate = dateFilterType === "All";
+
+    if (isAllCategory && isAllDate && !hasSearch) {
+      try {
+        return await fetchAllReportsForExport();
+      } catch (error) {
+        console.error("Fallback to local records for export:", error);
+        return records;
+      }
+    }
+
+    return filtered;
+  };
+
   const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
     try {
       const response = await fetch(imageSrc);
@@ -516,11 +747,12 @@ const Reports = () => {
   };
 
   const handleExportExcel = async () => {
-    if (filtered.length === 0) return alert("No records to export.");
+    const exportRows = await getOverallExportRows();
+    if (exportRows.length === 0) return alert("No records to export.");
 
     try {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Overall Terminal Report");
+      const worksheet = workbook.addWorksheet("Overall IBT Report");
 
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:D4');
@@ -529,15 +761,19 @@ const Reports = () => {
       worksheet.addRow([]);
       worksheet.addRow([]);
       worksheet.addRow([]);
-      const titleRow = worksheet.addRow(["OVERALL TERMINAL REPORTS"]);
+      const titleRow = worksheet.addRow(["OVERALL IBT REPORTS"]);
       const titleRowNumber = titleRow.number;
       worksheet.mergeCells(`A${titleRowNumber}:D${titleRowNumber}`);
       const titleCell = worksheet.getCell(`A${titleRowNumber}`);
       titleCell.font = { bold: true, size: 16, color: { argb: 'FFDC2626' } };
       titleCell.alignment = { horizontal: 'center' };
 
-      const getRevenue = (item) => item.data?.statistics?.totalRevenue || item.data?.statistics?.revenue || 0;
-      const overallTotalRevenue = filtered.reduce((sum, item) => sum + getRevenue(item), 0);
+      const getRevenue = (item) => {
+        const rawValue = item.data?.statistics?.totalRevenue ?? item.data?.statistics?.revenue;
+        const parsedValue = parseExportAmount(rawValue);
+        return Number.isNaN(parsedValue) ? 0 : parsedValue;
+      };
+      const overallTotalRevenue = exportRows.reduce((sum, item) => sum + getRevenue(item), 0);
 
       worksheet.addRow([]);
       worksheet.addRow([
@@ -561,7 +797,7 @@ const Reports = () => {
         cell.alignment = { horizontal: 'center' };
       });
 
-      filtered.forEach((item) => {
+      exportRows.forEach((item) => {
         worksheet.addRow([
           item.id ? item.id.substring(0, 8).toUpperCase() : "-",
           item.type || "-",
@@ -577,7 +813,7 @@ const Reports = () => {
       worksheet.columns = [{ width: 20 }, { width: 25 }, { width: 25 }, { width: 25 }];
 
       const buffer = await workbook.xlsx.writeBuffer();
-      saveAs(new Blob([buffer]), `Overall_Terminal_Report_${new Date().toISOString().split("T")[0]}.xlsx`);
+      saveAs(new Blob([buffer]), `Overall_IBT_Report_${new Date().toISOString().split("T")[0]}.xlsx`);
 
       logActivity(role, "EXPORT_OVERALL_EXCEL", "Exported branded Overall Report", "Reports");
     } catch (err) {
@@ -586,8 +822,9 @@ const Reports = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    if (filtered.length === 0) {
+  const handleExportPDF = async () => {
+    const exportRows = await getOverallExportRows();
+    if (exportRows.length === 0) {
       alert("No records to export.");
       return;
     }
@@ -595,6 +832,8 @@ const Reports = () => {
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+    const footerHeight = 24;
+    const footerY = pageHeight - footerHeight;
 
     // HEADER IMAGE
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
@@ -602,7 +841,7 @@ const Reports = () => {
     // TITLE
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("OVERALL TERMINAL REPORTS", pageWidth / 2, 40, { align: "center" });
+    doc.text("OVERALL IBT REPORTS", pageWidth / 2, 40, { align: "center" });
 
     // META DATA
     const authCollector = getExportCollectorName();
@@ -612,12 +851,19 @@ const Reports = () => {
     doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 50, { align: "right" });
     doc.text(`Status: Completed`, pageWidth - 15, 56, { align: "right" });
 
+    const getRevenue = (item) => {
+      const rawValue = item.data?.statistics?.totalRevenue ?? item.data?.statistics?.revenue;
+      const parsedValue = parseExportAmount(rawValue);
+      return Number.isNaN(parsedValue) ? 0 : parsedValue;
+    };
+    const overallTotalRevenue = exportRows.reduce((sum, item) => sum + getRevenue(item), 0);
+    doc.text(`Overall Revenue: ${formatExportCurrency(overallTotalRevenue)}`, pageWidth - 15, 62, {
+      align: "right",
+    });
+
     const tableColumn = ["Report ID", "Type", "Author", "Revenue"];
-    const tableRows = filtered.map((item) => {
-      const revenue =
-        item.data?.statistics?.totalRevenue ||
-        item.data?.statistics?.revenue ||
-        0;
+    const tableRows = exportRows.map((item) => {
+      const revenue = getRevenue(item);
 
       return [
         item.id ? item.id.substring(0, 8).toUpperCase() : "-",
@@ -628,26 +874,29 @@ const Reports = () => {
     });
 
     autoTable(doc, {
-      startY: 65,
+      startY: 70,
       head: [tableColumn],
       body: tableRows,
       theme: "striped",
       headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
       styles: { fontSize: 9, cellPadding: 3 },
-      margin: { left: 15, right: 15 },
+      margin: { left: 15, right: 15, bottom: footerHeight + 6 },
       columnStyles: { 0: { cellWidth: 30 } },
       didDrawPage: () => {
-        doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+        doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, footerHeight);
       },
     });
 
-    doc.save(`Overall_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+    doc.save(`Overall_IBT_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
 
  
   const handleSingleExportExcel = async (report) => {
     try {
       const workbook = new ExcelJS.Workbook();
+      const isParkingReport = isParkingSingleReport(report);
+      const collectorName = getParkingCollectorName(report);
+      const statsEntries = getSingleReportStatisticEntries(report);
 
     
       const wsSummary = workbook.addWorksheet("Summary");
@@ -660,21 +909,22 @@ const Reports = () => {
       wsSummary.addRow(["REPORT DETAILS"]).font = { bold: true, size: 12 };
       wsSummary.addRow(["ID", report.id]);
       wsSummary.addRow(["Type", report.type]);
-      wsSummary.addRow(["Author", report.author]);
+      wsSummary.addRow(["Operator", report.author || "Admin"]);
+      if (isParkingReport && collectorName && collectorName !== "-") {
+        wsSummary.addRow(["Collector", collectorName]);
+      }
       wsSummary.addRow(["Date", formatReportDate(report.createdAt || report.date)]);
       wsSummary.addRow([]);
 
       const statsHeader = wsSummary.addRow(["STATISTICS"]);
       statsHeader.font = { bold: true };
 
-      if (report.data?.statistics) {
-        Object.entries(report.data.statistics).forEach(([key, value]) => {
-          const formattedValue = isExportCurrencyField(key)
-            ? formatExportCurrency(value)
-            : value;
-          wsSummary.addRow([formatStatisticsLabel(key), formattedValue]);
-        });
-      }
+      statsEntries.forEach(([key, value]) => {
+        const formattedValue = isExportCurrencyField(key)
+          ? formatExportCurrency(value)
+          : value;
+        wsSummary.addRow([formatStatisticsLabel(key), formattedValue]);
+      });
       const lastRowSummary = wsSummary.lastRow.number + 2;
       wsSummary.getRow(lastRowSummary).height = 52.5;
       await addImageToWorksheet(workbook, wsSummary, footerImg, `A${lastRowSummary}:B${lastRowSummary + 3}`);
@@ -684,16 +934,25 @@ const Reports = () => {
 
       if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
         const wsData = workbook.addWorksheet("Data Records");
-        const headers = Object.keys(report.data.data[0]);
+        const headers = getSingleReportExportHeaders(report);
 
-        const dataHeaderRow = wsData.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").trim()));
+        const dataHeaderRow = wsData.addRow(
+          headers.map((h) =>
+            String(h)
+              .replace(/([A-Z])/g, " $1")
+              .replace(/_/g, " ")
+              .trim(),
+          ),
+        );
         dataHeaderRow.eachCell((cell) => {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
           cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
         });
 
-        report.data.data.forEach(row => {
-          wsData.addRow(Object.values(row));
+        report.data.data.forEach((row) => {
+          wsData.addRow(
+            headers.map((header) => formatSingleReportCellValue(header, row[header])),
+          );
         });
 
         wsData.getRow(1).height = 35;
@@ -716,6 +975,12 @@ const Reports = () => {
     const doc = new jsPDF("l", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+    const footerHeight = 24;
+    const footerY = pageHeight - footerHeight;
+    const isParkingReport = isParkingSingleReport(report);
+    const operatorName = report.author || "Admin";
+    const collectorName = getParkingCollectorName(report);
+    const statsEntries = getSingleReportStatisticEntries(report);
 
     // HEADER IMAGE
     doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
@@ -735,23 +1000,20 @@ const Reports = () => {
       15,
       50,
     );
-    doc.text(`Collector: ${report.author || "Admin"}`, 15, 56);
+    doc.text(`Operator: ${operatorName}`, 15, 56);
+    if (isParkingReport && collectorName && collectorName !== "-") {
+      doc.text(`Collector: ${collectorName}`, 15, 62);
+    }
     doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 50, {
       align: "right",
     });
     doc.text(`Status: Completed`, pageWidth - 15, 56, { align: "right" });
 
-    let currentY = 65;
+    let currentY = isParkingReport && collectorName && collectorName !== "-" ? 71 : 65;
 
     // STATISTICS
-    if (report.data?.statistics) {
-      const statsData = Object.entries(report.data.statistics)
-        .filter(
-          ([key]) =>
-            !["collectorid", "arrivalslogged", "departureslogged"].includes(
-              key.toLowerCase(),
-            ),
-        )
+    if (statsEntries.length > 0) {
+      const statsData = statsEntries
         .map(([k, v]) => [
           formatStatisticsLabel(k),
           isExportCurrencyField(k) ? formatExportCurrency(v) : v,
@@ -768,9 +1030,9 @@ const Reports = () => {
           fontStyle: "bold",
         },
         styles: { fontSize: 9, cellPadding: 3 },
-        margin: { left: 15, right: 15 },
+        margin: { left: 15, right: 15, bottom: footerHeight + 6 },
         didDrawPage: () => {
-          doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+          doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, footerHeight);
         },
       });
 
@@ -784,47 +1046,7 @@ const Reports = () => {
       doc.text("Detailed Transaction Records", 15, currentY);
 
       const rawData = report.data.data;
-      const normalizeKey = (key) =>
-        String(key || "").toLowerCase().replace(/[\s_-]/g, "");
-
-      const hiddenFields = [
-        "reportid",
-        "submitted",
-        "submittedat",
-        "submittedatserver",
-        "id",
-        "_id",
-        "status",
-      ];
-
-      let headers = Object.keys(rawData[0]).filter(
-        (key) => !hiddenFields.includes(normalizeKey(key)),
-      );
-
-      const priorityOrder = [
-        "ticketno",
-        "plateno",
-        "vehicletype",
-        "passengertype",
-        "pricingtype",
-        "timein",
-        "timeout",
-        "time",
-        "date",
-        "baseprice",
-        "finalprice",
-        "price",
-      ];
-
-      headers.sort((a, b) => {
-        const aIndex = priorityOrder.indexOf(normalizeKey(a));
-        const bIndex = priorityOrder.indexOf(normalizeKey(b));
-
-        if (aIndex === -1 && bIndex === -1) return 0;
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
-      });
+      const headers = getSingleReportExportHeaders(report);
 
       const formattedHeaders = headers.map((h) =>
         String(h)
@@ -834,48 +1056,8 @@ const Reports = () => {
           .toUpperCase(),
       );
 
-      const formatValue = (key, value) => {
-        const normalized = normalizeKey(key);
-
-        if (value === null || value === undefined || value === "") return "-";
-
-        let cleanValue = value;
-        if (typeof value === "string") {
-          cleanValue = value.replace(/[₱,]/g, "").trim();
-        }
-
-        if (
-          normalized.includes("price") ||
-          normalized.includes("revenue") ||
-          normalized.includes("amount")
-        ) {
-          const num = Number(cleanValue);
-          return Number.isNaN(num)
-            ? "-"
-            : formatExportCurrency(num);
-        }
-
-        if (["time", "timein", "timeout"].includes(normalized)) {
-          const d = new Date(`1970-01-01T${value}`);
-          if (!isNaN(d)) {
-            return d.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            });
-          }
-        }
-
-        if (normalized === "date") {
-          const d = new Date(value);
-          if (!isNaN(d)) return d.toLocaleDateString();
-        }
-
-        return value;
-      };
-
       const rows = rawData.map((row) =>
-        headers.map((header) => formatValue(header, row[header])),
+        headers.map((header) => formatSingleReportCellValue(header, row[header])),
       );
 
       autoTable(doc, {
@@ -899,13 +1081,13 @@ const Reports = () => {
         columnStyles: {
           0: { cellWidth: 25 },
         },
-        margin: { left: 15, right: 15, bottom: 35 },
+        margin: { left: 15, right: 15, bottom: footerHeight + 6 },
         didDrawPage: () => {
-          doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+          doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, footerHeight);
         },
       });
     } else {
-      doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+      doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, footerHeight);
     }
 
     doc.save(`${report.type}_Report_${report.id?.substring(0, 8) || "report"}.pdf`);
