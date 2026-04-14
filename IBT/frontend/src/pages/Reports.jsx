@@ -43,6 +43,28 @@ const formatStatisticsLabel = (rawKey) => {
   return String(rawKey).replace(/([A-Z])/g, " $1").trim();
 };
 
+const normalizeExportKey = (key) =>
+  String(key || "").replace(/[\s_-]/g, "").toLowerCase();
+
+const isExportCurrencyField = (key) =>
+  ["price", "finalprice", "amount", "revenue", "fee", "total"].some((term) =>
+    normalizeExportKey(key).includes(term),
+  );
+
+const formatExportCurrency = (value) => {
+  if (value === null || value === undefined || value === "") return "-";
+  const numeric = Number(String(value).replace(/[₱,]/g, "").trim());
+  return Number.isNaN(numeric)
+    ? value
+    : `₱${numeric.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+};
+
+const getExportCollectorName = () =>
+  localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin";
+
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload)
     return (
@@ -503,36 +525,48 @@ const Reports = () => {
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:D4');
 
-      worksheet.mergeCells('A6:D6');
-      const titleCell = worksheet.getCell('A6');
-      titleCell.value = 'OVERALL TERMINAL REPORTS';
-      titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
+      worksheet.addRow([]);
+      worksheet.addRow([]);
+      worksheet.addRow([]);
+      worksheet.addRow([]);
+      const titleRow = worksheet.addRow(["OVERALL TERMINAL REPORTS"]);
+      const titleRowNumber = titleRow.number;
+      worksheet.mergeCells(`A${titleRowNumber}:D${titleRowNumber}`);
+      const titleCell = worksheet.getCell(`A${titleRowNumber}`);
+      titleCell.font = { bold: true, size: 16, color: { argb: 'FFDC2626' } };
       titleCell.alignment = { horizontal: 'center' };
 
       const getRevenue = (item) => item.data?.statistics?.totalRevenue || item.data?.statistics?.revenue || 0;
       const overallTotalRevenue = filtered.reduce((sum, item) => sum + getRevenue(item), 0);
 
-      const adminName = localStorage.getItem("authName") || localStorage.getItem("authEmail") || "Admin";
-
       worksheet.addRow([]);
-      worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', `Overall Total Revenue: Php ${overallTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`]);
-      worksheet.addRow([`Collector: ${adminName}`, '', '', '']); 
+      worksheet.addRow([
+        `Date: ${new Date().toLocaleDateString()}`,
+        '',
+        `Collector: ${getExportCollectorName()}`,
+        `Status: Completed`,
+      ]);
+      worksheet.addRow([
+        '',
+        '',
+        '',
+        `Overall Total Revenue: ${formatExportCurrency(overallTotalRevenue)}`,
+      ]);
       worksheet.addRow([]);
 
-      const headerRow = worksheet.addRow(["Report ID", "Department", "Operator", "Revenue"]);
+      const headerRow = worksheet.addRow(["Report ID", "Type", "Author", "Revenue"]);
       headerRow.eachCell((cell) => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
         cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
         cell.alignment = { horizontal: 'center' };
       });
 
-      
       filtered.forEach((item) => {
         worksheet.addRow([
           item.id ? item.id.substring(0, 8).toUpperCase() : "-",
           item.type || "-",
           item.author || "-",
-          `Php ${getRevenue(item).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+          formatExportCurrency(getRevenue(item)),
         ]);
       });
 
@@ -553,42 +587,62 @@ const Reports = () => {
   };
 
   const handleExportPDF = () => {
-  if (filtered.length === 0) {
-    alert("No records to export.");
-    return;
-  }
+    if (filtered.length === 0) {
+      alert("No records to export.");
+      return;
+    }
 
-  const doc = new jsPDF();
+    const doc = new jsPDF("l", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-  doc.setFontSize(16);
-  doc.text("Overall Reports", 14, 15);
+    // HEADER IMAGE
+    doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-  const tableColumn = ["Report ID", "Type", "Author", "Revenue"];
+    // TITLE
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("OVERALL TERMINAL REPORTS", pageWidth / 2, 40, { align: "center" });
 
-  const tableRows = filtered.map((item) => {
-    const revenue =
-      item.data?.statistics?.totalRevenue ||
-      item.data?.statistics?.revenue ||
-      0;
+    // META DATA
+    const authCollector = getExportCollectorName();
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Collector: ${authCollector}`, 15, 50);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 50, { align: "right" });
+    doc.text(`Status: Completed`, pageWidth - 15, 56, { align: "right" });
 
-    return [
-      item.id ? item.id.substring(0, 8).toUpperCase() : "-",
-      item.type || "-",
-      item.author || "-",
-      `Php ${revenue.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      })}`,
-    ];
-  });
+    const tableColumn = ["Report ID", "Type", "Author", "Revenue"];
+    const tableRows = filtered.map((item) => {
+      const revenue =
+        item.data?.statistics?.totalRevenue ||
+        item.data?.statistics?.revenue ||
+        0;
 
-  autoTable(doc, {
-    startY: 25,
-    head: [tableColumn],
-    body: tableRows,
-  });
+      return [
+        item.id ? item.id.substring(0, 8).toUpperCase() : "-",
+        item.type || "-",
+        item.author || "-",
+        formatExportCurrency(revenue),
+      ];
+    });
 
-  doc.save(`Overall_Report_${new Date().toISOString().split("T")[0]}.pdf`);
-};
+    autoTable(doc, {
+      startY: 65,
+      head: [tableColumn],
+      body: tableRows,
+      theme: "striped",
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: 15, right: 15 },
+      columnStyles: { 0: { cellWidth: 30 } },
+      didDrawPage: () => {
+        doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+      },
+    });
+
+    doc.save(`Overall_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+  };
 
  
   const handleSingleExportExcel = async (report) => {
@@ -615,7 +669,10 @@ const Reports = () => {
 
       if (report.data?.statistics) {
         Object.entries(report.data.statistics).forEach(([key, value]) => {
-          wsSummary.addRow([formatStatisticsLabel(key), value]);
+          const formattedValue = isExportCurrencyField(key)
+            ? formatExportCurrency(value)
+            : value;
+          wsSummary.addRow([formatStatisticsLabel(key), formattedValue]);
         });
       }
       const lastRowSummary = wsSummary.lastRow.number + 2;
@@ -646,7 +703,7 @@ const Reports = () => {
       }
 
       const buffer = await workbook.xlsx.writeBuffer();
-      doc.save(`${report.type}_Report_${report.id?.substring(0, 8) || "report"}.pdf`);
+      saveAs(new Blob([buffer]), `${report.type}_Report_${report.id?.substring(0, 8) || "report"}.xlsx`);
 
       logActivity(role, "EXPORT_SINGLE_EXCEL", `Exported branded Single Report for ${report.id}`, "Reports");
     } catch (err) {
@@ -656,206 +713,203 @@ const Reports = () => {
   };
 
   const handleSingleExportPDF = (report) => {
-  const doc = new jsPDF("l", "mm", "a4");
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+    const doc = new jsPDF("l", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-  // HEADER IMAGE
-  doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+    // HEADER IMAGE
+    doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-  // TITLE
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text(`${report.type.toUpperCase()} REPORT`, pageWidth / 2, 40, { align: "center" });
-
-  // META DATA
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-
-  doc.text(`Report ID: ${report.id ? report.id.substring(0, 8).toUpperCase() : "-"}`, 15, 50);
-  doc.text(`Author/Collector: ${report.author || "Admin"}`, 15, 56);
-
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 50, { align: "right" });
-  doc.text(`Status: Completed`, pageWidth - 15, 56, { align: "right" });
-
-  let currentY = 65;
-
-  // STATISTICS
-  if (report.data?.statistics) {
-    const statsData = Object.entries(report.data.statistics)
-      .filter(([key]) => !["collectorid", "arrivalslogged", "departureslogged"].includes(key.toLowerCase()))
-      .map(([k, v]) => [
-        formatStatisticsLabel(k),
-        typeof v === "number" && k.toLowerCase().includes("revenue")
-          ? `Php ${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-          : v,
-      ]);
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [["Summary Metric", "Value"]],
-      body: statsData,
-      theme: "striped",
-      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
-      styles: { fontSize: 9, cellPadding: 3 },
-      margin: { left: 15, right: 15 },
+    // TITLE
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${report.type?.toUpperCase() || "REPORT"} REPORT`, pageWidth / 2, 40, {
+      align: "center",
     });
 
-    currentY = doc.lastAutoTable.finalY + 10;
-  }
+    // META DATA
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Report ID: ${report.id ? report.id.substring(0, 8).toUpperCase() : "-"}`,
+      15,
+      50,
+    );
+    doc.text(`Collector: ${report.author || "Admin"}`, 15, 56);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 50, {
+      align: "right",
+    });
+    doc.text(`Status: Completed`, pageWidth - 15, 56, { align: "right" });
 
-  // DATA RECORDS
- // DATA RECORDS (CLEAN FORMAT)
-if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("Detailed Transaction Records", 15, currentY);
+    let currentY = 65;
 
-  const rawData = report.data.data;
+    // STATISTICS
+    if (report.data?.statistics) {
+      const statsData = Object.entries(report.data.statistics)
+        .filter(
+          ([key]) =>
+            !["collectorid", "arrivalslogged", "departureslogged"].includes(
+              key.toLowerCase(),
+            ),
+        )
+        .map(([k, v]) => [
+          formatStatisticsLabel(k),
+          isExportCurrencyField(k) ? formatExportCurrency(v) : v,
+        ]);
 
-  const normalizeKey = (key) =>
-    key.toLowerCase().replace(/[\s_-]/g, "");
-
-  // ✅ REMOVE UNNECESSARY FIELDS
-  const hiddenFields = [
-    "reportid",
-    "submitted",
-    "submittedat",
-    "submittedatserver",
-    "id",
-    "_id",
-    "status",
-  ];
-
-  // ✅ FORMAT HEADERS (CLEAN + ORDERED)
-  let headers = Object.keys(rawData[0]).filter(
-    (key) => !hiddenFields.includes(normalizeKey(key))
-  );
-
-  // PRIORITY ORDER (Parking / Terminal Style)
-  const priorityOrder = [
-    "ticketno",
-    "plateno",
-    "vehicletype",
-    "passengertype",
-    "pricingtype",
-    "timein",
-    "timeout",
-    "time",
-    "date",
-    "baseprice",
-    "finalprice",
-    "price",
-  ];
-
-  headers.sort((a, b) => {
-    const aIndex = priorityOrder.indexOf(normalizeKey(a));
-    const bIndex = priorityOrder.indexOf(normalizeKey(b));
-
-    if (aIndex === -1 && bIndex === -1) return 0;
-    if (aIndex === -1) return 1;
-    if (bIndex === -1) return -1;
-    return aIndex - bIndex;
-  });
-
-  // FORMAT HEADER LABELS
-  const formattedHeaders = headers.map((h) =>
-    h
-      .replace(/([A-Z])/g, " $1")
-      .replace(/_/g, " ")
-      .trim()
-      .toUpperCase()
-  );
-
-  // ✅ FORMAT CELL VALUES
-  const formatValue = (key, value) => {
-  const normalized = normalizeKey(key);
-
-  // ✅ HANDLE NULL / UNDEFINED ONLY
-  if (value === null || value === undefined || value === "") return "-";
-
-  // ✅ CLEAN STRING NUMBERS (REMOVE ₱, COMMAS, SPACES)
-  let cleanValue = value;
-  if (typeof value === "string") {
-    cleanValue = value.replace(/[₱,]/g, "").trim();
-  }
-
-  // ✅ MONEY FORMAT (SAFE)
-  if (
-    normalized.includes("price") ||
-    normalized.includes("revenue") ||
-    normalized.includes("amount")
-  ) {
-    const num = Number(cleanValue);
-    return isNaN(num)
-      ? "-" // fallback if invalid
-      : `₱${num.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-        })}`;
-  }
-
-  // ✅ TIME FORMAT
-  if (["time", "timein", "timeout"].includes(normalized)) {
-    const d = new Date(`1970-01-01T${value}`);
-    if (!isNaN(d)) {
-      return d.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Summary Metric", "Value"]],
+        body: statsData,
+        theme: "striped",
+        headStyles: {
+          fillColor: [16, 185, 129],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        styles: { fontSize: 9, cellPadding: 3 },
+        margin: { left: 15, right: 15 },
+        didDrawPage: () => {
+          doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+        },
       });
+
+      currentY = doc.lastAutoTable.finalY + 10;
     }
-  }
 
-  // ✅ DATE FORMAT
-  if (normalized === "date") {
-    const d = new Date(value);
-    if (!isNaN(d)) return d.toLocaleDateString();
-  }
+    // DATA RECORDS
+    if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("Detailed Transaction Records", 15, currentY);
 
-  return value;
-};
+      const rawData = report.data.data;
+      const normalizeKey = (key) =>
+        String(key || "").toLowerCase().replace(/[\s_-]/g, "");
 
-  const rows = rawData.map((row) =>
-    headers.map((header) => formatValue(header, row[header]))
-  );
+      const hiddenFields = [
+        "reportid",
+        "submitted",
+        "submittedat",
+        "submittedatserver",
+        "id",
+        "_id",
+        "status",
+      ];
 
-  autoTable(doc, {
-    startY: currentY + 5,
-    head: [formattedHeaders],
-    body: rows,
-    tableWidth: "auto",
+      let headers = Object.keys(rawData[0]).filter(
+        (key) => !hiddenFields.includes(normalizeKey(key)),
+      );
 
-    theme: "striped",
+      const priorityOrder = [
+        "ticketno",
+        "plateno",
+        "vehicletype",
+        "passengertype",
+        "pricingtype",
+        "timein",
+        "timeout",
+        "time",
+        "date",
+        "baseprice",
+        "finalprice",
+        "price",
+      ];
 
-    styles: {
-      fontSize: 8,
-      cellPadding: 4,
-      valign: "middle",
-      overflow: "linebreak",
-    },
+      headers.sort((a, b) => {
+        const aIndex = priorityOrder.indexOf(normalizeKey(a));
+        const bIndex = priorityOrder.indexOf(normalizeKey(b));
 
-    headStyles: {
-      fillColor: [16, 185, 129],
-      textColor: 255,
-      fontStyle: "bold",
-      halign: "center",
-    },
+        if (aIndex === -1 && bIndex === -1) return 0;
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
 
-    columnStyles: {
-      0: { cellWidth: 25 }, // Ticket No
-    },
+      const formattedHeaders = headers.map((h) =>
+        String(h)
+          .replace(/([A-Z])/g, " $1")
+          .replace(/_/g, " ")
+          .trim()
+          .toUpperCase(),
+      );
 
-    margin: { left: 15, right: 15, bottom: 35 },
+      const formatValue = (key, value) => {
+        const normalized = normalizeKey(key);
 
-    didDrawPage: () => {
+        if (value === null || value === undefined || value === "") return "-";
+
+        let cleanValue = value;
+        if (typeof value === "string") {
+          cleanValue = value.replace(/[₱,]/g, "").trim();
+        }
+
+        if (
+          normalized.includes("price") ||
+          normalized.includes("revenue") ||
+          normalized.includes("amount")
+        ) {
+          const num = Number(cleanValue);
+          return Number.isNaN(num)
+            ? "-"
+            : formatExportCurrency(num);
+        }
+
+        if (["time", "timein", "timeout"].includes(normalized)) {
+          const d = new Date(`1970-01-01T${value}`);
+          if (!isNaN(d)) {
+            return d.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            });
+          }
+        }
+
+        if (normalized === "date") {
+          const d = new Date(value);
+          if (!isNaN(d)) return d.toLocaleDateString();
+        }
+
+        return value;
+      };
+
+      const rows = rawData.map((row) =>
+        headers.map((header) => formatValue(header, row[header])),
+      );
+
+      autoTable(doc, {
+        startY: currentY + 5,
+        head: [formattedHeaders],
+        body: rows,
+        tableWidth: "auto",
+        theme: "striped",
+        styles: {
+          fontSize: 8,
+          cellPadding: 4,
+          valign: "middle",
+          overflow: "linebreak",
+        },
+        headStyles: {
+          fillColor: [16, 185, 129],
+          textColor: 255,
+          fontStyle: "bold",
+          halign: "center",
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+        },
+        margin: { left: 15, right: 15, bottom: 35 },
+        didDrawPage: () => {
+          doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+        },
+      });
+    } else {
       doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
-    },
-  });
-} else {
-  doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
-}
-doc.save(`${report.type}_Report_${report.id?.substring(0, 8) || "report"}.pdf`);
-};
+    }
+
+    doc.save(`${report.type}_Report_${report.id?.substring(0, 8) || "report"}.pdf`);
+  };
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
