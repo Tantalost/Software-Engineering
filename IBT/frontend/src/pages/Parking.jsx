@@ -34,7 +34,8 @@ import {
   CheckCircle,
   ChevronLeft,   
   ChevronRight,
-  Calendar
+  Calendar,
+  ChevronDown
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -1690,21 +1691,29 @@ const Parking = () => {
           
           <div className="flex flex-wrap items-center gap-3">
             <ParkingFilter activeType={activeType} onTypeChange={setActiveType} />
-            <select
-              value={activeStatus}
-              onChange={(e) => {
-                setActiveStatus(e.target.value);
-                setCurrentPage(1); 
-              }}
-              className="h-[42px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer"
-            >
-              <option value="All">All Status</option>
-              <option value="Parked">Parked</option>
-              <option value="Departed">Departed</option>
-            </select>
+    
+            <div className="relative w-full sm:w-auto shrink-0">
+              <select
+                value={activeStatus}
+                onChange={(e) => {
+                  setActiveStatus(e.target.value);
+                  setCurrentPage(1); 
+                }}
+                className="w-full appearance-none h-[42px] pl-3 pr-12 border border-slate-300 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all"
+              >
+                <option value="All">All Status</option>
+                <option value="Parked">Parked</option>
+                <option value="Departed">Departed</option>
+              </select>
+              
+              <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">
+                <div className="border-l border-slate-300 pl-2 h-5 flex items-center justify-center">
+                  <ChevronDown size={16} className="text-slate-500" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Right Side: Wrapped Date Filters and Logs Button Together */}
           <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
             {role === "superadmin" && (
               <div className="flex flex-wrap items-center gap-2">

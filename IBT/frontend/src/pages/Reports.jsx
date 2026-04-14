@@ -18,7 +18,7 @@ import {
   Trash2,
   Calendar,
   Tag,
-  History,
+  ChevronDown,
   ListChecks,
   X,
   Loader2,
@@ -895,22 +895,29 @@ const Reports = () => {
         </div>
 
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-          
+      
           <div className="relative w-full sm:w-64 shrink-0">
+          
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
               <Tag size={16} />
             </div>
+            
             <select
               value={selectedCategory}
               onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-10 pr-8 h-[42px] bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+              className="w-full appearance-none pl-10 pr-12 h-[42px] bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer transition-all"
             >
               {["All", "Bus Trips", "Terminal Fees", "Tenant/Lease", "Parking", "Lost & Found"].map((cat) => (
                 <option key={cat} value={cat}>{cat === "All" ? "All Categories" : cat}</option>
               ))}
             </select>
-          </div>
 
+            <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">
+              <div className="border-l border-slate-300 pl-2 h-5 flex items-center justify-center">
+                <ChevronDown size={16} className="text-slate-500" />
+              </div>
+            </div>
+          </div>
           <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
             
             <div className="flex items-center gap-2">
