@@ -602,6 +602,23 @@ export default function StallsPage() {
   }
 };
 
+  const getApplicationRequirementKeys = (floorValue: string): Array<keyof FileState> => {
+    if (floorValue === 'Night Market') {
+      return ['permit', 'validId', 'clearance', 'communityTax', 'policeClearance'];
+    }
+    return ['permit', 'validId', 'clearance'];
+  };
+
+  const setRequirementUploadProgress = (keys: Array<keyof FileState>, progress: number) => {
+    setUploadProgress((prev) => {
+      const next = { ...prev };
+      keys.forEach((key) => {
+        next[key] = progress;
+      });
+      return next;
+    });
+  };
+
   const handleApiError = async (res: any) => {
     if (!res.ok) {
       const errorText = await res.text();
@@ -626,9 +643,17 @@ export default function StallsPage() {
 
   const submitApplication = async () => {
     if (!user) return;
+    const requirementKeys = getApplicationRequirementKeys(selectedFloor);
     setApplying(true);
+    setRequirementUploadProgress(requirementKeys, 0.1);
 
     setTimeout(async () => {
+      let progressValue = 0.1;
+      const progressInterval = setInterval(() => {
+        progressValue = Math.min(progressValue + 0.08, 0.9);
+        setRequirementUploadProgress(requirementKeys, progressValue);
+      }, 180);
+
       try {
         const formPayload = new FormData();
         const fullCombinedName = `${formData.firstName} ${formData.middleName ? formData.middleName + ' ' : ''}${formData.lastName}${formData.suffix ? ' ' + formData.suffix : ''}`.replace(/\s+/g, ' ').trim();
@@ -672,6 +697,9 @@ export default function StallsPage() {
 
         await handleApiError(res);
 
+        clearInterval(progressInterval);
+        setRequirementUploadProgress(requirementKeys, 1);
+
         setModalVisible(false);
         setModalStep('form');
         Alert.alert("Success", "Application Submitted!");
@@ -693,9 +721,16 @@ export default function StallsPage() {
 
 setSelectedStall(null);
 
+        setTimeout(() => {
+          setRequirementUploadProgress(requirementKeys, 0);
+        }, 1000);
+
       } catch (error: any) {
+        clearInterval(progressInterval);
+        setRequirementUploadProgress(requirementKeys, 0);
         Alert.alert("Submission Failed", error.message);
       } finally {
+        clearInterval(progressInterval);
         setApplying(false);
       }
     }, 100);
