@@ -337,7 +337,7 @@ const Reports = () => {
       setRecords(data.map((item) => ({ ...item, id: item._id || item.id })));
     } catch (err) {
       console.error(err);
-      showToast("error", "Failed to delete report.");
+      showToast("error", "Failed to fetch reports.");
     } finally {
       setLoading(false);
     }
@@ -553,78 +553,42 @@ const Reports = () => {
   };
 
   const handleExportPDF = () => {
-    if (filtered.length === 0) return alert("No records to export.");
+  if (filtered.length === 0) {
+    alert("No records to export.");
+    return;
+  }
 
-    const doc = new jsPDF("p", "mm", "a4");
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const getRevenue = (item) =>
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text("Overall Reports", 14, 15);
+
+  const tableColumn = ["Report ID", "Type", "Author", "Revenue"];
+
+  const tableRows = filtered.map((item) => {
+    const revenue =
       item.data?.statistics?.totalRevenue ||
       item.data?.statistics?.revenue ||
       0;
-    const overallTotalRevenue = filtered.reduce(
-      (sum, item) => sum + getRevenue(item),
-      0,
-    );
 
-    doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
+    return [
+      item.id ? item.id.substring(0, 8).toUpperCase() : "-",
+      item.type || "-",
+      item.author || "-",
+      `Php ${revenue.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+      })}`,
+    ];
+  });
 
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("OVERALL REPORTS", pageWidth / 2, 45, { align: "center" });
+  autoTable(doc, {
+    startY: 25,
+    head: [tableColumn],
+    body: tableRows,
+  });
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 15, 55);
-    doc.text(
-      `Collector: ${localStorage.getItem("authName") || "Admin"}`,
-      15,
-      61,
-    );
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Overall Total Revenue:", pageWidth - 70, 55);
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      `₱${overallTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-      pageWidth - 15,
-      55,
-      { align: "right" },
-    );
-
-    autoTable(doc, {
-      startY: 70,
-      margin: { bottom: 35 },
-      head: [["Report ID", "Department", "Operator", "Revenue"]],
-      body: filtered.map((item) => [
-        item.id ? item.id.substring(0, 8).toUpperCase() : "-",
-        item.type || "-",
-        item.author || "-",
-        `₱${getRevenue(item).toFixed(2)}`,
-      ]),
-      headStyles: { fillColor: [16, 185, 129] }, 
-      styles: { fontSize: 9, halign: "center" },
-      columnStyles: {
-        0: { halign: "left" }, 
-        1: { halign: "left" }, 
-        2: { halign: "left" }, 
-      },
-      didDrawPage: (data) => {
-      
-        doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
-      },
-    });
-
-    doc.save(
-      `Overall_Terminal_Report_${new Date().toISOString().slice(0, 10)}.pdf`,
-    );
-    logActivity(
-      role,
-      "EXPORT_OVERALL_PDF",
-      `Exported Overall Report summary to PDF`,
-      "Reports",
-    );
-  };
+  doc.save(`Overall_Report_${new Date().toISOString().split("T")[0]}.pdf`);
+};
 
  
   const handleSingleExportExcel = async (report) => {
@@ -682,7 +646,7 @@ const Reports = () => {
       }
 
       const buffer = await workbook.xlsx.writeBuffer();
-      saveAs(new Blob([buffer]), `${report.type}_Report_${report.id.substring(0, 8)}.xlsx`);
+      doc.save(`${report.type}_Report_${report.id?.substring(0, 8) || "report"}.pdf`);
 
       logActivity(role, "EXPORT_SINGLE_EXCEL", `Exported branded Single Report for ${report.id}`, "Reports");
     } catch (err) {
@@ -692,60 +656,206 @@ const Reports = () => {
   };
 
   const handleSingleExportPDF = (report) => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Report Details", 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
-    doc.setFontSize(11);
-    doc.text(`ID: ${report.id}`, 14, 30);
-    doc.text(`Type: ${report.type}`, 14, 36);
-    doc.text(`Author: ${report.author}`, 14, 42);
-    doc.text(
-      `Date: ${formatReportDate(report.createdAt || report.date)}`,
-      14,
-      48,
-    );
+  const doc = new jsPDF("l", "mm", "a4");
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
 
-    let currentY = 60;
-    if (report.data?.statistics) {
-      doc.setFontSize(12);
-      doc.text("Statistics", 14, currentY);
-      currentY += 10;
+  // HEADER IMAGE
+  doc.addImage(headerImg, "PNG", 0, 0, pageWidth, 35);
 
-      const statsData = Object.entries(report.data.statistics).map(([k, v]) => [
+  // TITLE
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${report.type.toUpperCase()} REPORT`, pageWidth / 2, 40, { align: "center" });
+
+  // META DATA
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+
+  doc.text(`Report ID: ${report.id ? report.id.substring(0, 8).toUpperCase() : "-"}`, 15, 50);
+  doc.text(`Author/Collector: ${report.author || "Admin"}`, 15, 56);
+
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 50, { align: "right" });
+  doc.text(`Status: Completed`, pageWidth - 15, 56, { align: "right" });
+
+  let currentY = 65;
+
+  // STATISTICS
+  if (report.data?.statistics) {
+    const statsData = Object.entries(report.data.statistics)
+      .filter(([key]) => !["collectorid", "arrivalslogged", "departureslogged"].includes(key.toLowerCase()))
+      .map(([k, v]) => [
         formatStatisticsLabel(k),
-        v,
+        typeof v === "number" && k.toLowerCase().includes("revenue")
+          ? `Php ${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+          : v,
       ]);
-      autoTable(doc, {
-        startY: currentY,
-        head: [["Metric", "Value"]],
-        body: statsData,
-        theme: "grid",
-        headStyles: { fillColor: [16, 185, 129], textColor: 50 },
-        styles: { fontSize: 10 },
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Summary Metric", "Value"]],
+      body: statsData,
+      theme: "striped",
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: 15, right: 15 },
+    });
+
+    currentY = doc.lastAutoTable.finalY + 10;
+  }
+
+  // DATA RECORDS
+ // DATA RECORDS (CLEAN FORMAT)
+if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Detailed Transaction Records", 15, currentY);
+
+  const rawData = report.data.data;
+
+  const normalizeKey = (key) =>
+    key.toLowerCase().replace(/[\s_-]/g, "");
+
+  // ✅ REMOVE UNNECESSARY FIELDS
+  const hiddenFields = [
+    "reportid",
+    "submitted",
+    "submittedat",
+    "submittedatserver",
+    "id",
+    "_id",
+    "status",
+  ];
+
+  // ✅ FORMAT HEADERS (CLEAN + ORDERED)
+  let headers = Object.keys(rawData[0]).filter(
+    (key) => !hiddenFields.includes(normalizeKey(key))
+  );
+
+  // PRIORITY ORDER (Parking / Terminal Style)
+  const priorityOrder = [
+    "ticketno",
+    "plateno",
+    "vehicletype",
+    "passengertype",
+    "pricingtype",
+    "timein",
+    "timeout",
+    "time",
+    "date",
+    "baseprice",
+    "finalprice",
+    "price",
+  ];
+
+  headers.sort((a, b) => {
+    const aIndex = priorityOrder.indexOf(normalizeKey(a));
+    const bIndex = priorityOrder.indexOf(normalizeKey(b));
+
+    if (aIndex === -1 && bIndex === -1) return 0;
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
+
+  // FORMAT HEADER LABELS
+  const formattedHeaders = headers.map((h) =>
+    h
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .trim()
+      .toUpperCase()
+  );
+
+  // ✅ FORMAT CELL VALUES
+  const formatValue = (key, value) => {
+  const normalized = normalizeKey(key);
+
+  // ✅ HANDLE NULL / UNDEFINED ONLY
+  if (value === null || value === undefined || value === "") return "-";
+
+  // ✅ CLEAN STRING NUMBERS (REMOVE ₱, COMMAS, SPACES)
+  let cleanValue = value;
+  if (typeof value === "string") {
+    cleanValue = value.replace(/[₱,]/g, "").trim();
+  }
+
+  // ✅ MONEY FORMAT (SAFE)
+  if (
+    normalized.includes("price") ||
+    normalized.includes("revenue") ||
+    normalized.includes("amount")
+  ) {
+    const num = Number(cleanValue);
+    return isNaN(num)
+      ? "-" // fallback if invalid
+      : `₱${num.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+        })}`;
+  }
+
+  // ✅ TIME FORMAT
+  if (["time", "timein", "timeout"].includes(normalized)) {
+    const d = new Date(`1970-01-01T${value}`);
+    if (!isNaN(d)) {
+      return d.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
       });
-      currentY = doc.lastAutoTable.finalY + 15;
     }
+  }
 
-    if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
-      doc.setFontSize(12);
-      doc.text("Data Records", 14, currentY);
+  // ✅ DATE FORMAT
+  if (normalized === "date") {
+    const d = new Date(value);
+    if (!isNaN(d)) return d.toLocaleDateString();
+  }
 
-      const headers = Object.keys(report.data.data[0]);
-      const rows = report.data.data.map((row) => Object.values(row));
+  return value;
+};
 
-      autoTable(doc, {
-        startY: currentY + 5,
-        head: [headers],
-        body: rows,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [16, 185, 129] },
-      });
-    }
+  const rows = rawData.map((row) =>
+    headers.map((header) => formatValue(header, row[header]))
+  );
 
-    doc.save(`${report.type}_Report_${report.id}.pdf`);
-  };
+  autoTable(doc, {
+    startY: currentY + 5,
+    head: [formattedHeaders],
+    body: rows,
+    tableWidth: "auto",
+
+    theme: "striped",
+
+    styles: {
+      fontSize: 8,
+      cellPadding: 4,
+      valign: "middle",
+      overflow: "linebreak",
+    },
+
+    headStyles: {
+      fillColor: [16, 185, 129],
+      textColor: 255,
+      fontStyle: "bold",
+      halign: "center",
+    },
+
+    columnStyles: {
+      0: { cellWidth: 25 }, // Ticket No
+    },
+
+    margin: { left: 15, right: 15, bottom: 35 },
+
+    didDrawPage: () => {
+      doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+    },
+  });
+} else {
+  doc.addImage(footerImg, "PNG", 0, pageHeight - 30, pageWidth, 30);
+}
+doc.save(`${report.type}_Report_${report.id?.substring(0, 8) || "report"}.pdf`);
+};
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
@@ -1185,14 +1295,6 @@ const Reports = () => {
           </div>
         </div>
       )}
-
-      <DeleteModal
-        isOpen={!!deleteRow}
-        onClose={() => setDeleteRow(null)}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Record"
-        message="Are you sure you want to remove this report? This action cannot be undone."
-      />
 
       <DeleteModal
         isOpen={!!deleteRow}
