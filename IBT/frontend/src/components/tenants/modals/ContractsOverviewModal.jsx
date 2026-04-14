@@ -40,6 +40,38 @@ const resolveActiveContract = (tenant) => {
   return null;
 };
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const getRenewalCountdown = (endDateValue) => {
+  if (!endDateValue) {
+    return {
+      daysLeft: null,
+      isWithinOneMonth: false,
+      isExpired: false,
+    };
+  }
+
+  const endDate = new Date(endDateValue);
+  if (Number.isNaN(endDate.getTime())) {
+    return {
+      daysLeft: null,
+      isWithinOneMonth: false,
+      isExpired: false,
+    };
+  }
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endStart = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  const daysLeft = Math.ceil((endStart.getTime() - todayStart.getTime()) / MS_PER_DAY);
+
+  return {
+    daysLeft,
+    isWithinOneMonth: daysLeft >= 0 && daysLeft <= 30,
+    isExpired: daysLeft < 0,
+  };
+};
+
 const getDocUrl = (apiUrl, filename) => {
   if (!filename) return "";
   if (filename.startsWith("http") || filename.startsWith("data:")) return filename;
@@ -132,6 +164,13 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
       return haystack.includes(query);
     });
   }, [tenants, search]);
+
+  const oneMonthLeftCount = useMemo(() => {
+    return rows.reduce((count, { active }) => {
+      const renewalMeta = getRenewalCountdown(active?.endDate);
+      return renewalMeta.isWithinOneMonth ? count + 1 : count;
+    }, 0);
+  }, [rows]);
 
   if (!isOpen) return null;
 
@@ -236,6 +275,9 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
           <p className="text-xs text-slate-500 mt-2">
             Showing {rows.length} of {tenants.length} tenants
           </p>
+          <p className="text-xs text-amber-700 mt-1 font-semibold">
+            Renewal watch (1 month left): {oneMonthLeftCount} tenant{oneMonthLeftCount === 1 ? "" : "s"}
+          </p>
         </div>
 
         <div className="overflow-auto p-4">
@@ -248,6 +290,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                 <th className="text-left px-3 py-2">Active Contract</th>
                 <th className="text-left px-3 py-2">Duration</th>
                 <th className="text-left px-3 py-2">Period</th>
+                <th className="text-left px-3 py-2">Renewal Watch</th>
                 <th className="text-left px-3 py-2">Document</th>
                 <th className="text-right px-3 py-2">Action</th>
               </tr>
@@ -255,8 +298,12 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
             <tbody>
               {rows.map(({ tenant, active }) => {
                 const docUrl = getDocUrl(apiUrl, active?.documentUrl || "");
+                const renewalMeta = getRenewalCountdown(active?.endDate);
                 return (
-                  <tr key={tenant._id || tenant.id} className="border-t border-slate-100">
+                  <tr
+                    key={tenant._id || tenant.id}
+                    className={`border-t border-slate-100 ${renewalMeta.isWithinOneMonth ? "bg-amber-50/60" : ""}`}
+                  >
                     <td className="px-3 py-2 font-semibold text-slate-800">{tenant.tenantName || tenant.name || "-"}</td>
                     <td className="px-3 py-2 text-slate-600">{tenant.slotNo || "-"}</td>
                     <td className="px-3 py-2 text-slate-600">{tenant.tenantType || "-"}</td>
@@ -276,6 +323,23 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                     </td>
                     <td className="px-3 py-2 text-slate-600">
                       {active ? `${toDateLabel(active.startDate)} - ${toDateLabel(active.endDate)}` : "-"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {!active || renewalMeta.daysLeft === null ? (
+                        <span className="text-slate-400">-</span>
+                      ) : renewalMeta.isExpired ? (
+                        <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-1 text-[11px] font-bold">
+                          Expired {Math.abs(renewalMeta.daysLeft)}d ago
+                        </span>
+                      ) : renewalMeta.isWithinOneMonth ? (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2 py-1 text-[11px] font-bold">
+                          1 month left ({renewalMeta.daysLeft}d)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-2 py-1 text-[11px] font-semibold">
+                          {renewalMeta.daysLeft}d left
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       {docUrl ? (

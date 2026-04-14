@@ -111,6 +111,7 @@ const TenantSchema = new mongoose.Schema({
   },
   isEligibleForRenewal: { type: Boolean, default: false },
   renewalEligibilityNotifiedAt: { type: Date, default: null },
+  renewalEligibilityEmailNotifiedAt: { type: Date, default: null },
   
   documents: {
     businessPermit: String,

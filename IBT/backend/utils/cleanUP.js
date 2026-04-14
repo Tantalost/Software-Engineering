@@ -5,6 +5,7 @@ import BusTrip from '../models/BusTrips.js';
 import Tenant from '../models/Tenant.js';
 import User from '../models/User.js';
 import sendPushNotification from './sendPushNotification.js';
+import sendEmail from './sendEmail.js';
 
 
 const ApplicationSchema = new mongoose.Schema({
@@ -25,8 +26,16 @@ const daysUntil = (targetDate, fromDate = new Date()) => {
     return Math.floor(diff / (24 * 60 * 60 * 1000));
 };
 
-const processContractRenewalLifecycle = async () => {
-    if (mongoose.connection.readyState !== 1) return;
+export const processContractRenewalLifecycle = async () => {
+    if (mongoose.connection.readyState !== 1) {
+        return {
+            skipped: true,
+            reason: 'db-not-connected',
+            eligibilityFlagged: 0,
+            transitionsApplied: 0,
+            eligibilityEmailsSent: 0,
+        };
+    }
 
     const tenants = await Tenant.find({
         isArchived: { $ne: true },
@@ -36,6 +45,7 @@ const processContractRenewalLifecycle = async () => {
     const today = new Date();
     let eligibilityFlagged = 0;
     let transitionsApplied = 0;
+    let eligibilityEmailsSent = 0;
 
     for (const tenant of tenants) {
         const contracts = Array.isArray(tenant.contracts) ? tenant.contracts : [];
@@ -64,6 +74,8 @@ const processContractRenewalLifecycle = async () => {
                 tenant.documents.contract = awaitingContract.documentUrl;
             }
             tenant.isEligibleForRenewal = false;
+            tenant.renewalEligibilityNotifiedAt = null;
+            tenant.renewalEligibilityEmailNotifiedAt = null;
             touched = true;
             transitionsApplied += 1;
 
@@ -87,6 +99,7 @@ const processContractRenewalLifecycle = async () => {
         const hasOpenRenewal = contracts.some((contract) => ['pending_approval', 'approved_awaiting_start'].includes(contract.status));
         const remainingDays = daysUntil(activeContract.endDate, today);
         const shouldFlagEligibility = remainingDays === 30 && !hasOpenRenewal;
+        const shouldSendEligibilityEmail = shouldFlagEligibility && !tenant.renewalEligibilityEmailNotifiedAt;
 
         if (shouldFlagEligibility && !tenant.isEligibleForRenewal) {
             tenant.isEligibleForRenewal = true;
@@ -111,14 +124,44 @@ const processContractRenewalLifecycle = async () => {
             }
         }
 
+        if (shouldSendEligibilityEmail && tenant.email) {
+            const tenantDisplayName = tenant.tenantName || tenant.name || 'Tenant';
+            const subject = 'Contract Renewal Reminder - 1 Month Left';
+            const message = `Dear ${tenantDisplayName},\n\nYour current contract for Slot ${tenant.slotNo} has 30 days remaining.\n\nTo avoid interruption, please submit your renewal contract request in the IBT mobile app as soon as possible.\n\nThank you,\nIBT Management`;
+
+            try {
+                await sendEmail({
+                    email: tenant.email,
+                    subject,
+                    message,
+                });
+
+                tenant.renewalEligibilityEmailNotifiedAt = new Date();
+                if (!tenant.renewalEligibilityNotifiedAt) {
+                    tenant.renewalEligibilityNotifiedAt = new Date();
+                }
+                eligibilityEmailsSent += 1;
+                touched = true;
+            } catch (emailError) {
+                console.error('[RENEWAL CRON] eligibility email failed:', emailError.message);
+            }
+        }
+
         if (touched) {
             await tenant.save();
         }
     }
 
-    if (eligibilityFlagged > 0 || transitionsApplied > 0) {
-        console.log(`[RENEWAL CRON] Flagged ${eligibilityFlagged} eligible tenant(s), transitioned ${transitionsApplied} contract(s).`);
+    if (eligibilityFlagged > 0 || transitionsApplied > 0 || eligibilityEmailsSent > 0) {
+        console.log(`[RENEWAL CRON] Flagged ${eligibilityFlagged} eligible tenant(s), transitioned ${transitionsApplied} contract(s), sent ${eligibilityEmailsSent} eligibility email(s).`);
     }
+
+    return {
+        skipped: false,
+        eligibilityFlagged,
+        transitionsApplied,
+        eligibilityEmailsSent,
+    };
 };
 
 const deleteGridFSFiles = async (bucket, filenames) => {

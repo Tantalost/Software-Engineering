@@ -27,6 +27,38 @@ const normalizeContractType = (value) => {
 
 const displayContractType = (value) => normalizeContractType(value);
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const getRenewalCountdown = (endDateValue) => {
+  if (!endDateValue) {
+    return {
+      daysLeft: null,
+      isWithinOneMonth: false,
+      isExpired: false,
+    };
+  }
+
+  const endDate = new Date(endDateValue);
+  if (Number.isNaN(endDate.getTime())) {
+    return {
+      daysLeft: null,
+      isWithinOneMonth: false,
+      isExpired: false,
+    };
+  }
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endStart = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  const daysLeft = Math.ceil((endStart.getTime() - todayStart.getTime()) / MS_PER_DAY);
+
+  return {
+    daysLeft,
+    isWithinOneMonth: daysLeft >= 0 && daysLeft <= 30,
+    isExpired: daysLeft < 0,
+  };
+};
+
 const defaultForm = {
   contractType: "RENEWAL",
   startDate: "",
@@ -52,6 +84,8 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
     if (!contracts.length || !activeContractId) return null;
     return contracts.find((contract) => String(contract._id) === String(activeContractId)) || null;
   }, [contracts, activeContractId]);
+
+  const activeRenewalMeta = useMemo(() => getRenewalCountdown(activeContract?.endDate), [activeContract]);
 
   const resetForm = () => {
     setEditingContractId("");
@@ -229,6 +263,7 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
                       <th className="text-left px-3 py-2">Type</th>
                       <th className="text-left px-3 py-2">Duration</th>
                       <th className="text-left px-3 py-2">Period</th>
+                      <th className="text-left px-3 py-2">Renewal Watch</th>
                       <th className="text-left px-3 py-2">Status</th>
                       <th className="text-left px-3 py-2">Doc</th>
                       <th className="text-right px-3 py-2">Actions</th>
@@ -238,6 +273,7 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
                     {contracts.map((contract) => {
                       const isActive = String(contract._id) === String(activeContractId);
                       const docUrl = getDocUrl(apiUrl, contract.documentUrl);
+                      const renewalMeta = getRenewalCountdown(contract.endDate);
 
                       return (
                         <tr key={contract._id} className="border-t border-slate-100">
@@ -247,6 +283,23 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
                           </td>
                           <td className="px-3 py-2 text-slate-600">
                             {formatDate(contract.startDate)} - {formatDate(contract.endDate)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {!isActive || renewalMeta.daysLeft === null ? (
+                              <span className="text-slate-400">-</span>
+                            ) : renewalMeta.isExpired ? (
+                              <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-1 text-[11px] font-bold">
+                                Expired {Math.abs(renewalMeta.daysLeft)}d ago
+                              </span>
+                            ) : renewalMeta.isWithinOneMonth ? (
+                              <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-2 py-1 text-[11px] font-bold">
+                                1 month left ({renewalMeta.daysLeft}d)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-2 py-1 text-[11px] font-semibold">
+                                {renewalMeta.daysLeft}d left
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-2">
                             <span className={`px-2 py-1 rounded-full text-[11px] font-bold ${isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
@@ -297,6 +350,15 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
 
             <div className="px-4 py-3 border-t border-slate-100 text-xs text-slate-500">
               Current active contract: {activeContract ? `${formatDate(activeContract.startDate)} to ${formatDate(activeContract.endDate)}` : "None"}
+              {activeContract && activeRenewalMeta.daysLeft !== null && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                  {activeRenewalMeta.isExpired
+                    ? `Expired ${Math.abs(activeRenewalMeta.daysLeft)}d ago`
+                    : activeRenewalMeta.isWithinOneMonth
+                      ? `Renewal watch: 1 month left (${activeRenewalMeta.daysLeft}d)`
+                      : `${activeRenewalMeta.daysLeft}d left`}
+                </span>
+              )}
             </div>
           </section>
 

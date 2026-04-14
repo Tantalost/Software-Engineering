@@ -241,6 +241,43 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
     ? Math.ceil((new Date(activeContractEndDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
     : null;
 
+  const getTemplateDurationLabel = (template: any) => {
+    const duration = template?.duration;
+
+    if (typeof duration === 'string' && duration.trim()) {
+      return duration;
+    }
+
+    if (typeof duration === 'number' && Number.isFinite(duration) && duration > 0) {
+      return `${duration} month${duration === 1 ? '' : 's'}`;
+    }
+
+    if (duration && typeof duration === 'object') {
+      const years = Number(duration.years) || 0;
+      const months = Number(duration.months) || 0;
+      const parts: string[] = [];
+
+      if (years > 0) {
+        parts.push(`${years} year${years === 1 ? '' : 's'}`);
+      }
+
+      if (months > 0) {
+        parts.push(`${months} month${months === 1 ? '' : 's'}`);
+      }
+
+      if (parts.length > 0) {
+        return parts.join(' ');
+      }
+    }
+
+    const durationMonths = Number(template?.durationMonths);
+    if (Number.isFinite(durationMonths) && durationMonths > 0) {
+      return `${durationMonths} month${durationMonths === 1 ? '' : 's'}`;
+    }
+
+    return 'Duration unavailable';
+  };
+
   return (
    <ScrollView 
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
@@ -303,7 +340,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                         style={{ marginBottom: 8, borderColor: '#1d4ed8' }}
                         textColor={selected ? '#ffffff' : '#1d4ed8'}
                       >
-                        {template.name} ({template.duration || `${template.durationMonths} month${template.durationMonths === 1 ? '' : 's'}`})
+                        {template.name} ({getTemplateDurationLabel(template)})
                       </Button>
                     );
                   })
