@@ -199,7 +199,49 @@ export const processTenantOverdueLifecycle = async () => {
         tenant.DueDateTime = dueCursor;
         tenant.rentAmount = cycleRentAmount;
 
+        let wasAutoPausedNow = false;
+        const hasOperationStarted = Boolean(tenant.operationStartDate);
+        const shouldAutoPauseForNonPayment = !isNightMarket && hasOperationStarted && tenant.overdueCycleCount >= 2;
+
+        if (shouldAutoPauseForNonPayment) {
+            const alreadyAutoPaused = Boolean(tenant.isOperationPaused)
+                && String(tenant.operationPauseReason || '').toUpperCase() === 'NON_PAYMENT_2_MONTHS';
+
+            if (!alreadyAutoPaused) {
+                tenant.lastPausedDate = new Date();
+                wasAutoPausedNow = true;
+            }
+
+            tenant.isOperationPaused = true;
+            tenant.operationPauseReason = 'NON_PAYMENT_2_MONTHS';
+        }
+
         await tenant.save();
+
+        if (wasAutoPausedNow && tenant.email) {
+            try {
+                const subject = 'Notice: Operations Paused Due to 2 Months Unpaid Balance';
+                const message = `Dear ${tenant.tenantName || tenant.name},\n\nYour stall operations for Slot ${tenant.slotNo} have been paused because your account has remained unpaid for 2 months.\n\nPlease settle your remaining balance of ₱${Number(tenant.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to resume operations.\n\nThank you,\nIBT Management`;
+
+                await sendEmail({
+                    email: tenant.email,
+                    subject,
+                    message,
+                });
+
+                const user = await User.findOne({ email: tenant.email });
+                if (user?.expoPushToken) {
+                    await sendPushNotification(
+                        user.expoPushToken,
+                        'Operations Paused',
+                        `Slot ${tenant.slotNo} is paused due to 2 months unpaid balance. Please settle remaining balance.`,
+                        { route: 'stalls' },
+                    );
+                }
+            } catch (notifyError) {
+                console.error('[OVERDUE CRON] auto-pause notification failed:', notifyError.message);
+            }
+        }
 
         affectedTenants += 1;
         appliedCycles += tenantCycleCount;

@@ -36,6 +36,17 @@ const toValidDate = (value) => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const isPausedForExtendedNonPayment = (tenant) => {
+    if (!tenant?.isOperationPaused) return false;
+
+    const pauseReason = String(tenant.operationPauseReason || '').toUpperCase();
+    if (pauseReason === 'NON_PAYMENT_2_MONTHS') return true;
+
+    const status = String(tenant.status || '').toLowerCase();
+    const overdueCycles = Number(tenant.overdueCycleCount || 0);
+    return status === 'overdue' && overdueCycles >= 2;
+};
+
 const splitDuration = (durationMonths) => ({
     years: Math.floor(durationMonths / 12),
     months: durationMonths % 12,
@@ -388,6 +399,7 @@ export const getMyApplication = async (req, res) => {
             const isNightMarket = tenant.tenantType === 'Night Market';
             const isPermanent = !isNightMarket;
             const hasStartedOperation = Boolean(toValidDate(tenant.operationStartDate));
+            const isBlockedByExtendedNonPayment = isPausedForExtendedNonPayment(tenant);
             const activeContract = getActiveContract(tenant);
             const pendingRenewalContract = (Array.isArray(tenant.contracts) ? tenant.contracts : []).find(
                 (contract) => contract.status === 'pending_approval'
@@ -410,11 +422,11 @@ export const getMyApplication = async (req, res) => {
             }
 
             const calcDueDate = resolveNextBillingDueDate(tenant, activeContract, permanentDueDay);
-            const calcDue = (isPermanent && !hasStartedOperation)
+            const calcDue = (isPermanent && (!hasStartedOperation || isBlockedByExtendedNonPayment))
                 ? null
                 : (calcDueDate ? calcDueDate.toISOString() : null);
 
-            const effectiveTenantStatus = (isPermanent && !hasStartedOperation)
+            const effectiveTenantStatus = (isPermanent && (!hasStartedOperation || isBlockedByExtendedNonPayment))
                 ? 'Not Started Operations'
                 : tenant.status;
             
@@ -423,6 +435,9 @@ export const getMyApplication = async (req, res) => {
                 tenantDbStatus: effectiveTenantStatus,
                 start: tenant.StartDateTime,
                 operationStartDate: tenant.operationStartDate || null,
+                isOperationPaused: Boolean(tenant.isOperationPaused),
+                operationPauseReason: tenant.operationPauseReason || null,
+                overdueCycleCount: Number(tenant.overdueCycleCount || 0),
                 due: calcDue,
                 rentAmount: calcRent,
                 utilityAmount: calcUtil,
