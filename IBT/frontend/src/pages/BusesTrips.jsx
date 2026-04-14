@@ -3271,6 +3271,16 @@ const BusTrips = () => {
                 )}
               </div>
             )}
+
+              {role === "superadmin" && (
+                <button
+                  onClick={() => setShowMissedModal(true)}
+                  className="flex items-center cursor-pointer justify-center space-x-2 border border-amber-200 bg-white text-amber-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition-all"
+                >
+                  <span>View Missed Buses</span>
+                </button>
+              )}
+
           </div>
 
           <PredefinedArrivalsBoard
@@ -3385,27 +3395,6 @@ const BusTrips = () => {
                   className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
                 >
                   <Settings size={18} /> <span>Set Price</span>
-                </button>
-              )}
-
-            {role === "superadmin" && (
-              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
-                <button
-                  onClick={() => setShowManageCompaniesModal(true)}
-                  className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
-                >
-                  <Bus size={18} />
-                  <span>Manage Companies</span>
-                </button>
-              </div>
-            )}
-
-              {role === "superadmin" && (
-                <button
-                  onClick={() => setShowMissedModal(true)}
-                  className="flex items-center cursor-pointer justify-center space-x-2 border border-amber-200 bg-white text-amber-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition-all"
-                >
-                  <span>View Missed Buses</span>
                 </button>
               )}
 
