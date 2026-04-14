@@ -604,9 +604,9 @@ const TerminalFees = () => {
   }, [records, sessionStartedAt]);
 
   const hasPendingTerminalShiftReport = useMemo(() => {
-    if (role !== "ticket") return false;
-    return shiftRecords.length > 0;
-  }, [role, shiftRecords]);
+    if (role === "superadmin") return false;
+    return records.some((item) => !Boolean(item?.submitted));
+  }, [role, records]);
 
   const handleCollectorSelection = (nextCollectorId, selectedCollector) => {
     setCollectorId(nextCollectorId);
@@ -1226,7 +1226,7 @@ const TerminalFees = () => {
     <Layout
       title="Terminal Fees Management"
       topbarProps={
-        role === "ticket"
+        role !== "superadmin"
           ? {
               logoutGuard: {
                 canLogout: !hasPendingTerminalShiftReport,

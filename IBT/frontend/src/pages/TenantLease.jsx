@@ -108,7 +108,7 @@ const TenantLease = () => {
     const [showPaymentRecords, setShowPaymentRecords] = useState(false);
     const [paymentViewType, setPaymentViewType] = useState("Week");
     const [paymentRefDate, setPaymentRefDate] = useState(new Date());
-    const [paymentTypeFilter, setPaymentTypeFilter] = useState("All");
+    const [paymentTenantTab, setPaymentTenantTab] = useState("Permanent");
     const [selectedPaymentTenantId, setSelectedPaymentTenantId] = useState("");
 
     const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);     
@@ -658,33 +658,36 @@ const TenantLease = () => {
 
         all.sort((a, b) => new Date(b.datePaid) - new Date(a.datePaid));
 
-        const start = new Date(paymentRefDate);
-        const end = new Date(paymentRefDate);
+        const defaultStart = new Date(paymentRefDate);
+        const defaultEnd = new Date(paymentRefDate);
 
         if (paymentViewType === "Week") {
-            const day = start.getDay();
-            start.setDate(start.getDate() - day); 
-            end.setDate(start.getDate() + 6);     
+            const day = defaultStart.getDay();
+            defaultStart.setDate(defaultStart.getDate() - day);
+            defaultEnd.setDate(defaultStart.getDate() + 6);
         } else if (paymentViewType === "Month") {
-            start.setDate(1);
-            end.setMonth(end.getMonth() + 1, 0);  
+            defaultStart.setDate(1);
+            defaultEnd.setMonth(defaultEnd.getMonth() + 1, 0);
         } else if (paymentViewType === "Year") {
-            start.setMonth(0, 1);
-            end.setMonth(11, 31);
+            defaultStart.setMonth(0, 1);
+            defaultEnd.setMonth(11, 31);
         }
 
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
+        defaultStart.setHours(0, 0, 0, 0);
+        defaultEnd.setHours(23, 59, 59, 999);
+
+        const start = defaultStart;
+        const end = defaultEnd;
 
         const filtered = all.filter(p => {
             const pDate = new Date(p.datePaid);
             const isWithinDate = pDate >= start && pDate <= end;
-            const isTypeMatch = paymentTypeFilter === "All" || p.tenantType === paymentTypeFilter;
+            const isTypeMatch = p.tenantType === paymentTenantTab;
             return isWithinDate && isTypeMatch;
         });
 
         return { dateRange: { start, end }, filteredPayments: filtered };
-    }, [records, paymentViewType, paymentRefDate, paymentTypeFilter]);
+    }, [records, paymentViewType, paymentRefDate, paymentTenantTab]);
 
     const handleShiftDate = (direction) => {
         setPaymentRefDate(prev => {
@@ -715,13 +718,18 @@ const TenantLease = () => {
         return filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     }, [filteredPayments]);
 
+    const uniquePayingTenants = useMemo(() => {
+        return new Set(
+            filteredPayments.map((payment) => `${payment.tenantName || ""}|||${payment.slotNo || ""}`),
+        ).size;
+    }, [filteredPayments]);
+
     const paymentTenantOptions = useMemo(() => {
         const tenantMap = new globalThis.Map();
 
         records
             .filter((tenant) => {
-                if (paymentTypeFilter === "All") return true;
-                return (tenant.tenantType || "Permanent") === paymentTypeFilter;
+                return (tenant.tenantType || "Permanent") === paymentTenantTab;
             })
             .forEach((tenant) => {
                 const rawId = tenant._id || tenant.id || tenant.referenceNo || `${tenant.tenantName || tenant.name}-${tenant.slotNo || "slot"}`;
@@ -732,7 +740,7 @@ const TenantLease = () => {
             });
 
         return Array.from(tenantMap.entries()).map(([id, tenant]) => ({ id, tenant }));
-    }, [records, paymentTypeFilter]);
+    }, [records, paymentTenantTab]);
 
     useEffect(() => {
         if (paymentTenantOptions.length === 0) {
@@ -760,9 +768,29 @@ const TenantLease = () => {
             return Number.isNaN(parsed.getTime()) ? null : parsed;
         };
 
+        const startOfDay = (date) => {
+            const next = new Date(date);
+            next.setHours(0, 0, 0, 0);
+            return next;
+        };
+
         const addMonths = (date, months) => {
             const next = new Date(date);
             next.setMonth(next.getMonth() + months);
+            return next;
+        };
+
+        const addDays = (date, days) => {
+            const next = new Date(date);
+            next.setDate(next.getDate() + days);
+            return next;
+        };
+
+        const withDayInMonth = (baseDate, targetDay) => {
+            const next = new Date(baseDate);
+            const safeDay = Math.max(1, Number(targetDay) || 1);
+            const daysInMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+            next.setDate(Math.min(safeDay, daysInMonth));
             return next;
         };
 
@@ -808,6 +836,146 @@ const TenantLease = () => {
         const futureRentAmount = configuredDefaultBase * slotCount;
         const monthlyCharge = futureRentAmount + utilityAmount;
         const hasUnpaidCurrentCycle = String(selectedPaymentTenant.status || "").toLowerCase() !== "paid";
+
+        const isPermanentTenant = !isNightMarketTenant;
+        if (isPermanentTenant) {
+            const dueDay = Math.max(1, Math.min(31, Number(defaultDueDate) || 5));
+            const dailyFee = Math.max(0, Number(defaultDailyFee) || 200);
+
+            const operationStartDate = toValidDate(selectedPaymentTenant.operationStartDate);
+            const billingStartDate = operationStartDate ? addDays(startOfDay(operationStartDate), 1) : null;
+
+            let firstDueDate = null;
+            if (billingStartDate) {
+                firstDueDate = withDayInMonth(billingStartDate, dueDay);
+                if (firstDueDate < billingStartDate) {
+                    firstDueDate = withDayInMonth(addMonths(billingStartDate, 1), dueDay);
+                }
+            }
+
+            const fallbackAnchorBase = billingStartDate || contractStart;
+            let dueAnchor = firstDueDate;
+            if (!dueAnchor) {
+                dueAnchor = withDayInMonth(fallbackAnchorBase, dueDay);
+                if (dueAnchor < fallbackAnchorBase) {
+                    dueAnchor = withDayInMonth(addMonths(fallbackAnchorBase, 1), dueDay);
+                }
+            }
+            const cycleDueDates = [];
+            for (
+                let cursor = new Date(dueAnchor), guard = 0;
+                cursor <= contractEnd && guard < 240;
+                cursor = withDayInMonth(addMonths(cursor, 1), dueDay), guard += 1
+            ) {
+                cycleDueDates.push(new Date(cursor));
+            }
+            if (cycleDueDates.length === 0) {
+                cycleDueDates.push(new Date(dueAnchor));
+            }
+
+            let firstCycleAmount = monthlyCharge;
+            let firstCycleIsProrated = false;
+            if (billingStartDate && firstDueDate) {
+                const dayMs = 24 * 60 * 60 * 1000;
+                const dayDiff = Math.floor((startOfDay(firstDueDate).getTime() - startOfDay(billingStartDate).getTime()) / dayMs);
+                const billableDays = Math.max(0, dayDiff + 1);
+                const proratedRent = dailyFee * Math.max(1, slotCount) * billableDays;
+                firstCycleAmount = proratedRent + utilityAmount;
+                firstCycleIsProrated = true;
+            }
+
+            const allPayments = [...(selectedPaymentTenant.paymentHistory || [])].sort(
+                (a, b) => new Date(a?.datePaid || 0).getTime() - new Date(b?.datePaid || 0).getTime(),
+            );
+
+            const advancePayments = [];
+            const cyclePayments = [];
+            allPayments.forEach((entry) => {
+                const paidAt = toValidDate(entry?.datePaid);
+                if (!paidAt) return;
+
+                const ref = String(entry?.referenceNo || "").trim().toLowerCase();
+                const coverageEnd = toValidDate(entry?.coverageEndDate);
+
+                const looksInitial = ref === "initial payment" || ref.includes("initial");
+                const paidBeforeBilling = billingStartDate ? paidAt < billingStartDate : false;
+                const coverageBeforeBilling = billingStartDate && coverageEnd ? coverageEnd <= billingStartDate : false;
+
+                if (looksInitial || paidBeforeBilling || coverageBeforeBilling) {
+                    advancePayments.push(entry);
+                    return;
+                }
+
+                cyclePayments.push(entry);
+            });
+
+            const timeline = cycleDueDates.map((dueDate, index) => {
+                const key = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-${String(dueDate.getDate()).padStart(2, "0")}`;
+                const label = `${dueDate.toLocaleString("en-US", { month: "short" }).toUpperCase()} ${dueDate.getDate()}`;
+                const paymentEntry = cyclePayments[index] || null;
+                const expectedDueAmount = index === 0 ? firstCycleAmount : monthlyCharge;
+
+                if (paymentEntry) {
+                    const paidAmount = Number(paymentEntry.amount) || 0;
+                    return {
+                        label,
+                        key,
+                        paidAmount,
+                        dueAmount: 0,
+                        status: "paid",
+                    };
+                }
+
+                let dueAmount = expectedDueAmount;
+                if (index === cyclePayments.length && hasUnpaidCurrentCycle) {
+                    dueAmount = currentOutstandingAmount || expectedDueAmount;
+                }
+
+                const status = startOfDay(dueDate) < startOfDay(new Date()) ? "overdue" : "remaining";
+
+                return {
+                    label,
+                    key,
+                    paidAmount: 0,
+                    dueAmount,
+                    status,
+                };
+            });
+
+            const totalMonths = timeline.length;
+            const paidMonths = timeline.filter((month) => month.status === "paid").length;
+            const remainingMonths = timeline.filter((month) => month.status === "remaining").length;
+            const overdueMonths = timeline.filter((month) => month.status === "overdue").length;
+
+            const advancePaidAmount = advancePayments.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+            const paidAmount = timeline
+                .filter((month) => month.status === "paid")
+                .reduce((sum, month) => sum + (Number(month.paidAmount) || 0), 0) + advancePaidAmount;
+            const remainingAmount = timeline
+                .filter((month) => month.status === "remaining" || month.status === "overdue")
+                .reduce((sum, month) => sum + (Number(month.dueAmount) || 0), 0);
+            const projectedAmount = paidAmount + remainingAmount;
+            const progressPercent = totalMonths > 0 ? Math.round((paidMonths / totalMonths) * 100) : 0;
+
+            return {
+                timeline,
+                totalMonths,
+                paidMonths,
+                remainingMonths,
+                overdueMonths,
+                paidAmount,
+                projectedAmount,
+                remainingAmount,
+                progressPercent,
+                monthlyCharge,
+                currentCycleAmount: hasUnpaidCurrentCycle ? currentOutstandingAmount : 0,
+                contractPeriodLabel: `${contractStart.toLocaleDateString()} - ${contractEnd.toLocaleDateString()}`,
+                fixedDueDay: dueDay,
+                firstCycleAmount,
+                firstCycleIsProrated,
+                advancePaidAmount,
+            };
+        }
 
         const timelineStart = new Date(contractStart.getFullYear(), contractStart.getMonth(), 1);
         const timelineEnd = new Date(contractEnd.getFullYear(), contractEnd.getMonth(), 1);
@@ -892,7 +1060,7 @@ const TenantLease = () => {
             currentCycleAmount: hasUnpaidCurrentCycle ? currentOutstandingAmount : 0,
             contractPeriodLabel: `${contractStart.toLocaleDateString()} - ${contractEnd.toLocaleDateString()}`,
         };
-    }, [selectedPaymentTenant, defaultNightPrice, defaultPermanentPrice]);
+    }, [selectedPaymentTenant, defaultNightPrice, defaultPermanentPrice, defaultDueDate, defaultDailyFee]);
 
     const paginatedPayments = useMemo(() => {
         const start = (paymentCurrentPage - 1) * paymentItemsPerPage;
@@ -902,7 +1070,7 @@ const TenantLease = () => {
    
     useEffect(() => {
         setPaymentCurrentPage(1);
-    }, [paymentViewType, paymentRefDate, paymentTypeFilter]);
+    }, [paymentViewType, paymentRefDate, paymentTenantTab]);
    
     const validateCollector = () => {
         if (role === "superadmin") {
@@ -3113,48 +3281,55 @@ const TenantLease = () => {
 
                         
                         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
-
-                            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-5"></div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                
-                                <div className="flex bg-slate-50 p-1 rounded-lg border border-slate-200 shadow-sm">
-                                    {["Week", "Month", "Year"].map(v => (
-                                        <button
-                                            key={v}
-                                            onClick={() => { setPaymentViewType(v); setPaymentRefDate(new Date()); }}
-                                            className={`px-4 py-1.5 rounded-md font-semibold text-sm transition-all cursor-pointer ${paymentViewType === v ? "bg-white text-emerald-700 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-700"}`}
-                                        >
-                                            {v}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm h-9">
-                                    <button onClick={() => handleShiftDate(-1)} className="px-2 h-full text-slate-400 hover:text-emerald-600 hover:bg-slate-50 rounded-l-lg transition-colors cursor-pointer border-r border-slate-100">
-                                        <ChevronLeft size={18} />
-                                    </button>
-                                    <div className="px-4 text-sm font-bold text-slate-700 flex items-center gap-2 min-w-[180px] justify-center">
-                                        <Calendar size={14} className="text-slate-400" />
-                                        {getDisplayRangeText()}
+                            <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4 shadow-sm">
+                                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+                                    <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm w-full xl:w-[380px]">
+                                        {["Permanent", "Night Market"].map((tenantTab) => (
+                                            <button
+                                                key={tenantTab}
+                                                onClick={() => {
+                                                    setPaymentTenantTab(tenantTab);
+                                                    setSelectedPaymentTenantId("");
+                                                    setPaymentCurrentPage(1);
+                                                }}
+                                                className={`h-10 sm:h-11 rounded-lg font-bold text-sm transition-all cursor-pointer ${paymentTenantTab === tenantTab ? "bg-white text-emerald-700 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-700"}`}
+                                            >
+                                                {tenantTab}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <button onClick={() => handleShiftDate(1)} className="px-2 h-full text-slate-400 hover:text-emerald-600 hover:bg-slate-50 rounded-r-lg transition-colors cursor-pointer border-l border-slate-100">
-                                        <ChevronRight size={18} />
-                                    </button>
+
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 w-full xl:w-auto">
+                                        <div className="grid grid-cols-3 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-full sm:w-[280px]">
+                                            {["Week", "Month", "Year"].map((v) => (
+                                                <button
+                                                    key={v}
+                                                    onClick={() => {
+                                                        setPaymentViewType(v);
+                                                        setPaymentRefDate(new Date());
+                                                    }}
+                                                    className={`h-9 sm:h-10 rounded-md font-semibold text-sm transition-all cursor-pointer ${paymentViewType === v ? "bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200" : "text-slate-500 hover:text-slate-700"}`}
+                                                >
+                                                    {v}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm h-10 sm:h-11 w-full sm:w-auto sm:min-w-[320px]">
+                                            <button onClick={() => handleShiftDate(-1)} className="px-2.5 h-full text-slate-400 hover:text-emerald-600 hover:bg-slate-50 rounded-l-lg transition-colors cursor-pointer border-r border-slate-100">
+                                                <ChevronLeft size={18} />
+                                            </button>
+                                            <div className="px-4 text-sm font-bold text-slate-700 flex items-center gap-2 flex-1 justify-center whitespace-nowrap">
+                                                <Calendar size={14} className="text-slate-400" />
+                                                {getDisplayRangeText()}
+                                            </div>
+                                            <button onClick={() => handleShiftDate(1)} className="px-2.5 h-full text-slate-400 hover:text-emerald-600 hover:bg-slate-50 rounded-r-lg transition-colors cursor-pointer border-l border-slate-100">
+                                                <ChevronRight size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                          
-                            <div className="flex bg-slate-100 p-1 rounded-lg shrink-0 border border-slate-200 shadow-sm">
-                                {["All", "Permanent", "Night Market"].map(t => (
-                                    <button
-                                        key={t}
-                                        onClick={() => setPaymentTypeFilter(t)}
-                                        className={`px-3 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer ${paymentTypeFilter === t ? "bg-white text-emerald-700 shadow-sm border border-slate-100" : "text-slate-500 hover:text-slate-700"}`}
-                                    >
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
 
                         <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
                             <div>
@@ -3168,123 +3343,158 @@ const TenantLease = () => {
                         </div>
 
                         <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                                <div>
-                                    <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Tenant Payment Visual</p>
-                                    <h4 className="text-lg font-bold text-slate-800 mt-1">
-                                        {selectedPaymentTenant ? (selectedPaymentTenant.tenantName || selectedPaymentTenant.name) : "No tenant selected"}
-                                    </h4>
-                                    <p className="text-sm text-slate-500 mt-1">
-                                        {selectedPaymentTenant
-                                            ? `Slot ${selectedPaymentTenant.slotNo || "N/A"} | ${(selectedPaymentTenant.tenantType || "Permanent")} | Contract: ${paymentProgress?.contractPeriodLabel || "N/A"}`
-                                            : "Select a tenant to view paid and remaining month visuals."}
-                                    </p>
-                                </div>
-
-                                <div className="w-full lg:w-80">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Tenant</label>
-                                    <select
-                                        value={selectedPaymentTenantId}
-                                        onChange={(e) => setSelectedPaymentTenantId(e.target.value)}
-                                        className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    >
-                                        {paymentTenantOptions.length === 0 && <option value="">No tenants found</option>}
-                                        {paymentTenantOptions.map((option) => {
-                                            const tenantName = option.tenant.tenantName || option.tenant.name || "Unnamed Tenant";
-                                            const slotNo = option.tenant.slotNo || "N/A";
-                                            return (
-                                                <option key={option.id} value={option.id}>
-                                                    {tenantName} (Slot {slotNo})
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {selectedPaymentTenant && paymentProgress ? (
-                                <>
-                                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                            {paymentTenantTab === "Night Market" ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Night Market Collection Summary</p>
+                                        <h4 className="text-lg font-bold text-slate-800 mt-1">{getDisplayRangeText()}</h4>
+                                        <p className="text-sm text-slate-500 mt-1">Night Market uses direct payment records and does not require contract timeline tracking.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                                            <p className="text-[11px] uppercase tracking-wide font-bold text-emerald-700">Paid</p>
-                                            <p className="text-xl font-black text-emerald-800">{paymentProgress.paidMonths}/{paymentProgress.totalMonths} months</p>
-                                            <p className="text-xs font-semibold text-emerald-700 mt-1">₱{paymentProgress.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-emerald-700">Total Collected</p>
+                                            <p className="text-2xl font-black text-emerald-800">₱{totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                         </div>
-                                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                                            <p className="text-[11px] uppercase tracking-wide font-bold text-amber-700">Remaining</p>
-                                            <p className="text-xl font-black text-amber-800">{paymentProgress.remainingMonths} months</p>
-                                            <p className="text-xs font-semibold text-amber-700 mt-1">₱{paymentProgress.remainingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                            {paymentProgress.currentCycleAmount > 0 && (
-                                                <p className="text-[11px] text-amber-700 mt-1">Current cycle due: ₱{paymentProgress.currentCycleAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                            )}
+                                        <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-sky-700">Transactions</p>
+                                            <p className="text-2xl font-black text-sky-800">{filteredPayments.length}</p>
                                         </div>
-                                        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
-                                            <p className="text-[11px] uppercase tracking-wide font-bold text-rose-700">Overdue</p>
-                                            <p className="text-xl font-black text-rose-800">{paymentProgress.overdueMonths} month(s)</p>
-                                            <p className="text-xs font-semibold text-rose-700 mt-1">Monthly Due: ₱{paymentProgress.monthlyCharge.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                        <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
+                                            <p className="text-[11px] uppercase tracking-wide font-bold text-violet-700">Paying Tenants</p>
+                                            <p className="text-2xl font-black text-violet-800">{uniquePayingTenants}</p>
                                         </div>
                                     </div>
-
-                                    <div className="mt-4">
-                                        <div className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5">
-                                            <span>Lease Progress ({paymentProgress.progressPercent}% Paid)</span>
-                                            <span>{paymentProgress.paidMonths} of {paymentProgress.totalMonths} month(s)</span>
-                                        </div>
-                                        <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                                            <div
-                                                className="h-full bg-emerald-500 transition-all"
-                                                style={{ width: `${paymentProgress.progressPercent}%` }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-4 overflow-x-auto pb-1">
-                                        <div className="min-w-max flex gap-2">
-                                            {paymentProgress.timeline.map((month) => {
-                                                const baseClass = "rounded-lg border p-2 text-center min-h-[82px] flex flex-col justify-between";
-                                                const statusClass = month.status === "paid"
-                                                    ? "border-emerald-200 bg-emerald-500 text-white"
-                                                    : month.status === "overdue"
-                                                        ? "border-rose-200 bg-rose-100 text-rose-800"
-                                                        : month.status === "remaining"
-                                                        ? "border-amber-200 bg-amber-50 text-amber-800"
-                                                            : "border-slate-200 bg-slate-50 text-slate-400";
-
-                                                return (
-                                                    <div key={month.key} className={`${baseClass} ${statusClass} w-[90px]`}> 
-                                                        <p className="text-[11px] font-black tracking-wide">{month.label}</p>
-                                                        <p className="text-[10px] font-bold uppercase">
-                                                            {month.status === "paid"
-                                                                ? "Paid"
-                                                                : month.status === "overdue"
-                                                                    ? "Overdue"
-                                                                : month.status === "remaining"
-                                                                    ? "Due"
-                                                                        : "N/A"}
-                                                        </p>
-                                                        <p className="text-[10px] font-semibold">
-                                                            {month.status === "paid"
-                                                                ? `₱${month.paidAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                                                                : month.status === "remaining"
-                                                                    ? `₱${(month.dueAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-                                                                    : ""}
-                                                        </p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
-                                        <span className="px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">Paid</span>
-                                        <span className="px-2 py-1 rounded-md bg-rose-100 text-rose-700">Overdue</span>
-                                        <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-700">Due / Unpaid</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-                                    No payment timeline available for this filter.
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                        <div>
+                                            <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Tenant Payment Visual</p>
+                                            <h4 className="text-lg font-bold text-slate-800 mt-1">
+                                                {selectedPaymentTenant ? (selectedPaymentTenant.tenantName || selectedPaymentTenant.name) : "No tenant selected"}
+                                            </h4>
+                                            <p className="text-sm text-slate-500 mt-1">
+                                                {selectedPaymentTenant
+                                                    ? `Slot ${selectedPaymentTenant.slotNo || "N/A"} | ${(selectedPaymentTenant.tenantType || "Permanent")} | Contract: ${paymentProgress?.contractPeriodLabel || "N/A"}`
+                                                    : "Select a tenant to view paid and remaining month visuals."}
+                                            </p>
+                                        </div>
+
+                                        <div className="w-full lg:w-80">
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">Tenant</label>
+                                            <select
+                                                value={selectedPaymentTenantId}
+                                                onChange={(e) => setSelectedPaymentTenantId(e.target.value)}
+                                                className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            >
+                                                {paymentTenantOptions.length === 0 && <option value="">No tenants found</option>}
+                                                {paymentTenantOptions.map((option) => {
+                                                    const tenantName = option.tenant.tenantName || option.tenant.name || "Unnamed Tenant";
+                                                    const slotNo = option.tenant.slotNo || "N/A";
+                                                    return (
+                                                        <option key={option.id} value={option.id}>
+                                                            {tenantName} (Slot {slotNo})
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {selectedPaymentTenant && paymentProgress ? (
+                                        <>
+                                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                                    <p className="text-[11px] uppercase tracking-wide font-bold text-emerald-700">Paid</p>
+                                                    <p className="text-xl font-black text-emerald-800">{paymentProgress.paidMonths}/{paymentProgress.totalMonths} months</p>
+                                                    <p className="text-xs font-semibold text-emerald-700 mt-1">₱{paymentProgress.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                    {paymentProgress.advancePaidAmount > 0 && (
+                                                        <p className="text-[11px] text-emerald-700 mt-1">Advance paid: ₱{paymentProgress.advancePaidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                    )}
+                                                </div>
+                                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                                    <p className="text-[11px] uppercase tracking-wide font-bold text-amber-700">Remaining</p>
+                                                    <p className="text-xl font-black text-amber-800">{paymentProgress.remainingMonths} months</p>
+                                                    <p className="text-xs font-semibold text-amber-700 mt-1">₱{paymentProgress.remainingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                    {paymentProgress.currentCycleAmount > 0 && (
+                                                        <p className="text-[11px] text-amber-700 mt-1">Current cycle due: ₱{paymentProgress.currentCycleAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                    )}
+                                                    {paymentProgress.firstCycleIsProrated && paymentProgress.firstCycleAmount > 0 && (
+                                                        <p className="text-[11px] text-amber-700 mt-1">First due (prorated): ₱{paymentProgress.firstCycleAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                    )}
+                                                </div>
+                                                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                                                    <p className="text-[11px] uppercase tracking-wide font-bold text-rose-700">Overdue</p>
+                                                    <p className="text-xl font-black text-rose-800">{paymentProgress.overdueMonths} month(s)</p>
+                                                    <p className="text-xs font-semibold text-rose-700 mt-1">Monthly Due: ₱{paymentProgress.monthlyCharge.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                    {paymentProgress.fixedDueDay && (
+                                                        <p className="text-[11px] text-rose-700 mt-1">Fixed due day: every {paymentProgress.fixedDueDay}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4">
+                                                <div className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-1.5">
+                                                    <span>Lease Progress ({paymentProgress.progressPercent}% Paid)</span>
+                                                    <span>{paymentProgress.paidMonths} of {paymentProgress.totalMonths} month(s)</span>
+                                                </div>
+                                                <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-emerald-500 transition-all"
+                                                        style={{ width: `${paymentProgress.progressPercent}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 overflow-x-auto pb-1">
+                                                <div className="min-w-max flex gap-2">
+                                                    {paymentProgress.timeline.map((month) => {
+                                                        const baseClass = "rounded-lg border p-2 text-center min-h-[82px] flex flex-col justify-between";
+                                                        const statusClass = month.status === "paid"
+                                                            ? "border-emerald-200 bg-emerald-500 text-white"
+                                                            : month.status === "overdue"
+                                                                ? "border-rose-200 bg-rose-100 text-rose-800"
+                                                                : month.status === "remaining"
+                                                                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                                                                    : "border-slate-200 bg-slate-50 text-slate-400";
+
+                                                        return (
+                                                            <div key={month.key} className={`${baseClass} ${statusClass} w-[90px]`}>
+                                                                <p className="text-[11px] font-black tracking-wide">{month.label}</p>
+                                                                <p className="text-[10px] font-bold uppercase">
+                                                                    {month.status === "paid"
+                                                                        ? "Paid"
+                                                                        : month.status === "overdue"
+                                                                            ? "Overdue"
+                                                                            : month.status === "remaining"
+                                                                                ? "Due"
+                                                                                : "N/A"}
+                                                                </p>
+                                                                <p className="text-[10px] font-semibold">
+                                                                    {month.status === "paid"
+                                                                        ? `₱${month.paidAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                                        : month.status === "remaining"
+                                                                            ? `₱${(month.dueAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                                                                            : ""}
+                                                                </p>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
+                                                <span className="px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">Paid</span>
+                                                <span className="px-2 py-1 rounded-md bg-rose-100 text-rose-700">Overdue</span>
+                                                <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-700">Due / Unpaid</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+                                            No payment timeline available for this filter.
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                         
@@ -3336,6 +3546,7 @@ const TenantLease = () => {
                         </div>
                     </div>
                 </div>
+            </div>
             )}
 
             {isMoveOutModalOpen && (
