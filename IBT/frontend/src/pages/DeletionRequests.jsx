@@ -15,6 +15,7 @@ import {
   Trash2,
   Archive,
   History,
+  ChevronDown,
 } from "lucide-react";
 import { logActivity } from "../utils/logger";
 import LogModal from "../components/common/LogModal";
@@ -52,6 +53,8 @@ const DeletionRequests = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showLogModal, setShowLogModal] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const [toast, setToast] = useState({
     isOpen: false,
@@ -92,12 +95,6 @@ const DeletionRequests = () => {
     fetchRequests();
   }, []);
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return requests.slice(startIndex, startIndex + itemsPerPage);
-  }, [requests, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(requests.length / itemsPerPage);
   const normalizeStatus = (status) => {
     if (typeof status === "string") {
       const normalized = status.trim().toLowerCase();
@@ -122,9 +119,19 @@ const DeletionRequests = () => {
     return "pending";
   };
 
-  const selectableRequests = paginatedData.filter(
-    (item) => normalizeStatus(item.status) === "pending",
-  );
+  const filteredRequests = useMemo(() => {
+    if (statusFilter === "All") return requests;
+    return requests.filter((req) => normalizeStatus(req.status) === statusFilter.toLowerCase());
+  }, [requests, statusFilter]);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredRequests.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredRequests, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+
+  const selectableRequests = paginatedData; 
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) setSelectedIds([]);
@@ -175,76 +182,35 @@ const DeletionRequests = () => {
     return "";
   };
 
-  // BULK APPROVE (SOFT DELETE)
-  const handleBulkApprove = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to approve deletion for ${selectedIds.length} items? \n\nThey will be moved to the Archives and permanently deleted from their main tables.`,
-      )
-    )
-      return;
-
+  // BULK DELETE REQUEST LOGS
+  const handleConfirmBulkDelete = async () => {
     setIsLoading(true);
     try {
       const processPromises = selectedIds.map(async (id) => {
-        const reqItem = requests.find((r) => (r._id || r.id) === id);
-        if (!reqItem) return;
-
-        if (normalizeStatus(reqItem.status) !== "pending") return;
-
-        if (reqItem.originalData) {
-          // 1. AUTO-ARCHIVE
-          await fetch(ARCHIVE_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: reqItem.itemType,
-              description: reqItem.itemDescription,
-              originalData: reqItem.originalData,
-              archivedBy: role,
-            }),
-          });
-
-          // 2. DELETE ORIGINAL RECORD
-          const originalId = reqItem.originalData._id || reqItem.originalData.id;
-          const deleteEndpoint = getDeleteEndpoint(reqItem.itemType, originalId);
-
-          if (deleteEndpoint) {
-            await fetch(deleteEndpoint, { method: "DELETE" });
-          }
-        }
-
-        // 3. APPROVE DELETION REQUEST
-        await fetch(`${API_URL}/deletion-requests/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "approve",
-            adminRemarks: "Bulk Approved via Superadmin Console",
-          }),
-        });
+        await fetch(`${API_URL}/deletion-requests/${id}`, { method: "DELETE" });
       });
 
       await Promise.all(processPromises);
       
       await logActivity(
         role,
-        "BULK_APPROVE_DELETE",
-        `Bulk approved/archived ${selectedIds.length} items`,
+        "BULK_DELETE_REQUESTS",
+        `Bulk deleted ${selectedIds.length} deletion request logs`,
         "DeletionRequests",
       );
 
       showToast(
         "success",
-        `Successfully archived and deleted ${selectedIds.length} items.`,
+        `Successfully deleted ${selectedIds.length} request logs.`,
       );
 
       setSelectedIds([]);
       setIsSelectionMode(false);
+      setShowBulkDeleteModal(false);
       fetchRequests();
     } catch (e) {
-      console.error("Bulk action failed", e);
-      showToast("error", "Failed to process some records.");
+      console.error("Bulk delete failed", e);
+      showToast("error", "Failed to delete some records.");
     } finally {
       setIsLoading(false);
     }
@@ -255,7 +221,6 @@ const DeletionRequests = () => {
 
     try {
       if (approveData.originalData) {
-        // 1. Send to Archives
         await fetch(ARCHIVE_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -380,39 +345,63 @@ const DeletionRequests = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 mb-4">
-        {isSelectionMode && selectedIds.length > 0 && (
-          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-            <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
-              {selectedIds.length} Selected
-            </span>
-            <button
-              onClick={handleBulkApprove}
-              title="Delete Selected"
-              className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs font-bold text-slate-500">STATUS:</span>
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 py-2 pl-3 pr-10 outline-none font-semibold shadow-sm appearance-none cursor-pointer"
             >
-              <Trash2 className="h-5 w-5" />
-            </button>
+              <option value="All">All Requests</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Denied">Denied</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+              <ChevronDown size={16} />
+            </div>
           </div>
-        )}
-        <button
-          onClick={() => setShowLogModal(true)}
-          className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[40px] rounded-xl shadow-sm hover:border-emerald-500 transition-all cursor-pointer"
-        >
-          <History size={18} />
-          <span className="hidden sm:inline">Logs</span>
-        </button>
-        <button
-          onClick={toggleSelectionMode}
-          title={isSelectionMode ? "Cancel Selection" : "Select Records"}
-          className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
-            isSelectionMode
-              ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
-              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
-          }`}
-        >
-          {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
-        </button>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+          {isSelectionMode && selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+              <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">
+                {selectedIds.length} Selected
+              </span>
+              <button
+                onClick={() => setShowBulkDeleteModal(true)}
+                title="Delete Selected Logs"
+                className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 transition-all cursor-pointer"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setShowLogModal(true)}
+            className="flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 h-[40px] rounded-xl shadow-sm hover:border-emerald-500 transition-all cursor-pointer"
+          >
+            <History size={18} />
+            <span className="hidden sm:inline">Logs</span>
+          </button>
+          <button
+            onClick={toggleSelectionMode}
+            title={isSelectionMode ? "Cancel Selection" : "Select Records"}
+            className={`flex items-center justify-center h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${
+              isSelectionMode
+                ? "bg-red-500 text-white shadow-md cursor-pointer hover:bg-red-600 border-red-600"
+                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer"
+            }`}
+          >
+            {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -432,10 +421,9 @@ const DeletionRequests = () => {
               date: new Date(req.requestDate).toLocaleString(),
               id: req._id || req.id,
             };
-
             if (isSelectionMode) {
               return {
-                select: normalizeStatus(req.status) === "pending" ? (
+                select: (
                   <div
                     className="flex items-center"
                     onClick={(e) => e.stopPropagation()}
@@ -447,10 +435,11 @@ const DeletionRequests = () => {
                       className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                     />
                   </div>
-                ) : null,
+                ),
                 ...baseData,
               };
             }
+
             return baseData;
           })}
           emptyMessage="No deletion requests found."
@@ -504,7 +493,7 @@ const DeletionRequests = () => {
         totalPages={totalPages}
         onPageChange={setCurrentPage}
         itemsPerPage={itemsPerPage}
-        totalItems={requests.length}
+        totalItems={filteredRequests.length}
         onItemsPerPageChange={setItemsPerPage}
       />
 
@@ -624,6 +613,31 @@ const DeletionRequests = () => {
           </div>
         </Modal>
       )}
+      {showBulkDeleteModal && (
+        <Modal title="Confirm Bulk Delete" onClose={() => setShowBulkDeleteModal(false)}>
+          <p className="text-sm text-slate-600 mb-4 bg-red-50 p-3 rounded border border-red-100">
+            Are you sure you want to permanently delete <strong>{selectedIds.length}</strong> request logs?
+            <br/><br/>
+            This action cannot be undone.
+          </p>
+          <div className="mt-4 flex justify-end gap-3">
+            <button
+              onClick={() => setShowBulkDeleteModal(false)}
+              className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg cursor-pointer hover:bg-slate-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmBulkDelete}
+              disabled={isLoading}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50 cursor-pointer hover:bg-red-700"
+            >
+              {isLoading ? "Deleting..." : "Confirm Delete"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
       <LogModal isOpen={showLogModal} onClose={() => setShowLogModal(false)} />
 
       <NotificationToast
