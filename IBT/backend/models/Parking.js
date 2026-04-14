@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const ParkingSchema = new mongoose.Schema({
   ticketNo: { type: String, required: true },
   plateNo: { type: String, required: true }, 
-
+  referenceNo: { type: String, default: "-" },
   type: { type: String, required: true },
    pricingType: { 
     type: String, 

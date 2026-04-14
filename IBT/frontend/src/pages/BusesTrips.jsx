@@ -470,8 +470,8 @@ const ManageCompaniesModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-[min(96vw,1500px)] h-[min(88vh,900px)] flex rounded-2xl bg-white shadow-2xl overflow-hidden text-[15px]">
-        <div className="w-[32%] min-w-[320px] bg-slate-50 border-r border-slate-200 flex flex-col">
+      <div className="w-[min(96vw,1500px)] h-[min(88vh,900px)] flex flex-col md:flex-row rounded-2xl bg-white shadow-2xl overflow-hidden text-[15px]">
+        <div className="w-full md:w-[32%] md:min-w-[320px] h-[40%] md:h-full bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
           <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-white">
             <h3 className="font-bold text-slate-700 text-lg">Companies</h3>
             <button
@@ -581,8 +581,8 @@ const ManageCompaniesModal = ({
           </div>
 
           {activeCompany ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4 shrink-0">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-500 uppercase">
@@ -819,7 +819,7 @@ const ManageCompaniesModal = ({
                 </div>
               </div>
 
-              <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center">
+              <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h4 className="text-base font-semibold text-slate-700">
                   Registered Buses
                 </h4>
@@ -834,7 +834,7 @@ const ManageCompaniesModal = ({
                 </select>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5">
+              <div className="p-5">
                 {activeCompany.buses && activeCompany.buses.length > 0 ? (
                   <table className="w-full text-[15px] text-left">
                     <thead className="text-sm text-slate-500 uppercase bg-slate-50">
@@ -2228,8 +2228,8 @@ const BusTrips = () => {
           item.ticketReferenceNo || "-",
           item.route || "-",
           `Php ${(item.price || 75).toFixed(2)}`,
-          item.time || "-",
-          item.departureTime || "-",
+          formatTime(item.time) || "-",
+          formatTime(item.departureTime) || "-",
           item.company || "-",
           item.status || "-",
         ]);
@@ -2366,8 +2366,8 @@ const BusTrips = () => {
         item.ticketReferenceNo || "-",
         item.route || "-",
         `Php ${(item.price || 75).toFixed(2)}`,
-        item.time || "-",
-        item.departureTime || "-",
+        formatTime(item.time) || "-",
+        formatTime(item.departureTime) || "-",
         item.company || "-",
         item.status || "-",
       ]),
@@ -3218,7 +3218,7 @@ const BusTrips = () => {
           arrivedTrips={dashboardArrivedTrips}
           paidTrips={dashboardPaidTrips}
           maintenanceTrips={dashboardMaintenanceTrips}
-          missedTrips={missedBuses.length}
+          missedTrips={allMissedBusesDisplay.length}
           totalRevenue={dashboardTotalRevenue}
         />
       </div>
@@ -3243,25 +3243,17 @@ const BusTrips = () => {
 
             {role === "superadmin" && (
               <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
-                <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
-                  {["All", "Daily", "Week", "Month", "Year"].map((type) => (
+                {role === "superadmin" && (
+                  <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
                     <button
-                      key={type}
-                      onClick={() => {
-                        setDateFilterType(type);
-                        setCurrentDateRange(new Date());
-                        setCurrentPage(1);
-                      }}
-                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
-                        dateFilterType === type
-                          ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
-                          : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                      }`}
+                      onClick={() => setShowManageCompaniesModal(true)}
+                      className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
                     >
-                      {type}
+                      <Bus size={18} />
+                      <span>Manage Companies</span>
                     </button>
-                  ))}
-                </div>
+                  </div>
+                )}
 
                 {dateFilterType !== "All" && (
                   <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
@@ -3396,13 +3388,24 @@ const BusTrips = () => {
                 </button>
               )}
 
-              {role === "superadmin" && (
+            {role === "superadmin" && (
+              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
                 <button
                   onClick={() => setShowManageCompaniesModal(true)}
                   className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
                 >
                   <Bus size={18} />
                   <span>Manage Companies</span>
+                </button>
+              </div>
+            )}
+
+              {role === "superadmin" && (
+                <button
+                  onClick={() => setShowMissedModal(true)}
+                  className="flex items-center cursor-pointer justify-center space-x-2 border border-amber-200 bg-white text-amber-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition-all"
+                >
+                  <span>View Missed Buses</span>
                 </button>
               )}
 
@@ -3438,16 +3441,59 @@ const BusTrips = () => {
             </div>
           </div>
 
-          <div className="w-full pt-4 mt-2 border-t border-slate-100">
-            <BusTripFilters
-              selectedCompany={selectedCompany}
-              setSelectedCompany={setSelectedCompany}
-              uniqueCompanies={availableCompanies}
-              selectedBusType={selectedBusType}
-              setSelectedBusType={setSelectedBusType}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-            />
+          <div className="w-full pt-4 mt-2 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div className="flex-1 overflow-x-auto w-full">
+              <BusTripFilters
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedCompany={selectedCompany}
+                setSelectedCompany={setSelectedCompany}
+                uniqueCompanies={availableCompanies}
+                selectedBusType={selectedBusType}
+                setSelectedBusType={setSelectedBusType}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
+              />
+            </div>
+            
+            {role === "superadmin" && (
+              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto shrink-0">
+                <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
+                  {["All", "Daily", "Week", "Month", "Year"].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setDateFilterType(type);
+                        setCurrentDateRange(new Date());
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                        dateFilterType === type
+                          ? "bg-white text-emerald-600 shadow-sm border border-slate-200"
+                          : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
+                {dateFilterType !== "All" && (
+                  <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                    <button onClick={handlePrevPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                      <ChevronLeft size={18} />
+                    </button>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                      <Calendar size={16} className="text-slate-400" />
+                      {getPeriodDisplayStr()}
+                    </div>
+                    <button onClick={handleNextPeriod} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>
