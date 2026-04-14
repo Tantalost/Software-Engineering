@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { X, Plus, Pencil, Trash2, Loader2, FileText } from "lucide-react";
+import { X, Plus, Pencil, Trash2, Loader2, FileText, ChevronDown } from "lucide-react";
 
 const getDocUrl = (apiUrl, filename) => {
   if (!filename) return "";
@@ -211,12 +211,21 @@ const AvailableContractsModal = ({ isOpen, onClose, apiUrl, onNotify, onSaved })
           <section className="xl:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <h4 className="font-bold text-slate-700 mb-3">{editingId ? "Edit Template" : "Create Template"}</h4>
             <div className="space-y-3">
-              <div>
+             <div>
                 <label className="text-xs font-semibold text-slate-600">Contract Type</label>
-                <select value={form.contractType} onChange={(e) => setForm((prev) => ({ ...prev, contractType: normalizeContractType(e.target.value) }))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                  <option value="INITIAL">INITIAL</option>
-                  <option value="RENEWAL">RENEWAL</option>
-                </select>
+                <div className="relative mt-1">
+                  <select 
+                    value={form.contractType} 
+                    onChange={(e) => setForm((prev) => ({ ...prev, contractType: normalizeContractType(e.target.value) }))} 
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-sm appearance-none cursor-pointer bg-white"
+                  >
+                    <option value="INITIAL">INITIAL</option>
+                    <option value="RENEWAL">RENEWAL</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-9 border-l border-slate-200 text-slate-500 my-1">
+                    <ChevronDown size={16} />
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>

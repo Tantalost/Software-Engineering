@@ -1,5 +1,5 @@
 import React, { useState } from "react"; 
-import { X, ClipboardList, CreditCard, Eye, Filter, AlertTriangle, FileSignature, XCircle } from "lucide-react";
+import { X, ClipboardList, CreditCard, Eye, Filter, AlertTriangle, FileSignature, XCircle, ChevronDown } from "lucide-react";
 
 
 const getTimeAgo = (dateString) => {
@@ -155,15 +155,20 @@ const isRenewalRecord = (app) => {
              
               <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-3">
                   <span className="text-xs font-bold text-slate-500">TYPE:</span>
-                  <select
-                      value={slotTypeFilter}
-                      onChange={(e) => setSlotTypeFilter(e.target.value)}
-                      className="bg-white border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-emerald-500 focus:border-emerald-500 p-1.5 outline-none font-bold shadow-sm cursor-pointer"
-                  >
-                      <option value="All">All Slots</option>
-                      <option value="Permanent">Permanent</option>
-                      <option value="Night Market">Night Market</option>
-                  </select>
+                  <div className="relative">
+                      <select
+                          value={slotTypeFilter}
+                          onChange={(e) => setSlotTypeFilter(e.target.value)}
+                          className="bg-white border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-emerald-500 focus:border-emerald-500 py-1.5 pl-2.5 pr-8 outline-none font-bold shadow-sm appearance-none cursor-pointer"
+                      >
+                          <option value="All">All Slots</option>
+                          <option value="Permanent">Permanent</option>
+                          <option value="Night Market">Night Market</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-7 border-l border-slate-200 text-slate-500 my-1">
+                          <ChevronDown size={14} />
+                      </div>
+                  </div>
               </div>
              
           </div>

@@ -270,21 +270,26 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
           <div className="pt-4 border-t border-slate-100">
             <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Products to be Sold</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
+               <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-slate-700">Category</label>
-                  <select 
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 w-full"
-                    value={productCategory}
-                    onChange={(e) => setProductCategory(e.target.value)}
-                  >
-                    <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
-                    <option value="clothes_textiles">Clothes and textiles</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="footwears">Footwears</option>
-                    <option value="kitchenwares">Kitchenwares</option>
-                    <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
-                    <option value="other">Others, please specify</option>
-                  </select>
+                  <div className="relative">
+                    <select 
+                      className="rounded-lg border border-slate-300 px-3 py-2 pr-10 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 w-full appearance-none cursor-pointer bg-white"
+                      value={productCategory}
+                      onChange={(e) => setProductCategory(e.target.value)}
+                    >
+                      <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
+                      <option value="clothes_textiles">Clothes and textiles</option>
+                      <option value="accessories">Accessories</option>
+                      <option value="footwears">Footwears</option>
+                      <option value="kitchenwares">Kitchenwares</option>
+                      <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
+                      <option value="other">Others, please specify</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1">
+                      <ChevronDown size={16} />
+                    </div>
+                  </div>
                 </div>
                 {productCategory === "other" && (
                   <div className="flex flex-col gap-1">
@@ -385,7 +390,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
-                      className={`appearance-none rounded-lg border px-3 py-2 text-sm outline-none w-full font-bold cursor-pointer transition-colors
+                      className={`appearance-none rounded-lg border px-3 py-2 pr-10 text-sm outline-none w-full font-bold cursor-pointer transition-colors
                       ${status === 'Paid' 
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-700 focus:border-emerald-500' 
                       : status === 'Payment Review' || status === 'PAYMENT_REVIEW'
@@ -397,8 +402,8 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
                       <option value="Payment Review">Payment Review</option>
                       <option value="Overdue">Overdue</option>
                     </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
-                       <ChevronDown size={14} />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-black/10 text-slate-500 my-1">
+                       <ChevronDown size={16} />
                     </div>
                 </div>
               </div>

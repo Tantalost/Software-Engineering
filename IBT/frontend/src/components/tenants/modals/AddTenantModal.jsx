@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Loader2, ZoomIn } from "lucide-react";
+import { X, Upload, FileText, Calendar, PhilippinePeso, Map, Check, Loader2, ZoomIn, ChevronDown } from "lucide-react";
 
 import CryptoJS from "crypto-js";
 
@@ -377,18 +377,23 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Lease Type</label>
-                  <select 
-                    required
-                    className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    value={formData.tenantType}
-                    onChange={(e) => {
-                        setFormData({...formData, tenantType: e.target.value, slotNo: ""}); 
-                        setTempSelectedSlots([]);
-                    }}
-                  >
-                    <option value="Permanent">Permanent</option>
-                    <option value="Night Market">Night Market</option>
-                  </select>
+                  <div className="relative">
+                    <select 
+                      required
+                      className="p-2.5 pr-10 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none appearance-none cursor-pointer bg-white"
+                      value={formData.tenantType}
+                      onChange={(e) => {
+                          setFormData({...formData, tenantType: e.target.value, slotNo: ""}); 
+                          setTempSelectedSlots([]);
+                      }}
+                    >
+                      <option value="Permanent">Permanent</option>
+                      <option value="Night Market">Night Market</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1">
+                      <ChevronDown size={16} />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -565,17 +570,26 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             <section className="pt-4 border-t border-slate-100">
               <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-600 mb-4 flex items-center gap-2"><FileText size={16} /> 2. Products to be Sold</h3>
               <div className="grid grid-cols-1 gap-4">
-                <div className="flex flex-col gap-1">
+               <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Category</label>
-                  <select className="p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={productCategory} onChange={(e) => setProductCategory(e.target.value)}>
-                    <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
-                    <option value="clothes_textiles">Clothes and textiles</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="footwears">Footwears</option>
-                    <option value="kitchenwares">Kitchenwares</option>
-                    <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
-                    <option value="other">Others, please specify</option>
-                  </select>
+                  <div className="relative">
+                    <select 
+                      className="p-2.5 pr-10 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none appearance-none cursor-pointer bg-white" 
+                      value={productCategory} 
+                      onChange={(e) => setProductCategory(e.target.value)}
+                    >
+                      <option value="food_non_alcoholic">Food and non-alcoholic beverages</option>
+                      <option value="clothes_textiles">Clothes and textiles</option>
+                      <option value="accessories">Accessories</option>
+                      <option value="footwears">Footwears</option>
+                      <option value="kitchenwares">Kitchenwares</option>
+                      <option value="agricultural_produce">Fruits, vegetables and other agricultural produce</option>
+                      <option value="other">Others, please specify</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1">
+                      <ChevronDown size={16} />
+                    </div>
+                  </div>
                 </div>
                 {productCategory === "other" && (
                   <div className="flex flex-col gap-1 animate-fadeIn">
