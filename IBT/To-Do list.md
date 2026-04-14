@@ -3,18 +3,6 @@ Color Coding
 🟡 **In Progress**
 🟢 **Done**
 
-**REQUEST NI SIR DERICK**
-Permanent
-- Add type of tenant (OFFICES) in permanent tenants (Steph)🔴 **To be Fixed**
-
-
-
-
-
-
-
-
-
 
 ================================================================================================================================================
 **DONE TO DO LIST**
