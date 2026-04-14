@@ -267,10 +267,24 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
     const contractType = String(template?.contractType || template?.type || '').toUpperCase();
     return contractType === 'RENEWAL';
   });
+  const currentContracts = Array.isArray(currentApp?.contracts) ? currentApp.contracts : [];
+  const approvedRenewalContract = currentContracts.find((contract: any) => {
+    const contractType = String(contract?.contractType || '').toUpperCase();
+    const status = String(contract?.status || '').toLowerCase();
+    return contractType === 'RENEWAL' && status === 'approved_awaiting_start';
+  });
+  const hasApprovedRenewalAwaitingStart = Boolean(approvedRenewalContract);
+  const parsedApprovedRenewalStartDate = approvedRenewalContract?.startDate
+    ? new Date(approvedRenewalContract.startDate)
+    : null;
+  const approvedRenewalStartDate = parsedApprovedRenewalStartDate && !Number.isNaN(parsedApprovedRenewalStartDate.getTime())
+    ? parsedApprovedRenewalStartDate
+    : null;
+  const hasPendingRenewal = Boolean(currentApp?.hasPendingRenewal);
+  const hasOpenRenewalRequest = hasPendingRenewal || hasApprovedRenewalAwaitingStart;
   const hasSelectedRenewalContract = renewalContracts.some(
     (template: any) => String(template._id) === selectedTemplateId
   );
-  const hasPendingRenewal = Boolean(currentApp?.hasPendingRenewal);
   const parsedContractEndDate = currentApp?.activeContractEndDate
     ? new Date(currentApp.activeContractEndDate)
     : null;
@@ -281,7 +295,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
     ? Math.ceil((new Date(activeContractEndDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
     : null;
   const isWithinRenewalWindow = renewalDaysLeft !== null && renewalDaysLeft >= 0 && renewalDaysLeft <= 30;
-  const isEligibleForRenewal = Boolean(currentApp?.isEligibleForRenewal) || isWithinRenewalWindow;
+  const isEligibleForRenewal = !hasOpenRenewalRequest && (Boolean(currentApp?.isEligibleForRenewal) || isWithinRenewalWindow);
 
   const getTemplateDurationLabel = (template: any) => {
     const duration = template?.duration;
@@ -341,7 +355,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         </Card.Content>
       </Card>
 
-      {isPermanent && (isEligibleForRenewal || hasPendingRenewal) && (
+      {isPermanent && (isEligibleForRenewal || hasPendingRenewal) && !hasApprovedRenewalAwaitingStart && (
         <Card style={{ marginBottom: 20, backgroundColor: '#eff6ff', borderColor: '#bbf7d0', borderWidth: 1 }}>
           <Card.Content>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
@@ -401,6 +415,27 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                   Submit Renewal Contract
                 </Button>
               </>
+            )}
+          </Card.Content>
+        </Card>
+      )}
+
+      {isPermanent && hasApprovedRenewalAwaitingStart && (
+        <Card style={{ marginBottom: 20, backgroundColor: '#ecfeff', borderColor: '#67e8f9', borderWidth: 1 }}>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Icon name="clock-check-outline" size={22} color="#0e7490" style={{ marginRight: 8 }} />
+              <Text variant="titleMedium" style={{ color: '#155e75', fontWeight: 'bold' }}>
+                Renewal Approved
+              </Text>
+            </View>
+            <Text style={{ color: '#155e75' }}>
+              Your renewal contract is approved and waiting for activation.
+            </Text>
+            {approvedRenewalStartDate && (
+              <Text style={{ color: '#0c4a6e', fontWeight: 'bold', marginTop: 6 }}>
+                Activation date: {approvedRenewalStartDate.toLocaleDateString()}
+              </Text>
             )}
           </Card.Content>
         </Card>
