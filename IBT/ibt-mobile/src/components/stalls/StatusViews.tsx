@@ -184,7 +184,11 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const isPermanent = currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent";
-  const isWaitingForStartOperation = isPermanent && !currentApp.due && !currentApp.operationStartDate;
+  const isPausedForExtendedNonPayment = Boolean(currentApp.isOperationPaused) && (
+    String(currentApp.operationPauseReason || '').toUpperCase() === 'NON_PAYMENT_2_MONTHS' ||
+    (currentApp.tenantDbStatus === 'Not Started Operations' && Number(currentApp.overdueCycleCount || 0) >= 2)
+  );
+  const isWaitingForStartOperation = currentApp.tenantDbStatus === 'Not Started Operations' || (isPermanent && !currentApp.due && !currentApp.operationStartDate);
 
   useEffect(() => {
     if (!applying && paymentData?.referenceNo === '') {
@@ -210,6 +214,8 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
 
   const isOverdueState = currentApp.tenantDbStatus === 'Overdue' || 
                          (currentApp.tenantDbStatus === 'Payment Review' && (hasPenalties || isPastDue));
+  const isAlertState = isOverdueState || isPausedForExtendedNonPayment;
+  const isPaymentSubmissionDisabled = currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation || isPausedForExtendedNonPayment;
 
   const rentAmount = rawRent.toLocaleString(undefined, {minimumFractionDigits: 2});
   const utilityAmount = rawUtil.toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -284,10 +290,10 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.success]} />}
     >
 
-      <Card style={[styles.card, { borderColor: isOverdueState ? '#dc2626' : colors.success, borderWidth: 1, marginBottom: 20 }]}>
+      <Card style={[styles.card, { borderColor: isAlertState ? '#dc2626' : colors.success, borderWidth: 1, marginBottom: 20 }]}>
         <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
-          <Icon name={isOverdueState ? "alert-circle" : "check-decagram"} size={80} color={isOverdueState ? '#dc2626' : colors.success} />
-          <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: isOverdueState ? '#dc2626' : colors.success }}>
+          <Icon name={isAlertState ? "alert-circle" : "check-decagram"} size={80} color={isAlertState ? '#dc2626' : colors.success} />
+          <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: isAlertState ? '#dc2626' : colors.success }}>
             {isOverdueState ? 'Overdue Account' : (isWaitingForStartOperation ? 'Not Started Operations' : 'Active Tenant')}
           </Text>
           <Text variant="titleMedium" style={{ marginTop: 5, color: colors.textDark, fontWeight: 'bold' }}>
@@ -370,12 +376,16 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>Next Payment Due</Text>
           </View>
-          <Text variant="headlineSmall" style={{ color: isWaitingForStartOperation ? '#b45309' : colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
-          {isWaitingForStartOperation && (
+          <Text variant="headlineSmall" style={{ color: isPausedForExtendedNonPayment ? '#dc2626' : (isWaitingForStartOperation ? '#b45309' : colors.success), fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
+          {isPausedForExtendedNonPayment ? (
+            <Text style={{ marginLeft: 34, marginTop: 4, color: '#b91c1c', fontStyle: 'italic' }}>
+              Operations are paused after 2 months unpaid balance. Please settle the remaining balance.
+            </Text>
+          ) : isWaitingForStartOperation ? (
             <Text style={{ marginLeft: 34, marginTop: 4, color: '#92400e', fontStyle: 'italic' }}>
               Billing starts the day after your operation starts.
             </Text>
-          )}
+          ) : null}
           
           <View style={{ marginLeft: 34, marginTop: 10, backgroundColor: '#dcfce7', padding: 12, borderRadius: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
@@ -557,15 +567,15 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               clearPaymentData(); 
               setPaymentModalVisible(true); 
             }} 
-            style={{ backgroundColor: (currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation) ? '#ffbf49' : colors.success }} 
+            style={{ backgroundColor: isPausedForExtendedNonPayment ? '#dc2626' : ((currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation) ? '#ffbf49' : colors.success) }} 
             labelStyle={{ 
             color: colors.white, 
             fontWeight: 'bold',
             fontSize: 16 
             }} 
-            disabled={currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation} 
+            disabled={isPaymentSubmissionDisabled} 
           >
-          {isWaitingForStartOperation ? 'Operation Not Started' : (currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment')}
+          {isPausedForExtendedNonPayment ? 'Operations Paused - Settle Balance' : (isWaitingForStartOperation ? 'Operation Not Started' : (currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment'))}
         </Button>
         </Card.Content>
       </Card>

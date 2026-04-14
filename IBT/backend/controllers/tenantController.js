@@ -85,6 +85,20 @@ const daysUntil = (targetDate, fromDate = new Date()) => {
   return Math.floor(diff / (24 * 60 * 60 * 1000));
 };
 
+const hasOutstandingOverdueBalance = (tenant) => {
+  const status = String(tenant?.status || "").toLowerCase();
+  const charge = Number(tenant?.chargeAmount || 0);
+  const interest = Number(tenant?.interestAmount || 0);
+  const overdueCycleCount = Number(tenant?.overdueCycleCount || 0);
+
+  return status === "overdue" || charge > 0 || interest > 0 || overdueCycleCount >= 2;
+};
+
+const isAutoPausedForNonPayment = (tenant) => {
+  return Boolean(tenant?.isOperationPaused)
+    && String(tenant?.operationPauseReason || "").toUpperCase() === "NON_PAYMENT_2_MONTHS";
+};
+
 const calculateDurationMonths = (startDate, endDate) => {
   let months =
     (endDate.getFullYear() - startDate.getFullYear()) * 12 +
@@ -1745,8 +1759,17 @@ export const startOperation = async (req, res) => {
     
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
 
+    if (isAutoPausedForNonPayment(tenant) && hasOutstandingOverdueBalance(tenant)) {
+      return res.status(400).json({
+        error: "Operations are paused after 2 months of unpaid balance. Please settle the remaining balance first.",
+      });
+    }
+
     const operationStartDate = new Date();
     tenant.operationStartDate = operationStartDate;
+    tenant.isOperationPaused = false;
+    tenant.operationPauseReason = null;
+    tenant.lastPausedDate = null;
 
     const isPermanentTenant = tenant.tenantType === "Permanent" || !tenant.tenantType;
 
@@ -1815,18 +1838,26 @@ export const toggleOperationStatus = async (req, res) => {
     let actionTaken = "";
 
     if (tenant.isOperationPaused) {
+      if (isAutoPausedForNonPayment(tenant) && hasOutstandingOverdueBalance(tenant)) {
+        return res.status(400).json({
+          error: "Cannot resume operations yet. Please pay the remaining overdue balance first.",
+        });
+      }
         
         const now = new Date();
-        const pauseDurationMs = now - new Date(tenant.lastPausedDate);
-        const pauseDurationDays = pauseDurationMs / (1000 * 60 * 60 * 24);
+      const validLastPausedDate = toValidDate(tenant.lastPausedDate);
+      const pauseDurationMs = validLastPausedDate ? (now - validLastPausedDate) : 0;
+      const pauseDurationDays = pauseDurationMs / (1000 * 60 * 60 * 24);
 
         tenant.totalPausedDays += pauseDurationDays;
         tenant.isOperationPaused = false;
+      tenant.operationPauseReason = null;
         tenant.lastPausedDate = null;
         actionTaken = "resumed";
     } else {
        
         tenant.isOperationPaused = true;
+      tenant.operationPauseReason = "MANUAL";
         tenant.lastPausedDate = new Date();
         actionTaken = "paused";
     }

@@ -1594,7 +1594,10 @@ const TenantLease = () => {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" }
             });
-            if (!res.ok) throw new Error("Failed to start operation");
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to start operation");
+            }
 
             setNotificationState({ isOpen: true, type: 'success', message: "Operation officially started!", autoClose: true, duration: 3000 });
             await logActivity(role, "START_OPERATION", `Started operation for tenant: ${tenantName}`, "Tenants");
@@ -1603,7 +1606,7 @@ const TenantLease = () => {
             fetchTenants();        
         } catch (e) {
             console.error(e);
-            setNotificationState({ isOpen: true, type: 'error', message: "Failed to start operation.", autoClose: true, duration: 3000 });
+            setNotificationState({ isOpen: true, type: 'error', message: e.message || "Failed to start operation.", autoClose: true, duration: 3000 });
         }
     };
 
@@ -1618,7 +1621,10 @@ const TenantLease = () => {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" }
             });
-            if (!res.ok) throw new Error("Failed to toggle operation");
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to toggle operation");
+            }
 
             setNotificationState({ 
                 isOpen: true, type: 'success', 
@@ -1632,7 +1638,7 @@ const TenantLease = () => {
             fetchTenants();       
         } catch (e) {
             console.error(e);
-            setNotificationState({ isOpen: true, type: 'error', message: "Failed to update operation status.", autoClose: true, duration: 3000 });
+            setNotificationState({ isOpen: true, type: 'error', message: e.message || "Failed to update operation status.", autoClose: true, duration: 3000 });
         }
     };
 

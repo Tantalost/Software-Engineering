@@ -93,6 +93,11 @@ const TenantSchema = new mongoose.Schema({
   
   operationStartDate: Date, 
   isOperationPaused: { type: Boolean, default: false }, 
+  operationPauseReason: {
+    type: String,
+    enum: ["MANUAL", "NON_PAYMENT_2_MONTHS"],
+    default: null,
+  },
   lastPausedDate: Date,                               
   totalPausedDays: { type: Number, default: 0 },
   status: { type: String, default: "Paid" }, 
