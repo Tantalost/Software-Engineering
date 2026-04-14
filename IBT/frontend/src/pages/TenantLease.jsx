@@ -83,10 +83,12 @@ const TenantLease = () => {
     const [nightChargePct, setNightChargePct] = useState(25);
     const [nightInterestPct, setNightInterestPct] = useState(2);
     const [nightMaxTerminationDays, setNightMaxTerminationDays] = useState(3);
+    const [nightOperationStartDeadlineDays, setNightOperationStartDeadlineDays] = useState(3);
     
     const [newChargePct, setNewChargePct] = useState("");
     const [newInterestPct, setNewInterestPct] = useState("");
     const [newNightMaxTerminationDays, setNewNightMaxTerminationDays] = useState("");
+    const [newNightOperationStartDeadlineDays, setNewNightOperationStartDeadlineDays] = useState("");
 
     const [defaultDueDate, setDefaultDueDate] = useState("5");
     const [newDueDate, setNewDueDate] = useState("");
@@ -292,6 +294,7 @@ const TenantLease = () => {
                     setNightChargePct(data.nightMarketCharge);
                     setNightInterestPct(data.nightMarketInterest);
                     setNightMaxTerminationDays(data.nightMarketMaxTerminationDays || 3);
+                    setNightOperationStartDeadlineDays(data.nightMarketOperationStartDeadlineDays || 3);
                     if (data.permanentDueDate !== undefined) setDefaultDueDate(data.permanentDueDate.toString());
                     if (data.dailyFee !== undefined) setDefaultDailyFee(Number(data.dailyFee));
                 }
@@ -339,6 +342,12 @@ const TenantLease = () => {
                 setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid Max Days Before Termination (minimum 1 day).", autoClose: true, duration: 3000 });
                 return;
             }
+
+            const startOperationDeadlineDays = Number(newNightOperationStartDeadlineDays || nightOperationStartDeadlineDays);
+            if (!Number.isFinite(startOperationDeadlineDays) || startOperationDeadlineDays < 1) {
+                setNotificationState({ isOpen: true, type: 'error', message: "Please enter a valid Start Operation Deadline (minimum 1 day).", autoClose: true, duration: 3000 });
+                return;
+            }
         }
 
         setIsSettingPrice(true);
@@ -371,6 +380,7 @@ const TenantLease = () => {
                     chargePercentage: newChargePct ? Number(newChargePct) : (isNightMarket ? nightChargePct : permChargePct), 
                     interestPercentage: newInterestPct ? Number(newInterestPct) : (isNightMarket ? nightInterestPct : permInterestPct),
                     nightMarketMaxTerminationDays: isNightMarket ? Number(newNightMaxTerminationDays || nightMaxTerminationDays) : undefined,
+                    nightMarketOperationStartDeadlineDays: isNightMarket ? Number(newNightOperationStartDeadlineDays || nightOperationStartDeadlineDays) : undefined,
                     permanentDueDate: (!isNightMarket && newDueDate) ? Number(newDueDate) : Number(defaultDueDate),
                     dailyFee: !isNightMarket ? Number(newDailyFee || defaultDailyFee) : undefined,
                 }),
@@ -384,6 +394,7 @@ const TenantLease = () => {
                 setNightChargePct(newChargePct ? Number(newChargePct) : nightChargePct);
                 setNightInterestPct(newInterestPct ? Number(newInterestPct) : nightInterestPct);
                 setNightMaxTerminationDays(Number(newNightMaxTerminationDays || nightMaxTerminationDays));
+                setNightOperationStartDeadlineDays(Number(newNightOperationStartDeadlineDays || nightOperationStartDeadlineDays));
                 localStorage.setItem("defaultNightPrice", basePriceValue.toString());
                 localStorage.setItem("defaultNightWeeklyRent", weeklyRentValue.toString());
             } else {
@@ -2399,6 +2410,7 @@ const TenantLease = () => {
                                     setNewChargePct(nightChargePct.toString());
                                     setNewInterestPct(nightInterestPct.toString());
                                     setNewNightMaxTerminationDays(nightMaxTerminationDays.toString());
+                                    setNewNightOperationStartDeadlineDays(nightOperationStartDeadlineDays.toString());
                                 } else {
                                     setNewPermanentPrice(defaultPermanentPrice.toString());
                                     setNewChargePct(permChargePct.toString());
@@ -3289,6 +3301,30 @@ const TenantLease = () => {
                                         </div>
                                         <p className="text-[10px] text-amber-700 mt-2 leading-tight">
                                             Night Market operations are paused immediately when weekly dues are missed. If still unpaid after this grace period, the tenant account is terminated automatically.
+                                        </p>
+
+                                        <label className="block text-xs font-semibold text-amber-800 mb-1 mt-3">Start Operation Deadline</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={newNightOperationStartDeadlineDays}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value;
+                                                    if (raw === "") {
+                                                        setNewNightOperationStartDeadlineDays("");
+                                                        return;
+                                                    }
+                                                    const parsed = Math.max(1, Math.floor(Number(raw) || 1));
+                                                    setNewNightOperationStartDeadlineDays(parsed.toString());
+                                                }}
+                                                className="w-full bg-white border border-amber-300 px-3 py-2 rounded-lg font-semibold text-slate-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                                                placeholder="e.g., 3"
+                                            />
+                                            <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-xs font-semibold text-amber-700">days</span>
+                                        </div>
+                                        <p className="text-[10px] text-amber-700 mt-2 leading-tight">
+                                            Newly approved Night Market tenants must start operations within this number of days. If not, the slot is automatically released to accommodate other applicants.
                                         </p>
                                     </div>
                                 )}

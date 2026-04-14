@@ -214,6 +214,20 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
       ? Math.ceil((new Date(nightMarketTerminationAt).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
       : null);
   const isWaitingForStartOperation = currentApp.tenantDbStatus === 'Not Started Operations' || (isPermanent && !currentApp.due && !currentApp.operationStartDate);
+  const parsedNightMarketOperationStartDeadlineAt = currentApp?.nightMarketOperationStartDeadlineAt
+    ? new Date(currentApp.nightMarketOperationStartDeadlineAt)
+    : null;
+  const nightMarketOperationStartDeadlineAt = parsedNightMarketOperationStartDeadlineAt
+    && !Number.isNaN(parsedNightMarketOperationStartDeadlineAt.getTime())
+      ? parsedNightMarketOperationStartDeadlineAt
+      : null;
+  const rawNightMarketOperationStartDeadlineDaysLeft = Number(currentApp?.nightMarketOperationStartDeadlineDaysLeft);
+  const nightMarketOperationStartDeadlineDaysLeft = Number.isFinite(rawNightMarketOperationStartDeadlineDaysLeft)
+    ? rawNightMarketOperationStartDeadlineDaysLeft
+    : (nightMarketOperationStartDeadlineAt
+      ? Math.ceil((new Date(nightMarketOperationStartDeadlineAt).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
+      : null);
+  const configuredOperationStartDeadlineDays = Math.max(1, Number(currentApp?.nightMarketOperationStartDeadlineDays) || 3);
 
   useEffect(() => {
     if (!applying && paymentData?.referenceNo === '') {
@@ -460,6 +474,30 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             </Text>
             <Text style={{ color: '#9a3412', marginTop: 6 }}>
               Termination date: {nightMarketTerminationAt.toLocaleDateString()}
+            </Text>
+          </Card.Content>
+        </Card>
+      )}
+
+      {isNightMarket && isWaitingForStartOperation && nightMarketOperationStartDeadlineAt && nightMarketOperationStartDeadlineDaysLeft !== null && (
+        <Card style={{ marginBottom: 20, backgroundColor: '#fffbeb', borderColor: '#fcd34d', borderWidth: 1 }}>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Icon name="clock-alert-outline" size={22} color="#b45309" style={{ marginRight: 8 }} />
+              <Text variant="titleMedium" style={{ color: '#92400e', fontWeight: 'bold' }}>
+                Start Operations Deadline
+              </Text>
+            </View>
+            <Text style={{ color: '#92400e', marginBottom: 6 }}>
+              You must start operations within {configuredOperationStartDeadlineDays} day{configuredOperationStartDeadlineDays === 1 ? '' : 's'} after approval.
+            </Text>
+            <Text style={{ color: '#7c2d12', fontWeight: 'bold' }}>
+              {nightMarketOperationStartDeadlineDaysLeft > 0
+                ? `Start within ${nightMarketOperationStartDeadlineDaysLeft} day${nightMarketOperationStartDeadlineDaysLeft === 1 ? '' : 's'} to keep your slot.`
+                : 'Deadline reached. Start operations now to avoid automatic slot release.'}
+            </Text>
+            <Text style={{ color: '#92400e', marginTop: 6 }}>
+              Deadline date: {nightMarketOperationStartDeadlineAt.toLocaleDateString()}
             </Text>
           </Card.Content>
         </Card>
