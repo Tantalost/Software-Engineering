@@ -70,26 +70,17 @@ export const createParking = async (req, res) => {
 
 export const departParking = async (req, res) => {
   try {
-    const { timeOut, duration, finalPrice, referenceNo } = req.body; 
-
-    const updatedParking = await Parking.findByIdAndUpdate(
-      req.params.id,
-      { 
-        status: "Departed", 
-        timeOut, 
-        duration, 
-        finalPrice,
-        referenceNo: referenceNo || "-" 
-      },
-      { new: true }
-    );
+    console.log("DEPART API HIT:", req.params.id);
+    const { id } = req.params;
+    const { referenceNo } = req.body;
 
     if (referenceNo && referenceNo !== "-") {
-      const existingRef = await Parking.findOne({ 
-        referenceNo: referenceNo.trim(), 
-        status: "Departed" 
+      const existingRef = await Parking.findOne({
+        referenceNo: referenceNo.trim(),
+        status: "Departed",
+        _id: { $ne: id } 
       });
-      
+
       if (existingRef) {
         return res.status(400).json({ message: "This Reference Number already exists in the database." });
       }
@@ -101,68 +92,45 @@ export const departParking = async (req, res) => {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    res.status(200).json(updatedParking);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    const timeOut = new Date();
+    const timeIn = new Date(parkingRecord.timeIn);
 
-  try {
-    console.log("DEPART API HIT:", req.params.id);
-    const { id } = req.params;
-    const parkingRecord = await Parking.findById(id);
+    const diffMs = timeOut - timeIn;
+    const duration = diffMs / (1000 * 60 * 60);
 
-    if (!parkingRecord) {
-      return res.status(404).json({ message: "Ticket not found" });
+    const hours = Math.floor(duration);
+    const minutes = Math.round((duration - hours) * 60);
+    const durationText = `${hours} hours ${minutes} minutes`;
+
+    let finalPrice = 0;
+
+    if (parkingRecord.type === "4 Wheels" || parkingRecord.type === "2 Wheels") {
+      const base = parkingRecord.baseRate;
+      if (duration <= 3) {
+        finalPrice = base;
+      } else {
+        const extraHours = Math.ceil(duration - 3);
+        finalPrice = base + extraHours * base;
+      }
+    } else if (parkingRecord.type === "Jeep") {
+      finalPrice = parkingRecord.baseRate;
     }
 
-    const timeOut = new Date();
-const timeIn = new Date(parkingRecord.timeIn);
+    parkingRecord.timeOut = timeOut;
+    parkingRecord.duration = String(durationText);
+    parkingRecord.finalPrice = finalPrice;
+    parkingRecord.status = "Departed";
+    
+    if (referenceNo) {
+      parkingRecord.referenceNo = referenceNo.trim();
+    }
 
-const diffMs = timeOut - timeIn;
-const duration = diffMs / (1000 * 60 * 60);
-
-const hours = Math.floor(duration);
-const minutes = Math.round((duration - hours) * 60);
-const durationText = `${hours} hours ${minutes} minutes`;
-
-let finalPrice = 0;
-
-if (parkingRecord.type === "4 Wheels") {
-  const base = parkingRecord.baseRate;
-
-  if (duration <= 3) {
-    finalPrice = base;
-  } else {
-    const extraHours = Math.ceil(duration - 3);
-    finalPrice = base + extraHours * base;
-  }
-}
-
-else if (parkingRecord.type === "2 Wheels") {
-  const base = parkingRecord.baseRate;
-
-  if (duration <= 3) {
-    finalPrice = base;
-  } else {
-    const extraHours = Math.ceil(duration - 3);
-    finalPrice = base + extraHours * base;
-  }
-}
-
-else if (parkingRecord.type === "Jeep") {
-  finalPrice = parkingRecord.baseRate;
-}
-
-parkingRecord.timeOut = timeOut;
-parkingRecord.duration = String(durationText);
-parkingRecord.finalPrice = finalPrice;
-parkingRecord.status = "Departed";
-
-const updatedRecord = await parkingRecord.save();
-res.status(200).json(updatedRecord);
+    const updatedRecord = await parkingRecord.save();
+    return res.status(200).json(updatedRecord);
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Depart API Error:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 

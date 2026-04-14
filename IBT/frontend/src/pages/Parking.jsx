@@ -107,6 +107,7 @@ const Parking = () => {
   }, [showPriceModal, priceSettings]);
 
   const getRangeBounds = (type, date) => {
+    if (type === "All") return { start: null, end: null };
     const start = new Date(date);
     const end = new Date(date);
 
@@ -138,6 +139,7 @@ const Parking = () => {
   const { start: filterStart, end: filterEnd } = getRangeBounds(dateFilterType, currentDateRange);
 
   const handlePrevPeriod = () => {
+    if (dateFilterType === "All") return;
     const newDate = new Date(currentDateRange);
     if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() - 1);
     else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() - 7);
@@ -148,6 +150,7 @@ const Parking = () => {
   };
 
   const handleNextPeriod = () => {
+    if (dateFilterType === "All") return;
     const newDate = new Date(currentDateRange);
     if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() + 1);
     else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() + 7);
@@ -158,6 +161,7 @@ const Parking = () => {
   };
 
   const getPeriodDisplayStr = () => {
+    if (dateFilterType === "All") return "All Time";
     const { start, end } = getRangeBounds(dateFilterType, currentDateRange);
     if (dateFilterType === "Daily") {
       return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -575,9 +579,12 @@ const Parking = () => {
 
     const ticketTimeIn = ticket.timeIn ? new Date(ticket.timeIn) : null;
     
-    const matchesDateRange = ticketTimeIn 
-      ? (ticketTimeIn >= filterStart && ticketTimeIn <= filterEnd)
-      : false;
+    let matchesDateRange = false;
+    if (dateFilterType === "All") {
+      matchesDateRange = true;
+    } else if (ticketTimeIn) {
+      matchesDateRange = ticketTimeIn >= filterStart && ticketTimeIn <= filterEnd;
+    }
 
     return matchesSearch && matchesType && matchesStatus && matchesDateRange;
   });
@@ -1202,7 +1209,11 @@ const Parking = () => {
     }
 
     const isDuplicateRef = records.some(
-      (record) => String(record.referenceNo).trim() === refInput && record.status === "Departed"
+      (record) => 
+        record.referenceNo && 
+        String(record.referenceNo).trim() === refInput && 
+        record.status === "Departed" &&
+        record.id !== logoutRow.id 
     );
 
     if (isDuplicateRef) {
@@ -1767,7 +1778,7 @@ const Parking = () => {
             {role === "superadmin" && (
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
-                  {["Daily", "Week", "Month", "Year"].map((type) => (
+                  {["All", "Daily", "Week", "Month", "Year"].map((type) => (
                     <button
                       key={type}
                       onClick={() => {
@@ -1786,24 +1797,26 @@ const Parking = () => {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
-                  <button 
-                    onClick={handlePrevPeriod} 
-                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                    <Calendar size={16} className="text-slate-400" />
-                    {getPeriodDisplayStr()}
+                {dateFilterType !== "All" && (
+                  <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                    <button 
+                      onClick={handlePrevPeriod} 
+                      className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                      <Calendar size={16} className="text-slate-400" />
+                      {getPeriodDisplayStr()}
+                    </div>
+                    <button 
+                      onClick={handleNextPeriod} 
+                      className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
                   </div>
-                  <button 
-                    onClick={handleNextPeriod} 
-                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
+                )}
               </div>
             )}
 

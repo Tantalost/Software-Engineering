@@ -129,6 +129,7 @@ const TerminalFees = () => {
   const REPORTS_API_URL = `${API_URL}/reports`;
 
   const getRangeBounds = (type, date) => {
+    if (type === "All") return { start: null, end: null };
     const start = new Date(date);
     const end = new Date(date);
 
@@ -160,6 +161,7 @@ const TerminalFees = () => {
   const { start: filterStart, end: filterEnd } = getRangeBounds(dateFilterType, currentDateRange);
 
   const handlePrevPeriod = () => {
+    if (dateFilterType === "All") return;
     const newDate = new Date(currentDateRange);
     if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() - 1);
     else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() - 7);
@@ -170,6 +172,7 @@ const TerminalFees = () => {
   };
 
   const handleNextPeriod = () => {
+    if (dateFilterType === "All") return;
     const newDate = new Date(currentDateRange);
     if (dateFilterType === "Daily") newDate.setDate(newDate.getDate() + 1);
     else if (dateFilterType === "Week") newDate.setDate(newDate.getDate() + 7);
@@ -180,6 +183,7 @@ const TerminalFees = () => {
   };
 
   const getPeriodDisplayStr = () => {
+    if (dateFilterType === "All") return "All Time";
     const { start, end } = getRangeBounds(dateFilterType, currentDateRange);
     if (dateFilterType === "Daily") {
       return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -380,16 +384,18 @@ const TerminalFees = () => {
         matchesType = pType.includes(aType);
       }
 
-      const feeDate = fee.date ? new Date(fee.date) : null;
+     const feeDate = fee.date ? new Date(fee.date) : null;
       let matchesDateRange = false;
 
-      if (feeDate && !Number.isNaN(feeDate.getTime())) {
+      if (dateFilterType === "All") {
+        matchesDateRange = true; 
+      } else if (feeDate && !Number.isNaN(feeDate.getTime())) {
         matchesDateRange = feeDate >= filterStart && feeDate <= filterEnd;
       }
 
       return matchesType && matchesDateRange;
     });
-  }, [records, activeType, filterStart, filterEnd]);
+  }, [records, activeType, filterStart, filterEnd, dateFilterType]); 
 
   const stats = useMemo(
     () => ({
@@ -1146,18 +1152,19 @@ const TerminalFees = () => {
     doc.text("PASSENGER REPORTS", pageWidth / 2, 45, { align: "center" });
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, 55);
     doc.text(`Collector: ${collectorName || "N/A"}`, margin, 61);
-    
-    doc.text(`No. Regular: ${stats.regular}`, pageWidth / 2, 55, { align: "center" });
-    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, pageWidth / 2, 61, { align: "center" });
-    
-    doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, { align: "right" });
-    doc.text(`Revenue: Php ${stats.revenue.toFixed(2)}`, tableRightEdge, 61, { align: "right" });
+    doc.text(`No. Regular: ${stats.regular}`, 75, 67);
+    doc.text(`No. Student/Senior: ${stats.student + stats.senior}`, 75, 73);
+    doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, {
+      align: "right",
+    });
+    doc.text(`Revenue: Php ${stats.revenue.toFixed(2)}`, tableRightEdge, 61, {
+      align: "right",
+    });
 
     autoTable(doc, {
-      startY: 70,
+      startY: 80,
       margin: { left: margin, right: margin, bottom: 35 },
       head: [["Ticket No", "Passenger Type", "Price", "Time", "Date"]],
       body: filtered.map((item) => [
@@ -1281,7 +1288,7 @@ const TerminalFees = () => {
           {role === "superadmin" && (
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[42px]">
-                {["Daily", "Week", "Month", "Year"].map((type) => (
+                {["All", "Daily", "Week", "Month", "Year"].map((type) => (
                   <button
                     key={type}
                     onClick={() => {
@@ -1300,24 +1307,26 @@ const TerminalFees = () => {
                 ))}
               </div>
 
-              <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
-                <button 
-                  onClick={handlePrevPeriod} 
-                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                  <Calendar size={16} className="text-slate-400" />
-                  {getPeriodDisplayStr()}
+              {dateFilterType !== "All" && (
+                <div className="flex items-center justify-between border border-slate-200 bg-white rounded-xl h-[42px] min-w-[240px] px-2 shadow-sm">
+                  <button 
+                    onClick={handlePrevPeriod} 
+                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                    <Calendar size={16} className="text-slate-400" />
+                    {getPeriodDisplayStr()}
+                  </div>
+                  <button 
+                    onClick={handleNextPeriod} 
+                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
                 </div>
-                <button 
-                  onClick={handleNextPeriod} 
-                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+              )}
             </div>
           )}
         </div>
