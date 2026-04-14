@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from "jspdf-autotable";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle, Play, Pause, Wallet, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Archive, Trash2, Mail, Download, Store, MoonStar, Map, ClipboardList, ListChecks, FileText, X, History, Settings, Loader2, CheckCircle, Play, Pause, Wallet, Calendar, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 import headerImg from "../assets/Header.png";
 import footerImg from "../assets/FOOTER.png";
@@ -3380,24 +3380,29 @@ const TenantLease = () => {
                                             </p>
                                         </div>
 
-                                        <div className="w-full lg:w-80">
+                                       <div className="w-full lg:w-80">
                                             <label className="block text-xs font-semibold text-slate-600 mb-1">Tenant</label>
-                                            <select
-                                                value={selectedPaymentTenantId}
-                                                onChange={(e) => setSelectedPaymentTenantId(e.target.value)}
-                                                className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                            >
-                                                {paymentTenantOptions.length === 0 && <option value="">No tenants found</option>}
-                                                {paymentTenantOptions.map((option) => {
-                                                    const tenantName = option.tenant.tenantName || option.tenant.name || "Unnamed Tenant";
-                                                    const slotNo = option.tenant.slotNo || "N/A";
-                                                    return (
-                                                        <option key={option.id} value={option.id}>
-                                                            {tenantName} (Slot {slotNo})
-                                                        </option>
-                                                    );
-                                                })}
-                                            </select>
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedPaymentTenantId}
+                                                    onChange={(e) => setSelectedPaymentTenantId(e.target.value)}
+                                                    className="w-full h-10 rounded-lg border border-slate-300 px-3 pr-10 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer bg-white"
+                                                >
+                                                    {paymentTenantOptions.length === 0 && <option value="">No tenants found</option>}
+                                                    {paymentTenantOptions.map((option) => {
+                                                        const tenantName = option.tenant.tenantName || option.tenant.name || "Unnamed Tenant";
+                                                        const slotNo = option.tenant.slotNo || "N/A";
+                                                        return (
+                                                            <option key={option.id} value={option.id}>
+                                                                {tenantName} (Slot {slotNo})
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                                                    <ChevronDown size={16} />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 

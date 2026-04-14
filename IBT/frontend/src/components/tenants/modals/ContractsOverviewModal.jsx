@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, FileText, Search, Loader2 } from "lucide-react";
+import { X, FileText, Search, Loader2, ChevronDown } from "lucide-react";
 import AvailableContractsModal from "./AvailableContractsModal";
 
 const toDateLabel = (value) => {
@@ -226,18 +226,23 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                 <div className="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3 items-end">
                   <div className="xl:col-span-2">
                     <label className="text-xs font-semibold text-slate-600">Default Template</label>
-                    <select
-                      value={defaultTemplateId}
-                      onChange={(e) => setDefaultTemplateId(e.target.value)}
-                      className="mt-1 w-full h-11 rounded-lg border border-slate-300 px-3 text-sm"
-                    >
-                      <option value="">No default template</option>
-                      {templates.map((template) => (
-                        <option key={template._id} value={template._id}>
-                          {normalizeContractType(template.contractType)} ({template.duration?.years || 0}y {template.duration?.months || 0}m)
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative mt-1">
+                      <select
+                        value={defaultTemplateId}
+                        onChange={(e) => setDefaultTemplateId(e.target.value)}
+                        className="w-full h-11 rounded-lg border border-slate-300 px-3 pr-10 text-sm appearance-none cursor-pointer bg-white"
+                      >
+                        <option value="">No default template</option>
+                        {templates.map((template) => (
+                          <option key={template._id} value={template._id}>
+                            {normalizeContractType(template.contractType)} ({template.duration?.years || 0}y {template.duration?.months || 0}m)
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-1.5">
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-end">
                     <button
