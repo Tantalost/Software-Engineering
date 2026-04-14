@@ -600,14 +600,19 @@ const ManageCompaniesModal = ({
                     <label className="text-sm font-semibold text-slate-500 uppercase">
                       Bus Type
                     </label>
-                    <select
-                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
-                      value={newBusType}
-                      onChange={(e) => setNewBusType(e.target.value)}
-                    >
-                      <option value="Regular">Regular</option>
-                      <option value="Aircon">Aircon</option>
-                    </select>
+                    <div className="relative mt-1">
+                      <select
+                        className="w-full p-3 pr-12 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white appearance-none cursor-pointer"
+                        value={newBusType}
+                        onChange={(e) => setNewBusType(e.target.value)}
+                      >
+                        <option value="Regular">Regular</option>
+                        <option value="Aircon">Aircon</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-2">
+                        <ChevronDown size={18} />
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-500 uppercase">
@@ -632,23 +637,28 @@ const ManageCompaniesModal = ({
                     <label className="text-sm font-semibold text-slate-500 uppercase">
                       No. of Stops
                     </label>
-                    <select
-                      className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white"
-                      value={newBusStopType}
-                      onChange={(e) => setNewBusStopType(e.target.value)}
-                    >
-                      <option value="Regular Trip">Regular trip (Default)</option>
-                      <option value="1-stop">1</option>
-                      <option value="2-stop">2</option>
-                      <option value="3-stop">3</option>
-                      <option value="4-stop">4</option>
-                      <option value="5-stop">5</option>
-                      <option value="6-stop">6</option>
-                      <option value="7-stop">7</option>
-                      <option value="8-stop">8</option>
-                      <option value="9-stop">9</option>
-                      <option value="10-stop">10</option>
-                    </select>
+                    <div className="relative mt-1">
+                      <select
+                        className="w-full p-3 pr-12 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white appearance-none cursor-pointer"
+                        value={newBusStopType}
+                        onChange={(e) => setNewBusStopType(e.target.value)}
+                      >
+                        <option value="Regular Trip">Regular trip (Default)</option>
+                        <option value="1-stop">1</option>
+                        <option value="2-stop">2</option>
+                        <option value="3-stop">3</option>
+                        <option value="4-stop">4</option>
+                        <option value="5-stop">5</option>
+                        <option value="6-stop">6</option>
+                        <option value="7-stop">7</option>
+                        <option value="8-stop">8</option>
+                        <option value="9-stop">9</option>
+                        <option value="10-stop">10</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-2">
+                        <ChevronDown size={18} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -823,17 +833,22 @@ const ManageCompaniesModal = ({
                 <h4 className="text-base font-semibold text-slate-700">
                   Registered Buses
                 </h4>
-                <select
-                  value={tableBusTypeFilter}
-                  onChange={(e) => setTableBusTypeFilter(e.target.value)}
-                  className="px-3 py-2 text-base border border-slate-300 rounded-lg outline-none bg-slate-50"
-                >
-                  <option value="All">All Types</option>
-                  <option value="Regular">Regular Only</option>
-                  <option value="Aircon">Aircon Only</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={tableBusTypeFilter}
+                    onChange={(e) => setTableBusTypeFilter(e.target.value)}
+                    className="pl-3 pr-10 py-2 text-base text-slate-700 font-medium border border-slate-300 rounded-xl outline-none bg-white appearance-none cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
+                  >
+                    <option value="All">All Types</option>
+                    <option value="Regular">Regular Only</option>
+                    <option value="Aircon">Aircon Only</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-8 border-l border-slate-200 text-slate-500 my-1.5">
+                    <ChevronDown size={16} />
+                  </div>
+                </div>
               </div>
-
+              
               <div className="p-5">
                 {activeCompany.buses && activeCompany.buses.length > 0 ? (
                   <table className="w-full text-[15px] text-left">
