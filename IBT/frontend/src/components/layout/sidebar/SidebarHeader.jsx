@@ -7,9 +7,9 @@ const SidebarHeader = ({ sidebarExpanded, onMenuClick }) => {
       <div className="flex items-center space-x-3">
         <button
           onClick={onMenuClick}
-          className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
+          className="w-10 h-10 flex-none bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-[14px] flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
         >
-          <Menu className="text-white" size={24} />
+          <Menu className="text-white" size={20} />
         </button>
         {sidebarExpanded && (
           <div className="overflow-hidden">
