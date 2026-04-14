@@ -2965,7 +2965,7 @@ const TenantLease = () => {
                             Set the new standard rent rate for {activeTab === "night" ? "Night Market" : "Permanent"} tenants. Changes take effect upon saving.
                         </p>
 
-                        <div className="space-y-5">
+                        <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">
                                     Global {activeTab === "night" ? "Night Market" : "Permanent"} Fee
@@ -3096,7 +3096,8 @@ const TenantLease = () => {
             {showPaymentRecords && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm">
                     <div className="w-full max-w-6xl xl:max-w-[1240px] rounded-xl bg-white p-4 sm:p-5 lg:p-6 shadow-xl flex flex-col h-[92vh] max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
+                      
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-4 shrink-0">
                             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 <Wallet size={20} className="text-emerald-600" />
                                 Collection & Payment Records
@@ -3106,8 +3107,10 @@ const TenantLease = () => {
                             </button>
                         </div>
 
-                        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-5">
-                            
+                        
+                        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
+
+                            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-5"></div>
                             <div className="flex flex-wrap items-center gap-3">
                                 
                                 <div className="flex bg-slate-50 p-1 rounded-lg border border-slate-200 shadow-sm">
@@ -3281,7 +3284,7 @@ const TenantLease = () => {
                             )}
                         </div>
                         
-                        <div className="overflow-y-auto border border-slate-200 rounded-xl flex-1 min-h-0 custom-scrollbar">
+                        <div className="border border-slate-200 rounded-xl">
                             <table className="w-full text-left border-collapse text-sm">
                                 <thead className="bg-slate-50 sticky top-0 shadow-sm z-10">
                                     <tr>
@@ -3310,7 +3313,7 @@ const TenantLease = () => {
                                             <td colSpan="5" className="p-10 text-center text-slate-400 font-semibold italic">No payment records found for this {paymentViewType.toLowerCase()}.</td>
                                         </tr>
                                     )}
-                                </tbody>
+                               </tbody>
                          </table>
                         </div>
 
