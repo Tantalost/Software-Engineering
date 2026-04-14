@@ -263,6 +263,13 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   };
 
   const renewalTemplates = Array.isArray(currentApp?.renewalTemplates) ? currentApp.renewalTemplates : [];
+  const renewalContracts = renewalTemplates.filter((template: any) => {
+    const contractType = String(template?.contractType || template?.type || '').toUpperCase();
+    return contractType === 'RENEWAL';
+  });
+  const hasSelectedRenewalContract = renewalContracts.some(
+    (template: any) => String(template._id) === selectedTemplateId
+  );
   const hasPendingRenewal = Boolean(currentApp?.hasPendingRenewal);
   const parsedContractEndDate = currentApp?.activeContractEndDate
     ? new Date(currentApp.activeContractEndDate)
@@ -359,13 +366,13 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                   </Text>
                 )}
 
-                <Text style={{ color: '#0a0a0a', marginBottom: 6, fontWeight: 'bold' }}>Select Renewal Template</Text>
-                {renewalTemplates.length === 0 ? (
+                <Text style={{ color: '#0a0a0a', marginBottom: 6, fontWeight: 'bold' }}>Select Renewal Contract</Text>
+                {renewalContracts.length === 0 ? (
                   <Text style={{ color: '#333333', marginBottom: 12 }}>
-                    No renewal template is available right now. Please contact the admin office.
+                    No renewal contract is available right now. Please contact the admin office.
                   </Text>
                 ) : (
-                  renewalTemplates.map((template: any) => {
+                  renewalContracts.map((template: any) => {
                     const selected = selectedTemplateId === String(template._id);
                     return (
                       <Button
@@ -387,7 +394,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                   mode={applying ? 'contained' : 'outlined'}
                   onPress={() => submitRenewalContract(selectedTemplateId)}
                   loading={applying}
-                  disabled={renewalTemplates.length === 0 || !selectedTemplateId || !files?.contract}
+                  disabled={renewalContracts.length === 0 || !hasSelectedRenewalContract || !files?.contract}
                   style={{ marginTop: 12, borderColor: '#166534', borderWidth: applying ? 0 : 1, backgroundColor: applying ? '#bbf7d0': 'transparent' }}
                   textColor={applying ? '#020202' : '#166534'}
                 >

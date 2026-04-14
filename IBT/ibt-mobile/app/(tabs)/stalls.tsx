@@ -815,7 +815,14 @@ setSelectedStall(null);
     }
 
     setApplying(true);
+    setUploadProgress(prev => ({ ...prev, contract: 0.1 }));
     setTimeout(async () => {
+      let progressValue = 0.1;
+      const progressInterval = setInterval(() => {
+        progressValue = Math.min(progressValue + 0.08, 0.9);
+        setUploadProgress(prev => ({ ...prev, contract: progressValue }));
+      }, 180);
+
       try {
         const formPayload = new FormData();
         formPayload.append('tenantId', currentApp.tenantId || currentApp.id || currentApp._id || "");
@@ -835,12 +842,20 @@ setSelectedStall(null);
         });
 
         await handleApiError(res);
+        clearInterval(progressInterval);
+        setUploadProgress(prev => ({ ...prev, contract: 1 }));
         Alert.alert("Renewal Submitted", "Your renewal contract was sent for admin review.");
         setFiles(prev => ({ ...prev, contract: null }));
+        setTimeout(() => {
+          setUploadProgress(prev => ({ ...prev, contract: 0 }));
+        }, 1000);
         fetchData(user.id);
       } catch (error: any) {
+        clearInterval(progressInterval);
+        setUploadProgress(prev => ({ ...prev, contract: 0 }));
         Alert.alert("Submission Failed", error.message || "Could not submit renewal contract.");
       } finally {
+        clearInterval(progressInterval);
         setApplying(false);
       }
     }, 100);
