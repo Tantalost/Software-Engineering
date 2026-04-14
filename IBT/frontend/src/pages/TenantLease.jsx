@@ -3158,7 +3158,7 @@ const TenantLease = () => {
 
                         <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl mb-4 flex justify-between items-center shadow-inner">
                             <div>
-                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected ({paymentViewType})</p>
+                                <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Total Collected</p>
                                 <p className="text-3xl font-black text-emerald-800">₱{totalCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                             </div>
                             <div className="text-right">
