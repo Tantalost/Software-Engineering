@@ -603,6 +603,11 @@ const TerminalFees = () => {
     });
   }, [records, sessionStartedAt]);
 
+  const hasPendingTerminalShiftReport = useMemo(() => {
+    if (role !== "ticket") return false;
+    return shiftRecords.length > 0;
+  }, [role, shiftRecords]);
+
   const handleCollectorSelection = (nextCollectorId, selectedCollector) => {
     setCollectorId(nextCollectorId);
     if (!selectedCollector) {
@@ -1218,7 +1223,20 @@ const TerminalFees = () => {
     : ["Ticket No", "Passenger Type", "Report State", "Time", "Date", "Price"];
 
   return (
-    <Layout title="Terminal Fees Management">
+    <Layout
+      title="Terminal Fees Management"
+      topbarProps={
+        role === "ticket"
+          ? {
+              logoutGuard: {
+                canLogout: !hasPendingTerminalShiftReport,
+                message:
+                  "Please submit your shift report before logging out. You still have unsubmitted Terminal Fee transactions in this shift.",
+              },
+            }
+          : undefined
+      }
+    >
       <div className="mb-6">
         <StatCardGroupTerminal
           regular={stats.regular}

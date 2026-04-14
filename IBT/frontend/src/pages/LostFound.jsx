@@ -669,6 +669,11 @@ const LostFound = () => {
     });
   }, [records, sessionStartedAt]);
 
+  const hasPendingLostFoundShiftReport = useMemo(() => {
+    if (role !== "lostfound") return false;
+    return shiftRecords.length > 0;
+  }, [role, shiftRecords]);
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filtered.slice(startIndex, startIndex + itemsPerPage);
@@ -838,11 +843,9 @@ const LostFound = () => {
         sessionStartedAt,
         filters: {
           searchQuery,
-          selectedDate: selectedDate
-            ? new Date(selectedDate).toLocaleDateString()
-            : "None",
+          selectedDate: getPeriodDisplayStr(),
           activeStatus,
-          duration: reportDuration,
+          duration: dateFilterType,
         },
         statistics: {
           totalItems: records.length,
@@ -914,19 +917,7 @@ const LostFound = () => {
   };
 
   const validateCollector = () => {
-    if (role === "superadmin") return true;
-
-    if (!collectorName || collectorName.trim() === "" || !collectorId) {
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Please select a Collector before exporting.",
-        autoClose: true,
-        duration: 3000,
-      });
-      return false;
-    }
-
+    // Lost & Found exports do not require collector assignment.
     return true;
   };
 
@@ -1154,7 +1145,20 @@ const LostFound = () => {
 
 
   return (
-    <Layout title="Lost and Found Records">
+    <Layout
+      title="Lost and Found Records"
+      topbarProps={
+        role === "lostfound"
+          ? {
+              logoutGuard: {
+                canLogout: !hasPendingLostFoundShiftReport,
+                message:
+                  "Please submit your shift report before logging out. You still have unsubmitted Lost & Found records in this shift.",
+              },
+            }
+          : undefined
+      }
+    >
       <div className="px-4 lg:px-8 mt-4 mb-6">
 
         <StatCardGroupLostFound 
