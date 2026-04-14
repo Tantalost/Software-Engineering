@@ -692,27 +692,34 @@ const ManageCompaniesModal = ({
                         key={idx}
                         className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-3"
                       >
-                        <select
-                          className="p-2.5 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[4.8rem]"
-                          value={slot.hour}
-                          onChange={(e) => {
-                            const v = Number(e.target.value);
-                            setScheduleSlots((prev) =>
-                              prev.map((s, i) =>
-                                i === idx ? { ...s, hour: v } : s,
+                        <div className="relative">
+                          <select
+                            className="p-2.5 pr-10 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[5.5rem] appearance-none cursor-pointer"
+                            value={slot.hour}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setScheduleSlots((prev) =>
+                                prev.map((s, i) =>
+                                  i === idx ? { ...s, hour: v } : s,
+                                ),
+                              );
+                            }}
+                          >
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                              (h) => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
                               ),
-                            );
-                          }}
-                        >
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                            (h) => (
-                              <option key={h} value={h}>
-                                {h}
-                              </option>
-                            ),
-                          )}
-                        </select>
+                            )}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-9 border-l border-slate-200 text-slate-500 my-1.5">
+                            <ChevronDown size={16} />
+                          </div>
+                        </div>
+
                         <span className="text-slate-400 font-medium">:</span>
+                        
                         <input
                           type="text"
                           inputMode="numeric"
@@ -747,21 +754,27 @@ const ManageCompaniesModal = ({
                             );
                           }}
                         />
-                        <select
-                          className="p-2.5 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[5.8rem]"
-                          value={slot.period}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setScheduleSlots((prev) =>
-                              prev.map((s, i) =>
-                                i === idx ? { ...s, period: v } : s,
-                              ),
-                            );
-                          }}
-                        >
-                          <option value="AM">AM</option>
-                          <option value="PM">PM</option>
-                        </select>
+
+                        <div className="relative">
+                          <select
+                            className="p-2.5 pr-10 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 bg-white min-w-[6rem] appearance-none cursor-pointer"
+                            value={slot.period}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setScheduleSlots((prev) =>
+                                prev.map((s, i) =>
+                                  i === idx ? { ...s, period: v } : s,
+                                ),
+                              );
+                            }}
+                          >
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-9 border-l border-slate-200 text-slate-500 my-1.5">
+                            <ChevronDown size={16} />
+                          </div>
+                        </div>
                         {scheduleSlots.length > 1 && (
                           <button
                             type="button"

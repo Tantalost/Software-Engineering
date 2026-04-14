@@ -82,7 +82,7 @@ export default function ApplicationModal({
                 </RadioButton.Group>
 
                 {formData.productType === 'other' && (
-                  <TextInput label="Please specify product category" value={formData.otherProduct} onChangeText={(text) => setFormData({ ...formData, otherProduct: text })} mode="outlined" outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} textColor='black' />
+                  <TextInput label="Please specify category" value={formData.otherProduct} onChangeText={(text) => setFormData({ ...formData, otherProduct: text })} mode="outlined" outlineColor={colors.textMedium} activeOutlineColor={colors.primary} style={styles.input} textColor='black' />
                 )}
 
                 <Text variant="titleMedium" style={styles.sectionHeader}>2. Requirements</Text>

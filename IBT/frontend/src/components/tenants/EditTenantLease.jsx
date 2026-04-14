@@ -288,7 +288,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
                 </div>
                 {productCategory === "other" && (
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-slate-700">Specify Product</label>
+                    <label className="text-sm font-medium text-slate-700">Specify Category</label>
                     <input 
                       type="text" 
                       required
