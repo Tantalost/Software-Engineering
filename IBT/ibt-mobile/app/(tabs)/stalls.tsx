@@ -788,6 +788,10 @@ setSelectedStall(null);
 
   const submitRenewalContract = async (templateId: string) => {
     if (!user) return;
+    const isNightMarketTenant = currentApp?.floor === 'Night Market' || currentApp?.tenantType === 'Night Market';
+    if (isNightMarketTenant) {
+      return Alert.alert("Not Available", "Night Market tenants do not use contract renewals.");
+    }
     if (!currentApp?.tenantId && !currentApp?.id && !currentApp?._id) {
       return Alert.alert("Missing Tenant", "Unable to determine tenant account for renewal.");
     }

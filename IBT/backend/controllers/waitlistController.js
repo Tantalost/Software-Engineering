@@ -112,12 +112,16 @@ export const updateWaitlistEntry = async (req, res) => {
     const { id } = req.params;
     const { status, rejectionReason } = req.body; 
 
-    const applicant = await TenantApplication.findByIdAndUpdate(
-        id, 
-        { ...req.body, adminViewed: true }, 
-        { new: true }
-    );
+    const applicant = await TenantApplication.findById(id);
     if (!applicant) return res.status(404).json({ error: "Applicant not found" });
+
+    const applicantType = applicant.floor || applicant.tenantType;
+    if (status === "CONTRACT_PENDING" && applicantType === "Night Market") {
+      return res.status(400).json({ error: "Night Market applicants do not require contract signing." });
+    }
+
+    Object.assign(applicant, req.body, { adminViewed: true });
+    await applicant.save();
 
     let message = "";
     let subject = "";

@@ -305,7 +305,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         </Card.Content>
       </Card>
 
-      {(isEligibleForRenewal || hasPendingRenewal) && (
+      {isPermanent && (isEligibleForRenewal || hasPendingRenewal) && (
         <Card style={{ marginBottom: 20, backgroundColor: '#eff6ff', borderColor: '#bbf7d0', borderWidth: 1 }}>
           <Card.Content>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>

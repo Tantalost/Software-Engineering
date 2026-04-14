@@ -400,10 +400,11 @@ export const getMyApplication = async (req, res) => {
             const isPermanent = !isNightMarket;
             const hasStartedOperation = Boolean(toValidDate(tenant.operationStartDate));
             const isBlockedByExtendedNonPayment = isPausedForExtendedNonPayment(tenant);
-            const activeContract = getActiveContract(tenant);
-            const pendingRenewalContract = (Array.isArray(tenant.contracts) ? tenant.contracts : []).find(
-                (contract) => contract.status === 'pending_approval'
-            );
+            const activeContract = isNightMarket ? null : getActiveContract(tenant);
+            const tenantContracts = isNightMarket ? [] : (Array.isArray(tenant.contracts) ? tenant.contracts : []);
+            const pendingRenewalContract = isNightMarket
+                ? null
+                : tenantContracts.find((contract) => contract.status === 'pending_approval');
             
            
             let calcRent = tenant.rentAmount;
@@ -452,17 +453,17 @@ export const getMyApplication = async (req, res) => {
    
                 permitUrl: tenant.documents?.businessPermit || "",
                 validIdUrl: tenant.documents?.validID || "",
-                contractUrl: tenant.documents?.contract || "",
+                contractUrl: isNightMarket ? "" : (tenant.documents?.contract || ""),
                 communityTaxUrl: tenant.documents?.communityTax || "", 
                 policeClearanceUrl: tenant.documents?.policeClearance || "",
-                contracts: Array.isArray(tenant.contracts) ? tenant.contracts : [],
-                activeContractId: tenant.activeContractId || null,
+                contracts: tenantContracts,
+                activeContractId: isNightMarket ? null : (tenant.activeContractId || null),
                 activeContract,
-                activeContractEndDate: activeContract?.endDate || null,
-                isEligibleForRenewal: Boolean(tenant.isEligibleForRenewal),
+                activeContractEndDate: isNightMarket ? null : (activeContract?.endDate || null),
+                isEligibleForRenewal: isNightMarket ? false : Boolean(tenant.isEligibleForRenewal),
                 hasPendingRenewal: Boolean(pendingRenewalContract),
                 pendingRenewalContract: pendingRenewalContract || null,
-                renewalTemplates,
+                renewalTemplates: isNightMarket ? [] : renewalTemplates,
                 userId: tenant.uid || userId,
             };
 
@@ -579,16 +580,23 @@ export const uploadContract = async (req, res) => {
         let contractUrl = "";
         if (req.file) contractUrl = req.file.filename;
         if (!userId || !targetSlot || !contractUrl) return res.status(400).json({ message: "Missing userId, targetSlot, or contract file" });
+
+                const application = await TenantApplication.findOne({ userId, targetSlot });
+                if (!application) return res.status(404).json({ message: "Application not found" });
+
+                const applicantType = application.floor || application.tenantType;
+                if (applicantType === 'Night Market') {
+                        return res.status(400).json({ message: "Night Market applicants do not need signed contracts." });
+                }
         
         
-        const updatedApp = await TenantApplication.findOneAndUpdate(
-            { userId: userId, targetSlot: targetSlot }, 
-            { contractUrl, status: 'CONTRACT_REVIEW', contractSubmittedAt: new Date(), adminViewed: false },
-            { new: true }
-        );
+                application.contractUrl = contractUrl;
+                application.status = 'CONTRACT_REVIEW';
+                application.contractSubmittedAt = new Date();
+                application.adminViewed = false;
+                const updatedApp = await application.save();
         
         await createAdminNotification("Contract Signed", "A new signed contract has been uploaded.");
-        if (!updatedApp) return res.status(404).json({ message: "Application not found" });
         res.json(updatedApp);
       } catch (error) {
         res.status(500).json({ message: error.message });
@@ -606,6 +614,10 @@ export const submitRenewalContractRequest = async (req, res) => {
 
         const tenant = await Tenant.findById(tenantId);
         if (!tenant) return res.status(404).json({ message: "Tenant not found." });
+
+        if (tenant.tenantType === 'Night Market') {
+            return res.status(400).json({ message: "Night Market tenants do not use contract renewals." });
+        }
 
         const activeContract = getActiveContract(tenant);
         if (!activeContract) {
