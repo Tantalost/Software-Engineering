@@ -3012,7 +3012,7 @@ const TenantLease = () => {
                                     </div>
                                 </div>
                                 <p className="text-[10px] text-slate-500 mt-2 leading-tight">
-                                    Updating these percentages will immediately recalculate the total due for all currently overdue tenants.
+                                    Changes here apply to the next overdue cycle and to new tenants. Existing overdue balances keep their current charge and interest rates until that cycle is cleared.
                                 </p>
                             </div>
 
