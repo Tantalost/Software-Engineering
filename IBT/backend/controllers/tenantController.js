@@ -371,11 +371,26 @@ export const getTenantById = async (req, res) => {
 export const getTenantContracts = async (req, res) => {
   try {
     const tenant = await Tenant.findById(req.params.id).select(
-      "tenantName slotNo contracts activeContractId StartDateTime DueDateTime documents"
+      "tenantName tenantType slotNo contracts activeContractId StartDateTime DueDateTime documents"
     );
 
     if (!tenant) {
       return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    if (tenant.tenantType === "Night Market") {
+      return res.status(200).json({
+        tenantId: tenant._id,
+        tenantName: tenant.tenantName,
+        slotNo: tenant.slotNo,
+        activeContractId: null,
+        contracts: [],
+        legacy: {
+          StartDateTime: tenant.StartDateTime,
+          DueDateTime: tenant.DueDateTime,
+          contract: "",
+        },
+      });
     }
 
     const sortedContracts = [...(tenant.contracts || [])].sort(
@@ -404,6 +419,10 @@ export const addTenantContract = async (req, res) => {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) {
       return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    if (tenant.tenantType === "Night Market") {
+      return res.status(400).json({ error: "Night Market tenants do not use contract lifecycle." });
     }
 
     const timing = deriveContractTiming({
@@ -461,6 +480,10 @@ export const updateTenantContract = async (req, res) => {
 
     if (!tenant) {
       return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    if (tenant.tenantType === "Night Market") {
+      return res.status(400).json({ error: "Night Market tenants do not use contract lifecycle." });
     }
 
     const contract = tenant.contracts.id(contractId);
@@ -545,6 +568,10 @@ export const activateTenantContract = async (req, res) => {
       return res.status(404).json({ error: "Tenant not found" });
     }
 
+    if (tenant.tenantType === "Night Market") {
+      return res.status(400).json({ error: "Night Market tenants do not use contract lifecycle." });
+    }
+
     const contract = tenant.contracts.id(contractId);
     if (!contract) {
       return res.status(404).json({ error: "Contract not found" });
@@ -572,6 +599,10 @@ export const deleteTenantContract = async (req, res) => {
 
     if (!tenant) {
       return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    if (tenant.tenantType === "Night Market") {
+      return res.status(400).json({ error: "Night Market tenants do not use contract lifecycle." });
     }
 
     if (!Array.isArray(tenant.contracts) || tenant.contracts.length <= 1) {
@@ -871,6 +902,7 @@ export const createTenant = async (req, res) => {
     req.body.utilityAmount = Number(normalizedFeeBreakdown.electricity || 0) + Number(normalizedFeeBreakdown.otherAmount || 0);
 
     const isPermanent = req.body.tenantType === "Permanent";
+    const isNightMarket = req.body.tenantType === "Night Market";
     const advancePayment = isPermanent ? Number(req.body.advancePaymentBalance || 0) : 0;
 
     const rentAmt = Number(req.body.rentAmount) || 0;
@@ -897,10 +929,12 @@ export const createTenant = async (req, res) => {
     const fallbackDurationMonths = toNonNegativeInt(transferApplication?.defaultContractDurationMonths) || 24;
     const initialDurationMonths = Math.max(toNonNegativeInt(selectedTemplate?.durationMonths) || fallbackDurationMonths, 1);
     const contractEndDate = addMonths(contractStartDate, initialDurationMonths);
-    const initialContractId = new mongoose.Types.ObjectId();
-    const initialContractDocument = contract || req.body.documents?.contract || selectedTemplate?.documentUrl || "";
+    const initialContractId = isPermanent ? new mongoose.Types.ObjectId() : null;
+    const initialContractDocument = isPermanent
+      ? (contract || req.body.documents?.contract || selectedTemplate?.documentUrl || "")
+      : "";
 
-    const initialContract = {
+    const initialContract = isPermanent ? {
       _id: initialContractId,
       contractType: "INITIAL",
       startDate: contractStartDate,
@@ -916,18 +950,21 @@ export const createTenant = async (req, res) => {
       notes: req.body.transferWaitlistId
         ? "Auto-created active contract from approved application."
         : "Initial active contract created during onboarding.",
-    };
+    } : null;
+
+    const initialDueDate = isNightMarket ? addDays(contractStartDate, 7) : contractEndDate;
+    const initialCoverageEndDate = isNightMarket ? addDays(contractStartDate, 7) : addMonths(contractStartDate, 1);
 
     const tenantData = {
         ...req.body,
       rentAmount: normalizedRentAmt,
       StartDateTime: contractStartDate,
-      DueDateTime: contractEndDate,
+      DueDateTime: initialDueDate,
         totalAmount: recurringTotal, 
         advancePaymentBalance: advancePayment,
         feeBreakdown: normalizedFeeBreakdown,
       activeContractId: initialContractId,
-      contracts: [initialContract],
+      contracts: initialContract ? [initialContract] : [],
       isEligibleForRenewal: false,
         paymentHistory: [{
             referenceNo: req.body.referenceNo || "Initial Payment",
@@ -936,14 +973,14 @@ export const createTenant = async (req, res) => {
         receiptUrl: proofOfReceipt || req.body.documents?.proofOfReceipt || "",
         contractId: initialContractId,
         coverageStartDate: contractStartDate,
-        coverageEndDate: addMonths(contractStartDate, 1)
+        coverageEndDate: initialCoverageEndDate
         }],
         
         documents: {
             ...(req.body.documents || {}),
             businessPermit: businessPermit || req.body.documents?.businessPermit,
             validID: validID || req.body.documents?.validID,
-        contract: initialContractDocument,
+            contract: isPermanent ? initialContractDocument : "",
             barangayClearance: barangayClearance || req.body.documents?.barangayClearance, 
             proofOfReceipt: proofOfReceipt || req.body.documents?.proofOfReceipt,
             communityTax: communityTax || req.body.documents?.communityTax,             
@@ -962,6 +999,10 @@ export const createTenant = async (req, res) => {
     }
 
     const subject = "Final Approval - Welcome to IBT Stalls!";
+    const paymentRuleLine = isNightMarket
+      ? `4. Weekly rent is due every 7 days from your approved start date.\n5. Non-payment for one week is grounds for lease termination.`
+      : `4. Monthly rent is due on the ${new Date(savedTenant.StartDateTime).getDate()}th of every month.`;
+
     const message = `
 Congratulations ${savedTenant.tenantName}!
 
@@ -977,7 +1018,7 @@ RULES AND REGULATIONS:
 1. Operating hours are from 5:00 PM to 12:00 AM.
 2. Keep your area clean at all times.
 3. No sub-leasing of stalls is allowed.
-4. Monthly rent is due on the ${new Date(savedTenant.StartDateTime).getDate()}th of every month.
+${paymentRuleLine}
 
 You may now start operating your business.
 
@@ -1486,6 +1527,10 @@ export const approveRenewalContractRequest = async (req, res) => {
     const tenant = await Tenant.findById(id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
 
+    if (tenant.tenantType === "Night Market") {
+      return res.status(400).json({ error: "Night Market tenants do not use renewal contracts." });
+    }
+
     const contract = tenant.contracts.id(contractId);
     if (!contract) return res.status(404).json({ error: "Renewal contract request not found." });
 
@@ -1540,6 +1585,10 @@ export const rejectRenewalContractRequest = async (req, res) => {
 
     const tenant = await Tenant.findById(id);
     if (!tenant) return res.status(404).json({ error: "Tenant not found" });
+
+    if (tenant.tenantType === "Night Market") {
+      return res.status(400).json({ error: "Night Market tenants do not use renewal contracts." });
+    }
 
     const contract = tenant.contracts.id(contractId);
     if (!contract) return res.status(404).json({ error: "Renewal contract request not found." });

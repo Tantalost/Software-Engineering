@@ -78,6 +78,11 @@ const getDocUrl = (apiUrl, filename) => {
   return `${apiUrl}/stalls/doc/${filename}`;
 };
 
+const isContractEligibleTenant = (tenant) => {
+  const tenantType = tenant?.tenantType || tenant?.floor || "Permanent";
+  return tenantType !== "Night Market";
+};
+
 const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant, apiUrl, onNotify }) => {
   const [search, setSearch] = useState("");
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
@@ -137,8 +142,13 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
     }
   };
 
+  const contractEligibleTenants = useMemo(
+    () => tenants.filter(isContractEligibleTenant),
+    [tenants]
+  );
+
   const rows = useMemo(() => {
-    const base = tenants.map((tenant) => {
+    const base = contractEligibleTenants.map((tenant) => {
       const active = resolveActiveContract(tenant);
       return {
         tenant,
@@ -163,7 +173,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
 
       return haystack.includes(query);
     });
-  }, [tenants, search]);
+  }, [contractEligibleTenants, search]);
 
   const oneMonthLeftCount = useMemo(() => {
     return rows.reduce((count, { active }) => {
@@ -296,7 +306,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Showing</p>
-                <p className="text-sm font-semibold text-slate-700">{rows.length} of {tenants.length}</p>
+                <p className="text-sm font-semibold text-slate-700">{rows.length} of {contractEligibleTenants.length}</p>
               </div>
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Active Contracts</p>
