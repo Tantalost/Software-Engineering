@@ -643,6 +643,7 @@ const Reports = () => {
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const [viewRow, setViewRow] = useState(null);
   const [archiveRow, setArchiveRow] = useState(null);
@@ -1223,14 +1224,7 @@ const Reports = () => {
     paginatedData.length > 0 &&
     paginatedData.every((item) => selectedIds.includes(item.id));
 
-  const handleBulkDelete = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete ${selectedIds.length} reports? \n\nThey will be moved to the Archives before deletion.`,
-      )
-    )
-      return;
-
+  const handleConfirmBulkDelete = async () => {
     setLoading(true);
     try {
       const processPromises = selectedIds.map(async (id) => {
@@ -1262,10 +1256,11 @@ const Reports = () => {
       await fetchReports();
       setSelectedIds([]);
       setIsSelectionMode(false);
-      alert(`Successfully archived and deleted ${selectedIds.length} reports.`);
+      setShowBulkDeleteModal(false); 
+      showToast("success", `Successfully archived and deleted ${selectedIds.length} reports.`);
     } catch (error) {
       console.error("Bulk action failed", error);
-      alert("Failed to process some records.");
+      showToast("error", "Failed to process some records.");
     } finally {
       setLoading(false);
     }
@@ -1415,7 +1410,7 @@ const Reports = () => {
             {isSelectionMode && selectedIds.length > 0 && (
               <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
                 <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">{selectedIds.length} Selected</span>
-                <button onClick={handleBulkDelete} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 shadow-sm border border-slate-200 cursor-pointer">
+                <button onClick={() => setShowBulkDeleteModal(true)} title="Bulk Delete" className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer transition-colors">
                   <Trash2 className="h-5 w-5" />
                 </button>
               </div>
@@ -1627,6 +1622,39 @@ const Reports = () => {
                 className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg"
               >
                 Yes, Archive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800">
+              Confirm Bulk Delete
+            </h3>
+            <p className="text-slate-600 mt-2 text-sm">
+              Are you sure you want to delete <strong>{selectedIds.length}</strong> reports?
+              <br /><br />
+              They will be moved to the Archives before deletion.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBulkDelete}
+                disabled={loading}
+                className="flex-1 py-2.5 bg-red-600 rounded-lg text-white font-medium hover:bg-red-700 shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {loading ? "Deleting..." : "Yes, Delete All"}
               </button>
             </div>
           </div>

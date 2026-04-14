@@ -292,6 +292,7 @@ const Parking = () => {
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const [viewRow, setViewRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
@@ -678,9 +679,8 @@ const Parking = () => {
   const isAllSelected =
     paginatedData.length > 0 &&
     paginatedData.every((item) => selectedIds.includes(item.id));
-
-  // BULK DELETE
-  const handleBulkDelete = async () => {
+// BULK DELETE
+  const handleConfirmBulkDelete = async () => {
     setIsLoading(true);
     try {
       if (role === "parking") {
@@ -698,6 +698,7 @@ const Parking = () => {
           });
           setSelectedIds([]);
           setIsSelectionMode(false);
+          setShowBulkDeleteModal(false);
           return;
         }
 
@@ -743,6 +744,7 @@ const Parking = () => {
         await fetchDeleteRequests();
         setSelectedIds([]);
         setIsSelectionMode(false);
+        setShowBulkDeleteModal(false);
       } else {
         // SUPERADMIN: INSTA DELETE
         const deletePromises = selectedIds.map((id) =>
@@ -767,6 +769,7 @@ const Parking = () => {
         fetchParkingTickets();
         setSelectedIds([]);
         setIsSelectionMode(false);
+        setShowBulkDeleteModal(false);
       }
     } catch (error) {
       console.error("Bulk action failed", error);
@@ -1914,8 +1917,8 @@ const handleSafeLogout = () => {
                   {selectedIds.length} Selected
                 </span>
                 <button
-                  onClick={handleBulkDelete}
-                  title="Delete Selected"
+                  onClick={() => setShowBulkDeleteModal(true)}
+                  title={role === "parking" ? "Request Bulk Deletion" : "Bulk Delete"}
                   className="rounded-lg p-1.5 bg-white text-red-500 hover:text-red-700 shadow-sm border border-red-200 transition-all cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -2610,6 +2613,39 @@ const handleSafeLogout = () => {
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800">
+              {role === "parking" ? "Confirm Deletion Request" : "Confirm Bulk Delete"}
+            </h3>
+            <p className="text-slate-600 mt-2 text-sm">
+              {role === "parking"
+                ? `Are you sure you want to request deletion for ${selectedIds.length} records? This will be sent to the Superadmin.`
+                : `Are you sure you want to permanently delete ${selectedIds.length} records? This action cannot be undone.`}
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBulkDelete}
+                disabled={isLoading}
+                className="flex-1 py-2.5 bg-red-600 rounded-lg text-white font-medium hover:bg-red-700 shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isLoading ? "Processing..." : "Confirm"}
               </button>
             </div>
           </div>
