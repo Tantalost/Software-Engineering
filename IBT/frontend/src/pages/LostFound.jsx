@@ -87,6 +87,7 @@ const LostFound = () => {
   const [sessionStartedAt] = useState(() => new Date().toISOString());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [collectors, setCollectors] = useState([]);
   const [collectorId, setCollectorId] = useState("");
   const [collectorName, setCollectorName] = useState("");
@@ -709,14 +710,7 @@ const LostFound = () => {
     paginatedData.length > 0 &&
     paginatedData.every((item) => selectedIds.includes(item.id));
 
-  const handleBulkDelete = async () => {
-    const confirmMsg =
-      role === "lostfound"
-        ? `Request deletion for ${selectedIds.length} records?`
-        : `Are you sure you want to permanently delete ${selectedIds.length} records?`;
-
-    if (!window.confirm(confirmMsg)) return;
-
+  const handleConfirmBulkDelete = async () => {
     setIsLoading(true);
     try {
       if (role === "lostfound") {
@@ -751,7 +745,6 @@ const LostFound = () => {
           "superadmin",
         );
 
-        // Success Toast (Request)
         setNotificationState({
           isOpen: true,
           type: "success",
@@ -761,9 +754,9 @@ const LostFound = () => {
         });
 
         fetchDeleteRequests();
-
         setSelectedIds([]);
         setIsSelectionMode(false);
+        setShowBulkDeleteModal(false);
       } else {
         const deletePromises = selectedIds.map((id) =>
           fetch(`${API_URL}/${id}`, { method: "DELETE" }),
@@ -777,7 +770,6 @@ const LostFound = () => {
           "LostFound",
         );
 
-        // Success Toast (Direct Delete)
         setNotificationState({
           isOpen: true,
           type: "success",
@@ -789,10 +781,10 @@ const LostFound = () => {
         fetchLostFound();
         setSelectedIds([]);
         setIsSelectionMode(false);
+        setShowBulkDeleteModal(false);
       }
     } catch (error) {
       console.error("Bulk action failed", error);
-      // Error Toast
       setNotificationState({
         isOpen: true,
         type: "error",
@@ -1324,7 +1316,7 @@ const LostFound = () => {
               {isSelectionMode && selectedIds.length > 0 && (
                 <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
                   <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">{selectedIds.length} Selected</span>
-                  <button onClick={handleBulkDelete} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 shadow-sm border border-slate-200 cursor-pointer">
+                  <button onClick={() => setShowBulkDeleteModal(true)} title={role === "lostfound" ? "Request Bulk Deletion" : "Bulk Delete"} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer transition-colors">
                     <Trash2 className="h-5 w-5" />
                   </button>
                 </div>
@@ -1921,6 +1913,39 @@ const LostFound = () => {
                 className="flex-1 py-2.5 bg-yellow-500 rounded-lg text-white font-medium hover:bg-yellow-600 shadow-lg cursor-pointer"
               >
                 Yes, Archive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800">
+              {role === "lostfound" ? "Confirm Deletion Request" : "Confirm Bulk Delete"}
+            </h3>
+            <p className="text-slate-600 mt-2 text-sm">
+              {role === "lostfound"
+                ? `Are you sure you want to request deletion for ${selectedIds.length} records? This will be sent to the Superadmin.`
+                : `Are you sure you want to permanently delete ${selectedIds.length} records? This action cannot be undone.`}
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBulkDelete}
+                disabled={isLoading}
+                className="flex-1 py-2.5 bg-red-600 rounded-lg text-white font-medium hover:bg-red-700 shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isLoading ? "Processing..." : "Confirm"}
               </button>
             </div>
           </div>
