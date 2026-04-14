@@ -118,29 +118,49 @@ export default function ProfileScreen() {
       const currentUserContact = normalizeComparableContact(user?.contact || '');
       const parseSlots = (value: unknown) => String(value || '').split(',').map((s) => s.trim()).filter(Boolean);
 
-      const isOwnedByCurrentAccount = (app: any) => {
+      const getOwnershipSignals = (app: any) => {
         const ownerId = String(app?.userId || app?.uid || '').trim();
-        if (ownerId) return ownerId === normalizedUserId;
-
         const ownerEmail = String(app?.email || '').trim().toLowerCase();
-        if (ownerEmail && currentUserEmail) return ownerEmail === currentUserEmail;
-
         const ownerContact = normalizeComparableContact(app?.contact || app?.contactNo);
-        if (ownerContact && currentUserContact) return ownerContact === currentUserContact;
+
+        const hasEmailMatch = Boolean(ownerEmail && currentUserEmail && ownerEmail === currentUserEmail);
+        const hasContactMatch = Boolean(ownerContact && currentUserContact && ownerContact === currentUserContact);
+        const hasIdMatch = Boolean(ownerId && ownerId === normalizedUserId);
+
+        return { hasIdMatch, hasEmailMatch, hasContactMatch };
+      };
+
+      const isStrongOwned = (app: any) => {
+        const status = String(app?.status || '').toUpperCase();
+        const { hasIdMatch, hasEmailMatch, hasContactMatch } = getOwnershipSignals(app);
+
+        if (hasEmailMatch || hasContactMatch) return true;
+
+        if (hasIdMatch && status !== 'TENANT') return true;
 
         return false;
       };
 
+      const isWeakOwned = (app: any) => {
+        const { hasIdMatch, hasEmailMatch, hasContactMatch } = getOwnershipSignals(app);
+        return hasIdMatch || hasEmailMatch || hasContactMatch;
+      };
+
       const trustedOwnedSlots = new Set(
         apps
-          .filter((app) => isOwnedByCurrentAccount(app))
+          .filter((app) => isStrongOwned(app))
           .flatMap((app) => parseSlots(app?.targetSlot))
       );
 
       apps = apps.filter((app) => {
-        if (isOwnedByCurrentAccount(app)) return true;
+        const status = String(app?.status || '').toUpperCase();
+        if (isStrongOwned(app)) return true;
 
-        if (String(app?.status || '').toUpperCase() !== 'TENANT') return true;
+        if (status !== 'TENANT') return isWeakOwned(app);
+
+        if (trustedOwnedSlots.size === 0) return false;
+
+        if (!isWeakOwned(app)) return false;
 
         const appSlots = parseSlots(app?.targetSlot);
         return appSlots.some((slot) => trustedOwnedSlots.has(slot));

@@ -625,7 +625,7 @@ export const createContractTemplate = async (req, res) => {
     const now = new Date();
     const newTemplate = {
       _id: new mongoose.Types.ObjectId().toString(),
-      name: req.body.name || `Template ${templates.length + 1}`,
+      name: req.body.name || "",
       contractType: normalizeContractType(req.body.contractType, "INITIAL"),
       durationMonths: timing.durationMonths,
       duration: timing.duration,

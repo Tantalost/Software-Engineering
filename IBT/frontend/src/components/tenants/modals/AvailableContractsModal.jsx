@@ -14,7 +14,6 @@ const normalizeContractType = (value) => {
 const displayContractType = (value) => normalizeContractType(value);
 
 const defaultForm = {
-  name: "",
   contractType: "INITIAL",
   durationYears: "0",
   durationMonths: "1",
@@ -60,7 +59,6 @@ const AvailableContractsModal = ({ isOpen, onClose, apiUrl, onNotify, onSaved })
   const beginEdit = (template) => {
     setEditingId(template._id);
     setForm({
-      name: template.name || "",
       contractType: normalizeContractType(template.contractType),
       durationYears: String(template.duration?.years || 0),
       durationMonths: String(template.duration?.months || 0),
@@ -83,7 +81,6 @@ const AvailableContractsModal = ({ isOpen, onClose, apiUrl, onNotify, onSaved })
       payload.append("durationYears", String(Number(form.durationYears || 0)));
       payload.append("durationMonths", String(Number(form.durationMonths || 0)));
       if (editingId) {
-        payload.append("name", form.name || "");
         payload.append("notes", form.notes || "");
       }
       if (form.contractFile instanceof File) {
@@ -168,7 +165,6 @@ const AvailableContractsModal = ({ isOpen, onClose, apiUrl, onNotify, onSaved })
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-slate-600 sticky top-0">
                     <tr>
-                      <th className="text-left px-3 py-2">Name</th>
                       <th className="text-left px-3 py-2">Type</th>
                       <th className="text-left px-3 py-2">Duration</th>
                       <th className="text-left px-3 py-2">Document</th>
@@ -180,7 +176,6 @@ const AvailableContractsModal = ({ isOpen, onClose, apiUrl, onNotify, onSaved })
                       const docUrl = getDocUrl(apiUrl, template.documentUrl || "");
                       return (
                         <tr key={template._id} className="border-t border-slate-100">
-                          <td className="px-3 py-2 font-semibold text-slate-800">{template.name || "-"}</td>
                           <td className="px-3 py-2 text-slate-600">{displayContractType(template.contractType)}</td>
                           <td className="px-3 py-2 text-slate-600">
                             {(template.duration?.years || 0)}y {(template.duration?.months || 0)}m ({template.durationMonths || 0}m)
@@ -216,12 +211,6 @@ const AvailableContractsModal = ({ isOpen, onClose, apiUrl, onNotify, onSaved })
           <section className="xl:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <h4 className="font-bold text-slate-700 mb-3">{editingId ? "Edit Template" : "Create Template"}</h4>
             <div className="space-y-3">
-              {editingId && (
-                <div>
-                  <label className="text-xs font-semibold text-slate-600">Template Name</label>
-                  <input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                </div>
-              )}
               <div>
                 <label className="text-xs font-semibold text-slate-600">Contract Type</label>
                 <select value={form.contractType} onChange={(e) => setForm((prev) => ({ ...prev, contractType: normalizeContractType(e.target.value) }))} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">

@@ -220,7 +220,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                       <option value="">No default template</option>
                       {templates.map((template) => (
                         <option key={template._id} value={template._id}>
-                          {template.name || "Unnamed Template"} ({template.durationMonths || 0}m)
+                          {normalizeContractType(template.contractType)} ({template.duration?.years || 0}y {template.duration?.months || 0}m)
                         </option>
                       ))}
                     </select>
@@ -239,7 +239,6 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                 <div className="mt-3 text-sm text-slate-600">
                   {selectedDefaultTemplate ? (
                     <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3">
-                      <p><span className="font-semibold">Name:</span> {selectedDefaultTemplate.name || "-"}</p>
                       <p><span className="font-semibold">Type:</span> {normalizeContractType(selectedDefaultTemplate.contractType)}</p>
                       <p><span className="font-semibold">Duration:</span> {(selectedDefaultTemplate.duration?.years || 0)}y {(selectedDefaultTemplate.duration?.months || 0)}m ({selectedDefaultTemplate.durationMonths || 0} months)</p>
                     </div>
