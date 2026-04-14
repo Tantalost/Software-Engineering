@@ -1192,6 +1192,31 @@ const Parking = () => {
     }
   };
 
+const handleSafeLogout = () => {
+  // Check if there are departed records that haven't been submitted to a report yet
+  const hasUnsubmittedData = records.some(
+    (r) => r.status === "Departed" && !r.submitted
+  );
+
+  if (hasUnsubmittedData) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Action Required: You have unsubmitted departed records. Please 'Submit Report' before logging out.",
+      autoClose: true,
+      duration: 5000,
+    });
+    // Automatically open the report modal to help the user
+    setShowSubmitModal(true);
+    return false; // Block logout
+  }
+
+  // If everything is clear, proceed with logout logic
+  localStorage.clear();
+  window.location.href = "/login";
+  return true;
+};
+
   const confirmLogout = async () => {
     if (!logoutRow) return;
 
@@ -1320,16 +1345,29 @@ const Parking = () => {
   };
 
   const handleSubmitReport = async () => {
-    if (!collectorName || !collectorName.trim() || !collectorId) {
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Please select a Collector before submitting report.",
-        autoClose: true,
-        duration: 2000,
-      });
-      return;
-    }
+  if (!collectorName || !collectorName.trim() || !collectorId) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Please select a Collector before submitting report.",
+      autoClose: true,
+      duration: 2000,
+    });
+    return;
+  }
+
+  const unsubmittedDeparted = records.filter((item) => item.status === "Departed" && !item.submitted);
+
+  if (unsubmittedDeparted.length === 0) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "No new departed vehicles to submit.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
 
     setIsReporting(true);
     try {
@@ -1407,10 +1445,10 @@ const Parking = () => {
         localStorage.getItem("authName") ||
         localStorage.getItem("authEmail") ||
         "Parking Admin";
-      const report = await submitPageReport("Parking", reportPayload, adminName, {
-        reportType: "Parking",
-        payload: reportPayload,
-      });
+     const report = await submitPageReport("Parking", reportPayload, adminName, {
+      reportType: "Parking",
+      payload: reportPayload,
+    });
 
       await fetch(
         `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/notifications`,
@@ -1427,42 +1465,40 @@ const Parking = () => {
         },
       );
 
-      const submitShiftRes = await fetch(`${API_URL}/submit-shift`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionStartedAt,
-          reportId: report?._id || report?.id || null,
-        }),
-      });
+     const submitShiftRes = await fetch(`${API_URL}/submit-shift`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionStartedAt,
+        reportId: report?._id || report?.id || null,
+      }),
+    });
 
-      if (!submitShiftRes.ok) {
-        throw new Error("Report created, but failed to mark shift parking records as submitted.");
-      }
+    if (!submitShiftRes.ok) throw new Error("Failed to clear shift records.");
 
-      setNotificationState({
-        isOpen: true,
-        type: "success",
-        message: "Report submitted successfully! Shift rows are cleared from active board.",
-        autoClose: true,
-        duration: 2000,
-      });
+    setNotificationState({
+      isOpen: true,
+      type: "success",
+      message: "Report submitted! You may now safely log out.",
+      autoClose: true,
+      duration: 3000,
+    });
       setShowSubmitModal(false);
       setCollectorId("");
       setCollectorName("");
       fetchParkingTickets();
     } catch (error) {
-      console.error(error);
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Failed to submit report.",
-        autoClose: true,
-        duration: 2000,
-      });
-    } finally {
-      setIsReporting(false);
-    }
+    console.error(error);
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "Submission failed. Please try again before logging out.",
+      autoClose: true,
+      duration: 3000,
+    });
+  } finally {
+    setIsReporting(false);
+  }
   };
 
   const getBadgeStyles = () => {
