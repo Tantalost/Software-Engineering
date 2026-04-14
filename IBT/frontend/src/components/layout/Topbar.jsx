@@ -532,7 +532,7 @@ const Topbar = ({ title, onMenuClick, logoutGuard }) => {
         <div className="p-4 lg:px-8 lg:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <button onClick={onMenuClick} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all cursor-pointer">
+              <button onClick={onMenuClick} className="lg:hidden p-2 hover:bg-gray-100 rounded-none transition-all cursor-pointer">
                 <Menu size={24} className="text-gray-700" />
               </button>
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">{title}</h1>
