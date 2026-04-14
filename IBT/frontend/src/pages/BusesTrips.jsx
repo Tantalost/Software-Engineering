@@ -3226,7 +3226,7 @@ const BusTrips = () => {
       <div className="px-4 lg:px-8">
         <div className="flex flex-col gap-4 w-full mb-4">
           
-          <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
             
             <div className="flex-1 w-full xl:max-w-[400px] shrink-0">
               <div className="relative w-full">
@@ -3241,30 +3241,23 @@ const BusTrips = () => {
               </div>
             </div>
 
-            {role === "superadmin" && (
-              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
-                {role === "superadmin" && (
-                  <div className="flex flex-wrap items-center justify-start xl:justify-end gap-2 w-full xl:w-auto">
-                    <button
-                      onClick={() => setShowManageCompaniesModal(true)}
-                      className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
-                    >
-                      <Bus size={18} />
-                      <span>Manage Companies</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-              {role === "superadmin" && (
+           {role === "superadmin" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setShowManageCompaniesModal(true)}
+                  className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
+                >
+                  <Bus size={18} />
+                  <span>Manage Companies</span>
+                </button>
                 <button
                   onClick={() => setShowMissedModal(true)}
                   className="flex items-center cursor-pointer justify-center space-x-2 border border-amber-200 bg-white text-amber-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition-all"
-                >
+                  >
                   <span>View Missed Buses</span>
                 </button>
-              )}
+              </div>
+            )}
 
           </div>
 
