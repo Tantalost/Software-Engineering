@@ -1715,8 +1715,31 @@ const handleSafeLogout = () => {
         "Status",
       ];
 
+  const hasPendingParkingShiftReport = useMemo(() => {
+    if (role !== "parking") return false;
+
+    return records.some((item) => {
+      const isDeparted = String(item?.status || "").toLowerCase() === "departed";
+      const isSubmitted = Boolean(item?.submitted);
+      return isDeparted && !isSubmitted;
+    });
+  }, [records, role]);
+
   return (
-    <Layout title="Parking Management" onLogout={handleSafeLogout}>
+    <Layout
+      title="Parking Management"
+      topbarProps={
+        role === "parking"
+          ? {
+              logoutGuard: {
+                canLogout: !hasPendingParkingShiftReport,
+                message:
+                  "Please submit your shift report before logging out. You still have unsubmitted Parking transactions in this shift.",
+              },
+            }
+          : undefined
+      }
+    >
       <div className="mb-6">
         <StatCardGroupPark
           cars={fourWheelCount}

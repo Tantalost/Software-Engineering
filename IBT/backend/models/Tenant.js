@@ -95,7 +95,10 @@ const TenantSchema = new mongoose.Schema({
   isOperationPaused: { type: Boolean, default: false }, 
   operationPauseReason: {
     type: String,
-    enum: ["MANUAL", "NON_PAYMENT_2_MONTHS"],
+    validate: {
+      validator: (value) => value == null || ["MANUAL", "NON_PAYMENT_2_MONTHS"].includes(value),
+      message: "Invalid operation pause reason",
+    },
     default: null,
   },
   lastPausedDate: Date,                               
