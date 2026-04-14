@@ -214,6 +214,20 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
       ? Math.ceil((new Date(nightMarketTerminationAt).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
       : null);
   const isWaitingForStartOperation = currentApp.tenantDbStatus === 'Not Started Operations' || (isPermanent && !currentApp.due && !currentApp.operationStartDate);
+  const parsedNightMarketOperationStartDeadlineAt = currentApp?.nightMarketOperationStartDeadlineAt
+    ? new Date(currentApp.nightMarketOperationStartDeadlineAt)
+    : null;
+  const nightMarketOperationStartDeadlineAt = parsedNightMarketOperationStartDeadlineAt
+    && !Number.isNaN(parsedNightMarketOperationStartDeadlineAt.getTime())
+      ? parsedNightMarketOperationStartDeadlineAt
+      : null;
+  const rawNightMarketOperationStartDeadlineDaysLeft = Number(currentApp?.nightMarketOperationStartDeadlineDaysLeft);
+  const nightMarketOperationStartDeadlineDaysLeft = Number.isFinite(rawNightMarketOperationStartDeadlineDaysLeft)
+    ? rawNightMarketOperationStartDeadlineDaysLeft
+    : (nightMarketOperationStartDeadlineAt
+      ? Math.ceil((new Date(nightMarketOperationStartDeadlineAt).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
+      : null);
+  const configuredOperationStartDeadlineDays = Math.max(1, Number(currentApp?.nightMarketOperationStartDeadlineDays) || 3);
 
   useEffect(() => {
     if (!applying && paymentData?.referenceNo === '') {
@@ -263,7 +277,28 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   };
 
   const renewalTemplates = Array.isArray(currentApp?.renewalTemplates) ? currentApp.renewalTemplates : [];
+  const renewalContracts = renewalTemplates.filter((template: any) => {
+    const contractType = String(template?.contractType || template?.type || '').toUpperCase();
+    return contractType === 'RENEWAL';
+  });
+  const currentContracts = Array.isArray(currentApp?.contracts) ? currentApp.contracts : [];
+  const approvedRenewalContract = currentContracts.find((contract: any) => {
+    const contractType = String(contract?.contractType || '').toUpperCase();
+    const status = String(contract?.status || '').toLowerCase();
+    return contractType === 'RENEWAL' && status === 'approved_awaiting_start';
+  });
+  const hasApprovedRenewalAwaitingStart = Boolean(approvedRenewalContract);
+  const parsedApprovedRenewalStartDate = approvedRenewalContract?.startDate
+    ? new Date(approvedRenewalContract.startDate)
+    : null;
+  const approvedRenewalStartDate = parsedApprovedRenewalStartDate && !Number.isNaN(parsedApprovedRenewalStartDate.getTime())
+    ? parsedApprovedRenewalStartDate
+    : null;
   const hasPendingRenewal = Boolean(currentApp?.hasPendingRenewal);
+  const hasOpenRenewalRequest = hasPendingRenewal || hasApprovedRenewalAwaitingStart;
+  const hasSelectedRenewalContract = renewalContracts.some(
+    (template: any) => String(template._id) === selectedTemplateId
+  );
   const parsedContractEndDate = currentApp?.activeContractEndDate
     ? new Date(currentApp.activeContractEndDate)
     : null;
@@ -274,7 +309,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
     ? Math.ceil((new Date(activeContractEndDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
     : null;
   const isWithinRenewalWindow = renewalDaysLeft !== null && renewalDaysLeft >= 0 && renewalDaysLeft <= 30;
-  const isEligibleForRenewal = Boolean(currentApp?.isEligibleForRenewal) || isWithinRenewalWindow;
+  const isEligibleForRenewal = !hasOpenRenewalRequest && (Boolean(currentApp?.isEligibleForRenewal) || isWithinRenewalWindow);
 
   const getTemplateDurationLabel = (template: any) => {
     const duration = template?.duration;
@@ -334,7 +369,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         </Card.Content>
       </Card>
 
-      {isPermanent && (isEligibleForRenewal || hasPendingRenewal) && (
+      {isPermanent && (isEligibleForRenewal || hasPendingRenewal) && !hasApprovedRenewalAwaitingStart && (
         <Card style={{ marginBottom: 20, backgroundColor: '#eff6ff', borderColor: '#bbf7d0', borderWidth: 1 }}>
           <Card.Content>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
@@ -359,13 +394,13 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                   </Text>
                 )}
 
-                <Text style={{ color: '#0a0a0a', marginBottom: 6, fontWeight: 'bold' }}>Select Renewal Template</Text>
-                {renewalTemplates.length === 0 ? (
+                <Text style={{ color: '#0a0a0a', marginBottom: 6, fontWeight: 'bold' }}>Select Renewal Contract</Text>
+                {renewalContracts.length === 0 ? (
                   <Text style={{ color: '#333333', marginBottom: 12 }}>
-                    No renewal template is available right now. Please contact the admin office.
+                    No renewal contract is available right now. Please contact the admin office.
                   </Text>
                 ) : (
-                  renewalTemplates.map((template: any) => {
+                  renewalContracts.map((template: any) => {
                     const selected = selectedTemplateId === String(template._id);
                     return (
                       <Button
@@ -387,13 +422,34 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
                   mode={applying ? 'contained' : 'outlined'}
                   onPress={() => submitRenewalContract(selectedTemplateId)}
                   loading={applying}
-                  disabled={renewalTemplates.length === 0 || !selectedTemplateId || !files?.contract}
+                  disabled={renewalContracts.length === 0 || !hasSelectedRenewalContract || !files?.contract}
                   style={{ marginTop: 12, borderColor: '#166534', borderWidth: applying ? 0 : 1, backgroundColor: applying ? '#bbf7d0': 'transparent' }}
                   textColor={applying ? '#020202' : '#166534'}
                 >
                   Submit Renewal Contract
                 </Button>
               </>
+            )}
+          </Card.Content>
+        </Card>
+      )}
+
+      {isPermanent && hasApprovedRenewalAwaitingStart && (
+        <Card style={{ marginBottom: 20, backgroundColor: '#ecfeff', borderColor: '#67e8f9', borderWidth: 1 }}>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Icon name="clock-check-outline" size={22} color="#0e7490" style={{ marginRight: 8 }} />
+              <Text variant="titleMedium" style={{ color: '#155e75', fontWeight: 'bold' }}>
+                Renewal Approved
+              </Text>
+            </View>
+            <Text style={{ color: '#155e75' }}>
+              Your renewal contract is approved and waiting for activation.
+            </Text>
+            {approvedRenewalStartDate && (
+              <Text style={{ color: '#0c4a6e', fontWeight: 'bold', marginTop: 6 }}>
+                Activation date: {approvedRenewalStartDate.toLocaleDateString()}
+              </Text>
             )}
           </Card.Content>
         </Card>
@@ -418,6 +474,30 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
             </Text>
             <Text style={{ color: '#9a3412', marginTop: 6 }}>
               Termination date: {nightMarketTerminationAt.toLocaleDateString()}
+            </Text>
+          </Card.Content>
+        </Card>
+      )}
+
+      {isNightMarket && isWaitingForStartOperation && nightMarketOperationStartDeadlineAt && nightMarketOperationStartDeadlineDaysLeft !== null && (
+        <Card style={{ marginBottom: 20, backgroundColor: '#fffbeb', borderColor: '#fcd34d', borderWidth: 1 }}>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Icon name="clock-alert-outline" size={22} color="#b45309" style={{ marginRight: 8 }} />
+              <Text variant="titleMedium" style={{ color: '#92400e', fontWeight: 'bold' }}>
+                Start Operations Deadline
+              </Text>
+            </View>
+            <Text style={{ color: '#92400e', marginBottom: 6 }}>
+              You must start operations within {configuredOperationStartDeadlineDays} day{configuredOperationStartDeadlineDays === 1 ? '' : 's'} after approval.
+            </Text>
+            <Text style={{ color: '#7c2d12', fontWeight: 'bold' }}>
+              {nightMarketOperationStartDeadlineDaysLeft > 0
+                ? `Start within ${nightMarketOperationStartDeadlineDaysLeft} day${nightMarketOperationStartDeadlineDaysLeft === 1 ? '' : 's'} to keep your slot.`
+                : 'Deadline reached. Start operations now to avoid automatic slot release.'}
+            </Text>
+            <Text style={{ color: '#92400e', marginTop: 6 }}>
+              Deadline date: {nightMarketOperationStartDeadlineAt.toLocaleDateString()}
             </Text>
           </Card.Content>
         </Card>

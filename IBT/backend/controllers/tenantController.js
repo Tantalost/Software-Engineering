@@ -1754,6 +1754,7 @@ export const getOverdueSettings = async (req, res) => {
     const nCharge = await Settings.findOne({ key: "nightMarketChargePercentage" });
     const nInterest = await Settings.findOne({ key: "nightMarketInterestPercentage" });
     const nMaxTerminationDays = await Settings.findOne({ key: "nightMarketMaxTerminationDays" });
+    const nOperationStartDeadlineDays = await Settings.findOne({ key: "nightMarketOperationStartDeadlineDays" });
     const pDueDate = await Settings.findOne({ key: "permanentDueDate" });
     const pDailyFee = await Settings.findOne({ key: "permanentDailyFee" });
 
@@ -1764,6 +1765,7 @@ export const getOverdueSettings = async (req, res) => {
       nightMarketInterest: nInterest ? Number(nInterest.value) : 2,
       nightMarketWeeklyRent,
       nightMarketMaxTerminationDays: nMaxTerminationDays ? Number(nMaxTerminationDays.value) : 3,
+      nightMarketOperationStartDeadlineDays: nOperationStartDeadlineDays ? Number(nOperationStartDeadlineDays.value) : 3,
       permanentDueDate: pDueDate ? Number(pDueDate.value) : 5,
       dailyFee: pDailyFee ? Number(pDailyFee.value) : 200,
     });
@@ -1774,7 +1776,15 @@ export const getOverdueSettings = async (req, res) => {
 
 export const updateOverdueSettings = async (req, res) => {
   try {
-    const { tenantType, chargePercentage, interestPercentage, permanentDueDate, dailyFee, nightMarketMaxTerminationDays } = req.body;
+    const {
+      tenantType,
+      chargePercentage,
+      interestPercentage,
+      permanentDueDate,
+      dailyFee,
+      nightMarketMaxTerminationDays,
+      nightMarketOperationStartDeadlineDays,
+    } = req.body;
     
     const isNightMarket = tenantType === "Night Market";
     const chargeKey = isNightMarket ? "nightMarketChargePercentage" : "permanentChargePercentage";
@@ -1832,6 +1842,15 @@ export const updateOverdueSettings = async (req, res) => {
       await Settings.findOneAndUpdate(
         { key: "nightMarketMaxTerminationDays" },
         { value: parsedMaxDays },
+        { upsert: true }
+      );
+    }
+
+    if (isNightMarket && nightMarketOperationStartDeadlineDays !== undefined) {
+      const parsedStartDeadlineDays = Math.max(1, Math.floor(Number(nightMarketOperationStartDeadlineDays) || 0));
+      await Settings.findOneAndUpdate(
+        { key: "nightMarketOperationStartDeadlineDays" },
+        { value: parsedStartDeadlineDays },
         { upsert: true }
       );
     }

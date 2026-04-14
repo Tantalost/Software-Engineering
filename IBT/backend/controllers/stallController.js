@@ -393,12 +393,16 @@ export const getMyApplication = async (req, res) => {
         const permSetting = await Settings.findOne({ key: "defaultPermanentPrice" });
         const dueDateSetting = await Settings.findOne({ key: "permanentDueDate" });
         const nightMaxTerminationSetting = await Settings.findOne({ key: "nightMarketMaxTerminationDays" });
+        const nightOperationStartDeadlineSetting = await Settings.findOne({ key: "nightMarketOperationStartDeadlineDays" });
         const globalNightPrice = nightSetting ? Number(nightSetting.value) : 150;
         const globalNightWeeklyRent = nightWeeklySetting ? Number(nightWeeklySetting.value) : (globalNightPrice * 7);
         const globalPermPrice = permSetting ? Number(permSetting.value) : 6000;
         const permanentDueDay = dueDateSetting ? Number(dueDateSetting.value) : 5;
         const nightMarketMaxTerminationDays = nightMaxTerminationSetting
             ? Math.max(1, Math.floor(Number(nightMaxTerminationSetting.value) || 0))
+            : 3;
+        const nightMarketOperationStartDeadlineDays = nightOperationStartDeadlineSetting
+            ? Math.max(1, Math.floor(Number(nightOperationStartDeadlineSetting.value) || 0))
             : 3;
         const templateState = await fetchTemplateState();
         const renewalTemplates = templateState.templates.map((template) => ({
@@ -428,6 +432,15 @@ export const getMyApplication = async (req, res) => {
             const isWithinRenewalWindow = renewalDaysLeft !== null && renewalDaysLeft >= 0 && renewalDaysLeft <= 30;
             const nightMarketTerminationAt = isNightMarket ? toValidDate(tenant.nightMarketTerminationAt) : null;
             const nightMarketTerminationDaysLeft = nightMarketTerminationAt ? daysUntil(nightMarketTerminationAt) : null;
+            const operationStartAnchorDate = isNightMarket
+                ? (toValidDate(tenant.StartDateTime) || toValidDate(tenant.createdAt))
+                : null;
+            const nightMarketOperationStartDeadlineAt = (isNightMarket && isWaitingForStartOperation && operationStartAnchorDate)
+                ? addDays(startOfDay(operationStartAnchorDate), nightMarketOperationStartDeadlineDays)
+                : null;
+            const nightMarketOperationStartDeadlineDaysLeft = nightMarketOperationStartDeadlineAt
+                ? daysUntil(nightMarketOperationStartDeadlineAt)
+                : null;
             
            
             let calcRent = tenant.rentAmount;
@@ -465,6 +478,9 @@ export const getMyApplication = async (req, res) => {
                 nightMarketTerminationAt: nightMarketTerminationAt ? nightMarketTerminationAt.toISOString() : null,
                 nightMarketTerminationDaysLeft,
                 nightMarketMaxTerminationDays,
+                nightMarketOperationStartDeadlineAt: nightMarketOperationStartDeadlineAt ? nightMarketOperationStartDeadlineAt.toISOString() : null,
+                nightMarketOperationStartDeadlineDaysLeft,
+                nightMarketOperationStartDeadlineDays,
                 nightMarketBasePrice: globalNightPrice,
                 nightMarketWeeklyRent: globalNightWeeklyRent,
                 due: calcDue,
