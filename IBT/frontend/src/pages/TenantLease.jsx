@@ -2554,6 +2554,10 @@ const TenantLease = () => {
             <ContractManagementModal
                 isOpen={role === "superadmin" && !!contractRow}
                 onClose={() => setContractRow(null)}
+                onBack={() => {
+                    setContractRow(null);
+                    setShowContractsOverview(true);
+                }}
                 tenant={contractRow}
                 apiUrl={API_URL}
                 onSaved={fetchTenants}

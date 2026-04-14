@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, FileText, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { X, ChevronLeft, FileText, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
 
 const getDocUrl = (apiUrl, filename) => {
   if (!filename) return "";
@@ -70,7 +70,7 @@ const defaultForm = {
   contractFile: null,
 };
 
-const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onNotify }) => {
+const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSaved, onNotify }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [contracts, setContracts] = useState([]);
@@ -220,16 +220,29 @@ const ContractManagementModal = ({ isOpen, onClose, tenant, apiUrl, onSaved, onN
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50">
-          <div>
-            <h3 className="text-xl font-bold text-slate-800">Contract Management</h3>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {tenant.tenantName || tenant.name} | Slot {tenant.slotNo || "-"}
-            </p>
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50 shrink-0">
+          <div className="flex items-center gap-3">
+            
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-1.5 -ml-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                title="Back to Contracts Overview"
+              >
+                <ChevronLeft size={22} />
+              </button>
+            )}
+
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Contract Management</h3>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {tenant.tenantName || tenant.name} | Slot {tenant.slotNo || "-"}
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="rounded-full p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>

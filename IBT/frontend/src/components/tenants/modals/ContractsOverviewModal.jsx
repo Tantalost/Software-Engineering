@@ -181,7 +181,8 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
       <div className="w-full max-w-6xl rounded-2xl bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+   
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
           <div>
             <h3 className="text-xl font-bold text-slate-800">Tenant Contracts Overview</h3>
             <p className="text-sm text-slate-500 mt-0.5">
@@ -196,11 +197,13 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
           </button>
         </div>
 
-        <div className="p-4 border-b border-slate-100 bg-slate-50/60">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+        <div className="p-4 border-b border-slate-100 bg-slate-50/60"></div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">Default Contract For Mobile Applicants</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-2">Default Contract For Mobile Applicants</p>
                 <h4 className="text-lg font-bold text-slate-800">New Tenant Application Contract</h4>
                 <p className="text-sm text-slate-500 mt-1">This default template is shown/used for incoming mobile applications.</p>
               </div>
@@ -240,22 +243,22 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                     <button
                       onClick={handleSaveDefaultTemplate}
                       disabled={savingDefault || loadingDefault}
-                      className="w-full h-11 rounded-lg bg-indigo-600 text-white px-3 text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60"
+                      className="w-full h-11 rounded-lg bg-emerald-600 text-white px-3 text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60"
                     >
-                      {savingDefault ? "Saving..." : "Save Default"}
+                     {savingDefault ? "Saving..." : "Save Default"}
                     </button>
                   </div>
                 </div>
 
                 <div className="mt-3 text-sm text-slate-600">
                   {selectedDefaultTemplate ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                      <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2">
-                        <p className="text-[11px] uppercase tracking-wider font-bold text-indigo-700">Type</p>
-                        <p className="font-semibold text-slate-700">{normalizeContractType(selectedDefaultTemplate.contractType)}</p>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Type</p>
+                      <p className="font-semibold text-slate-700">{normalizeContractType(selectedDefaultTemplate.contractType)}</p>
                       </div>
-                      <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 md:col-span-2">
-                        <p className="text-[11px] uppercase tracking-wider font-bold text-indigo-700">Duration</p>
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 md:col-span-2">
+                        <p className="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Duration</p>
                         <p className="font-semibold text-slate-700">{(selectedDefaultTemplate.duration?.years || 0)}y {(selectedDefaultTemplate.duration?.months || 0)}m ({selectedDefaultTemplate.durationMonths || 0} months)</p>
                       </div>
                     </div>
@@ -302,8 +305,8 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 p-4 pt-3">
-          <div className="h-full overflow-auto rounded-xl border border-slate-200 bg-white">
+        <div className="p-4 pt-3">
+          <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
             {rows.length > 0 ? (
               <table className="min-w-[980px] w-full text-sm">
                 <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
@@ -383,7 +386,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
                         <td className="px-3 py-2.5 text-right">
                           <button
                             onClick={() => onManageTenant?.(tenant)}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold"
+                            className="px-3 py-1.5 rounded-lg bg-cyan-50 text-cyan-700 hover:bg-cyan-100 font-semibold"
                           >
                             Manage
                           </button>
@@ -397,7 +400,7 @@ const ContractsOverviewModal = ({ isOpen, onClose, tenants = [], onManageTenant,
               <div className="h-full min-h-[220px] flex items-center justify-center text-slate-500 px-6 text-center">
                 No tenants found for your search.
               </div>
-            )}
+          )}
           </div>
         </div>
 
