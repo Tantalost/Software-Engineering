@@ -32,6 +32,17 @@ import { saveAs } from 'file-saver';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const formatStatisticsLabel = (rawKey) => {
+  const normalized = String(rawKey || "").replace(/[\s_-]/g, "").toLowerCase();
+
+  if (normalized === "cars") return "4 Wheels";
+  if (normalized === "motorcycles") return "2 Wheels";
+  if (normalized === "missedcount" || normalized === "missedbus") return "Missed Bus";
+  if (normalized === "departednow" || normalized === "departedbus") return "Departed Bus";
+
+  return String(rawKey).replace(/([A-Z])/g, " $1").trim();
+};
+
 const DataRenderer = ({ reportPayload }) => {
   if (!reportPayload)
     return (
@@ -46,10 +57,7 @@ const DataRenderer = ({ reportPayload }) => {
       .toLowerCase();
 
   const formatStatLabel = (rawKey) => {
-    const key = String(rawKey || "").toLowerCase();
-    if (key === "missedcount" || key === "missedbus") return "Missed Bus";
-    if (key === "departednow" || key === "departedbus") return "Departed Bus";
-    return String(rawKey).replace(/([A-Z])/g, " $1").trim();
+    return formatStatisticsLabel(rawKey);
   };
 
   const formatStatValue = (key, value) => {
@@ -643,7 +651,7 @@ const Reports = () => {
 
       if (report.data?.statistics) {
         Object.entries(report.data.statistics).forEach(([key, value]) => {
-          wsSummary.addRow([key.replace(/([A-Z])/g, " $1").trim(), value]);
+          wsSummary.addRow([formatStatisticsLabel(key), value]);
         });
       }
       const lastRowSummary = wsSummary.lastRow.number + 2;
@@ -706,7 +714,7 @@ const Reports = () => {
       currentY += 10;
 
       const statsData = Object.entries(report.data.statistics).map(([k, v]) => [
-        k,
+        formatStatisticsLabel(k),
         v,
       ]);
       autoTable(doc, {

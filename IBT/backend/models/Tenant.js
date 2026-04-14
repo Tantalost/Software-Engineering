@@ -1,5 +1,48 @@
 import mongoose from "mongoose";
 
+const normalizeContractTypeValue = (value) => {
+  return String(value || "").toUpperCase() === "INITIAL" ? "INITIAL" : "RENEWAL";
+};
+
+const TenantContractSchema = new mongoose.Schema(
+  {
+    contractType: {
+      type: String,
+      enum: ["INITIAL", "RENEWAL"],
+      default: "INITIAL",
+      set: normalizeContractTypeValue
+    },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    durationMonths: { type: Number, required: true, min: 1 },
+    duration: {
+      years: { type: Number, default: 0, min: 0 },
+      months: { type: Number, default: 0, min: 0, max: 11 }
+    },
+    documentUrl: { type: String, default: "" },
+    status: {
+      type: String,
+      enum: ["active", "inactive", "superseded", "expired", "terminated", "pending_approval", "approved_awaiting_start", "rejected"],
+      default: "inactive"
+    },
+    source: {
+      type: String,
+      enum: ["legacy", "admin", "system", "tenant"],
+      default: "admin"
+    },
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin", default: null },
+    assignedAt: { type: Date, default: Date.now },
+    templateId: { type: String, default: "" },
+    templateName: { type: String, default: "" },
+    requestedAt: { type: Date, default: null },
+    approvedAt: { type: Date, default: null },
+    rejectedAt: { type: Date, default: null },
+    rejectedReason: { type: String, default: "" },
+    notes: { type: String, default: "" }
+  },
+  { _id: true }
+);
+
 const TenantSchema = new mongoose.Schema({
  
   firstName: String,     
@@ -54,8 +97,20 @@ const TenantSchema = new mongoose.Schema({
     referenceNo: String,
     amount: Number,
     datePaid: Date,
-    receiptUrl: String
+    receiptUrl: String,
+    contractId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    coverageStartDate: Date,
+    coverageEndDate: Date
   }],
+
+  // New dynamic contract model. Keep StartDateTime/DueDateTime for backward compatibility.
+  activeContractId: { type: mongoose.Schema.Types.ObjectId, default: null },
+  contracts: {
+    type: [TenantContractSchema],
+    default: []
+  },
+  isEligibleForRenewal: { type: Boolean, default: false },
+  renewalEligibilityNotifiedAt: { type: Date, default: null },
   
   documents: {
     businessPermit: String,
@@ -78,6 +133,27 @@ const TenantSchema = new mongoose.Schema({
 }, { 
   timestamps: true 
 });
+
+TenantSchema.pre("validate", function normalizeContractTypes(next) {
+  if (Array.isArray(this.contracts)) {
+    this.contracts.forEach((contract) => {
+      contract.contractType = normalizeContractTypeValue(contract.contractType);
+    });
+  }
+  next();
+});
+
+TenantSchema.methods.getActiveContract = function getActiveContract() {
+  if (!Array.isArray(this.contracts) || this.contracts.length === 0) return null;
+
+  if (this.activeContractId) {
+    const byId = this.contracts.find((contract) => String(contract._id) === String(this.activeContractId));
+    if (byId) return byId;
+  }
+
+  const byStatus = this.contracts.find((contract) => contract.status === "active");
+  return byStatus || this.contracts[this.contracts.length - 1];
+};
 
 const Tenant = mongoose.models.Tenant || mongoose.model('Tenant', TenantSchema);
 mongoose.connection.once('open', async () => {

@@ -2,6 +2,9 @@ import cron from 'node-cron';
 import mongoose from 'mongoose';
 import TenantApplication from '../models/TenantApplication.js';
 import BusTrip from '../models/BusTrips.js';
+import Tenant from '../models/Tenant.js';
+import User from '../models/User.js';
+import sendPushNotification from './sendPushNotification.js';
 
 
 const ApplicationSchema = new mongoose.Schema({
@@ -10,6 +13,113 @@ const ApplicationSchema = new mongoose.Schema({
 }, { strict: false });
 
 const Application = mongoose.model('Application', ApplicationSchema, 'applications');
+
+const startOfDay = (date) => {
+    const copy = new Date(date);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+};
+
+const daysUntil = (targetDate, fromDate = new Date()) => {
+    const diff = startOfDay(targetDate).getTime() - startOfDay(fromDate).getTime();
+    return Math.floor(diff / (24 * 60 * 60 * 1000));
+};
+
+const processContractRenewalLifecycle = async () => {
+    if (mongoose.connection.readyState !== 1) return;
+
+    const tenants = await Tenant.find({
+        isArchived: { $ne: true },
+        contracts: { $exists: true, $ne: [] },
+    });
+
+    const today = new Date();
+    let eligibilityFlagged = 0;
+    let transitionsApplied = 0;
+
+    for (const tenant of tenants) {
+        const contracts = Array.isArray(tenant.contracts) ? tenant.contracts : [];
+        if (contracts.length === 0) continue;
+
+        const activeContract = tenant.activeContractId
+            ? contracts.find((contract) => String(contract._id) === String(tenant.activeContractId))
+            : (contracts.find((contract) => contract.status === 'active') || contracts[contracts.length - 1]);
+        if (!activeContract?.endDate) continue;
+
+        const awaitingContract = contracts.find(
+            (contract) => contract.status === 'approved_awaiting_start' && contract.startDate && startOfDay(contract.startDate) <= startOfDay(today)
+        );
+
+        let touched = false;
+        if (awaitingContract) {
+            if (activeContract.status === 'active') {
+                activeContract.status = 'expired';
+            }
+            awaitingContract.status = 'active';
+            tenant.activeContractId = awaitingContract._id;
+            tenant.StartDateTime = awaitingContract.startDate;
+            tenant.DueDateTime = awaitingContract.endDate;
+            tenant.documents = tenant.documents || {};
+            if (awaitingContract.documentUrl) {
+                tenant.documents.contract = awaitingContract.documentUrl;
+            }
+            tenant.isEligibleForRenewal = false;
+            touched = true;
+            transitionsApplied += 1;
+
+            if (tenant.email) {
+                try {
+                    const user = await User.findOne({ email: tenant.email });
+                    if (user?.expoPushToken) {
+                        await sendPushNotification(
+                            user.expoPushToken,
+                            'Renewal Activated',
+                            `Your new renewal contract for Slot ${tenant.slotNo} is now active.`,
+                            { route: 'stalls' },
+                        );
+                    }
+                } catch (pushError) {
+                    console.error('[RENEWAL CRON] transition push failed:', pushError.message);
+                }
+            }
+        }
+
+        const hasOpenRenewal = contracts.some((contract) => ['pending_approval', 'approved_awaiting_start'].includes(contract.status));
+        const remainingDays = daysUntil(activeContract.endDate, today);
+        const shouldFlagEligibility = remainingDays === 30 && !hasOpenRenewal;
+
+        if (shouldFlagEligibility && !tenant.isEligibleForRenewal) {
+            tenant.isEligibleForRenewal = true;
+            tenant.renewalEligibilityNotifiedAt = new Date();
+            touched = true;
+            eligibilityFlagged += 1;
+
+            if (tenant.email) {
+                try {
+                    const user = await User.findOne({ email: tenant.email });
+                    if (user?.expoPushToken) {
+                        await sendPushNotification(
+                            user.expoPushToken,
+                            'Renewal Available',
+                            `Your contract for Slot ${tenant.slotNo} ends in 30 days. Submit your renewal contract in the app.`,
+                            { route: 'stalls' },
+                        );
+                    }
+                } catch (pushError) {
+                    console.error('[RENEWAL CRON] eligibility push failed:', pushError.message);
+                }
+            }
+        }
+
+        if (touched) {
+            await tenant.save();
+        }
+    }
+
+    if (eligibilityFlagged > 0 || transitionsApplied > 0) {
+        console.log(`[RENEWAL CRON] Flagged ${eligibilityFlagged} eligible tenant(s), transitioned ${transitionsApplied} contract(s).`);
+    }
+};
 
 const deleteGridFSFiles = async (bucket, filenames) => {
     const validFilenames = filenames.filter(Boolean);
@@ -137,6 +247,14 @@ export const startCleanUP = () => {
             }
         } catch (error) {
             console.error("[BUS AUTO-CLEAR ERROR]:", error);
+        }
+    });
+
+    cron.schedule('2 0 * * *', async () => {
+        try {
+            await processContractRenewalLifecycle();
+        } catch (error) {
+            console.error('[RENEWAL CRON ERROR]:', error);
         }
     });
 

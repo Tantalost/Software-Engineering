@@ -72,7 +72,16 @@ const filteredData = baseFilteredData.filter((app) => {
 });
 
 
-const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app._id || app.id));
+const isRenewalRecord = (app) => {
+  if (app?.reviewSource === 'renewal') return true;
+
+  return renewalsData.some((r) => {
+  if (r.renewalContractId && app.renewalContractId) {
+    return String(r.renewalContractId) === String(app.renewalContractId);
+  }
+  return (r._id || r.id) === (app._id || app.id);
+  });
+};
 
   const handleOpenReject = (appId, isRenewal = false) => {
     setRejectionReason("");
@@ -127,7 +136,7 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                   <ClipboardList className="text-emerald-600" /> Applicants & Renewals
               </h3>
-              <p className="text-xs text-slate-500 mt-1">Manage incoming applications and lease renewal payments.</p>
+                <p className="text-xs text-slate-500 mt-1">Manage incoming applications and lease renewal contract requests.</p>
             </div>
             <button onClick={onClose} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"><X size={20}/></button>
           </div>
@@ -139,7 +148,7 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
               <button onClick={() => setStatusFilter("Contract Review")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Contract Review" ? "bg-green-600 text-white border-green-600" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><FileSignature size={12}/> Contract Review</button>
               <button onClick={() => setStatusFilter("Rejected")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Rejected" ? "bg-red-500 text-white border-red-500" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}><XCircle size={12}/> Rejected</button>
               
-              <button onClick={() => setStatusFilter("Renewals")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Renewals" ? "bg-yellow-500 text-white border-yellow-500 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:bg-yellow-50 hover:text-yellow-700 hover:border-yelow-200"}`}>
+                <button onClick={() => setStatusFilter("Renewals")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors border flex items-center gap-2 ${statusFilter === "Renewals" ? "bg-yellow-500 text-white border-yellow-500 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:bg-yellow-50 hover:text-yellow-700 hover:border-yelow-200"}`}>
                   <ClipboardList size={12}/> Pending Renewals ({renewalsData?.length || 0})
               </button>
 
@@ -177,16 +186,16 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredData.map((app) => (
-                    <tr key={app._id || app.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr key={app.renewalContractId || app._id || app.id} className="hover:bg-slate-50 transition-colors group">
                       <td className="px-4 py-3">
                           <div className="font-bold text-slate-800 text-base">{app.tenantName || app.name}</div>
                           <div className="text-xs text-slate-500 font-medium">{app.contactNo || app.contact}</div>
                           
                           
                           <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
-                            {new Date(app.createdAt || app.dateRequested || app.StartDateTime).toLocaleDateString()}
+                            {new Date(app.renewalRequestedAt || app.createdAt || app.dateRequested || app.StartDateTime).toLocaleDateString()}
                             <span className="italic font-medium text-emerald-600">
-                              ({getTimeAgo(app.createdAt || app.dateRequested || app.StartDateTime)})
+                              ({getTimeAgo(app.renewalRequestedAt || app.createdAt || app.dateRequested || app.StartDateTime)})
                             </span>
                           </div>
                           
@@ -205,6 +214,8 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
                               app.status === 'PAYMENT_REVIEW' || app.status === 'Payment Review' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                               app.status === 'PAYMENT_UNLOCKED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                               app.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
+                                app.status === 'PENDING_APPROVAL' || app.status === 'pending_approval' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                app.status === 'APPROVED_AWAITING_START' || app.status === 'approved_awaiting_start' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
                               app.status === 'CONTRACT_REVIEW' || app.status === 'CONTRACT_PENDING' ? 'bg-green-50 text-green-700 border-green-200' :
                               'bg-slate-100 text-slate-600 border-slate-200'
                           }`}>
@@ -224,7 +235,11 @@ const isRenewalRecord = (app) => renewalsData.some(r => (r._id || r.id) === (app
                                   (app.status === 'PAYMENT_REVIEW' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-600 hover:bg-emerald-700')
                                 }`}
                               >
-                                {isRenewalRecord(app) ? <><ClipboardList size={14}/> Review Renewal</> : 
+                                {isRenewalRecord(app) ? (
+                                  app.renewalReviewType === 'payment'
+                                    ? <><CreditCard size={14}/> Check Payment</>
+                                    : <><ClipboardList size={14}/> Review Contract</>
+                                ) : 
                                 (app.status === 'PAYMENT_REVIEW' ? <><CreditCard size={14}/> Check Payment</> : <><Eye size={14}/> Review Docs</>)}
                               </button>
                           </div>

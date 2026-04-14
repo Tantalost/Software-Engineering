@@ -66,14 +66,52 @@ const ApplicationReviewModal = ({
   const safeData = reviewData || {};
   const isPermanent = (safeData.floor === "Permanent" || safeData.tenantType === "Permanent");
   
-  const isTenantRenewal = !!(safeData.paymentHistory || safeData.DueDateTime || safeData.status === "Payment Review" || safeData.status === "Overdue" || safeData.status === "Paid");
+  const hasTenantMarkers = Boolean(
+    safeData.tenantId || safeData.paymentHistory || safeData.DueDateTime || safeData.activeContractId
+  );
+
+  const isContractRenewalStatus = (
+    safeData.status === "PENDING_APPROVAL"
+    || safeData.status === "pending_approval"
+    || safeData.status === "APPROVED_AWAITING_START"
+    || safeData.status === "approved_awaiting_start"
+  );
+
+  const isLegacyTenantPaymentRenewal = hasTenantMarkers && (
+    safeData.status === "Payment Review" || safeData.status === "PAYMENT_REVIEW"
+  );
+
+  const isTenantRenewal = Boolean(
+    safeData.renewalContractId || isContractRenewalStatus || isLegacyTenantPaymentRenewal
+  );
+
+  const isRenewalPaymentReview = Boolean(
+    isTenantRenewal && (
+      safeData.renewalReviewType === "payment" ||
+      safeData.status === "PAYMENT_REVIEW" ||
+      safeData.status === "Payment Review"
+    )
+  );
 
   const documents = useMemo(() => {
     if (!reviewData) return []; 
     
     if (isTenantRenewal) {
+        if (isRenewalPaymentReview) {
+          return [
+            {
+              label: "Payment Receipt",
+              url: getFileUrl(
+                reviewData.receiptUrl ||
+                reviewData.documents?.proofOfReceipt ||
+                reviewData.proofOfReceipt
+              )
+            }
+          ];
+        }
+
         return [
-            { label: "Renewal Receipt", url: getFileUrl(reviewData.documents?.proofOfReceipt) }
+        { label: "Renewal Contract", url: getFileUrl(reviewData.contractUrl || reviewData.documents?.contract || reviewData.documents?.proofOfReceipt) }
         ];
     }
 
@@ -87,7 +125,7 @@ const ApplicationReviewModal = ({
       ...(!isPermanent && reviewData.communityTaxUrl ? [{ label: "Community Tax", url: getFileUrl(reviewData.communityTaxUrl) }] : []),
       ...(!isPermanent && reviewData.policeClearanceUrl ? [{ label: "Police Clearance", url: getFileUrl(reviewData.policeClearanceUrl) }] : [])
     ];
-  }, [reviewData, isPermanent, isTenantRenewal]);
+  }, [reviewData, isPermanent, isTenantRenewal, isRenewalPaymentReview]);
 
   if (!isOpen || !reviewData) return null;
 
@@ -95,12 +133,13 @@ const ApplicationReviewModal = ({
   const status = reviewData.status || "Pending";
   
   const isPaymentReview = status === "PAYMENT_REVIEW" || status === "Payment Review"; 
+  const isRenewalContractPending = status === "PENDING_APPROVAL" || status === "pending_approval";
   const isContractReview = status === "CONTRACT_REVIEW";
   
   const showUnlockBtn = !isTenantRenewal && status === "VERIFICATION_PENDING";
   const showRequestContractBtn = !isTenantRenewal && isPaymentReview && isPermanent;
   const showAddTenantBtn = !isTenantRenewal && ((isPaymentReview && !isPermanent) || isContractReview);
-  const showApproveRenewalBtn = isTenantRenewal && isPaymentReview;
+  const showApproveRenewalBtn = isTenantRenewal && (isPaymentReview || isRenewalContractPending);
 
   const handleDownload = async (e, url, label) => {
     e.stopPropagation();
@@ -138,7 +177,15 @@ const ApplicationReviewModal = ({
     } else if (actionType === 'lease') {
       setConfirmConfig({ isOpen: true, action: 'lease', title: 'Approve & Create Lease', message: 'Are you sure you want to finalize this application and create a lease for this tenant?', isReject: false });
     } else if (actionType === 'renewal') {
-      setConfirmConfig({ isOpen: true, action: 'renewal', title: 'Confirm Renewal Payment', message: 'Are you sure you want to verify this renewal receipt and update the next due date?', isReject: false });
+      setConfirmConfig({
+        isOpen: true,
+        action: 'renewal',
+        title: isRenewalPaymentReview ? 'Approve Renewal Payment' : 'Approve Renewal Contract',
+        message: isRenewalPaymentReview
+          ? 'Approve this renewal payment receipt and update the next due date?'
+          : 'Approve this renewal contract request and schedule it for automatic activation on its start date?',
+        isReject: false
+      });
     } else if (actionType === 'reject') {
       setRejectionReason("");
       setConfirmConfig({ isOpen: true, action: 'reject', title: 'Reject Application', message: 'Please provide a reason for rejecting this application. This will be sent to the user via email.', isReject: true });
@@ -208,11 +255,15 @@ const ApplicationReviewModal = ({
             <div className="flex items-center gap-3">
               <button onClick={onBack} className="p-2 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 rounded-full transition-all text-slate-500"><ArrowLeft size={20} /></button>
               <div>
-                <h3 className="text-xl font-bold text-slate-800">{isTenantRenewal ? "Renewal Payment Review" : "Application Review"}</h3>
+                <h3 className="text-xl font-bold text-slate-800">
+                  {isTenantRenewal
+                    ? (isRenewalPaymentReview ? "Renewal Payment Review" : "Renewal Contract Review")
+                    : "Application Review"}
+                </h3>
                 <p className="text-sm text-slate-500 font-mono">ID: {displayId}</p>
               </div>
             </div>
-            <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${(isPaymentReview || isContractReview) ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>{status}</div>
+            <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${(isPaymentReview || isContractReview || isRenewalContractPending) ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>{status}</div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
@@ -290,26 +341,8 @@ const ApplicationReviewModal = ({
                           <>
                               {(() => {
                                   const advance = typeof defaultPermanentPrice !== 'undefined' ? Number(defaultPermanentPrice) : 6000;
-                                  
-                                  let upcomingRent = Number(reviewData.rentAmount || 0); 
-                                  
-                                  if (upcomingRent === 0) {
-                                      const targetDay = Number(defaultDueDate) || 5;
-                                      const d = reviewData.createdAt ? new Date(reviewData.createdAt) : new Date();
-                                      let nextDue = new Date(d.getFullYear(), d.getMonth(), targetDay);
-                                      
-                                      if (d.getDate() >= targetDay) {
-                                          nextDue.setMonth(nextDue.getMonth() + 1);
-                                      }
-                                      
-                                      const diffDays = Math.max(0, Math.ceil((nextDue.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
-                                      const dailyRate = advance / 30;
-                                      
-                                      const slotString = reviewData.targetSlot || reviewData.slotNo || "";
-                                      const slotCount = slotString ? slotString.split(',').length : 1;
-                                      
-                                      upcomingRent = diffDays * dailyRate * slotCount;
-                                  }
+                                  const hasStartedOperation = Boolean(reviewData.operationStartDate);
+                                  const upcomingRent = hasStartedOperation ? Number(reviewData.rentAmount || 0) : 0;
                                   
                                   return (
                                       <>
@@ -345,7 +378,8 @@ const ApplicationReviewModal = ({
                 <div className="bg-blue-50 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-3 border border-blue-100">
                     <Lock size={18} className="mt-0.5 shrink-0 text-blue-600" />
                     <p className="leading-relaxed">
-                      {isTenantRenewal && "Step 1: Verify the renewal receipt, then click 'Confirm Receipt' to update the tenant's due date and history."}
+                      {isTenantRenewal && isRenewalPaymentReview && "Step 1: Verify the submitted renewal payment receipt, then click 'Approve Renewal Payment' to update the tenant's next due date."}
+                      {isTenantRenewal && !isRenewalPaymentReview && "Step 1: Verify the submitted renewal contract, then click 'Approve Renewal Contract' to queue automatic activation on the contract start date."}
                       {!isTenantRenewal && showUnlockBtn && "Step 1: Verify documents above, then click 'Unlock Payment'."}
                       {!isTenantRenewal && status === "PAYMENT_UNLOCKED" && "Waiting for applicant to upload receipt..."}
                       {showRequestContractBtn && "Step 2: Payment Verified. Permanent Slot requires a contract. Click 'Request Contract'."}
@@ -377,7 +411,7 @@ const ApplicationReviewModal = ({
               )}
               {showApproveRenewalBtn && (
                 <button onClick={() => handleActionClick('renewal')} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95">
-                  <CheckCircle size={18} /> Confirm Receipt
+                  <CheckCircle size={18} /> {isRenewalPaymentReview ? "Approve Renewal Payment" : "Approve Renewal Contract"}
                 </button>
               )}
               {showAddTenantBtn && (

@@ -91,6 +91,7 @@ export default function StallsPage() {
   const [dynamicNightPrice, setDynamicNightPrice] = useState(150);
 
   const [dynamicDueDate, setDynamicDueDate] = useState(5);
+  const [dynamicDailyFee, setDynamicDailyFee] = useState(200);
   const [dynamicChargePct, setDynamicChargePct] = useState(25);
   const [dynamicInterestPct, setDynamicInterestPct] = useState(2);
   
@@ -105,7 +106,16 @@ export default function StallsPage() {
 
   const currentApp = (viewIndex >= 0 && viewIndex < myApplications.length) ? myApplications[viewIndex] : null;
 
-  const calculateProratedRent = (basePrice: number) => {
+  const calculateProratedRent = (basePrice: number, isNightMarket: boolean) => {
+    if (!isNightMarket) {
+      return {
+        diffDays: 0,
+        proratedRent: 0,
+        targetDay: dynamicDueDate,
+        dailyRate: dynamicDailyFee,
+      };
+    }
+
     const now = new Date();
     let nextDue = new Date(now.getFullYear(), now.getMonth(), dynamicDueDate);
     
@@ -115,9 +125,9 @@ export default function StallsPage() {
     const diffTime = nextDue.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    const dailyRate = basePrice / 30; 
+    const dailyRate = basePrice / 30;
     
-    return { diffDays, proratedRent: diffDays * dailyRate, targetDay: dynamicDueDate };
+    return { diffDays, proratedRent: diffDays * dailyRate, targetDay: dynamicDueDate, dailyRate };
   };
 
   const currentBilling = useMemo(() => {
@@ -125,7 +135,7 @@ export default function StallsPage() {
     const isNightMarket = floorType === 'Night Market';
     const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
     
-    const { diffDays, proratedRent } = calculateProratedRent(basePrice);
+    const { diffDays, proratedRent, dailyRate } = calculateProratedRent(basePrice, isNightMarket);
     
     const totalAmount = basePrice; 
 
@@ -135,16 +145,17 @@ export default function StallsPage() {
       rawAmount: totalAmount,
       baseRent: basePrice,
       proratedRent, 
+      dailyRate,
       diffDays,
       isPermanent: !isNightMarket
     };
-  }, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice, dynamicDueDate]);
+  }, [selectedFloor, currentApp, dynamicNightPrice, dynamicPermanentPrice, dynamicDueDate, dynamicDailyFee]);
 
   const modalBilling = useMemo(() => {
       const isNightMarket = selectedFloor === 'Night Market';
       const basePrice = isNightMarket ? dynamicNightPrice : dynamicPermanentPrice; 
       
-      const { diffDays, proratedRent } = calculateProratedRent(basePrice);
+      const { diffDays, proratedRent, dailyRate } = calculateProratedRent(basePrice, isNightMarket);
       
       const totalAmount = basePrice;
       
@@ -154,10 +165,11 @@ export default function StallsPage() {
         rawAmount: totalAmount,
         baseRent: basePrice,
         proratedRent,
+          dailyRate,
         diffDays,
         isPermanent: !isNightMarket
       };
-  }, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice, dynamicDueDate]);
+        }, [selectedFloor, dynamicNightPrice, dynamicPermanentPrice, dynamicDueDate, dynamicDailyFee]);
 
   const handlePhoneChange = (text: string) => {
     let cleaned = text.replace(/[^0-9]/g, '');
@@ -264,6 +276,7 @@ export default function StallsPage() {
         if (settingsRes.ok) {
           const settingsData = await settingsRes.json();
           setDynamicDueDate(settingsData.permanentDueDate || 5);
+          setDynamicDailyFee(settingsData.dailyFee || 200);
 
           if (selectedFloor === 'Night Market') {
              setDynamicChargePct(settingsData.nightMarketCharge || 25);
@@ -683,6 +696,50 @@ setSelectedStall(null);
     }, 100);
   };
 
+  const submitRenewalContract = async (templateId: string) => {
+    if (!user) return;
+    if (!currentApp?.tenantId && !currentApp?.id && !currentApp?._id) {
+      return Alert.alert("Missing Tenant", "Unable to determine tenant account for renewal.");
+    }
+    if (!templateId) {
+      return Alert.alert("Select Template", "Please select a contract template first.");
+    }
+    if (!files.contract) {
+      return Alert.alert("Missing Contract", "Please upload your signed renewal contract.");
+    }
+
+    setApplying(true);
+    setTimeout(async () => {
+      try {
+        const formPayload = new FormData();
+        formPayload.append('tenantId', currentApp.tenantId || currentApp.id || currentApp._id || "");
+        formPayload.append('templateId', templateId);
+
+        const encContract = await encryptFileBeforeUpload(files.contract!.uri, files.contract!.name || 'renewal-contract.pdf');
+        appendFile(formPayload, 'contract', files.contract, encContract);
+
+        const token = await AsyncStorage.getItem('token');
+        const res = await fetch(`${API_URL}/stalls/renew-contract`, {
+          method: 'POST',
+          body: formPayload,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        await handleApiError(res);
+        Alert.alert("Renewal Submitted", "Your renewal contract was sent for admin review.");
+        setFiles(prev => ({ ...prev, contract: null }));
+        fetchData(user.id);
+      } catch (error: any) {
+        Alert.alert("Submission Failed", error.message || "Could not submit renewal contract.");
+      } finally {
+        setApplying(false);
+      }
+    }, 100);
+  };
+
   const submitContract = async () => {
     if (!user || !files.contract) { return Alert.alert("Missing Contract", "Please upload the signed contract PDF."); }
     if (!currentApp) return;
@@ -854,6 +911,7 @@ setSelectedStall(null);
           paymentData={paymentData} 
           setPaymentData={setPaymentData} 
           submitRenewal={submitRenewalPayment} 
+          submitRenewalContract={submitRenewalContract}
           applying={applying} 
           files={files} 
           uploadProgress={uploadProgress} 

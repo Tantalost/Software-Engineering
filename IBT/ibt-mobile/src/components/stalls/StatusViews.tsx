@@ -20,7 +20,7 @@ export const VerificationPendingView = ({ currentApp, refreshing, onRefresh }: a
                 <Text style={styles.statusText}>Applying for Slot: <Text style={{fontWeight:'bold', color: colors.textDark}}>{currentApp.targetSlot}</Text></Text>
                 <Text style={[styles.statusText, {marginTop: 5}]}>Section: <Text style={{fontWeight:'bold', color: colors.textDark}}>{currentApp.floor}</Text></Text>
                 <Divider style={{ marginVertical: 15 }} />
-                <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>"Our Admin is currently reviewing your submitted documents. Please check back later."</Text>
+                <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>Our Admin is currently reviewing your submitted documents. Please check back later.</Text>
             </Card.Content>
         </Card>
     </ScrollView>
@@ -37,7 +37,7 @@ export const ContractReviewView = ({ currentApp, refreshing, onRefresh }: any) =
             <Card.Content>
                 <Text style={styles.statusText}>Contract for Slot: <Text style={{fontWeight:'bold', color: colors.textDark}}>{currentApp.targetSlot}</Text></Text>
                 <Divider style={{ marginVertical: 15 }} />
-                <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>"We are currently reviewing your signed contract. Please wait for the final approval."</Text>
+                <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>We are currently reviewing your signed contract. Please wait for the final approval.</Text>
             </Card.Content>
         </Card>
     </ScrollView>
@@ -76,7 +76,7 @@ export const PaymentReviewView = ({ currentApp, refreshing, onRefresh }: any) =>
             <Card.Content>
                 <Text style={styles.statusText}>Payment for Slot: <Text style={{fontWeight:'bold', color: colors.textDark}}>{currentApp.targetSlot}</Text></Text>
                 <Divider style={{ marginVertical: 15 }} />
-                <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>"The Treasurer is verifying your receipt. This may take a moment."</Text>
+                <Text style={[styles.statusText, {fontSize: 14, color: colors.textMedium, fontStyle: 'italic'}]}>The Treasurer is verifying your receipt. This may take a moment.</Text>
             </Card.Content>
         </Card>
     </ScrollView>
@@ -179,8 +179,12 @@ const getTimeAgo = (dateString: string) => {
   return `${years} year${years > 1 ? 's' : ''} ago`;
 };
 
-export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPaymentData, submitRenewal, applying, files, uploadProgress, onPickFile, refreshing, onRefresh, dynamicChargePct, dynamicInterestPct }: any) => {
+export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPaymentData, submitRenewal, submitRenewalContract, applying, files, uploadProgress, onPickFile, refreshing, onRefresh, dynamicChargePct, dynamicInterestPct }: any) => {
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+
+  const isPermanent = currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent";
+  const isWaitingForStartOperation = isPermanent && !currentApp.due && !currentApp.operationStartDate;
 
   useEffect(() => {
     if (!applying && paymentData?.referenceNo === '') {
@@ -188,7 +192,9 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
     }
   }, [applying, paymentData?.referenceNo]);
 
-  const dueDate = currentApp.due 
+  const dueDate = isWaitingForStartOperation
+    ? "Not Started Operations"
+    : currentApp.due 
     ? new Date(currentApp.due).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -213,8 +219,6 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
   const interestAmount = currentApp.interestAmount ? Number(currentApp.interestAmount) : 0;
   const advanceBalance = currentApp.advancePaymentBalance ? Number(currentApp.advancePaymentBalance) : 0;
   const advanceUsed = currentApp.advanceUsedForPenalties ? Number(currentApp.advanceUsedForPenalties) : 0;
-  const isPermanent = currentApp.floor === "Permanent" || currentApp.tenantType === "Permanent";
-
   const feeBreakdown = typeof currentApp.feeBreakdown === 'string' 
       ? JSON.parse(currentApp.feeBreakdown || '{}') 
       : (currentApp.feeBreakdown || {});
@@ -227,6 +231,16 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
       submitRenewal();
   };
 
+  const renewalTemplates = Array.isArray(currentApp?.renewalTemplates) ? currentApp.renewalTemplates : [];
+  const isEligibleForRenewal = Boolean(currentApp?.isEligibleForRenewal);
+  const hasPendingRenewal = Boolean(currentApp?.hasPendingRenewal);
+  const activeContractEndDate = currentApp?.activeContractEndDate
+    ? new Date(currentApp.activeContractEndDate)
+    : null;
+  const renewalDaysLeft = activeContractEndDate
+    ? Math.ceil((new Date(activeContractEndDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / (24 * 60 * 60 * 1000))
+    : null;
+
   return (
    <ScrollView 
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
@@ -237,7 +251,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         <Card.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
           <Icon name={isOverdueState ? "alert-circle" : "check-decagram"} size={80} color={isOverdueState ? '#dc2626' : colors.success} />
           <Text variant="headlineSmall" style={{ marginTop: 15, fontWeight: 'bold', color: isOverdueState ? '#dc2626' : colors.success }}>
-            {isOverdueState ? 'Overdue Account' : 'Active Tenant'}
+            {isOverdueState ? 'Overdue Account' : (isWaitingForStartOperation ? 'Not Started Operations' : 'Active Tenant')}
           </Text>
           <Text variant="titleMedium" style={{ marginTop: 5, color: colors.textDark, fontWeight: 'bold' }}>
             Slot: {currentApp.targetSlot}
@@ -248,13 +262,83 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
         </Card.Content>
       </Card>
 
+      {(isEligibleForRenewal || hasPendingRenewal) && (
+        <Card style={{ marginBottom: 20, backgroundColor: '#eff6ff', borderColor: '#93c5fd', borderWidth: 1 }}>
+          <Card.Content>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <Icon name="file-document-edit-outline" size={24} color="#1d4ed8" style={{ marginRight: 10 }} />
+              <Text variant="titleMedium" style={{ color: '#1d4ed8', fontWeight: 'bold' }}>
+                Contract Renewal
+              </Text>
+            </View>
+
+            {hasPendingRenewal ? (
+              <Text style={{ color: '#1e3a8a' }}>
+                Your renewal contract request is pending admin review. Please wait for approval.
+              </Text>
+            ) : (
+              <>
+                <Text style={{ color: '#1e3a8a', marginBottom: 8 }}>
+                  You are eligible to renew your contract.
+                </Text>
+                {activeContractEndDate && (
+                  <Text style={{ color: '#1e3a8a', marginBottom: 12, fontWeight: 'bold' }}>
+                    Active contract ends on {activeContractEndDate.toLocaleDateString()} ({renewalDaysLeft} day{renewalDaysLeft === 1 ? '' : 's'} left)
+                  </Text>
+                )}
+
+                <Text style={{ color: '#1e3a8a', marginBottom: 6, fontWeight: 'bold' }}>Select Renewal Template</Text>
+                {renewalTemplates.length === 0 ? (
+                  <Text style={{ color: '#1e3a8a', marginBottom: 12 }}>
+                    No renewal template is available right now. Please contact the admin office.
+                  </Text>
+                ) : (
+                  renewalTemplates.map((template: any) => {
+                    const selected = selectedTemplateId === String(template._id);
+                    return (
+                      <Button
+                        key={String(template._id)}
+                        mode={selected ? 'contained' : 'outlined'}
+                        onPress={() => setSelectedTemplateId(String(template._id))}
+                        style={{ marginBottom: 8, borderColor: '#1d4ed8' }}
+                        textColor={selected ? '#ffffff' : '#1d4ed8'}
+                      >
+                        {template.name} ({template.duration || `${template.durationMonths} month${template.durationMonths === 1 ? '' : 's'}`})
+                      </Button>
+                    );
+                  })
+                )}
+
+                <FileUploadButton label="Signed Renewal Contract" fileKey="contract" files={files} uploadProgress={uploadProgress} onPickFile={onPickFile} />
+
+                <Button
+                  mode={applying ? 'contained' : 'outlined'}
+                  onPress={() => submitRenewalContract(selectedTemplateId)}
+                  loading={applying}
+                  disabled={renewalTemplates.length === 0 || !selectedTemplateId || !files?.contract}
+                  style={{ marginTop: 12, borderColor: '#1d4ed8', borderWidth: applying ? 0 : 1, backgroundColor: applying ? '#1d4ed8' : 'transparent' }}
+                  textColor={applying ? '#ffffff' : '#1d4ed8'}
+                >
+                  Submit Renewal Contract
+                </Button>
+              </>
+            )}
+          </Card.Content>
+        </Card>
+      )}
+
       <Card style={{ marginBottom: 20, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1 }}>
         <Card.Content>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
             <Icon name="calendar-clock" size={24} color={colors.success} style={{ marginRight: 10 }} />
             <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#166534' }}>Next Payment Due</Text>
           </View>
-          <Text variant="headlineSmall" style={{ color: colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
+          <Text variant="headlineSmall" style={{ color: isWaitingForStartOperation ? '#b45309' : colors.success, fontWeight: 'bold', marginLeft: 34 }}>{dueDate}</Text>
+          {isWaitingForStartOperation && (
+            <Text style={{ marginLeft: 34, marginTop: 4, color: '#92400e', fontStyle: 'italic' }}>
+              Billing starts the day after your operation starts.
+            </Text>
+          )}
           
           <View style={{ marginLeft: 34, marginTop: 10, backgroundColor: '#dcfce7', padding: 12, borderRadius: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
@@ -436,15 +520,15 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
               clearPaymentData(); 
               setPaymentModalVisible(true); 
             }} 
-            style={{ backgroundColor: currentApp.tenantDbStatus === 'Payment Review' ? '#ffbf49' : colors.success }} 
+            style={{ backgroundColor: (currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation) ? '#ffbf49' : colors.success }} 
             labelStyle={{ 
             color: colors.white, 
             fontWeight: 'bold',
             fontSize: 16 
             }} 
-            disabled={currentApp.tenantDbStatus === 'Payment Review'} 
+            disabled={currentApp.tenantDbStatus === 'Payment Review' || isWaitingForStartOperation} 
           >
-          {currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment'}
+          {isWaitingForStartOperation ? 'Operation Not Started' : (currentApp.tenantDbStatus === 'Payment Review' ? 'Payment Under Review' : 'Submit Next Payment')}
         </Button>
         </Card.Content>
       </Card>
@@ -611,7 +695,7 @@ export const MovedOutView = ({ currentApp, refreshing, onRefresh }: any) => {
 
                         {lastMonthRent > 0 && (
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                                <Text style={{ color: '#4f46e5' }}>Less Last Month's Rent:</Text>
+                                <Text style={{ color: '#4f46e5' }}>Less Last Month&apos;s Rent:</Text>
                                 <Text style={{ color: '#4f46e5', fontWeight: 'bold' }}>- ₱{lastMonthRent.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
                             </View>
                         )}
@@ -660,7 +744,7 @@ export const MovedOutView = ({ currentApp, refreshing, onRefresh }: any) => {
                             
                             {lastMonthRent > 0 && (
                                 <Text style={{ color: '#10b981', fontSize: 12, fontStyle: 'italic', marginTop: 10, textAlign: 'center' }}>
-                                    Your advance deposit was successfully used to cover your last month's rent.
+                                    Your advance deposit was successfully used to cover your last month&apos;s rent.
                                 </Text>
                             )}
                         </View>

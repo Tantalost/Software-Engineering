@@ -39,6 +39,13 @@ const TenantApplicationSchema = new mongoose.Schema({
   paymentReference: String,
   paymentAmount: String,
   paymentSubmittedAt: Date,
+  defaultTemplateId: String,
+  defaultContractDurationMonths: Number,
+  defaultContractType: {
+    type: String,
+    enum: ['INITIAL', 'RENEWAL'],
+    default: 'INITIAL'
+  },
 
 }, { timestamps: true });
 

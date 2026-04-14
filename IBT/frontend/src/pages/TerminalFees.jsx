@@ -989,7 +989,7 @@ const TerminalFees = () => {
   };
 
   const handleExportExcel = async () => {
-    if (!collectorName || collectorName.trim() === "") {
+    if (role !== "superadmin" && (!collectorName || collectorName.trim() === "" || !collectorId)) {
       setToast({
         isOpen: true,
         type: "error",
@@ -1115,7 +1115,7 @@ const TerminalFees = () => {
   };
 
   const exportToPDF = () => {
-    if (!collectorName || collectorName.trim() === "") {
+    if (role !== "superadmin" && (!collectorName || collectorName.trim() === "" || !collectorId)) {
       setToast({
         isOpen: true,
         type: "error",
