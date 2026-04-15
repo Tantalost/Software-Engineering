@@ -59,16 +59,7 @@ const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
       extension: "png",
     });
 
-    const [start, end] = range.split(":");
-    const startCol = start.charCodeAt(0) - 65;
-    const startRow = parseInt(start.slice(1)) - 1;
-    const endCol = end.charCodeAt(0) - 65;
-    const endRow = parseInt(end.slice(1)) - 1;
-
-    worksheet.addImage(imageId, {
-      tl: { col: startCol, row: startRow },
-      br: { col: endCol, row: endRow },
-    });
+    worksheet.addImage(imageId, range);
   } catch (error) {
     console.error("Branding image error:", error);
   }
@@ -2204,8 +2195,10 @@ const BusTrips = () => {
       titleCell.alignment = { horizontal: "center" };
 
       worksheet.addRow([]);
-      worksheet.addRow([
+      const dateSummaryRow = worksheet.addRow([
         `Date: ${new Date().toLocaleDateString()}`,
+        "",
+        "",
         "",
         "",
         "",
@@ -2214,7 +2207,9 @@ const BusTrips = () => {
         "",
         `No. of Bus: ${filtered.length}`,
       ]);
-      worksheet.addRow([
+      dateSummaryRow.getCell(10).alignment = { horizontal: "right" };
+
+      const operatorSummaryRow = worksheet.addRow([
         `Operator: ${localStorage.getItem("authName") || "Admin"}`,
         "",
         "",
@@ -2222,8 +2217,11 @@ const BusTrips = () => {
         "",
         "",
         "",
-        `Total Revenue: Php ${totalRevenue.toFixed(2)}`,
+        "",
+        "",
+        `Revenue: Php ${totalRevenue.toFixed(2)}`,
       ]);
+      operatorSummaryRow.getCell(10).alignment = { horizontal: "right" };
 
       worksheet.addRow([`Collector: ${collectorName || "-"}`]);
 
@@ -2285,7 +2283,6 @@ const BusTrips = () => {
         { width: 12 },
         { width: 15 },
         { width: 16 },
-        { width: 14 },
       ];
 
       const buffer = await workbook.xlsx.writeBuffer();

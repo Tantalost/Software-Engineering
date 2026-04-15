@@ -37,12 +37,42 @@ const formatStatisticsLabel = (rawKey) => {
 
   if (normalized === "cars") return "4 Wheels";
   if (normalized === "motorcycles") return "2 Wheels";
+  if (normalized === "regularcount") return "Regular Count";
+  if (normalized === "studentcount") return "Student Count";
+  if (normalized === "seniorcount") return "Senior Count";
+  if (normalized === "regular") return "Regular";
+  if (normalized === "student") return "Student";
+  if (normalized === "senior") return "Senior";
   if (normalized === "missedcount" || normalized === "missedbus") return "Missed Bus";
   if (normalized === "departednow" || normalized === "departedbus") return "Departed Bus";
   if (normalized === "priceamount") return "Price Amount";
   if (normalized === "totalrevenue") return "Total Revenue";
 
   return String(rawKey).replace(/([A-Z])/g, " $1").trim();
+};
+
+const toTitleCaseWords = (value) => {
+  const words = String(value || "").trim();
+  if (!words) return "-";
+
+  return words
+    .toLowerCase()
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
+
+const getExcelColumnLabel = (index) => {
+  let n = Number(index) || 1;
+  let label = "";
+
+  while (n > 0) {
+    const remainder = (n - 1) % 26;
+    label = String.fromCharCode(65 + remainder) + label;
+    n = Math.floor((n - 1) / 26);
+  }
+
+  return label || "A";
 };
 
 const normalizeExportKey = (key) =>
@@ -103,6 +133,29 @@ const isBusSingleReport = (report) => {
 
   const keys = Object.keys(rows[0]).map((key) => normalizeExportKey(key));
   return ["templateno", "arrivaltime", "departuretime", "company", "route"].some((key) => keys.includes(key));
+};
+
+const isTerminalSingleReport = (report) => {
+  const reportType = String(report?.type || "").toLowerCase();
+  if (reportType.includes("terminal")) return true;
+
+  const rows = Array.isArray(report?.data?.data) ? report.data.data : [];
+  if (rows.length === 0) return false;
+
+  const keys = Object.keys(rows[0]).map((key) => normalizeExportKey(key));
+  return ["ticketno", "passengertype", "time", "date", "price"].every((key) => keys.includes(key));
+};
+
+const normalizeTerminalReportRowsForExport = (report) => {
+  const sourceRows = Array.isArray(report?.data?.data) ? report.data.data : [];
+
+  return sourceRows.map((row) => ({
+    ticketNo: row?.ticketNo || row?.ticketno || "-",
+    passengerType: toTitleCaseWords(row?.passengerType || row?.passengertype || "-"),
+    date: row?.date || "-",
+    time: row?.time || "-",
+    price: row?.price ?? row?.amount ?? row?.fee ?? "-",
+  }));
 };
 
 const normalizeBusReportRowsForExport = (report) => {
@@ -176,6 +229,12 @@ const getSingleReportExportDataset = (report) => {
   if (isBusSingleReport(report)) {
     const headers = ["busNo", "company", "route", "arrivalTime", "departureTime"];
     const rows = normalizeBusReportRowsForExport(report);
+    return { headers, rows };
+  }
+
+  if (isTerminalSingleReport(report)) {
+    const headers = ["ticketNo", "passengerType", "date", "time", "price"];
+    const rows = normalizeTerminalReportRowsForExport(report);
     return { headers, rows };
   }
 
@@ -341,6 +400,10 @@ const formatSingleReportCellValue = (key, value) => {
   const normalized = normalizeExportKey(key);
 
   if (value === null || value === undefined || value === "") return "-";
+
+  if (normalized === "passengertype") {
+    return toTitleCaseWords(value);
+  }
 
   if (isExportCurrencyField(key)) {
     const parsed = parseExportAmount(value);
@@ -856,6 +919,7 @@ const Reports = () => {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Overall IBT Report");
+      worksheet.columns = [{ width: 20 }, { width: 25 }, { width: 25 }, { width: 25 }];
 
       worksheet.getRow(1).height = 35;
       await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:D4');
@@ -912,8 +976,6 @@ const Reports = () => {
       const lastRowNumber = worksheet.lastRow.number + 2;
       worksheet.getRow(lastRowNumber).height = 52.5;
       await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:D${lastRowNumber + 3}`);
-
-      worksheet.columns = [{ width: 20 }, { width: 25 }, { width: 25 }, { width: 25 }];
 
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(new Blob([buffer]), `Overall_IBT_Report_${new Date().toISOString().split("T")[0]}.xlsx`);
@@ -998,11 +1060,231 @@ const Reports = () => {
     try {
       const workbook = new ExcelJS.Workbook();
       const isParkingReport = isParkingSingleReport(report);
+      const isTerminalReport = isTerminalSingleReport(report);
       const collectorName = getParkingCollectorName(report);
       const statsEntries = getSingleReportStatisticEntries(report);
 
+      if (isParkingReport) {
+        const ws = workbook.addWorksheet("Parking Report");
+        const { headers, rows: exportRows } = getSingleReportExportDataset(report);
+        const tableColumnCount = Math.max(headers.length, 5);
+        const lastColLabel = getExcelColumnLabel(tableColumnCount);
+
+        headers.forEach((header, index) => {
+          const normalized = normalizeExportKey(header);
+
+          if (normalized === "ticketno") {
+            ws.getColumn(index + 1).width = 14;
+          } else if (normalized === "plateno") {
+            ws.getColumn(index + 1).width = 14;
+          } else if (["timein", "timeout"].includes(normalized)) {
+            ws.getColumn(index + 1).width = 20;
+          } else if (isExportCurrencyField(header)) {
+            ws.getColumn(index + 1).width = 16;
+          } else if (normalized === "duration") {
+            ws.getColumn(index + 1).width = 18;
+          } else {
+            ws.getColumn(index + 1).width = 16;
+          }
+        });
+
+        ws.getRow(1).height = 35;
+        await addImageToWorksheet(workbook, ws, headerImg, `A1:${lastColLabel}4`);
+
+        ws.mergeCells(`A6:${lastColLabel}6`);
+        const titleCell = ws.getCell("A6");
+        titleCell.value = `${report.type?.toUpperCase() || "PARKING"} REPORT`;
+        titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
+        titleCell.alignment = { horizontal: "center" };
+
+        const reportIdText = report.id ? report.id.substring(0, 8).toUpperCase() : "-";
+        const metaRow1 = new Array(tableColumnCount).fill("");
+        metaRow1[0] = `Report ID: ${reportIdText}`;
+        metaRow1[tableColumnCount - 1] = `Date: ${new Date().toLocaleDateString()}`;
+        const firstMetaRow = ws.addRow(metaRow1);
+        firstMetaRow.getCell(tableColumnCount).alignment = { horizontal: "right" };
+
+        const metaRow2 = new Array(tableColumnCount).fill("");
+        metaRow2[0] = `Operator: ${report.author || "Admin"}`;
+        metaRow2[tableColumnCount - 1] = "Status: Completed";
+        const secondMetaRow = ws.addRow(metaRow2);
+        secondMetaRow.getCell(tableColumnCount).alignment = { horizontal: "right" };
+
+        if (collectorName && collectorName !== "-") {
+          const collectorRow = new Array(tableColumnCount).fill("");
+          collectorRow[0] = `Collector: ${collectorName}`;
+          ws.addRow(collectorRow);
+        }
+
+        ws.addRow([]);
+
+        const statsHeaderRow = ws.addRow(["Summary Metric", "Value"]);
+        statsHeaderRow.eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF10B981" } };
+          cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+          cell.alignment = { horizontal: "center" };
+        });
+
+        statsEntries.forEach(([key, value]) => {
+          const formattedValue = isExportCurrencyField(key)
+            ? formatExportCurrency(value)
+            : value;
+          ws.addRow([formatStatisticsLabel(key), formattedValue]);
+        });
+
+        ws.addRow([]);
+        const detailTitleRowNumber = ws.lastRow.number + 1;
+        ws.mergeCells(`A${detailTitleRowNumber}:${lastColLabel}${detailTitleRowNumber}`);
+        const detailTitleCell = ws.getCell(`A${detailTitleRowNumber}`);
+        detailTitleCell.value = "Detailed Transaction Records";
+        detailTitleCell.font = { bold: true, size: 11 };
+
+        const tableHeaderRow = ws.addRow(
+          headers.map((h) =>
+            String(h)
+              .replace(/([A-Z])/g, " $1")
+              .replace(/_/g, " ")
+              .trim(),
+          ),
+        );
+        tableHeaderRow.eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF10B981" } };
+          cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+          cell.alignment = { horizontal: "center" };
+        });
+
+        const centerAlignedHeaders = new Set([
+          "ticketno",
+          "plateno",
+          "status",
+          "timein",
+          "timeout",
+          "date",
+        ]);
+
+        exportRows.forEach((row) => {
+          const dataRow = ws.addRow(
+            headers.map((header) => formatSingleReportCellValue(header, row[header])),
+          );
+
+          headers.forEach((header, index) => {
+            const normalized = normalizeExportKey(header);
+            if (isExportCurrencyField(header)) {
+              dataRow.getCell(index + 1).alignment = { horizontal: "right" };
+            } else if (centerAlignedHeaders.has(normalized)) {
+              dataRow.getCell(index + 1).alignment = { horizontal: "center" };
+            }
+          });
+        });
+
+        const lastRowNumber = ws.lastRow.number + 2;
+        ws.getRow(lastRowNumber).height = 52.5;
+        await addImageToWorksheet(
+          workbook,
+          ws,
+          footerImg,
+          `A${lastRowNumber}:${lastColLabel}${lastRowNumber + 3}`,
+        );
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(new Blob([buffer]), `${report.type}_Report_${report.id?.substring(0, 8) || "report"}.xlsx`);
+
+        logActivity(role, "EXPORT_SINGLE_EXCEL", `Exported branded Single Report for ${report.id}`, "Reports");
+        return;
+      }
+
+      if (isTerminalReport) {
+        const ws = workbook.addWorksheet("Terminal Fee Report");
+        const { headers, rows: exportRows } = getSingleReportExportDataset(report);
+        ws.columns = [
+          { width: 18 },
+          { width: 24 },
+          { width: 20 },
+          { width: 16 },
+          { width: 16 },
+        ];
+
+        ws.getRow(1).height = 35;
+        await addImageToWorksheet(workbook, ws, headerImg, "A1:E4");
+
+        ws.mergeCells("A6:E6");
+        const titleCell = ws.getCell("A6");
+        titleCell.value = `${report.type?.toUpperCase() || "TERMINAL FEES"} REPORT`;
+        titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
+        titleCell.alignment = { horizontal: "center" };
+
+        const reportDateText = formatReportDate(report.createdAt || report.date);
+        const reportIdText = report.id ? report.id.substring(0, 8).toUpperCase() : "-";
+        const metaRow1 = ws.addRow([`Report ID: ${reportIdText}`, "", "", "", `Date: ${reportDateText}`]);
+        metaRow1.getCell(5).alignment = { horizontal: "right" };
+
+        const metaRow2 = ws.addRow([`Operator: ${report.author || "Admin"}`, "", "", "", "Status: Completed"]);
+        metaRow2.getCell(5).alignment = { horizontal: "right" };
+
+        ws.addRow([]);
+
+        const statsHeaderRow = ws.addRow(["Summary Metric", "Value"]);
+        statsHeaderRow.eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF10B981" } };
+          cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+          cell.alignment = { horizontal: "center" };
+        });
+
+        statsEntries.forEach(([key, value]) => {
+          const formattedValue = isExportCurrencyField(key)
+            ? formatExportCurrency(value)
+            : value;
+          ws.addRow([formatStatisticsLabel(key), formattedValue]);
+        });
+
+        ws.addRow([]);
+        const detailTitleRowNumber = ws.lastRow.number + 1;
+        ws.mergeCells(`A${detailTitleRowNumber}:E${detailTitleRowNumber}`);
+        const detailTitleCell = ws.getCell(`A${detailTitleRowNumber}`);
+        detailTitleCell.value = "Detailed Transaction Records";
+        detailTitleCell.font = { bold: true, size: 11 };
+
+        const tableHeaderRow = ws.addRow(
+          headers.map((h) =>
+            String(h)
+              .replace(/([A-Z])/g, " $1")
+              .replace(/_/g, " ")
+              .trim(),
+          ),
+        );
+        tableHeaderRow.eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF10B981" } };
+          cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+          cell.alignment = { horizontal: "center" };
+        });
+
+        exportRows.forEach((row) => {
+          const dataRow = ws.addRow(
+            headers.map((header) => formatSingleReportCellValue(header, row[header])),
+          );
+
+          dataRow.getCell(1).alignment = { horizontal: "center" };
+          dataRow.getCell(2).alignment = { horizontal: "center" };
+          dataRow.getCell(3).alignment = { horizontal: "center" };
+          dataRow.getCell(4).alignment = { horizontal: "center" };
+          dataRow.getCell(5).alignment = { horizontal: "right" };
+        });
+
+        const lastRowNumber = ws.lastRow.number + 2;
+        ws.getRow(lastRowNumber).height = 52.5;
+        await addImageToWorksheet(workbook, ws, footerImg, `A${lastRowNumber}:E${lastRowNumber + 3}`);
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(new Blob([buffer]), `${report.type}_Report_${report.id?.substring(0, 8) || "report"}.xlsx`);
+
+        logActivity(role, "EXPORT_SINGLE_EXCEL", `Exported branded Single Report for ${report.id}`, "Reports");
+        return;
+      }
+
     
       const wsSummary = workbook.addWorksheet("Summary");
+      wsSummary.getColumn(1).width = 25;
+      wsSummary.getColumn(2).width = 30;
 
      
       wsSummary.getRow(1).height = 35;
@@ -1031,9 +1313,6 @@ const Reports = () => {
       const lastRowSummary = wsSummary.lastRow.number + 2;
       wsSummary.getRow(lastRowSummary).height = 52.5;
       await addImageToWorksheet(workbook, wsSummary, footerImg, `A${lastRowSummary}:B${lastRowSummary + 3}`);
-
-      wsSummary.getColumn(1).width = 25;
-      wsSummary.getColumn(2).width = 30;
 
       if (Array.isArray(report.data?.data) && report.data.data.length > 0) {
         const wsData = workbook.addWorksheet("Data Records");
@@ -1081,6 +1360,7 @@ const Reports = () => {
     const footerHeight = 24;
     const footerY = pageHeight - footerHeight;
     const isParkingReport = isParkingSingleReport(report);
+    const isTerminalReport = isTerminalSingleReport(report);
     const operatorName = report.author || "Admin";
     const collectorName = getParkingCollectorName(report);
     const statsEntries = getSingleReportStatisticEntries(report);
@@ -1172,6 +1452,7 @@ const Reports = () => {
           fontSize: 8,
           cellPadding: 4,
           valign: "middle",
+          halign: "left",
           overflow: "linebreak",
         },
         headStyles: {
@@ -1180,9 +1461,17 @@ const Reports = () => {
           fontStyle: "bold",
           halign: "center",
         },
-        columnStyles: {
-          0: { cellWidth: 25 },
-        },
+        columnStyles: isTerminalReport
+          ? {
+              0: { cellWidth: 25, halign: "center" },
+              1: { cellWidth: 35, halign: "center" },
+              2: { cellWidth: 28, halign: "center" },
+              3: { cellWidth: 22, halign: "center" },
+              4: { cellWidth: 24, halign: "right" },
+            }
+          : {
+              0: { cellWidth: 25 },
+            },
         margin: { left: 15, right: 15, bottom: footerHeight + 6 },
         didDrawPage: () => {
           doc.addImage(footerImg, "PNG", 0, footerY, pageWidth, footerHeight);

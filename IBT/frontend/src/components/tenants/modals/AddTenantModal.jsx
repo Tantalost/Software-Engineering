@@ -5,6 +5,27 @@ import CryptoJS from "crypto-js";
 
 
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY; 
+const DOCUMENT_UPLOAD_KEYS = [
+  "businessPermit",
+  "validID",
+  "barangayClearance",
+  "proofOfReceipt",
+  "contract",
+  "communityTax",
+  "policeClearance",
+];
+
+const buildDocumentUploadState = (docs = {}) => {
+  return DOCUMENT_UPLOAD_KEYS.reduce((acc, key) => {
+    const hasAttachedFile = typeof docs?.[key] === "string" && docs[key].trim() !== "";
+    acc[key] = {
+      status: hasAttachedFile ? "done" : "idle",
+      progress: hasAttachedFile ? 100 : 0,
+      error: "",
+    };
+    return acc;
+  }, {});
+};
 
 const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = null, activeTab = "permanent", defaultNightPrice = 150, defaultNightWeeklyRent = 1050, defaultPermanentPrice = 6000, defaultDueDate = 5 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +84,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     proofOfReceipt: null,
     contract: null,
   });
+  const [documentUploadState, setDocumentUploadState] = useState(buildDocumentUploadState());
 
   const formatDateTimeForInput = (dateObj) => {
     if (!dateObj) return "";
@@ -120,6 +142,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             communityTax: initialData.documents?.communityTax || null, 
             policeClearance: initialData.documents?.policeClearance || null 
         });
+        setDocumentUploadState(buildDocumentUploadState(initialData.documents || {}));
         setTempSelectedSlots([]); 
       }
       
@@ -143,6 +166,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
             businessPermit: null, validID: null, barangayClearance: null, proofOfReceipt: null, contract: null,
             communityTax: null, policeClearance: null 
         });
+        setDocumentUploadState(buildDocumentUploadState());
         setTempSelectedSlots([]); 
       }
 
@@ -220,9 +244,43 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
   }, [rentAmount, feeBreakdown, formData.tenantType, advancePayment]);
 
   const handleFileChange = (e, docType) => {
-    if (e.target.files && e.target.files[0]) {
-      setDocuments((prev) => ({ ...prev, [docType]: e.target.files[0] }));
-    }
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    setDocumentUploadState((prev) => ({
+      ...prev,
+      [docType]: { status: "loading", progress: 0, error: "" },
+    }));
+
+    const reader = new FileReader();
+
+    reader.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      const nextProgress = Math.min(99, Math.round((event.loaded / event.total) * 100));
+      setDocumentUploadState((prev) => ({
+        ...prev,
+        [docType]: { status: "loading", progress: nextProgress, error: "" },
+      }));
+    };
+
+    reader.onload = () => {
+      setDocuments((prev) => ({ ...prev, [docType]: selectedFile }));
+      setDocumentUploadState((prev) => ({
+        ...prev,
+        [docType]: { status: "done", progress: 100, error: "" },
+      }));
+    };
+
+    reader.onerror = () => {
+      setDocumentUploadState((prev) => ({
+        ...prev,
+        [docType]: { status: "error", progress: 0, error: "Failed to read file." },
+      }));
+      alert(`Failed to process ${selectedFile.name}. Please try again.`);
+    };
+
+    reader.readAsArrayBuffer(selectedFile);
+    e.target.value = "";
   };
 
   const encryptFile = (file) => {
@@ -249,6 +307,13 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const hasPendingUpload = Object.values(documentUploadState).some((item) => item?.status === "loading");
+    if (hasPendingUpload) {
+      alert("Please wait for all document uploads to finish before saving.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -331,6 +396,8 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
       }
       return file.name; 
   };
+
+    const hasPendingDocumentUpload = Object.values(documentUploadState).some((item) => item?.status === "loading");
 
   if (!isOpen) return null;
 
@@ -689,9 +756,35 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                   return docFields.map(({ label, key }) => {
                    const currentFile = documents[key];
                    const isString = typeof currentFile === 'string'; 
+                   const uploadMeta = documentUploadState[key] || { status: "idle", progress: 0, error: "" };
+                   const isUploading = uploadMeta.status === "loading";
+                   const isUploadDone = !isUploading && (isString || uploadMeta.status === "done");
+                   const hasUploadError = uploadMeta.status === "error";
+                   const statusText = isUploading
+                    ? `Uploading... ${uploadMeta.progress}%`
+                    : hasUploadError
+                      ? uploadMeta.error || "Upload failed. Click to retry"
+                      : isUploadDone
+                        ? "Done"
+                        : "Click to upload";
 
                    return (
-                    <div key={key} className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${isString ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:bg-slate-50'}`}>
+                    <div
+                      key={key}
+                      className={`border-2 border-dashed rounded-xl p-4 transition-colors relative group ${
+                        isUploadDone
+                          ? 'border-emerald-300 bg-emerald-50'
+                          : hasUploadError
+                            ? 'border-red-300 bg-red-50'
+                            : 'border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {isUploadDone && (
+                        <span className="absolute top-2 left-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                          Done
+                        </span>
+                      )}
+
                       {isString && (
                         <div className="absolute top-2 right-2 z-10">
                             <button 
@@ -725,13 +818,24 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                           onChange={(e) => handleFileChange(e, key)}
                         />
                         <div className="flex items-center gap-2 text-slate-400 text-xs">
-                          <div className={`p-2 rounded-full ${isString ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200'}`}>
-                            {isString ? <Check size={14} /> : <Upload size={14} />}
+                          <div className={`p-2 rounded-full ${isUploadDone ? 'bg-emerald-200 text-emerald-700' : hasUploadError ? 'bg-red-100 text-red-600' : 'bg-slate-200'}`}>
+                            {isUploading ? <Loader2 size={14} className="animate-spin" /> : isUploadDone ? <Check size={14} /> : <Upload size={14} />}
                           </div>
-                          <span className={isString ? "text-emerald-700 font-bold" : ""}>
+                          <span className={isUploadDone ? "text-emerald-700 font-bold" : hasUploadError ? "text-red-600 font-semibold" : ""}>
                              {getFileStatus(currentFile)}
                           </span>
                         </div>
+                        <p className={`mt-1 text-[11px] ${isUploadDone ? 'text-emerald-700 font-semibold' : hasUploadError ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                          {statusText}
+                        </p>
+                        {isUploading && (
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-500 transition-all"
+                              style={{ width: `${uploadMeta.progress}%` }}
+                            />
+                          </div>
+                        )}
                       </label>
                     </div>
                    );
@@ -755,12 +859,16 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
           <button 
             onClick={handleSubmit} 
             type="submit" 
-            disabled={isSubmitting}
+            disabled={isSubmitting || hasPendingDocumentUpload}
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg transition-all transform active:scale-95 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSubmitting ? (
                 <>
                     <Loader2 className="animate-spin" size={18} /> Saving...
+                </>
+            ) : hasPendingDocumentUpload ? (
+                <>
+                    <Loader2 className="animate-spin" size={18} /> Uploading Documents...
                 </>
             ) : "Save Tenant"}
           </button>

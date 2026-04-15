@@ -923,6 +923,28 @@ const LostFound = () => {
     }));
   };
 
+  const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
+    if (!imageSrc) return;
+    try {
+      const response = await fetch(imageSrc);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+
+      const imageId = workbook.addImage({
+        buffer: arrayBuffer,
+        extension: "png",
+      });
+
+      worksheet.addImage(imageId, range);
+    } catch (error) {
+      console.error("LostFound branding image failed:", error);
+    }
+  };
+
   const handleExportExcel = async () => {
     if (!validateCollector()) return;
 
