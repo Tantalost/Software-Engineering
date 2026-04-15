@@ -647,8 +647,9 @@ const TerminalFees = () => {
 
   const hasPendingTerminalShiftReport = useMemo(() => {
     if (role === "superadmin") return false;
-    return records.some((item) => !Boolean(item?.submitted));
-  }, [role, records]);
+    if (shiftRecords.length === 0) return false;
+    return shiftRecords.some((item) => !Boolean(item?.submitted));
+  }, [role, shiftRecords]);
 
   const handleCollectorSelection = (nextCollectorId, selectedCollector) => {
     setCollectorId(nextCollectorId);
