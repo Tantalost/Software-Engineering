@@ -626,16 +626,7 @@ const TenantLease = () => {
         const matchesTab = activeTab === "permanent" ? (t.tenantType === "Permanent" || !t.tenantType) : t.tenantType === "Night Market";
         const matchesStatus = activeStatus === "All" || t.status.toLowerCase() === activeStatus.toLowerCase();
 
-        const tenantDate = t.StartDateTime ? new Date(t.StartDateTime) : null;
-        let matchesDateRange = false;
-
-        if (dateFilterType === "All") {
-            matchesDateRange = true;
-        } else if (tenantDate && !Number.isNaN(tenantDate.getTime())) {
-            matchesDateRange = tenantDate >= filterStart && tenantDate <= filterEnd;
-        }
-
-        return matchesSearch && matchesTab && matchesStatus && matchesDateRange;
+        return matchesSearch && matchesTab && matchesStatus;
     });
 
     const formatDate = (dateString) => {
@@ -668,8 +659,6 @@ const TenantLease = () => {
             }
         }
 
-        const countedTenantIds = new Set();
-
         slotLabels.forEach(slotLabel => {
             const tenant = records.find(r =>
                 (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) &&
@@ -678,19 +667,45 @@ const TenantLease = () => {
 
             if (tenant && tenant.status !== "Available") {
                 paid++;
-
-                const tenantId = tenant._id || tenant.id;
-                if (!countedTenantIds.has(tenantId)) {
-                    countedTenantIds.add(tenantId);
-                    revenue += (parseFloat(tenant.rentAmount) || 0) + (parseFloat(tenant.utilityAmount) || 0);
-                }
             } else {
                 available++;
             }
         });
 
+        const isWithinSelectedRange = (value) => {
+            if (dateFilterType === "All") return true;
+            if (!filterStart || !filterEnd || !value) return false;
+
+            const paidAt = new Date(value);
+            if (Number.isNaN(paidAt.getTime())) return false;
+
+            return paidAt >= filterStart && paidAt <= filterEnd;
+        };
+
+        records.forEach((tenant) => {
+            const tenantType = tenant.tenantType || "Permanent";
+            const matchesTab =
+                activeTab === "permanent"
+                    ? tenantType === "Permanent"
+                    : tenantType === "Night Market";
+
+            if (!matchesTab) return;
+
+            const payments = Array.isArray(tenant.paymentHistory)
+                ? tenant.paymentHistory
+                : [];
+
+            payments.forEach((payment) => {
+                const amount = Number(payment?.amount) || 0;
+                if (amount <= 0) return;
+                if (!isWithinSelectedRange(payment?.datePaid)) return;
+
+                revenue += amount;
+            });
+        });
+
         return { availableSlots: available, nonAvailableSlots: paid, totalSlots: totalSlots, totalRevenue: revenue };
-    }, [records, activeTab]);
+    }, [records, activeTab, dateFilterType, filterStart, filterEnd]);
 
 
    const { dateRange, filteredPayments } = useMemo(() => {
@@ -2666,9 +2681,15 @@ const TenantLease = () => {
                         const endDate = (isPaused && fullRecord.lastPausedDate) 
                             ? new Date(fullRecord.lastPausedDate) 
                             : new Date();
-                            
-                        const rawMs = Math.abs(endDate - new Date(fullRecord.operationStartDate));
-                        const rawDays = rawMs / msPerDay;
+
+                        const startDate = new Date(fullRecord.operationStartDate);
+                        const startOfStart = new Date(startDate);
+                        startOfStart.setHours(0, 0, 0, 0);
+                        const startOfEnd = new Date(endDate);
+                        startOfEnd.setHours(0, 0, 0, 0);
+
+                        const rawMs = startOfEnd.getTime() - startOfStart.getTime();
+                        const rawDays = Math.max(0, rawMs / msPerDay);
                         const totalPaused = fullRecord.totalPausedDays || 0;
                         
                         const activeDays = Math.floor(rawDays - totalPaused);
