@@ -214,19 +214,9 @@ const Parking = () => {
     setModalPrices({
       car: priceSettings.carRate,
       motorcycle: priceSettings.motorcycleRate,
+      jeep: priceSettings.jeepRate,
     });
     setShowPriceModal(false);
-    if (!collectorName || !collectorName.trim() || !collectorId) {
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Please select a Collector before submitting report.",
-        autoClose: true,
-        duration: 2000,
-      });
-      return;
-    }
-
   };
 
   const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -1545,10 +1535,10 @@ const handleSafeLogout = () => {
 
       // 1. BRANDED HEADER (-1/8 height adjustment)
       worksheet.getRow(1).height = 35;
-      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:E4");
+      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:F4");
 
       // 2. Report Title & Metadata
-      worksheet.mergeCells("A6:E6");
+      worksheet.mergeCells("A6:F6");
       const titleCell = worksheet.getCell("A6");
       titleCell.value = "PARKING REPORTS";
       titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
@@ -1607,7 +1597,7 @@ const handleSafeLogout = () => {
         workbook,
         worksheet,
         footerImg,
-        `A${lastRowNumber}:E${lastRowNumber + 3}`,
+        `A${lastRowNumber}:F${lastRowNumber + 3}`,
       );
 
       worksheet.columns = [
