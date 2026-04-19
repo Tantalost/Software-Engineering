@@ -1,5 +1,6 @@
 import Company from "../models/Company.js";
 import BusTrip from "../models/BusTrips.js";
+import BusType from "../models/BusType.js";
 import ScheduleNotArrival from "../models/ScheduleNotArrival.js";
 import { getBusScheduleTimes } from "../utils/busScheduleServer.js";
 import { normalizeBusTypeForResponse } from "../utils/busTypeCompat.js";
@@ -10,12 +11,17 @@ function toDateKeyInAppTimezone(dateInput) {
   const d = new Date(dateInput);
   if (Number.isNaN(d.getTime())) return "";
 
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: APP_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(d);
+  let parts;
+  try {
+    parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: APP_TIMEZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+  } catch {
+    return d.toISOString().split("T")[0];
+  }
 
   const year = parts.find((p) => p.type === "year")?.value;
   const month = parts.find((p) => p.type === "month")?.value;
@@ -91,6 +97,74 @@ function dispatchDisplayStatus(raw) {
   return raw || "";
 }
 
+function isObjectIdLike(value) {
+  return /^[a-fA-F0-9]{24}$/.test(String(value || "").trim());
+}
+
+function extractBusTypeId(value) {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    const raw = value.trim();
+    return isObjectIdLike(raw) ? raw : "";
+  }
+
+  if (typeof value === "object") {
+    if (typeof value.name === "string" && value.name.trim()) {
+      return "";
+    }
+
+    if (value._id) {
+      const idFromNested = String(value._id).trim();
+      if (isObjectIdLike(idFromNested)) return idFromNested;
+    }
+
+    const idFromValue = String(value).trim();
+    if (isObjectIdLike(idFromValue)) return idFromValue;
+  }
+
+  return "";
+}
+
+async function buildBusTypeNameMap(companies, trips) {
+  const ids = new Set();
+
+  companies?.forEach((company) => {
+    company?.buses?.forEach((bus) => {
+      const id = extractBusTypeId(bus?.busType);
+      if (id) ids.add(id);
+    });
+  });
+
+  trips?.forEach((trip) => {
+    const id = extractBusTypeId(trip?.busType);
+    if (id) ids.add(id);
+  });
+
+  if (ids.size === 0) return new Map();
+
+  const rows = await BusType.find({ _id: { $in: [...ids] } })
+    .select("_id name")
+    .lean();
+
+  const nameMap = new Map();
+  rows.forEach((row) => {
+    const id = String(row?._id || "").trim();
+    const name = String(row?.name || "").trim();
+    if (id && name) nameMap.set(id, name);
+  });
+
+  return nameMap;
+}
+
+function resolveBusTypeLabel(value, nameMap) {
+  const id = extractBusTypeId(value);
+  if (id && nameMap?.has(id)) {
+    return nameMap.get(id);
+  }
+  return normalizeBusTypeForResponse(value);
+}
+
 /**
  * GET /api/predefined-schedule/today
  * Read-only predefined schedule rows with status aligned to the web Predefined Schedule board.
@@ -106,12 +180,12 @@ export const getPredefinedScheduleToday = async (req, res) => {
     }
 
     const [companies, notArrivalDocs, trips] = await Promise.all([
-      Company.find().populate("buses.busType", "name").lean(),
+      Company.find().lean(),
       ScheduleNotArrival.find({ dateKey: todayKey }).lean(),
-      BusTrip.find({ isArchived: { $ne: true } })
-        .populate("busType", "name")
-        .lean(),
+      BusTrip.find({ isArchived: { $ne: true } }).lean(),
     ]);
+
+    const busTypeNameMap = await buildBusTypeNameMap(companies, trips);
 
     const remarksMap = {};
     notArrivalDocs.forEach((doc) => {
@@ -164,7 +238,7 @@ export const getPredefinedScheduleToday = async (req, res) => {
             route: b.route.trim(),
             scheduleTime: sched,
             plateNumber: b.plateNumber,
-            busType: normalizeBusTypeForResponse(b.busType),
+            busType: resolveBusTypeLabel(b.busType, busTypeNameMap),
             stopType: b.stopType || "Regular Trip",
             customStopCount: b.customStopCount ?? null,
             seatingCapacity: b.seatingCapacity ?? null,
@@ -244,16 +318,17 @@ export const getDispatchBoardToday = async (req, res) => {
     }
 
     const trips = await BusTrip.find({ isArchived: { $ne: true } })
-      .populate("busType", "name")
       .sort({ createdAt: -1 })
       .lean();
+
+    const busTypeNameMap = await buildBusTypeNameMap([], trips);
 
     const todayTrips = trips.filter((trip) => getDateKey(trip.date) === todayKey);
 
     const payload = todayTrips.map((item) => ({
       _id: String(item._id),
       templateNo: item.templateNo || "",
-      busType: normalizeBusTypeForResponse(item.busType),
+      busType: resolveBusTypeLabel(item.busType, busTypeNameMap),
       stopType: item.stopType || "Regular Trip",
       customStopCount: item.customStopCount ?? null,
       stopsLabel: formatStopType(item.stopType, item.customStopCount),

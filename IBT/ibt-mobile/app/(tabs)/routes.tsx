@@ -197,7 +197,13 @@ export default function RoutesPage() {
     try {
       const [preRes, dispRes] = await Promise.all([fetch(preUrl), fetch(dispUrl)]);
 
-      if (preRes.status === 404 || dispRes.status === 404) {
+      const shouldUseLegacyFallback =
+        preRes.status === 404 ||
+        dispRes.status === 404 ||
+        preRes.status >= 500 ||
+        dispRes.status >= 500;
+
+      if (shouldUseLegacyFallback) {
         try {
           const { entries, trips } = await fetchTerminalBoardFromLegacyApi(API_URL);
           setPredefinedEntries(entries);
@@ -206,7 +212,14 @@ export default function RoutesPage() {
         } catch (legacyErr) {
           setPredefinedEntries([]);
           setDispatchTrips([]);
-          setFetchError('Schedule API returned 404. Fallback failed.');
+          const errors: string[] = [];
+          if (!preRes.ok) errors.push(`Schedule (${preRes.status})`);
+          if (!dispRes.ok) errors.push(`Dispatch (${dispRes.status})`);
+          setFetchError(
+            errors.length > 0
+              ? `Could not load: ${errors.join(', ')}. Fallback failed.`
+              : 'Could not load routes. Fallback failed.'
+          );
         }
         return;
       }
