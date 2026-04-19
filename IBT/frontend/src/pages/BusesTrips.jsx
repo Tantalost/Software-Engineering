@@ -116,6 +116,10 @@ const defaultScheduleSlot = () => ({
   period: "AM",
 });
 
+const MAX_BUS_PLATE_LENGTH = 20;
+const MAX_ROUTE_FIELD_LENGTH = 80;
+const MAX_BUS_SCHEDULE_SLOTS = 12;
+
 const formatCollectorDisplayName = (collector) => {
   const middleInitial = collector.middleName
     ? `${String(collector.middleName).trim().charAt(0).toUpperCase()}.`
@@ -203,6 +207,13 @@ const ManageCompaniesModal = ({
 
   const activeCompany = companyData.find((c) => c._id === selectedCompanyId);
 
+  const getBusStableKey = (bus) => {
+    if (bus?._id) return String(bus._id);
+    const plate = String(bus?.plateNumber || "").trim().toUpperCase();
+    const times = getBusScheduleTimes(bus).map((t) => String(t).trim()).join("|");
+    return `${plate}|||${times}`;
+  };
+
   const resetForms = () => {
     setIsEditingCompany(false);
     setEditCompanyTarget(null);
@@ -280,8 +291,10 @@ const ManageCompaniesModal = ({
   const confirmDeleteBus = async () => {
     if (!deleteBusTarget || !activeCompany) return;
 
+    const targetKey = getBusStableKey(deleteBusTarget);
+
     const updatedBuses = activeCompany.buses.filter(
-      (b) => b.plateNumber !== deleteBusTarget.plateNumber,
+      (b) => getBusStableKey(b) !== targetKey,
     );
 
     try {
@@ -405,11 +418,96 @@ const ManageCompaniesModal = ({
       return;
     }
 
+    if (newBusPlate.trim().length > MAX_BUS_PLATE_LENGTH) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: `Bus number must be ${MAX_BUS_PLATE_LENGTH} characters or fewer.`,
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (
+      newBusFrom.trim().length > MAX_ROUTE_FIELD_LENGTH ||
+      newBusTo.trim().length > MAX_ROUTE_FIELD_LENGTH
+    ) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: `Route fields must be ${MAX_ROUTE_FIELD_LENGTH} characters or fewer.`,
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (scheduleSlots.length > MAX_BUS_SCHEDULE_SLOTS) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: `Only up to ${MAX_BUS_SCHEDULE_SLOTS} arrival times are allowed per bus.`,
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
     const routeString = `${newBusFrom.trim()} - ${newBusTo.trim()}`;
     const built = scheduleSlots.map((s) =>
       buildScheduleTime(s.hour, s.minute, s.period),
     );
     const scheduleTimes = [...new Set(built)];
+
+    if (scheduleTimes.length === 0) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "Please add at least one arrival time.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    const normalizedNewPlate = newBusPlate.trim().toUpperCase();
+    const normalizedNewTimes = new Set(
+      scheduleTimes.map((t) => String(t).trim().toUpperCase()),
+    );
+    const editKey = editBusTarget ? getBusStableKey(editBusTarget) : null;
+
+    const conflictingTimes = [];
+    for (const existingBus of activeCompany.buses || []) {
+      if (editKey && getBusStableKey(existingBus) === editKey) continue;
+
+      const existingPlate = String(existingBus?.plateNumber || "")
+        .trim()
+        .toUpperCase();
+
+      if (!existingPlate || existingPlate !== normalizedNewPlate) continue;
+
+      const existingTimes = getBusScheduleTimes(existingBus).map((t) =>
+        String(t).trim().toUpperCase(),
+      );
+
+      existingTimes.forEach((t) => {
+        if (normalizedNewTimes.has(t)) conflictingTimes.push(t);
+      });
+    }
+
+    if (conflictingTimes.length > 0) {
+      const uniqueConflicts = [...new Set(conflictingTimes)];
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: `Bus ${newBusPlate.trim()} already has arrival time(s): ${uniqueConflicts.join(", ")}. Use a different time.`,
+        autoClose: true,
+        duration: 4200,
+      });
+      return;
+    }
+
     const scheduleTimeJoined = scheduleTimes.join(", ");
 
     const busPayloadBase = {
@@ -423,8 +521,9 @@ const ManageCompaniesModal = ({
 
     let updatedBuses;
     if (editBusTarget) {
+      const editTargetKey = getBusStableKey(editBusTarget);
       updatedBuses = activeCompany.buses.map((b) =>
-        b.plateNumber === editBusTarget.plateNumber
+        getBusStableKey(b) === editTargetKey
           ? {
               ...busPayloadBase,
               departureTime: b.departureTime || "",
@@ -631,7 +730,11 @@ const ManageCompaniesModal = ({
                       placeholder="e.g. ABC-1234"
                       className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusPlate}
-                      onChange={(e) => setNewBusPlate(e.target.value)}
+                      onChange={(e) =>
+                        setNewBusPlate(
+                          e.target.value.slice(0, MAX_BUS_PLATE_LENGTH),
+                        )
+                      }
                     />
                   </div>
                   <div>
@@ -715,10 +818,20 @@ const ManageCompaniesModal = ({
                     <button
                       type="button"
                       onClick={() =>
-                        setScheduleSlots((prev) => [
-                          ...prev,
-                          defaultScheduleSlot(),
-                        ])
+                        setScheduleSlots((prev) => {
+                          if (prev.length >= MAX_BUS_SCHEDULE_SLOTS) {
+                            setNotificationState({
+                              isOpen: true,
+                              type: "error",
+                              message: `You can only add up to ${MAX_BUS_SCHEDULE_SLOTS} arrival times for one bus.`,
+                              autoClose: true,
+                              duration: 3200,
+                            });
+                            return prev;
+                          }
+
+                          return [...prev, defaultScheduleSlot()];
+                        })
                       }
                       className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
                     >
@@ -727,7 +840,7 @@ const ManageCompaniesModal = ({
                     </button>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    One bus can run several trips per day — add each departure
+                    One bus can run several trips per day — add each arrival
                     time.
                   </p>
                   <div className="mt-2 space-y-2 max-h-[180px] overflow-y-auto pr-1">
@@ -848,7 +961,11 @@ const ManageCompaniesModal = ({
                       placeholder="e.g. Zamboanga"
                       className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusFrom}
-                      onChange={(e) => setNewBusFrom(e.target.value)}
+                      onChange={(e) =>
+                        setNewBusFrom(
+                          e.target.value.slice(0, MAX_ROUTE_FIELD_LENGTH),
+                        )
+                      }
                     />
                   </div>
 
@@ -861,7 +978,11 @@ const ManageCompaniesModal = ({
                       placeholder="e.g. Manila"
                       className="w-full mt-1 p-3 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                       value={newBusTo}
-                      onChange={(e) => setNewBusTo(e.target.value)}
+                      onChange={(e) =>
+                        setNewBusTo(
+                          e.target.value.slice(0, MAX_ROUTE_FIELD_LENGTH),
+                        )
+                      }
                     />
                   </div>
 
@@ -932,7 +1053,7 @@ const ManageCompaniesModal = ({
                         ) // Filter logic
                         .map((bus, idx) => (
                           <tr
-                            key={`${bus.plateNumber}-${idx}`}
+                            key={bus._id || `${bus.plateNumber}-${idx}`}
                             className="hover:bg-slate-50 group"
                           >
                             <td className="px-4 py-3 font-medium text-slate-900">
