@@ -10,6 +10,7 @@ import ExportMenu from "../components/common/exportMenu";
 import BusTripFilters from "../components/common/BusTripFilters";
 import EditBusTrip from "../components/busTrips/EditBusTrip.jsx";
 import DailyTripsDashboard from "../components/busTrips/DailyTripsDashboard.jsx";
+import BusTypeManager from "../components/busTrips/BusTypeManager.jsx";
 import Pagination from "../components/common/Pagination";
 import PredefinedArrivalsBoard from "../components/busTrips/CommonBusesView.jsx";
 import RequestDeletionModal from "../components/common/RequestDeletionModal";
@@ -147,7 +148,9 @@ const ManageCompaniesModal = ({
   isOpen,
   onClose,
   companyData,
+  busTypes,
   fetchCompanies,
+  fetchBusTypes,
   role,
   setNotificationState,
 }) => {
@@ -167,12 +170,36 @@ const ManageCompaniesModal = ({
   const [editBusTarget, setEditBusTarget] = useState(null);
   const [deleteCompanyTarget, setDeleteCompanyTarget] = useState(null);
   const [deleteBusTarget, setDeleteBusTarget] = useState(null);
+  const [showBusTypeManager, setShowBusTypeManager] = useState(false);
 
-  const [newBusType, setNewBusType] = useState("Regular");
+  const [newBusType, setNewBusType] = useState("");
   
   const [newBusStopType, setNewBusStopType] = useState("Regular Trip");
 
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/companies`;
+  const BUS_TYPES_API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/bus-types`;
+
+  const availableBusTypeNames = useMemo(
+    () => {
+      const fromApi = (Array.isArray(busTypes) ? busTypes : [])
+        .map((type) => type?.name)
+        .filter(Boolean);
+
+      if (fromApi.length > 0) return fromApi;
+
+      const fromCompanies = new Set();
+      (Array.isArray(companyData) ? companyData : []).forEach((company) => {
+        (company.buses || []).forEach((bus) => {
+          if (bus?.busType) fromCompanies.add(String(bus.busType));
+        });
+      });
+
+      return Array.from(fromCompanies);
+    },
+    [busTypes, companyData],
+  );
+
+  const fallbackBusType = availableBusTypeNames[0] || "Regular";
 
   const activeCompany = companyData.find((c) => c._id === selectedCompanyId);
 
@@ -183,7 +210,7 @@ const ManageCompaniesModal = ({
     setNewBusPlate("");
     setNewBusFrom("");
     setNewBusTo("");
-    setNewBusType("Regular");
+    setNewBusType(fallbackBusType);
     setNewBusStopType("Regular Trip");
     setNewBusSeatingCapacity("");
     setScheduleSlots([defaultScheduleSlot()]);
@@ -191,8 +218,15 @@ const ManageCompaniesModal = ({
   };
 
   useEffect(() => {
+    if (!newBusType && availableBusTypeNames.length > 0) {
+      setNewBusType(availableBusTypeNames[0]);
+    }
+  }, [newBusType, availableBusTypeNames]);
+
+  useEffect(() => {
     if (!isOpen) {
       setSelectedCompanyId(null);
+      setShowBusTypeManager(false);
       resetForms();
     }
   }, [isOpen]);
@@ -354,6 +388,7 @@ const ManageCompaniesModal = ({
       !newBusPlate.trim() ||
       !newBusFrom.trim() ||
       !newBusTo.trim() ||
+      !newBusType ||
       !activeCompany
     )
       return;
@@ -466,12 +501,23 @@ const ManageCompaniesModal = ({
         <div className="w-full md:w-[32%] md:min-w-[320px] h-[40%] md:h-full bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
           <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-white">
             <h3 className="font-bold text-slate-700 text-lg">Companies</h3>
-            <button
-              onClick={() => setIsEditingCompany(true)}
-              className="p-2 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition"
-            >
-              <Plus size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              {role === "superadmin" && (
+                <button
+                  onClick={() => setShowBusTypeManager(true)}
+                  className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
+                  title="Manage Bus Types"
+                >
+                  <Settings size={18} />
+                </button>
+              )}
+              <button
+                onClick={() => setIsEditingCompany(true)}
+                className="p-2 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
           </div>
 
           {isEditingCompany && (
@@ -597,9 +643,16 @@ const ManageCompaniesModal = ({
                         className="w-full p-3 pr-12 text-base border border-slate-300 rounded-lg outline-none focus:border-emerald-500 transition-colors bg-white appearance-none cursor-pointer"
                         value={newBusType}
                         onChange={(e) => setNewBusType(e.target.value)}
+                        disabled={availableBusTypeNames.length === 0}
                       >
-                        <option value="Regular">Regular</option>
-                        <option value="Aircon">Aircon</option>
+                        {availableBusTypeNames.length === 0 && (
+                          <option value="">No active bus types</option>
+                        )}
+                        {availableBusTypeNames.map((typeName) => (
+                          <option key={typeName} value={typeName}>
+                            {typeName}
+                          </option>
+                        ))}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-10 border-l border-slate-200 text-slate-500 my-2">
                         <ChevronDown size={18} />
@@ -845,8 +898,11 @@ const ManageCompaniesModal = ({
                     className="pl-3 pr-10 py-2 text-base text-slate-700 font-medium border border-slate-300 rounded-xl outline-none bg-white appearance-none cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
                   >
                     <option value="All">All Types</option>
-                    <option value="Regular">Regular Only</option>
-                    <option value="Aircon">Aircon Only</option>
+                    {availableBusTypeNames.map((typeName) => (
+                      <option key={typeName} value={typeName}>
+                        {typeName} Only
+                      </option>
+                    ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center w-8 border-l border-slate-200 text-slate-500 my-1.5">
                     <ChevronDown size={16} />
@@ -862,7 +918,6 @@ const ManageCompaniesModal = ({
                         <th className="px-4 py-3">Bus No.</th>
                         <th className="px-4 py-3">Type</th>
                         <th className="px-4 py-3">Capacity</th>
-                        <th className="px-4 py-3">Departure</th>
                         <th className="px-4 py-3">Schedule</th>
                         <th className="px-4 py-3">Route</th>
                         <th className="px-4 py-3 text-right">Action</th>
@@ -895,9 +950,6 @@ const ManageCompaniesModal = ({
                                 ? bus.seatingCapacity
                                 : "—"}
                             </td>
-                            <td className="px-4 py-3 text-slate-600 tabular-nums">
-                              {bus.departureTime || "—"}
-                            </td>
                             <td className="px-4 py-3 text-slate-600 text-sm max-w-[220px]">
                               {formatBusScheduleDisplay(bus) || "—"}
                             </td>
@@ -917,7 +969,7 @@ const ManageCompaniesModal = ({
                                       : bus.route || "",
                                   );
                                   setNewBusTo(toRoute ? toRoute.trim() : "");
-                                  setNewBusType(bus.busType || "Regular");
+                                  setNewBusType(bus.busType || fallbackBusType);
                                   setNewBusSeatingCapacity(
                                     bus.seatingCapacity != null
                                       ? String(bus.seatingCapacity)
@@ -1074,6 +1126,13 @@ const ManageCompaniesModal = ({
           )}
         </div>
       </div>
+
+      <BusTypeManager
+        isOpen={showBusTypeManager}
+        onClose={() => setShowBusTypeManager(false)}
+        apiUrl={BUS_TYPES_API_URL}
+        onChanged={fetchBusTypes}
+      />
     </div>
   );
 };
@@ -1178,6 +1237,7 @@ const BusTrips = () => {
   const [selectedBusType, setSelectedBusType] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [companyData, setCompanyData] = useState([]);
+  const [busTypes, setBusTypes] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -1275,6 +1335,7 @@ const BusTrips = () => {
   const API_URL = `${BASE_API_URL}/api/bustrips`;
   const PREDEFINED_TODAY_API_URL = `${API_URL}/predefined-today`;
   const COMPANY_API_URL = `${BASE_API_URL}/api/companies`;
+  const BUS_TYPES_API_URL = `${BASE_API_URL}/api/bus-types`;
   const ADMINS_API_URL = `${BASE_API_URL}/api/admins`;
   const COLLECTORS_API_URL = `${BASE_API_URL}/api/collectors`;
   const SCHEDULE_NOT_ARRIVAL_API = `${BASE_API_URL}/api/schedule-not-arrivals`;
@@ -1577,6 +1638,18 @@ const BusTrips = () => {
     }
   };
 
+  const fetchBusTypes = async () => {
+    try {
+      const res = await fetch(`${BUS_TYPES_API_URL}?active=true`);
+      if (!res.ok) throw new Error("Failed to fetch bus types.");
+      const data = await res.json();
+      setBusTypes(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching bus types:", error);
+      setBusTypes([]);
+    }
+  };
+
   const fetchDeleteRequests = async () => {
     try {
       const response = await fetch(DELETION_REQUESTS_API_URL);
@@ -1621,6 +1694,7 @@ const BusTrips = () => {
   useEffect(() => {
     fetchBusTrips();
     fetchCompanies();
+    fetchBusTypes();
     fetchPredefinedTodayTrips();
     fetchDeleteRequests();
   }, [role]);
@@ -1667,6 +1741,19 @@ const BusTrips = () => {
   }, [role]);
   
   const availableCompanies = companyData.map((c) => c.name);
+  const availableBusTypes = useMemo(() => {
+    const fromApi = busTypes.map((type) => type?.name).filter(Boolean);
+    if (fromApi.length > 0) return fromApi;
+
+    const fromCompanyData = new Set();
+    companyData.forEach((company) => {
+      (company.buses || []).forEach((bus) => {
+        if (bus?.busType) fromCompanyData.add(String(bus.busType));
+      });
+    });
+
+    return Array.from(fromCompanyData);
+  }, [busTypes, companyData]);
 
   const filtered = records.filter((bus) => {
     const templateNo = bus.templateNo || bus.templateno || "";
@@ -3449,6 +3536,7 @@ const BusTrips = () => {
                 uniqueCompanies={availableCompanies}
                 selectedBusType={selectedBusType}
                 setSelectedBusType={setSelectedBusType}
+                busTypeOptions={availableBusTypes}
                 selectedStatus={selectedStatus}
                 setSelectedStatus={setSelectedStatus}
               />
@@ -3536,7 +3624,9 @@ const BusTrips = () => {
         isOpen={showManageCompaniesModal}
         onClose={() => setShowManageCompaniesModal(false)}
         companyData={companyData}
+        busTypes={busTypes}
         fetchCompanies={fetchCompanies}
+        fetchBusTypes={fetchBusTypes}
         role={role}
         setNotificationState={setNotificationState}
       />
@@ -3675,12 +3765,15 @@ const BusTrips = () => {
                         seatingCapacity: null,
                       }))
                     }
-                    disabled={!newBusData.company}
+                    disabled={!newBusData.company || availableBusTypes.length === 0}
                     className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none disabled:bg-slate-100"
                   >
                     <option value="">Select Type</option>
-                    <option value="Aircon">Aircon</option>
-                    <option value="Regular">Regular</option>
+                    {availableBusTypes.map((typeName) => (
+                      <option key={typeName} value={typeName}>
+                        {typeName}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

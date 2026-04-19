@@ -1,11 +1,15 @@
 import Company from "../models/Company.js";
+import { normalizeCompanyForResponse, resolveBusTypeId } from "../utils/busTypeCompat.js";
 
 // @desc    Get all companies and their buses
 // @route   GET /api/companies
 export const getCompanies = async (req, res) => {
   try {
-    const companies = await Company.find().sort({ name: 1 });
-    res.status(200).json(companies);
+    const companies = await Company.find()
+      .populate("buses.busType", "name")
+      .sort({ name: 1 });
+
+    res.status(200).json(companies.map(normalizeCompanyForResponse));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -27,7 +31,8 @@ export const createCompany = async (req, res) => {
       buses: []
     });
 
-    res.status(201).json(company);
+    const populated = await Company.findById(company._id).populate("buses.busType", "name");
+    res.status(201).json(normalizeCompanyForResponse(populated));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -45,10 +50,30 @@ export const updateCompany = async (req, res) => {
     }
 
     company.name = name || company.name;
-    company.buses = buses || company.buses;
+
+    if (Array.isArray(buses)) {
+      const resolvedBuses = [];
+
+      for (const bus of buses) {
+        const resolvedBusTypeId = await resolveBusTypeId(bus?.busType);
+        if (!resolvedBusTypeId) {
+          return res.status(400).json({
+            message: `Invalid bus type for bus ${bus?.plateNumber || ""}.`,
+          });
+        }
+
+        resolvedBuses.push({
+          ...bus,
+          busType: resolvedBusTypeId,
+        });
+      }
+
+      company.buses = resolvedBuses;
+    }
 
     const updatedCompany = await company.save();
-    res.status(200).json(updatedCompany);
+    const populated = await Company.findById(updatedCompany._id).populate("buses.busType", "name");
+    res.status(200).json(normalizeCompanyForResponse(populated));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

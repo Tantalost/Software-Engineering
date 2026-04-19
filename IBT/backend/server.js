@@ -15,6 +15,7 @@ import lostfoundRoutes from "./routes/lostfoundRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import notifications from "./routes/notifications.js"; 
 import companyRoutes from "./routes/companyRoutes.js"; 
+import busTypeRoutes from "./routes/busTypeRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import broadcastRoutes from "./routes/broadcastRoutes.js";
 import stallRoutes from "./routes/stallRoutes.js"; 
@@ -60,6 +61,7 @@ app.get('/', (req, res) => res.send("IBT Unified Management System API is workin
 app.use("/api/bustrips", busTripRoutes);
 
 app.use("/api/companies", companyRoutes);
+app.use("/api/bus-types", busTypeRoutes);
 app.use("/api/terminal-fees", terminalFeeRoutes);
 app.use("/api/logs", logRoutes);
 app.use("/api/parking", parkingRoutes);

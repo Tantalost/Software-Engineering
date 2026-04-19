@@ -5,7 +5,11 @@ const BusTripSchema = new mongoose.Schema({
   templateNo: { type: String, required: true },
   company: { type: String, required: true },
   route: { type: String, required: true },
-  busType: { type: String, enum: ['Aircon', 'Regular'], default: 'Regular' },
+  busType: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "BusType",
+    default: null,
+  },
   stopType: {
     type: String,
     enum: ['Regular Trip', '1-stop', '2-stop', '3-stop', '4-stop', '5-stop', '6-stop', '7-stop', '8-stop', '9-stop', '10-stop', 'Other'],

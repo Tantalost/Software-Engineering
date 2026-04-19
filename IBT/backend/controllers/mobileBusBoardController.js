@@ -2,6 +2,7 @@ import Company from "../models/Company.js";
 import BusTrip from "../models/BusTrips.js";
 import ScheduleNotArrival from "../models/ScheduleNotArrival.js";
 import { getBusScheduleTimes } from "../utils/busScheduleServer.js";
+import { normalizeBusTypeForResponse } from "../utils/busTypeCompat.js";
 
 const APP_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Manila";
 
@@ -105,9 +106,11 @@ export const getPredefinedScheduleToday = async (req, res) => {
     }
 
     const [companies, notArrivalDocs, trips] = await Promise.all([
-      Company.find().lean(),
+      Company.find().populate("buses.busType", "name").lean(),
       ScheduleNotArrival.find({ dateKey: todayKey }).lean(),
-      BusTrip.find({ isArchived: { $ne: true } }).lean(),
+      BusTrip.find({ isArchived: { $ne: true } })
+        .populate("busType", "name")
+        .lean(),
     ]);
 
     const remarksMap = {};
@@ -161,7 +164,7 @@ export const getPredefinedScheduleToday = async (req, res) => {
             route: b.route.trim(),
             scheduleTime: sched,
             plateNumber: b.plateNumber,
-            busType: b.busType || "Regular",
+            busType: normalizeBusTypeForResponse(b.busType),
             stopType: b.stopType || "Regular Trip",
             customStopCount: b.customStopCount ?? null,
             seatingCapacity: b.seatingCapacity ?? null,
@@ -241,6 +244,7 @@ export const getDispatchBoardToday = async (req, res) => {
     }
 
     const trips = await BusTrip.find({ isArchived: { $ne: true } })
+      .populate("busType", "name")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -249,7 +253,7 @@ export const getDispatchBoardToday = async (req, res) => {
     const payload = todayTrips.map((item) => ({
       _id: String(item._id),
       templateNo: item.templateNo || "",
-      busType: item.busType || "Regular",
+      busType: normalizeBusTypeForResponse(item.busType),
       stopType: item.stopType || "Regular Trip",
       customStopCount: item.customStopCount ?? null,
       stopsLabel: formatStopType(item.stopType, item.customStopCount),

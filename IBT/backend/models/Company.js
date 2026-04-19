@@ -3,7 +3,11 @@ import mongoose from "mongoose";
 const BusSchema = new mongoose.Schema({
   plateNumber: { type: String, required: true },
   route: { type: String, required: true },
-  busType: { type: String, enum: ['Aircon', 'Regular'], required: true, default: 'Regular' },
+  busType: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "BusType",
+    required: true,
+  },
   seatingCapacity: { type: Number, min: 1, default: null },
   departureTime: { type: String, default: '' },
   scheduleTime: { type: String, default: '' },
