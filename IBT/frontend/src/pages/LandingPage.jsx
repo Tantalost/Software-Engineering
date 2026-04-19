@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, X } from 'lucide-react'; // Removed Chevrons
+import { ArrowRight, Clock3, Download, QrCode, X } from 'lucide-react';
 import LOGO from "../assets/LOGO.png";
 import adsPhone from "../assets/ads_phone.png";
 import newAppImg from "../assets/New_application.png";
@@ -14,170 +14,243 @@ const LandingPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const bottomImages = [
-    { src: newAppImg, alt: 'Stall Application' },
-    { src: busTripsImg, alt: 'Bus Trips' },
-    { src: lostFoundImg, alt: 'Lost and Found' }
+    {
+      src: newAppImg,
+      alt: 'Stall Application',
+      title: 'Stall Application',
+      subtitle: 'Submit and track tenant applications online.'
+    },
+    {
+      src: busTripsImg,
+      alt: 'Bus Trips',
+      title: 'Live Bus Trips',
+      subtitle: 'View departures, arrivals, and route activity in real-time.'
+    },
+    {
+      src: lostFoundImg,
+      alt: 'Lost and Found',
+      title: 'Lost and Found',
+      subtitle: 'Report, verify, and recover items through one dashboard.'
+    }
   ];
 
-  // Auto-scroll logic
+  const quickStats = [
+    { label: 'Live Monitoring', value: '24/7' },
+    { label: 'Smart Alerts', value: 'Instant' },
+    { label: 'Terminal Services', value: 'Unified' }
+  ];
+
   useEffect(() => {
+    const cardStep = 364;
     const autoScroll = setInterval(() => {
       if (scrollRef.current) {
         const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-        
-        // If we've reached the end of the scroll container (with a 10px buffer for rounding)
+
         if (scrollLeft + clientWidth >= scrollWidth - 10) {
-          // Smoothly scroll back to the start
           scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
-          // Scroll right by 256px (w-60 is 240px + 16px space-x-4 gap)
-          scrollRef.current.scrollTo({ left: scrollLeft + 256, behavior: 'smooth' });
+          scrollRef.current.scrollTo({ left: scrollLeft + cardStep, behavior: 'smooth' });
         }
       }
-    }, 3000); // Changes every 3 seconds
+    }, 3200);
 
-    // Cleanup interval on unmount
     return () => clearInterval(autoScroll);
   }, []);
 
   return (
-    <div
-      className="h-screen w-full flex flex-col font-sans overflow-hidden relative selection:bg-green-200 bg-sky-300"
-    >
-      {/* Background Image Layer */}
-      <div 
-        className="absolute inset-0 z-0 opacity-60 bg-cover bg-center bg-no-repeat blur-sm scale-105"
+    <div className="relative flex h-screen flex-col overflow-hidden bg-[#071823] text-slate-100 selection:bg-emerald-300/40">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.2),transparent_38%),radial-gradient(circle_at_78%_18%,rgba(56,189,248,0.24),transparent_36%),linear-gradient(165deg,#071823_0%,#0B2535_48%,#0A1220_100%)]"
+      />
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-20 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${ibtBg})` }}
       />
+      <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 bottom-16 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
 
-      {/* Header */}
-      <header className="flex justify-between items-center px-6 md:px-12 py-1 relative z-50">
-        <div className="flex items-center space-x-2">
-          <img src={LOGO} alt="IBT Logo" className="h-8 w-8 object-contain drop-shadow-sm" />
-          <h1 className="font-black text-gray-700 tracking-tight">Integrated Bus Terminal ZC</h1>
-        </div>
-        <Link
-          to="/login"
-          className="px-4 py-1 border-[2px] border-emerald-500 text-emerald-800 rounded-full font-black text-sm hover:bg-emerald-500 hover:text-white transition-all duration-300 shadow-md uppercase tracking-wider"
-        >
-          Login
-        </Link>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-grow flex items-center relative z-10 overflow-hidden px-4 md:px-15 lg:px-35">
-
-        {/* Left Side */}
-        <div className="flex flex-col justify-center space-y-9 z-20 w-1000 max-w-[52%]">
-
-          {/* Headline */}
-          <div className="transform -skew-x-3">
-            <h2 className="text-5xl md:text-6xl font-black italic text-green-800 leading-[0.90] tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]"
-            style={{ WebkitTextStroke: '0.5px white' }}
-            >
-              GET BUS TRIPS UPDATE
-            </h2>
-            <h2 className="text-5xl md:text-6xl font-black italic text-green-00 leading-[0.90] tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)]" style={{ WebkitTextStroke: '0.5px white' }}>
-              in REAL-TIME
-            </h2>
+      <header className="relative z-30">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-2 backdrop-blur">
+              <img src={LOGO} alt="IBT Logo" className="h-7 w-7 object-contain" />
+            </div>
+            <div>
+              <p className="text-[0.63rem] uppercase tracking-[0.28em] text-emerald-200/90">Integrated Terminal Platform</p>
+              <h1 className="text-sm font-semibold text-white sm:text-base" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Integrated Bus Terminal ZC
+              </h1>
+            </div>
           </div>
 
-          {/* CTA */}
-          <div className="flex items-center space-x-5">
-            <button 
+          <Link
+            to="/login"
+            className="rounded-full border border-emerald-300/50 bg-emerald-400/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100 transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-300/20"
+          >
+            Login Portal
+          </Link>
+        </div>
+      </header>
+
+      <main className="relative z-20 mx-auto grid w-full max-w-7xl flex-1 min-h-0 grid-cols-1 gap-8 overflow-hidden px-5 py-3 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-8 lg:py-4">
+        <section className="min-w-0">
+          <span className="inline-flex rounded-full border border-emerald-200/35 bg-emerald-300/10 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-emerald-100">
+            Terminal Operations, Simplified
+          </span>
+
+          <h2
+            className="mt-6 max-w-2xl text-4xl font-semibold leading-[1.02] text-white sm:text-5xl lg:text-[3.45rem]"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            Real-time bus intelligence for passengers, tenants, and terminal staff.
+          </h2>
+
+          <p className="mt-5 max-w-xl text-sm leading-relaxed text-slate-200/85 sm:text-base">
+            IBT centralizes trip tracking, stall applications, and service updates in one reliable platform so everyone can make faster, better decisions.
+          </p>
+
+          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <button
               onClick={() => setIsModalOpen(true)}
-              className="bg-[#00a86b] hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-lg font-black uppercase transition-all duration-200 hover:scale-95 tracking-widest shadow-lg border-1 border-green"
+              className="group inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.15em] text-slate-900 shadow-[0_12px_35px_rgba(16,185,129,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-300/50 focus:ring-offset-2"
             >
+              <Download size={16} />
               Download App
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
             </button>
           </div>
 
-          {/* Auto-Scroller */}
-          <div className="w-full">
-            <p className="text-[12px] text-white font-black italic mb-4 uppercase tracking-[0.1em] opacity-80">
-              Process Stall Application Online!
-            </p>
-
-            <div className="relative flex items-center px-5">
+          <div className="mt-8 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
+            {quickStats.map((item) => (
               <div
-                ref={scrollRef}
-                className="flex overflow-x-auto space-x-4 pb-2 no-scrollbar snap-x scroll-smooth w-full"
+                key={item.label}
+                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-4 backdrop-blur-sm"
               >
-                {bottomImages.map((img, index) => (
-                  <div
-                    key={index}
-                    className="flex-shrink-0 w-60 h-40 rounded-2xl overflow-hidden shadow-xl snap-center border-4 border-white transition-transform hover:scale-95 cursor-pointer"
-                  >
-                    <img src={img.src} alt={img.alt} className="w-full h-full object-cover" />
+                <p className="text-xl font-bold text-emerald-200" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {item.value}
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-300/90">{item.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-9 rounded-3xl border border-white/12 bg-slate-900/35 p-4 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-sm sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-cyan-100/85">What You Can Do Online</p>
+            </div>
+
+            <div
+              ref={scrollRef}
+              className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1"
+            >
+              {bottomImages.map((img) => (
+                <article
+                  key={img.title}
+                  className="group relative h-56 min-w-[348px] snap-start overflow-hidden rounded-2xl border border-white/20 bg-slate-900/35"
+                >
+                  <img
+                    src={img.src}
+                    alt={img.alt}
+                    className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/35 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="text-lg font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      {img.title}
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-200/90">{img.subtitle}</p>
                   </div>
-                ))}
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="relative min-w-0 lg:mt-14 lg:self-start">
+          <div className="relative mx-auto w-full max-w-[360px]">
+            <div className="animate-float absolute -top-4 left-3 z-20 rounded-2xl border border-white/30 bg-white/15 px-4 py-2 backdrop-blur-md">
+              <p className="text-[0.62rem] uppercase tracking-[0.2em] text-emerald-100/90">Trip Alert</p>
+              <p className="mt-1 text-sm font-semibold text-white">New Arrival at Platform 4</p>
+            </div>
+
+            <div className="relative mx-auto w-full max-w-[360px] rounded-[2.2rem] border border-white/20 bg-gradient-to-b from-cyan-200/15 to-emerald-300/10 p-3 shadow-[0_30px_70px_rgba(8,47,73,0.45)] sm:p-3">
+              <div className="rounded-[1.8rem] border border-white/15 bg-slate-950/45 p-2 backdrop-blur sm:p-2">
+                <img
+                  src={adsPhone}
+                  alt="IBT mobile app interface"
+                  className="mx-auto h-auto w-full max-h-[62vh] object-contain drop-shadow-[0_18px_45px_rgba(0,0,0,0.45)]"
+                />
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Right Side: Phone */}
-        <div className="absolute right-0 top-0 bottom-0 w-[48%] flex items-center justify-center z-10 pointer-events-none">
-          <div className="absolute top-[18%] left-[10%] z-30 animate-bounce pointer-events-auto">
-            <div className="bg-[#00a86b] text-white text-xs font-black px-4 py-2 rounded-full shadow-[0_5px_20px_rgba(0,168,107,0.5)] border-2 border-white whitespace-nowrap uppercase tracking-wider">
-              🚀 New Trip Has Arrived
+            <div className="mt-4 mx-auto w-full max-w-[360px] rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm">
+              <div className="flex items-start gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-300/20 text-emerald-100">
+                  <QrCode size={17} />
+                </div>
+                <div>
+                  <h3 className="text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-emerald-100">Fast Onboarding</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-200/85 sm:text-[0.82rem]">
+                    Scan the QR code to install the app and start receiving live trip updates and terminal notices.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 mx-auto w-full max-w-[360px] rounded-xl border border-cyan-200/20 bg-cyan-300/5 p-3 backdrop-blur-sm">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-cyan-100">Service Reminder</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-200/85 sm:text-[0.82rem]">
+                Enable notifications after login so schedule changes and terminal advisories appear instantly.
+              </p>
             </div>
           </div>
-
-          <div className="absolute bottom-[16%] right-[30%] z-80">
-            <div className="bg-white rounded-full w-30 h-30 flex items-center justify-center shadow-2xl border-[4px] border-emerald-400">
-              <Clock size={100} className="text-emerald-800" />
-            </div>
-          </div>
-
-          <img
-            src={adsPhone}
-            alt="Mobile App"
-            className="h-[86vh] w-auto object-contain drop-shadow-[0_25px_50px_rgba(0,0,0,0.25)]"
-          />
-        </div>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-green-900 text-green-100 py-3 text-center text-[10px] tracking-[0.3em] font-black z-50 border-t border-green-700">
-        <p className="opacity-70">© 2026 CYNERGYOPS. ALL RIGHTS RESERVED. | PRIVACY POLICY | TERMS</p>
+      <footer className="relative z-20 border-t border-white/10 bg-slate-950/40 py-2 text-center">
+        <p className="px-4 text-[0.62rem] uppercase tracking-[0.25em] text-slate-300/70">
+          © 2026 CYNERGYOPS. All rights reserved. Privacy Policy. Terms.
+        </p>
       </footer>
 
-      {/* QR Code Modal Overlay */}
       {isModalOpen && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-overlay"
+        <div
+          className="animate-overlay fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 px-4 backdrop-blur-sm"
           onClick={() => setIsModalOpen(false)}
         >
-          <div 
-            className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full relative flex flex-col items-center animate-modal"
+          <div
+            className="animate-modal relative flex w-full max-w-sm flex-col items-center rounded-3xl border border-white/20 bg-white p-8 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+              className="absolute right-4 top-4 rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-800"
+              aria-label="Close modal"
             >
               <X size={24} />
             </button>
 
-            <h3 className="text-2xl font-black text-green-800 mb-1 uppercase tracking-tight text-center mt-2">
+            <h3
+              className="mt-2 text-center text-2xl font-semibold uppercase tracking-tight text-emerald-800"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
               Scan to Download
             </h3>
-            <p className="text-gray-500 text-sm text-center mb-6 font-medium">
-              Available on Android
+            <p className="mb-6 text-center text-sm font-medium text-gray-500">
+              Available on Android devices
             </p>
-            
-            <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300 w-64 h-64 flex items-center justify-center mb-6 shadow-inner">
-              <img 
-                src={scanImage} 
-                alt="App QR Code" 
+
+            <div className="mb-6 flex h-64 w-64 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4 shadow-inner">
+              <img
+                src={scanImage}
+                alt="App QR Code"
                 className="w-full h-full object-contain"
               />
             </div>
-            
-            <button 
+
+            <button
               onClick={() => setIsModalOpen(false)}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl transition-colors uppercase tracking-wider text-sm"
+              className="w-full rounded-xl bg-gray-100 py-3 text-sm font-bold uppercase tracking-wider text-gray-800 transition-colors hover:bg-gray-200"
             >
               Close
             </button>
@@ -185,24 +258,63 @@ const LandingPage = () => {
         </div>
       )}
 
-      {/* Styles */}
       <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        * {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+        }
 
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
+
         @keyframes scaleUp {
           from { opacity: 0; transform: scale(0.95); }
           to { opacity: 1; transform: scale(1); }
         }
+
+        @keyframes floatCard {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-6px);
+          }
+        }
+
         .animate-overlay {
           animation: fadeIn 0.2s ease-out forwards;
         }
+
         .animate-modal {
           animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-float {
+          animation: floatCard 3s ease-in-out infinite;
+        }
+
+        .animate-float-delay {
+          animation: floatCard 3.2s ease-in-out infinite 0.6s;
+        }
+
+        @media (max-width: 1024px) {
+          .animate-float,
+          .animate-float-delay {
+            animation-duration: 2.4s;
+          }
         }
       `}</style>
     </div>
