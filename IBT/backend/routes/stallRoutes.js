@@ -22,6 +22,35 @@ dotenv.config();
 
 const router = express.Router();
 
+const TENANT_APPLICATION_IMAGE_FIELDS = new Set([
+  'permit',
+  'validId',
+  'clearance',
+  'communityTax',
+  'policeClearance',
+]);
+
+const TENANT_APPLICATION_ALLOWED_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+]);
+
+const tenantApplicationImageFileFilter = (req, file, cb) => {
+  if (!TENANT_APPLICATION_IMAGE_FIELDS.has(file.fieldname)) {
+    cb(null, true);
+    return;
+  }
+
+  const mimeType = String(file.mimetype || '').toLowerCase();
+  if (TENANT_APPLICATION_ALLOWED_MIME_TYPES.has(mimeType)) {
+    cb(null, true);
+    return;
+  }
+
+  cb(new Error('Only PNG and JPEG files are allowed for tenant application requirements.'));
+};
+
 const mongoURL = process.env.MONGODB_URL;
 
 const storage = new GridFsStorage({
@@ -36,10 +65,37 @@ const storage = new GridFsStorage({
 
 const upload = multer({ 
   storage,
+  fileFilter: tenantApplicationImageFileFilter,
   limits: { 
     fileSize: 5 * 1024 * 1024 
   }
 });
+
+const uploadApplicationFiles = (req, res, next) => {
+  const runUpload = upload.fields([
+    { name: 'permit', maxCount: 1 },
+    { name: 'validId', maxCount: 1 },
+    { name: 'clearance', maxCount: 1 },
+    { name: 'communityTax', maxCount: 1 },
+    { name: 'policeClearance', maxCount: 1 },
+  ]);
+
+  runUpload(req, res, (err) => {
+    if (!err) {
+      next();
+      return;
+    }
+
+    if (err instanceof multer.MulterError) {
+      res.status(400).json({ message: err.message });
+      return;
+    }
+
+    res.status(400).json({
+      message: err.message || 'Invalid file upload for tenant application.',
+    });
+  });
+};
 
 router.get('/pending', getPendingStalls); 
 router.get('/occupied', getOccupiedStalls);
@@ -49,13 +105,7 @@ router.get('/my-application/:userId', verifyToken, getMyApplication);
 
 router.post('/apply', 
   verifyToken,
-  upload.fields([
-    { name: 'permit', maxCount: 1 }, 
-    { name: 'validId', maxCount: 1 },
-    { name: 'clearance', maxCount: 1 },
-    { name: 'communityTax', maxCount: 1 },
-    { name: 'policeClearance', maxCount: 1 }
-  ]), 
+  uploadApplicationFiles,
   submitApplication
 );
 

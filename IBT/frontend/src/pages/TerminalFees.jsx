@@ -93,6 +93,14 @@ const getRecordSortTimestamp = (record) => {
   return fallback ? fallback.getTime() : 0;
 };
 
+const toNumericAmount = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
+const formatPhpAmount = (value) => `Php ${toNumericAmount(value).toFixed(2)}`;
+const formatPesoAmount = (value) => `₱${toNumericAmount(value).toFixed(2)}`;
+
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
   if (!imageSrc) return;
   try {
@@ -450,7 +458,7 @@ const TerminalFees = () => {
         return type.includes("senior") || type.includes("pwd");
       }).length,
       total: filtered.length,
-      revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0),
+      revenue: filtered.reduce((sum, f) => sum + toNumericAmount(f.price), 0),
     }),
     [filtered],
   );
@@ -543,10 +551,7 @@ const TerminalFees = () => {
         } = item;
         return {
           ...rest,
-          price:
-            typeof rest.price === "number"
-              ? `Php ${rest.price.toFixed(2)}`
-              : rest.price,
+          price: formatPhpAmount(rest.price),
           date: rest.date ? new Date(rest.date).toLocaleDateString() : "-",
           time: to12HourFormat(rest.time),
         };
@@ -1101,7 +1106,7 @@ const TerminalFees = () => {
         "",
         `Student/Senior: ${stats.student + stats.senior}`,
         "",
-        `Total Revenue: Php ${stats.revenue.toFixed(2)}`,
+        `Total Revenue: ${formatPhpAmount(stats.revenue)}`,
       ]);
       worksheet.addRow([]); 
 
@@ -1128,7 +1133,7 @@ const TerminalFees = () => {
           item.passengerType || "-",
           item.time || "-",
           item.date ? new Date(item.date).toLocaleDateString() : "-",
-          `Php ${(item.price || 0).toFixed(2)}`,
+          formatPhpAmount(item.price),
         ]);
       });
 
@@ -1209,7 +1214,7 @@ const TerminalFees = () => {
     doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, {
       align: "right",
     });
-    doc.text(`Revenue: Php ${stats.revenue.toFixed(2)}`, tableRightEdge, 61, {
+    doc.text(`Revenue: ${formatPhpAmount(stats.revenue)}`, tableRightEdge, 61, {
       align: "right",
     });
 
@@ -1220,7 +1225,7 @@ const TerminalFees = () => {
       body: filtered.map((item) => [
         item.ticketNo || "-",
         item.passengerType || "-",
-        `Php ${(item.price || 0).toFixed(2)}`,
+        formatPhpAmount(item.price),
         item.time || "-",
         item.date ? new Date(item.date).toLocaleDateString() : "-",
       ]),
@@ -1538,7 +1543,7 @@ const TerminalFees = () => {
                   ),
                   time: fee.time,
                   date: fee.date,
-                  price: `₱${fee.price.toFixed(2)}`,
+                  price: formatPesoAmount(fee.price),
                   __highlight: isDeleteHighlighted,
                   __highlightVariant: isDeleteRequested ? "amber" : "emerald",
                 };

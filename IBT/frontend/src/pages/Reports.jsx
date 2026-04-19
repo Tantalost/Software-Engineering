@@ -702,6 +702,8 @@ const Reports = () => {
   const [dateFilterType, setDateFilterType] = useState("All");
   const [currentDateRange, setCurrentDateRange] = useState(new Date());
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [exportDateFrom, setExportDateFrom] = useState("");
+  const [exportDateTo, setExportDateTo] = useState("");
   const [showLogModal, setShowLogModal] = useState(false);
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -715,8 +717,58 @@ const Reports = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const role = localStorage.getItem("authRole") || "superadmin";
+  const isSuperAdmin = role === "superadmin";
   const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/reports`;
   const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
+
+  const parseDateStart = (value) => {
+    if (!value) return null;
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const parseDateEnd = (value) => {
+    if (!value) return null;
+    const parsed = new Date(`${value}T23:59:59.999`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const isCustomExportRangeActive =
+    isSuperAdmin && Boolean(exportDateFrom || exportDateTo);
+
+  const hasInvalidCustomExportRange = () => {
+    if (!isCustomExportRangeActive) return false;
+    const start = parseDateStart(exportDateFrom);
+    const end = parseDateEnd(exportDateTo);
+    return Boolean(start && end && start > end);
+  };
+
+  const isInCustomExportRange = (dateValue) => {
+    if (!isCustomExportRangeActive) return true;
+
+    const candidate = new Date(dateValue);
+    if (Number.isNaN(candidate.getTime())) return false;
+
+    const start = parseDateStart(exportDateFrom);
+    const end = parseDateEnd(exportDateTo);
+
+    if (start && candidate < start) return false;
+    if (end && candidate > end) return false;
+    return true;
+  };
+
+  const getCustomExportRangeLabel = () => {
+    if (!isCustomExportRangeActive) return "";
+
+    const formatDate = (value) => {
+      if (!value) return "-";
+      const parsed = new Date(`${value}T00:00:00`);
+      if (Number.isNaN(parsed.getTime())) return "-";
+      return parsed.toLocaleDateString();
+    };
+
+    return `${formatDate(exportDateFrom)} to ${formatDate(exportDateTo)}`;
+  };
 
   const fetchReports = async () => {
     try {
@@ -867,6 +919,24 @@ const Reports = () => {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
+  const matchesCurrentSearchAndCategory = (report) => {
+    const reportId = String(report.id || report._id || "");
+    const reportType = String(report.type || "").toLowerCase();
+    const reportAuthor = String(report.author || "").toLowerCase();
+    const search = String(searchQuery || "").toLowerCase();
+
+    const matchesSearch =
+      !search ||
+      reportId.includes(search) ||
+      reportType.includes(search) ||
+      reportAuthor.includes(search);
+
+    const matchesCategory =
+      selectedCategory === "All" || report.type === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  };
+
   const fetchAllReportsForExport = async () => {
     const response = await fetch(API_URL);
     if (!response.ok) throw new Error("Failed to fetch all reports for export");
@@ -879,6 +949,20 @@ const Reports = () => {
   };
 
   const getOverallExportRows = async () => {
+    if (isCustomExportRangeActive) {
+      let sourceRows = records;
+      try {
+        sourceRows = await fetchAllReportsForExport();
+      } catch (error) {
+        console.error("Fallback to local records for custom export:", error);
+      }
+
+      return sourceRows.filter((report) => {
+        if (!matchesCurrentSearchAndCategory(report)) return false;
+        return isInCustomExportRange(report.createdAt || report.date);
+      });
+    }
+
     const hasSearch = Boolean(String(searchQuery || "").trim());
     const isAllCategory = selectedCategory === "All";
     const isAllDate = dateFilterType === "All";
@@ -913,6 +997,11 @@ const Reports = () => {
   };
 
   const handleExportExcel = async () => {
+    if (hasInvalidCustomExportRange()) {
+      showToast("error", "Invalid export date range. From date must be earlier than To date.");
+      return;
+    }
+
     const exportRows = await getOverallExportRows();
     if (exportRows.length === 0) return alert("No records to export.");
 
@@ -944,7 +1033,9 @@ const Reports = () => {
 
       worksheet.addRow([]);
       worksheet.addRow([
-        `Date: ${new Date().toLocaleDateString()}`,
+        isCustomExportRangeActive
+          ? `Date Range: ${getCustomExportRangeLabel()}`
+          : `Date: ${new Date().toLocaleDateString()}`,
         '',
         `Collector: ${getExportCollectorName()}`,
         `Status: Completed`,
@@ -988,6 +1079,11 @@ const Reports = () => {
   };
 
   const handleExportPDF = async () => {
+    if (hasInvalidCustomExportRange()) {
+      showToast("error", "Invalid export date range. From date must be earlier than To date.");
+      return;
+    }
+
     const exportRows = await getOverallExportRows();
     if (exportRows.length === 0) {
       alert("No records to export.");
@@ -1013,7 +1109,14 @@ const Reports = () => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Collector: ${authCollector}`, 15, 50);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 15, 50, { align: "right" });
+    doc.text(
+      isCustomExportRangeActive
+        ? `Date Range: ${getCustomExportRangeLabel()}`
+        : `Date: ${new Date().toLocaleDateString()}`,
+      pageWidth - 15,
+      50,
+      { align: "right" },
+    );
     doc.text(`Status: Completed`, pageWidth - 15, 56, { align: "right" });
 
     const getRevenue = (item) => {
@@ -1628,10 +1731,51 @@ const Reports = () => {
             <FilterBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
           </div>
           
-          <div className="flex items-center justify-end gap-3 w-full lg:w-auto">
+          <div className="flex flex-wrap items-end justify-end gap-3 w-full lg:w-auto">
+            {isSuperAdmin && (
+              <div className="flex items-end gap-2 border border-slate-200 rounded-xl bg-white p-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-semibold text-slate-500 uppercase">From</label>
+                  <input
+                    type="date"
+                    value={exportDateFrom}
+                    onChange={(e) => setExportDateFrom(e.target.value)}
+                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm text-slate-700"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-semibold text-slate-500 uppercase">To</label>
+                  <input
+                    type="date"
+                    value={exportDateTo}
+                    onChange={(e) => setExportDateTo(e.target.value)}
+                    className="h-9 rounded-lg border border-slate-300 px-2 text-sm text-slate-700"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExportDateFrom("");
+                    setExportDateTo("");
+                  }}
+                  className="h-9 px-3 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
              <ExportMenu onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
           </div>
         </div>
+
+        {isSuperAdmin && hasInvalidCustomExportRange() && (
+          <p className="text-sm text-red-600 -mt-2">
+            Invalid range: From date must be earlier than or equal to To date.
+          </p>
+        )}
 
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
       
