@@ -6,7 +6,7 @@ const SummaryDonut = ({ data = [], quota = 0 }) => {
 
   const formatCurrencyFull = (value) =>
     Number(value || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 0,
+      minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
   
@@ -89,7 +89,7 @@ const SummaryDonut = ({ data = [], quota = 0 }) => {
                   <p className="text-xs font-semibold tracking-wide">{item.name}</p>
                 </div>
                 <p className="font-extrabold text-xl drop-shadow-md">
-                  ₱{(item.value / 1000).toFixed(1)}k
+                  ₱{formatCurrencyFull(item.value)}
                 </p>
               </div>
             ))}

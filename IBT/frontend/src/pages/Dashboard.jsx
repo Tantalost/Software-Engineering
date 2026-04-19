@@ -151,6 +151,12 @@ const Dashboard = () => {
     return `₱${value.toLocaleString()}`;
   };
 
+  const formatRevenueAmount = (value) =>
+    Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
   const getExportPayload = () => {
     return {
       meta: {
@@ -318,7 +324,7 @@ const Dashboard = () => {
     };
 
     const formatCurrencyFull = (value) => {
-      return `₱${Number(value).toLocaleString()}`;
+      return `₱${formatRevenueAmount(value)}`;
     };
 
     setStats([
@@ -593,8 +599,8 @@ const Dashboard = () => {
 
           return [
             s.label,
-            `Php ${Number(s.rawValue).toLocaleString()}`,
-            `Php ${Math.round(targetVal).toLocaleString()}`,
+            `Php ${formatRevenueAmount(s.rawValue)}`,
+            `Php ${formatRevenueAmount(targetVal)}`,
             progressText,
           ];
         }),
@@ -613,7 +619,7 @@ const Dashboard = () => {
         head: [["Module", "Revenue"]],
         body: payload.donut.map((d) => [
           d.name,
-          `Php ${d.value.toLocaleString()}`,
+          `Php ${formatRevenueAmount(d.value)}`,
         ]),
         headStyles: { fillColor: [16, 185, 129] },
         styles: { fontSize: 9 },
@@ -676,8 +682,8 @@ const Dashboard = () => {
 
         worksheet.addRow([
           s.label,
-          `Php ${Number(s.rawValue).toLocaleString()}`,
-          `Php ${Math.round(targetVal).toLocaleString()}`,
+          `Php ${formatRevenueAmount(s.rawValue)}`,
+          `Php ${formatRevenueAmount(targetVal)}`,
           `${percentReached}% of Target`,
         ]
         );
@@ -696,7 +702,7 @@ const Dashboard = () => {
       });
 
       payload.donut.forEach((d) => {
-        worksheet.addRow([d.name, `Php ${d.value.toLocaleString()}`]);
+        worksheet.addRow([d.name, `Php ${formatRevenueAmount(d.value)}`]);
       });
 
       // 5. BRANDED FOOTER (-1/8 height adjustment)

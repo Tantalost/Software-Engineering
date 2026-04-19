@@ -1558,7 +1558,7 @@ const handleSafeLogout = () => {
         "",
         "",
         "",
-        `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       ]);
       worksheet.addRow([]); 
 
@@ -1586,8 +1586,8 @@ const handleSafeLogout = () => {
           item.plateNo || "-",
           item.referenceNo || "-",
           item.type || "-",
-          `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-          `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+          `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         ]);
       });
 
@@ -1666,8 +1666,8 @@ const handleSafeLogout = () => {
         item.plateNo || "-",
         item.referenceNo || "-",
         item.type || "-",
-        `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
-        `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
+        `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, // Use Php
+        `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, // Use Php
       ]),
       headStyles: { fillColor: [16, 185, 129] }, 
       styles: { fontSize: 9, halign: "center" },

@@ -2192,7 +2192,7 @@ const TenantLease = () => {
                 '',
                 '',
                 '',
-                `Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             ]);
             revenueRow.getCell(9).alignment = { horizontal: 'right' };
             revenueRow.getCell(9).font = { bold: true };
