@@ -11,10 +11,12 @@ import {
   verifyResetOtp,       // New
   resetPassword,         // New
   generateNewRecoveryCodes,
-  getRecoveryCodeCount
+  getRecoveryCodeCount,
+  getDashboardTargets,
+  updateDashboardTargets,
 } from "../controllers/adminController.js";
 
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken, requireSuperAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -22,6 +24,8 @@ const router = express.Router();
 router.get("/", listAdmins);
 router.post("/", createAdmin);
 router.get('/recovery-codes/count', verifyToken, getRecoveryCodeCount);
+router.get('/dashboard-targets', verifyToken, getDashboardTargets);
+router.put('/dashboard-targets', verifyToken, requireSuperAdmin, updateDashboardTargets);
 router.delete("/:id", deleteAdmin);
 
 // Auth & OTP
