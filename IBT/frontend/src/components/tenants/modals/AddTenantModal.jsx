@@ -741,6 +741,12 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                   </div>
                 </div>
 
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs font-semibold text-slate-600">Others (Please specify)</label>
+                  <input type="text" className="p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Specify what the other fee is for..." value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} />
+                </div>
+              </div> 
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Total Additional Fees</label>
