@@ -193,6 +193,21 @@ const Archive = () => {
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every(item => {
+    const id = item._id || item.id;
+    return selectedIds.includes(id);
+  });
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const ids = paginatedData.map(item => item._id || item.id);
+      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+    } else {
+      const pageIds = paginatedData.map(item => item._id || item.id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
   const handleRestore = async () => {
     if (!restoreRow) return;
     try {
