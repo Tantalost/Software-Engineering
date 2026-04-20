@@ -47,7 +47,7 @@ const LandingPage = () => {
     },
     {
       text: 'Unified Terminal Services',
-      positionClass: 'top-47 right-1 sm:-right-30 animate-float-delay',
+      positionClass: 'top-47 right-1 sm:-right-26 animate-float-delay',
       toneClass: 'border-white/30 bg-white/15 text-slate-50'
     }
   ];
