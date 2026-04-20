@@ -966,11 +966,10 @@ const TenantLease = () => {
                 const ref = String(entry?.referenceNo || "").trim().toLowerCase();
                 const coverageEnd = toValidDate(entry?.coverageEndDate);
 
-                const looksInitial = ref === "initial payment" || ref.includes("initial");
-                const paidBeforeBilling = billingStartDate ? paidAt < billingStartDate : false;
+                const looksInitial = ref === "initial payment";
                 const coverageBeforeBilling = billingStartDate && coverageEnd ? coverageEnd <= billingStartDate : false;
 
-                if (looksInitial || paidBeforeBilling || coverageBeforeBilling) {
+                if (looksInitial || coverageBeforeBilling) {
                     advancePayments.push(entry);
                     return;
                 }
@@ -2668,6 +2667,7 @@ const TenantLease = () => {
                         contactno: t.contactNo,
                         startdate: formatDate(t.StartDateTime),
                         duedate: formatDate(t.DueDateTime || t.EndDateTime),
+                        status: t.status || "-",
                         reportstate: isDeleteRequested ? (
                             <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">Delete Requested</span>
                         ) : isSubmitted ? (
