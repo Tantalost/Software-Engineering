@@ -3,7 +3,29 @@ import crypto from "crypto";
 import Admin from "../models/Admin.js";
 import jwt from "jsonwebtoken";
 import PasswordReset from "../models/PasswordReset.js";
+import Settings from "../models/Settings.js";
 import sendEmail from "../utils/sendEmail.js";
+
+const DASHBOARD_TARGETS_KEY = "dashboardRevenueTargets";
+const DEFAULT_DASHBOARD_TARGETS = Object.freeze({
+  tickets: 5000,
+  bus: 4000,
+  tenants: 10000,
+  parking: 3000,
+});
+
+const toNonNegativeNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return parsed;
+};
+
+const normalizeDashboardTargets = (value = {}) => ({
+  tickets: toNonNegativeNumber(value.tickets, DEFAULT_DASHBOARD_TARGETS.tickets),
+  bus: toNonNegativeNumber(value.bus, DEFAULT_DASHBOARD_TARGETS.bus),
+  tenants: toNonNegativeNumber(value.tenants, DEFAULT_DASHBOARD_TARGETS.tenants),
+  parking: toNonNegativeNumber(value.parking, DEFAULT_DASHBOARD_TARGETS.parking),
+});
 
 const getDeviceFingerprint = (req) => {
   let rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown-ip';
@@ -138,6 +160,45 @@ export const listAdmins = async (_req, res) => {
     return res.json(admins.map(sanitizeAdmin));
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch admins." });
+  }
+};
+
+export const getDashboardTargets = async (_req, res) => {
+  try {
+    const setting = await Settings.findOne({ key: DASHBOARD_TARGETS_KEY });
+    const targets = normalizeDashboardTargets(
+      setting && setting.value && typeof setting.value === "object"
+        ? setting.value
+        : {},
+    );
+
+    return res.status(200).json({ targets });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch dashboard targets." });
+  }
+};
+
+export const updateDashboardTargets = async (req, res) => {
+  try {
+    const incomingTargets =
+      req.body && req.body.targets && typeof req.body.targets === "object"
+        ? req.body.targets
+        : req.body;
+
+    const targets = normalizeDashboardTargets(incomingTargets || {});
+
+    await Settings.findOneAndUpdate(
+      { key: DASHBOARD_TARGETS_KEY },
+      { key: DASHBOARD_TARGETS_KEY, value: targets },
+      { upsert: true, new: true },
+    );
+
+    return res.status(200).json({
+      message: "Dashboard targets saved successfully.",
+      targets,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update dashboard targets." });
   }
 };
 

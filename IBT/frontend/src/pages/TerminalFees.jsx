@@ -529,11 +529,9 @@ const TerminalFees = () => {
         }
       };
 
-      const shiftStart = new Date(sessionStartedAt);
-      const shiftRecords = records.filter((item) => {
-        const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
-        return createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= shiftStart;
-      });
+      const shiftRecords = records.filter(
+        (item) => !Boolean(item?.submitted) && !Boolean(item?.isArchived),
+      );
 
       const formattedData = shiftRecords.map((item) => {
         const {
@@ -617,6 +615,7 @@ const TerminalFees = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionStartedAt,
+          includeAllPending: true,
           reportId: report?._id || report?.id || null,
         }),
       });
@@ -643,12 +642,10 @@ const TerminalFees = () => {
   };
 
   const shiftRecords = useMemo(() => {
-    const shiftStart = new Date(sessionStartedAt);
-    return records.filter((item) => {
-      const createdAt = item?.createdAt ? new Date(item.createdAt) : null;
-      return createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= shiftStart;
-    });
-  }, [records, sessionStartedAt]);
+    return records.filter(
+      (item) => !Boolean(item?.submitted) && !Boolean(item?.isArchived),
+    );
+  }, [records]);
 
   const hasPendingTerminalShiftReport = useMemo(() => {
     if (role === "superadmin") return false;

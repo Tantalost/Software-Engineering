@@ -16,10 +16,43 @@ import DashboardToolbar from "../components/dashboard/DashboardToolbar";
 import TargetModal from "../components/dashboard/TargetModal";
 import NotificationToast from "../components/common/NotificationToast";
 
+const DEFAULT_DASHBOARD_TARGETS = {
+  tickets: 5000,
+  bus: 4000,
+  tenants: 10000,
+  parking: 3000,
+};
+
+const DASHBOARD_TARGETS_STORAGE_KEY = "dashboardTargets";
+
+const toSafeTargetNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return parsed;
+};
+
+const normalizeDashboardTargets = (value = {}) => ({
+  tickets: toSafeTargetNumber(value.tickets, DEFAULT_DASHBOARD_TARGETS.tickets),
+  bus: toSafeTargetNumber(value.bus, DEFAULT_DASHBOARD_TARGETS.bus),
+  tenants: toSafeTargetNumber(value.tenants, DEFAULT_DASHBOARD_TARGETS.tenants),
+  parking: toSafeTargetNumber(value.parking, DEFAULT_DASHBOARD_TARGETS.parking),
+});
+
+const readDashboardTargetsFromLocalStorage = () => {
+  try {
+    const saved = localStorage.getItem(DASHBOARD_TARGETS_STORAGE_KEY);
+    if (!saved) return { ...DEFAULT_DASHBOARD_TARGETS };
+    return normalizeDashboardTargets(JSON.parse(saved));
+  } catch (_error) {
+    return { ...DEFAULT_DASHBOARD_TARGETS };
+  }
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const role = localStorage.getItem("authRole") || "superadmin";
   const isSuperAdmin = role === "superadmin";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
 
   const [rawData, setRawData] = useState({
     tickets: [],
@@ -38,17 +71,7 @@ const Dashboard = () => {
   const [showCustomRange, setShowCustomRange] = useState(false);
 
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
-  const [targets, setTargets] = useState(() => {
-    const saved = localStorage.getItem("dashboardTargets");
-    return saved
-      ? JSON.parse(saved)
-      : {
-        tickets: 5000,
-        bus: 4000,
-        tenants: 10000,
-        parking: 3000,
-      };
-  });
+  const [targets, setTargets] = useState(() => readDashboardTargetsFromLocalStorage());
 
   const [toast, setToast] = useState({
     isOpen: false,
@@ -63,21 +86,38 @@ const Dashboard = () => {
     }, 3000);
   };
 
-  const handleSaveTargets = (newTargets) => {
-    setTargets(newTargets);
-    localStorage.setItem("dashboardTargets", JSON.stringify(newTargets));
+  const handleSaveTargets = async (newTargets) => {
+    const normalizedTargets = normalizeDashboardTargets(newTargets);
+    const token = localStorage.getItem("authToken");
 
-    setToast({
-      isOpen: true,
-      message: "Revenue targets saved successfully",
-      type: "success",
-    });
+    try {
+      if (token) {
+        const response = await fetch(`${API_URL}/api/admins/dashboard-targets`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ targets: normalizedTargets }),
+        });
 
-    setIsTargetModalOpen(false);
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.message || "Failed to save dashboard targets.");
+        }
+      }
 
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, isOpen: false }));
-    }, 3000);
+      setTargets(normalizedTargets);
+      localStorage.setItem(
+        DASHBOARD_TARGETS_STORAGE_KEY,
+        JSON.stringify(normalizedTargets),
+      );
+      showToast("success", "Revenue targets saved successfully");
+      setIsTargetModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save dashboard targets:", error);
+      showToast("error", error.message || "Failed to save dashboard targets.");
+    }
   };
 
   const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -438,7 +478,36 @@ const Dashboard = () => {
     return false;
   };
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:10000";
+  const fetchDashboardTargets = async () => {
+    if (!isSuperAdmin) return;
+
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/admins/dashboard-targets`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard targets.");
+      }
+
+      const payload = await response.json();
+      const fetchedTargets = normalizeDashboardTargets(payload?.targets || {});
+      setTargets(fetchedTargets);
+      localStorage.setItem(
+        DASHBOARD_TARGETS_STORAGE_KEY,
+        JSON.stringify(fetchedTargets),
+      );
+    } catch (error) {
+      console.error("Failed to fetch dashboard targets:", error);
+      const fallbackTargets = readDashboardTargetsFromLocalStorage();
+      setTargets(fallbackTargets);
+    }
+  };
 
  const fetchDashboardData = async () => {
     try {
@@ -476,6 +545,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchDashboardTargets();
   }, []);
 
   const handleReportClick = (reportId) => {
