@@ -647,7 +647,7 @@ const ManageCompaniesModal = ({
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+          <div className="no-scrollbar flex-1 overflow-y-auto p-3 space-y-2.5">
             {companyData.map((company) => (
               <div
                 key={company._id}
@@ -718,7 +718,7 @@ const ManageCompaniesModal = ({
           </div>
 
           {activeCompany ? (
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="no-scrollbar flex-1 overflow-y-auto">
               <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-col gap-4 shrink-0">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div>
@@ -843,7 +843,7 @@ const ManageCompaniesModal = ({
                     One bus can run several trips per day — add each arrival
                     time.
                   </p>
-                  <div className="mt-2 space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                  <div className="no-scrollbar mt-2 space-y-2 max-h-[180px] overflow-y-auto pr-1">
                     {scheduleSlots.map((slot, idx) => (
                       <div
                         key={idx}
@@ -3440,6 +3440,7 @@ const BusTrips = () => {
   return (
     <Layout
       title="Bus Trips Management"
+      hideMainScrollbar={true}
       topbarProps={{
         logoutGuard:
           role === "bus"
@@ -3649,7 +3650,7 @@ const BusTrips = () => {
           </div>
 
           <div className="w-full pt-4 mt-2 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-            <div className="flex-1 overflow-x-auto w-full">
+            <div className="no-scrollbar flex-1 overflow-x-auto w-full">
               <BusTripFilters
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -3823,8 +3824,8 @@ const BusTrips = () => {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-lg max-h-[min(88vh,800px)] my-4 sm:my-8 overflow-y-auto rounded-xl bg-white p-5 sm:p-6 shadow-xl animate-in fade-in zoom-in-95">
+        <div className="no-scrollbar fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto">
+          <div className="no-scrollbar w-full max-w-lg max-h-[min(88vh,800px)] my-4 sm:my-8 overflow-y-auto rounded-xl bg-white p-5 sm:p-6 shadow-xl animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-slate-800">
                 Add New Bus Trip
@@ -4157,7 +4158,7 @@ const BusTrips = () => {
             ) : allMissedBusesDisplay.length === 0 ? (
               <div className="py-10 text-center text-slate-500">No missed buses for this operating day.</div>
             ) : (
-              <div className="max-h-[60vh] overflow-auto">
+              <div className="no-scrollbar max-h-[60vh] overflow-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
                     <tr>
@@ -4243,7 +4244,7 @@ const BusTrips = () => {
             ) : previousShiftReports.length === 0 ? (
               <div className="py-10 text-center text-slate-500">No previous shift reports found for this Bus Admin.</div>
             ) : (
-              <div className="max-h-[65vh] overflow-auto">
+              <div className="no-scrollbar max-h-[65vh] overflow-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
                     <tr>
@@ -4382,6 +4383,17 @@ const BusTrips = () => {
           })
         }
       />
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
 
       {viewRow && (
         <ViewModal

@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "../layout/sidebar/Sidebar";
 import Topbar from "./Topbar";
 
-const Layout = ({ title, children, topbarProps = {} }) => {
+const Layout = ({
+  title,
+  children,
+  topbarProps = {},
+  hideMainScrollbar = false,
+}) => {
   const [sidebarExpanded, setSidebarExpanded] = useState(() => {
     const saved = localStorage.getItem("sidebarExpanded");
     return saved === "false" ? false : true;
@@ -37,7 +42,7 @@ const Layout = ({ title, children, topbarProps = {} }) => {
             onMobileClose={() => setMobileOpen(false)} 
         />
       </div>
-      <div className="flex-1 overflow-auto relative z-0">
+      <div className={`flex-1 overflow-auto relative z-0 ${hideMainScrollbar ? "no-scrollbar" : ""}`}>
         <Topbar
           title={title}
           onMenuClick={() => setMobileOpen(true)}
