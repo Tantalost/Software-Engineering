@@ -687,7 +687,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Rental Fee (x{formData.slotNo ? formData.slotNo.split(',').length : 1})</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={rentAmount} /></div>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="text" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={Number(rentAmount).toFixed(2)} /></div>
                   {formData.tenantType === "Night Market" && (
                     <p className="text-[11px] text-slate-500 mt-1">
                       First due uses Base Price x remaining days to week-end. Weekly rent after this cycle: ₱{Number(defaultNightWeeklyRent || 0).toLocaleString()} per slot.
@@ -723,11 +723,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Total Additional Fees</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={utilityAmount} /></div>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="text" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700" value={Number(utilityAmount).toFixed(2)} /></div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Total Amount Due</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold" value={totalAmount} /></div>
+                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="text" readOnly className="pl-8 p-2.5 w-full rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold" value={Number(totalAmount).toFixed(2)} /></div>
                 </div>
               </div>
             </section>

@@ -1667,7 +1667,7 @@ const TerminalFees = () => {
             { label: "Passenger Type", value: viewRow.passengerType },
             { label: "Time", value: viewRow.time },
             { label: "Date", value: viewRow.date },
-            { label: "Price", value: viewRow.price },
+            { label: "Price", value: `₱${Number(viewRow.price || 0).toFixed(2)}` },
           ]}
           onClose={() => setViewRow(null)}
         />
@@ -1902,13 +1902,13 @@ const TerminalFees = () => {
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
-                <div>
+               <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
                     Price
                   </label>
                   <input
-                    type="number"
-                    value={newTicket.price}
+                    type="text" 
+                    value={Number(newTicket.price).toFixed(2)}
                     disabled
                     className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-semibold"
                   />
@@ -1993,12 +1993,13 @@ const TerminalFees = () => {
                   Price
                 </label>
                 <input
-                  type="number"
-                  value={editRow.price ?? 0}
+                  type="text"
+                  value={Number(editRow.price ?? 0).toFixed(2)}
                   disabled
                   className="w-full bg-slate-50 border border-slate-300 px-3 py-2 rounded-lg font-semibold"
                 />
               </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
                   Date
