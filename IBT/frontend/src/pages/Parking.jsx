@@ -2619,12 +2619,12 @@ const handleSafeLogout = () => {
               <Field label="Type" value={viewRow.type} />
               <Field
                 label="Base Rate"
-                value={viewRow.baseRate ? `₱${viewRow.baseRate}` : "N/A"}
+                value={viewRow.baseRate ? `₱${Number(viewRow.baseRate).toFixed(2)}` : "N/A"}
               />
               <Field
                 label="Final Price"
                 value={
-                  viewRow.finalPrice ? `₱${viewRow.finalPrice}` : "Pending"
+                  viewRow.finalPrice ? `₱${Number(viewRow.finalPrice).toFixed(2)}` : "Pending"
                 }
               />
               <Field

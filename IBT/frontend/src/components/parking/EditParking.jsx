@@ -27,7 +27,7 @@ const EditParking = ({ row, onClose, onSave }) => {
     ticketNo: row.ticketNo || "",
     plateNo: row.plateNo || "",
     type: row.type,
-    baseRate: parsePrice(row.baseRate || row.price),
+    baseRate: parsePrice(row.baseRate || row.price).toFixed(2),
     date: extractDate(row.timeIn),
     timeInVal: extractTime(row.timeIn),
     timeOutVal: extractTime(row.timeOut),
@@ -37,12 +37,11 @@ const EditParking = ({ row, onClose, onSave }) => {
 
   const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
 
-  /* AUTO UPDATE RATE WHEN VEHICLE TYPE CHANGES */
   useEffect(() => {
     if (form.type === "Car") {
-      set("baseRate", CAR_RATE);
+      set("baseRate", Number(CAR_RATE).toFixed(2));
     } else {
-      set("baseRate", MOTOR_RATE);
+      set("baseRate", Number(MOTOR_RATE).toFixed(2));
     }
   }, [form.type]);
 
@@ -108,8 +107,8 @@ const EditParking = ({ row, onClose, onSave }) => {
             type="text"
             value={form.baseRate}
             onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, "");
-              set("baseRate", Number(value));
+              const value = e.target.value.replace(/[^0-9.]/g, "");
+              set("baseRate", value);
             }}
           />
 
