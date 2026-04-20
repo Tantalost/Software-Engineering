@@ -64,6 +64,34 @@ const normalizeComparableContact = (value: unknown): string => {
   return digits;
 };
 
+const APPLICATION_IMAGE_FIELDS = new Set<keyof FileState>([
+  'permit',
+  'validId',
+  'clearance',
+  'communityTax',
+  'policeClearance',
+]);
+
+const APPLICATION_ALLOWED_IMAGE_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+]);
+
+const hasAllowedApplicationImageExtension = (fileNameOrUri: string) => {
+  const normalized = String(fileNameOrUri || '').toLowerCase();
+  return normalized.endsWith('.png') || normalized.endsWith('.jpg') || normalized.endsWith('.jpeg');
+};
+
+const isAllowedApplicationImage = (asset: DocumentPicker.DocumentPickerAsset) => {
+  const mimeType = String(asset?.mimeType || asset?.type || '').toLowerCase();
+  if (APPLICATION_ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+    return true;
+  }
+
+  return hasAllowedApplicationImageExtension(asset?.name || asset?.uri || '');
+};
+
 export default function StallsPage() {
 
   const [showLogin, setShowLogin] = useState(false);
@@ -490,15 +518,22 @@ export default function StallsPage() {
 
       if (fileType === 'contract') {
         docType = 'application/pdf';
-      } else if (fileType === 'communityTax' || fileType === 'policeClearance') {
-        docType = ['image/*', 'application/pdf'];
+      } else if (APPLICATION_IMAGE_FIELDS.has(fileType)) {
+        docType = ['image/png', 'image/jpeg'];
       }
 
       const result = await DocumentPicker.getDocumentAsync({ type: docType, copyToCacheDirectory: true });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedAsset = result.assets[0];
+
+        if (APPLICATION_IMAGE_FIELDS.has(fileType) && !isAllowedApplicationImage(selectedAsset)) {
+          Alert.alert('Invalid File Type', 'Only PNG and JPEG files are allowed for tenant application requirements.');
+          return;
+        }
+
         setUploadProgress(prev => ({ ...prev, [fileType]: 0.1 }));
-        setFiles(prev => ({ ...prev, [fileType]: result.assets![0] }));
+        setFiles(prev => ({ ...prev, [fileType]: selectedAsset }));
 
         let currentProgress = 0.1;
         const interval = setInterval(() => {

@@ -7,6 +7,7 @@ const BusTripFilters = ({
   uniqueCompanies,
   selectedBusType,
   setSelectedBusType,
+  busTypeOptions = [],
   selectedStatus,
   setSelectedStatus,
 }) => {
@@ -40,8 +41,11 @@ const BusTripFilters = ({
           className="w-full appearance-none h-[42px] pl-3 pr-12 border border-slate-200 rounded-xl bg-white text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 cursor-pointer transition-all"
         >
           <option value="">All Types</option>
-          <option value="Regular">Regular</option>
-          <option value="Aircon">Aircon</option>
+          {busTypeOptions.map((busType) => (
+            <option key={busType} value={busType}>
+              {busType}
+            </option>
+          ))}
         </select>
         <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">
           <div className="border-l border-slate-200 pl-2 h-5 flex items-center justify-center">

@@ -1,5 +1,6 @@
 import BusTrip from "../models/BusTrips.js";
 import ScheduleNotArrival from "../models/ScheduleNotArrival.js";
+import { normalizeBusTypeForResponse } from "../utils/busTypeCompat.js";
 
 function localDateKey(d = new Date()) {
   const y = d.getFullYear();
@@ -32,7 +33,9 @@ export const getBusRoutes = async (req, res) => {
   try {
     const trips = await BusTrip.find({
       $or: [{ isArchived: false }, { isArchived: { $exists: false } }],
-    }).sort({ date: 1, time: 1 });
+    })
+      .populate("busType", "name")
+      .sort({ date: 1, time: 1 });
 
     const dateKey = req.query.dateKey || localDateKey();
     const notArrivals = await ScheduleNotArrival.find({ dateKey }).lean();
@@ -66,7 +69,12 @@ export const getBusRoutes = async (req, res) => {
         price: 0,
       }));
 
-    res.json([...trips, ...synthetic]);
+    const normalizedTrips = trips.map((trip) => ({
+      ...trip.toObject(),
+      busType: normalizeBusTypeForResponse(trip.busType),
+    }));
+
+    res.json([...normalizedTrips, ...synthetic]);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

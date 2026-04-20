@@ -626,16 +626,7 @@ const TenantLease = () => {
         const matchesTab = activeTab === "permanent" ? (t.tenantType === "Permanent" || !t.tenantType) : t.tenantType === "Night Market";
         const matchesStatus = activeStatus === "All" || t.status.toLowerCase() === activeStatus.toLowerCase();
 
-        const tenantDate = t.StartDateTime ? new Date(t.StartDateTime) : null;
-        let matchesDateRange = false;
-
-        if (dateFilterType === "All") {
-            matchesDateRange = true;
-        } else if (tenantDate && !Number.isNaN(tenantDate.getTime())) {
-            matchesDateRange = tenantDate >= filterStart && tenantDate <= filterEnd;
-        }
-
-        return matchesSearch && matchesTab && matchesStatus && matchesDateRange;
+        return matchesSearch && matchesTab && matchesStatus;
     });
 
     const formatDate = (dateString) => {
@@ -668,8 +659,6 @@ const TenantLease = () => {
             }
         }
 
-        const countedTenantIds = new Set();
-
         slotLabels.forEach(slotLabel => {
             const tenant = records.find(r =>
                 (r.slotNo === slotLabel || r.slotno === slotLabel || (r.slotNo && r.slotNo.includes(slotLabel))) &&
@@ -678,19 +667,45 @@ const TenantLease = () => {
 
             if (tenant && tenant.status !== "Available") {
                 paid++;
-
-                const tenantId = tenant._id || tenant.id;
-                if (!countedTenantIds.has(tenantId)) {
-                    countedTenantIds.add(tenantId);
-                    revenue += (parseFloat(tenant.rentAmount) || 0) + (parseFloat(tenant.utilityAmount) || 0);
-                }
             } else {
                 available++;
             }
         });
 
+        const isWithinSelectedRange = (value) => {
+            if (dateFilterType === "All") return true;
+            if (!filterStart || !filterEnd || !value) return false;
+
+            const paidAt = new Date(value);
+            if (Number.isNaN(paidAt.getTime())) return false;
+
+            return paidAt >= filterStart && paidAt <= filterEnd;
+        };
+
+        records.forEach((tenant) => {
+            const tenantType = tenant.tenantType || "Permanent";
+            const matchesTab =
+                activeTab === "permanent"
+                    ? tenantType === "Permanent"
+                    : tenantType === "Night Market";
+
+            if (!matchesTab) return;
+
+            const payments = Array.isArray(tenant.paymentHistory)
+                ? tenant.paymentHistory
+                : [];
+
+            payments.forEach((payment) => {
+                const amount = Number(payment?.amount) || 0;
+                if (amount <= 0) return;
+                if (!isWithinSelectedRange(payment?.datePaid)) return;
+
+                revenue += amount;
+            });
+        });
+
         return { availableSlots: available, nonAvailableSlots: paid, totalSlots: totalSlots, totalRevenue: revenue };
-    }, [records, activeTab]);
+    }, [records, activeTab, dateFilterType, filterStart, filterEnd]);
 
 
    const { dateRange, filteredPayments } = useMemo(() => {
@@ -2129,21 +2144,58 @@ const TenantLease = () => {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Tenant Lease Report");
 
+            worksheet.columns = [
+                { width: 12 },
+                { width: 30 },
+                { width: 25 },
+                { width: 16 },
+                { width: 16 },
+                { width: 14 },
+                { width: 14 },
+                { width: 17 },
+                { width: 17 },
+            ];
+
           
             worksheet.getRow(1).height = 35;
-            await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:G4');
+            await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:I4');
 
            
           
-            worksheet.mergeCells('A6:J6');
+            worksheet.mergeCells('A6:I6');
             const titleCell = worksheet.getCell('A6');
             titleCell.value = 'TENANTS AND LEASE REPORTS';
             titleCell.font = { bold: true, size: 14, color: { argb: 'FFDC2626' } };
             titleCell.alignment = { horizontal: 'center' };
 
             worksheet.addRow([]); 
-            worksheet.addRow([`Date: ${new Date().toLocaleDateString()}`, '', '', '', '', '', '', '', '', `No. of Payments: ${filtered.length}`]);
-            worksheet.addRow([`Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '']);
+            const metadataRow = worksheet.addRow([
+                `Date: ${new Date().toLocaleDateString()}`,
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                `No. of Payments: ${filtered.length}`,
+            ]);
+            metadataRow.getCell(1).alignment = { horizontal: 'left' };
+            metadataRow.getCell(9).alignment = { horizontal: 'right' };
+
+            const revenueRow = worksheet.addRow([
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                `Revenue: Php ${mapStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            ]);
+            revenueRow.getCell(9).alignment = { horizontal: 'right' };
+            revenueRow.getCell(9).font = { bold: true };
             worksheet.addRow([]);
 
            
@@ -2167,7 +2219,7 @@ const TenantLease = () => {
                 const isPermanentTenant = (t.tenantType || t.floor || "Permanent") === "Permanent";
                 const electricity = isPermanentTenant ? Number(feeBreakdown.electricity || 0) : 0;
 
-                worksheet.addRow([
+                const dataRow = worksheet.addRow([
                     t.slotNo || "-",
                     t.tenantName || t.name || "-",
                     t.email || "-",
@@ -2178,20 +2230,20 @@ const TenantLease = () => {
                     `Php ${(t.utilityAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                     `Php ${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                 ]);
+
+                dataRow.getCell(1).alignment = { horizontal: 'center' };
+                dataRow.getCell(2).alignment = { horizontal: 'left' };
+                dataRow.getCell(3).alignment = { horizontal: 'left' };
+                dataRow.getCell(4).alignment = { horizontal: 'left' };
+                for (let idx = 5; idx <= 9; idx += 1) {
+                    dataRow.getCell(idx).alignment = { horizontal: 'right' };
+                }
             });
 
             const lastRowNumber = worksheet.lastRow.number + 2;
             worksheet.getRow(lastRowNumber).height = 52.5;
           
-            await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:J${lastRowNumber + 3}`);
-
-          
-            worksheet.columns = [
-                { width: 12 }, { width: 30 }, { width: 25 }, { width: 15 }, 
-                { width: 15 }, 
-                { width: 12 }, { width: 12 }, 
-                { width: 15 }, { width: 15 } 
-            ];
+            await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:I${lastRowNumber + 3}`);
 
           
             const buffer = await workbook.xlsx.writeBuffer();
@@ -2665,9 +2717,15 @@ const TenantLease = () => {
                         const endDate = (isPaused && fullRecord.lastPausedDate) 
                             ? new Date(fullRecord.lastPausedDate) 
                             : new Date();
-                            
-                        const rawMs = Math.abs(endDate - new Date(fullRecord.operationStartDate));
-                        const rawDays = rawMs / msPerDay;
+
+                        const startDate = new Date(fullRecord.operationStartDate);
+                        const startOfStart = new Date(startDate);
+                        startOfStart.setHours(0, 0, 0, 0);
+                        const startOfEnd = new Date(endDate);
+                        startOfEnd.setHours(0, 0, 0, 0);
+
+                        const rawMs = startOfEnd.getTime() - startOfStart.getTime();
+                        const rawDays = Math.max(0, rawMs / msPerDay);
                         const totalPaused = fullRecord.totalPausedDays || 0;
                         
                         const activeDays = Math.floor(rawDays - totalPaused);

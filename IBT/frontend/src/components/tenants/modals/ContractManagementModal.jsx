@@ -219,7 +219,7 @@ const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSa
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="w-full max-w-[96vw] xl:max-w-7xl rounded-2xl bg-white shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
             
@@ -248,8 +248,8 @@ const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSa
           </button>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 p-4 overflow-y-auto">
-          <section className="xl:col-span-3 rounded-xl border border-slate-200 bg-white">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 overflow-y-auto">
+          <section className="xl:col-span-8 rounded-xl border border-slate-200 bg-white">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <h4 className="font-bold text-slate-700">Existing Contracts</h4>
               <button
@@ -270,16 +270,16 @@ const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSa
               ) : contracts.length === 0 ? (
                 <div className="p-6 text-sm text-slate-500">No contracts yet for this tenant.</div>
               ) : (
-                <table className="w-full text-sm">
+                <table className="min-w-[980px] w-full text-sm">
                   <thead className="bg-slate-50 text-slate-600 sticky top-0">
                     <tr>
-                      <th className="text-left px-3 py-2">Type</th>
-                      <th className="text-left px-3 py-2">Duration</th>
-                      <th className="text-left px-3 py-2">Period</th>
-                      <th className="text-left px-3 py-2">Renewal Watch</th>
-                      <th className="text-left px-3 py-2">Status</th>
-                      <th className="text-left px-3 py-2">Doc</th>
-                      <th className="text-right px-3 py-2">Actions</th>
+                      <th className="text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">Type</th>
+                      <th className="text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">Duration</th>
+                      <th className="text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">Period</th>
+                      <th className="text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">Renewal Watch</th>
+                      <th className="text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">Status</th>
+                      <th className="text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">Document</th>
+                      <th className="text-right px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -289,15 +289,18 @@ const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSa
                       const renewalMeta = getRenewalCountdown(contract.endDate);
 
                       return (
-                        <tr key={contract._id} className="border-t border-slate-100">
-                          <td className="px-3 py-2 font-semibold text-slate-700">{displayContractType(contract.contractType)}</td>
-                          <td className="px-3 py-2 text-slate-600">
+                        <tr key={contract._id} className="border-t border-slate-100 hover:bg-slate-50/70">
+                          <td className="px-4 py-2.5 font-semibold text-slate-700 whitespace-nowrap">{displayContractType(contract.contractType)}</td>
+                          <td className="px-4 py-2.5 text-slate-600 whitespace-nowrap">
                             {(contract.duration?.years || 0)}y {(contract.duration?.months || 0)}m
                           </td>
-                          <td className="px-3 py-2 text-slate-600">
-                            {formatDate(contract.startDate)} - {formatDate(contract.endDate)}
+                          <td className="px-4 py-2.5 text-slate-600">
+                            <div className="min-w-[190px]">
+                              <div className="whitespace-nowrap">{formatDate(contract.startDate)}</div>
+                              <div className="text-xs text-slate-400">to {formatDate(contract.endDate)}</div>
+                            </div>
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-4 py-2.5 whitespace-nowrap">
                             {!isActive || renewalMeta.daysLeft === null ? (
                               <span className="text-slate-400">-</span>
                             ) : renewalMeta.isExpired ? (
@@ -314,12 +317,12 @@ const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSa
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-4 py-2.5 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded-full text-[11px] font-bold ${isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                               {isActive ? "ACTIVE" : (contract.status || "inactive").toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-4 py-2.5 whitespace-nowrap">
                             {docUrl ? (
                               <a
                                 href={docUrl}
@@ -333,7 +336,7 @@ const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSa
                               <span className="text-slate-400">-</span>
                             )}
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-4 py-2.5">
                             <div className="flex items-center justify-end gap-1">
                               <button
                                 className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
@@ -375,7 +378,7 @@ const ContractManagementModal = ({ isOpen, onClose, onBack, tenant, apiUrl, onSa
             </div>
           </section>
 
-          <section className="xl:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <section className="xl:col-span-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <h4 className="font-bold text-slate-700 mb-3">{editingContractId ? "Edit Contract" : "Select a Contract"}</h4>
 
             {!editingContractId ? (

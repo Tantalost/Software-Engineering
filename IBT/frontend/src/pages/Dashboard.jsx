@@ -18,6 +18,8 @@ import NotificationToast from "../components/common/NotificationToast";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const role = localStorage.getItem("authRole") || "superadmin";
+  const isSuperAdmin = role === "superadmin";
 
   const [rawData, setRawData] = useState({
     tickets: [],
@@ -29,6 +31,8 @@ const Dashboard = () => {
 
   const [filterDate, setFilterDate] = useState(new Date());
   const [filterView, setFilterView] = useState("week");
+  const [exportDateFrom, setExportDateFrom] = useState("");
+  const [exportDateTo, setExportDateTo] = useState("");
 
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [targets, setTargets] = useState(() => {
@@ -48,6 +52,13 @@ const Dashboard = () => {
     message: "",
     type: "success",
   });
+
+  const showToast = (type, message) => {
+    setToast({ isOpen: true, message, type });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, isOpen: false }));
+    }, 3000);
+  };
 
   const handleSaveTargets = (newTargets) => {
     setTargets(newTargets);
@@ -151,25 +162,263 @@ const Dashboard = () => {
     return `₱${value.toLocaleString()}`;
   };
 
+  const formatRevenueAmount = (value) =>
+    Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const parseFlexibleDate = (value) => {
+    if (value === null || value === undefined || value === "") return null;
+
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : new Date(value);
+    }
+
+    if (typeof value === "number") {
+      const parsedFromNumber = new Date(value);
+      return Number.isNaN(parsedFromNumber.getTime()) ? null : parsedFromNumber;
+    }
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const ymdMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymdMatch) {
+      const [, year, month, day] = ymdMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const dmyMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmyMatch) {
+      const [, firstPart, secondPart, yearText] = dmyMatch;
+      const first = Number(firstPart);
+      const second = Number(secondPart);
+      const year = Number(yearText);
+
+      // Disambiguate safely and avoid JS month overflow (e.g. 19 as month).
+      // If one side cannot be a month, infer format from the valid side.
+      if (first > 12 && second <= 12) {
+        return new Date(year, second - 1, first); // dd/mm/yyyy
+      }
+      if (second > 12 && first <= 12) {
+        return new Date(year, first - 1, second); // mm/dd/yyyy
+      }
+
+      // Ambiguous values (both <= 12): prefer month/day for backend data,
+      // then fallback to day/month if month/day is invalid.
+      const asMdy = new Date(year, first - 1, second);
+      if (!Number.isNaN(asMdy.getTime())) return asMdy;
+
+      const asDmy = new Date(year, second - 1, first);
+      return Number.isNaN(asDmy.getTime()) ? null : asDmy;
+    }
+
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const parseDateStart = (value) => {
+    const parsed = parseFlexibleDate(value);
+    if (!parsed) return null;
+
+    const scoped = new Date(parsed);
+    scoped.setHours(0, 0, 0, 0);
+    return scoped;
+  };
+
+  const parseDateEnd = (value) => {
+    const parsed = parseFlexibleDate(value);
+    if (!parsed) return null;
+
+    const scoped = new Date(parsed);
+    scoped.setHours(23, 59, 59, 999);
+    return scoped;
+  };
+
+  const isCustomExportRangeActive =
+    isSuperAdmin && Boolean(exportDateFrom || exportDateTo);
+
+  const hasInvalidCustomExportRange = () => {
+    if (!isCustomExportRangeActive) return false;
+    const start = parseDateStart(exportDateFrom);
+    const end = parseDateEnd(exportDateTo);
+    return Boolean(start && end && start > end);
+  };
+
+  const isInsideCustomExportRange = (dateValue) => {
+    if (!isCustomExportRangeActive) return true;
+
+    const candidate = parseFlexibleDate(dateValue);
+    if (!candidate) return false;
+
+    const start = parseDateStart(exportDateFrom);
+    const end = parseDateEnd(exportDateTo);
+
+    if (start && candidate < start) return false;
+    if (end && candidate > end) return false;
+    return true;
+  };
+
+  const getCustomExportRangeLabel = () => {
+    if (!isCustomExportRangeActive) return "";
+
+    const formatDate = (value) => {
+      if (!value) return "-";
+      const parsed = parseDateStart(value);
+      if (!parsed) return "-";
+      return parsed.toLocaleDateString();
+    };
+
+    return `${formatDate(exportDateFrom)} to ${formatDate(exportDateTo)}`;
+  };
+
+  const getTargetForExport = (moduleKey) => {
+    const baseMonthlyTarget = targets[moduleKey] || 0;
+
+    if (isCustomExportRangeActive && exportDateFrom && exportDateTo) {
+      const start = parseDateStart(exportDateFrom);
+      const end = parseDateEnd(exportDateTo);
+
+      if (start && end && start <= end) {
+        const millisecondsPerDay = 24 * 60 * 60 * 1000;
+        const dayCount = Math.floor((end - start) / millisecondsPerDay) + 1;
+        return (baseMonthlyTarget / 30) * dayCount;
+      }
+    }
+
+    if (filterView === "day") return baseMonthlyTarget / 30;
+    if (filterView === "week") return baseMonthlyTarget / 4;
+    if (filterView === "month") return baseMonthlyTarget;
+    if (filterView === "year") return baseMonthlyTarget * 12;
+    return 0;
+  };
+
+  const getExportScopedData = () => {
+    if (!isCustomExportRangeActive) {
+      return {
+        tickets: rawData.tickets.filter((i) =>
+          isDateInView(getItemDate(i), filterView, filterDate),
+        ),
+        bus: rawData.bus.filter((i) =>
+          isDateInView(getItemDate(i), filterView, filterDate),
+        ),
+        tenants: rawData.tenants.filter((i) =>
+          isDateInView(getItemDate(i), filterView, filterDate),
+        ),
+        parking: rawData.parking.filter((i) =>
+          isDateInView(getItemDate(i), filterView, filterDate),
+        ),
+        reports: rawData.reports.filter((r) =>
+          isDateInView(r.createdAt || r.date, filterView, filterDate),
+        ),
+      };
+    }
+
+    return {
+      tickets: rawData.tickets.filter((i) =>
+        isInsideCustomExportRange(getItemDate(i)),
+      ),
+      bus: rawData.bus.filter((i) => isInsideCustomExportRange(getItemDate(i))),
+      tenants: rawData.tenants.filter((i) =>
+        isInsideCustomExportRange(getItemDate(i)),
+      ),
+      parking: rawData.parking.filter((i) =>
+        isInsideCustomExportRange(getItemDate(i)),
+      ),
+      reports: rawData.reports.filter((r) =>
+        isInsideCustomExportRange(r.createdAt || r.date),
+      ),
+    };
+  };
+
   const getExportPayload = () => {
+    const scoped = getExportScopedData();
+    const formatCurrencyFull = (value) => `₱${formatRevenueAmount(value)}`;
+
+    const ticketsRevenue = calculateRevenue(getPaidItems(scoped.tickets, "tickets"));
+    const busRevenue = calculateRevenue(getPaidItems(scoped.bus, "bus"));
+    const parkingRevenue = calculateRevenue(getPaidItems(scoped.parking, "parking"));
+    const tenantsRevenue = scoped.tenants.reduce((sum, tenant) => {
+      const rent = parseFloat(tenant.rentAmount) || 0;
+      const util = parseFloat(tenant.utilityAmount) || 0;
+      return sum + rent + util;
+    }, 0);
+
+    const exportStats = [
+      {
+        label: "Tickets Revenue",
+        rawValue: ticketsRevenue,
+        color: "red",
+      },
+      {
+        label: "Bus Revenue",
+        rawValue: busRevenue,
+        color: "yellow",
+      },
+      {
+        label: "Tenants Revenue",
+        rawValue: tenantsRevenue,
+        color: "green",
+      },
+      {
+        label: "Parking Revenue",
+        rawValue: parkingRevenue,
+        color: "blue",
+      },
+    ].map((item) => {
+      const moduleKey = item.label.toLowerCase().split(" ")[0];
+      const targetRevenue = getTargetForExport(moduleKey);
+      const percent = targetRevenue > 0 ? (item.rawValue / targetRevenue) * 100 : 0;
+
+      return {
+        ...item,
+        value: formatCurrencyFull(item.rawValue),
+        change: `${percent.toFixed(0)}% of Target`,
+        subtitle: `Target: ${formatCurrencyFull(targetRevenue)}`,
+      };
+    });
+
+    const exportDonut = [
+      { name: "Tickets", value: ticketsRevenue, color: "#EF4444" },
+      { name: "Bus", value: busRevenue, color: "#EAB308" },
+      { name: "Tenants", value: tenantsRevenue, color: "#22C55E" },
+      { name: "Parking", value: parkingRevenue, color: "#3B82F6" },
+    ];
+
+    const exportActivity = scoped.reports
+      .sort(
+        (a, b) =>
+          new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt),
+      )
+      .slice(0, 5)
+      .map((r) => ({
+        id: r._id || r.id,
+        type: r.status === "Resolved" ? "success" : "warning",
+        message: `${r.type} Report Submitted`,
+        date: r.createdAt || r.date,
+        status: r.status,
+      }));
+
     return {
       meta: {
-        view: filterView,
+        view: isCustomExportRangeActive ? "custom" : filterView,
         date: filterDate.toDateString(),
         generatedAt: new Date().toLocaleString(),
+        dateRange: getCustomExportRangeLabel(),
       },
-      stats,
-      donut: donutData,
+      stats: exportStats,
+      donut: exportDonut,
       analytics: analyticsData,
-      activity: recentActivity,
+      activity: exportActivity,
     };
   };
 
   const isDateInView = (dateString, view, anchorDate) => {
     if (!dateString) return false;
-    const target = new Date(dateString);
-    const anchor = new Date(anchorDate);
-    if (isNaN(target.getTime())) return false;
+    const target = parseFlexibleDate(dateString);
+    const anchor = parseFlexibleDate(anchorDate);
+    if (!target || !anchor) return false;
 
     if (view === "day") return target.toDateString() === anchor.toDateString();
     if (view === "week") {
@@ -276,12 +525,20 @@ const Dashboard = () => {
     });
   };
 
+  const isDashboardDateMatch = (dateValue) => {
+    if (isCustomExportRangeActive) {
+      return isInsideCustomExportRange(dateValue);
+    }
+
+    return isDateInView(dateValue, filterView, filterDate);
+  };
+
   useEffect(() => {
     if (loading) return;
 
     const generateStat = (label, items, color, moduleKey) => {
       const dateFiltered = items.filter((i) =>
-        isDateInView(getItemDate(i), filterView, filterDate),
+        isDashboardDateMatch(getItemDate(i)),
       );
 
       let currentRev;
@@ -298,12 +555,8 @@ const Dashboard = () => {
       }
 
       const baseMonthlyTarget = targets[moduleKey] || 0;
-      let targetRev = 0;
-
-      if (filterView === "day") targetRev = baseMonthlyTarget / 30;
-      else if (filterView === "week") targetRev = baseMonthlyTarget / 4;
-      else if (filterView === "month") targetRev = baseMonthlyTarget;
-      else if (filterView === "year") targetRev = baseMonthlyTarget * 12;
+      let targetRev = getTargetForExport(moduleKey);
+      if (!targetRev && baseMonthlyTarget > 0) targetRev = baseMonthlyTarget;
 
       const percent = targetRev > 0 ? (currentRev / targetRev) * 100 : 0;
 
@@ -318,7 +571,7 @@ const Dashboard = () => {
     };
 
     const formatCurrencyFull = (value) => {
-      return `₱${Number(value).toLocaleString()}`;
+      return `₱${formatRevenueAmount(value)}`;
     };
 
     setStats([
@@ -328,38 +581,33 @@ const Dashboard = () => {
       generateStat("Parking Revenue", rawData.parking, "blue", "parking"),
     ]);
 
-    const monthlyTotalTarget = Object.values(targets).reduce(
-      (a, b) => a + b,
+    const scaledQuota = ["tickets", "bus", "tenants", "parking"].reduce(
+      (sum, moduleKey) => sum + getTargetForExport(moduleKey),
       0,
     );
-    let scaledQuota = 0;
-    if (filterView === "day") scaledQuota = monthlyTotalTarget / 30;
-    else if (filterView === "week") scaledQuota = monthlyTotalTarget / 4;
-    else if (filterView === "month") scaledQuota = monthlyTotalTarget;
-    else if (filterView === "year") scaledQuota = monthlyTotalTarget * 12;
 
     setTotalQuota(scaledQuota);
 
     const filteredTickets = getPaidItems(
       rawData.tickets.filter((i) =>
-        isDateInView(getItemDate(i), filterView, filterDate),
+        isDashboardDateMatch(getItemDate(i)),
       ),
       "tickets",
     );
     const filteredBus = getPaidItems(
       rawData.bus.filter((i) =>
-        isDateInView(getItemDate(i), filterView, filterDate),
+        isDashboardDateMatch(getItemDate(i)),
       ),
       "bus",
     );
     const filteredParking = getPaidItems(
       rawData.parking.filter((i) =>
-        isDateInView(getItemDate(i), filterView, filterDate),
+        isDashboardDateMatch(getItemDate(i)),
       ),
       "parking",
     );
     const filteredTenants = rawData.tenants.filter((i) =>
-      isDateInView(getItemDate(i), filterView, filterDate),
+      isDashboardDateMatch(getItemDate(i)),
     );
 
     // For tenants revenue, sum rent + utility for all tenants, not just paid
@@ -389,7 +637,7 @@ const Dashboard = () => {
     ]);
 
     const filteredReports = rawData.reports.filter((r) =>
-      isDateInView(r.createdAt || r.date, filterView, filterDate),
+      isDashboardDateMatch(r.createdAt || r.date),
     );
     const processedActivity = filteredReports
       .sort(
@@ -432,7 +680,86 @@ const Dashboard = () => {
 };
 
     let chartPoints = [];
-    if (filterView === "week") {
+    if (isCustomExportRangeActive) {
+      const customStart = parseDateStart(exportDateFrom);
+      const customEnd = parseDateEnd(exportDateTo);
+
+      if (customStart && customEnd && customStart <= customEnd) {
+        const millisecondsPerDay = 24 * 60 * 60 * 1000;
+        const dayCount = Math.floor((customEnd - customStart) / millisecondsPerDay) + 1;
+
+        if (dayCount <= 31) {
+          for (let i = 0; i < dayCount; i++) {
+            const dayStart = new Date(customStart);
+            dayStart.setDate(customStart.getDate() + i);
+            dayStart.setHours(0, 0, 0, 0);
+
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const isMatch = (item) => {
+              const dVal = getItemDate(item);
+              if (!dVal) return false;
+              const d = parseFlexibleDate(dVal);
+              return Boolean(d) && d >= dayStart && d <= dayEnd;
+            };
+
+            const tickets = getChartMetrics(rawData.tickets, "tickets", isMatch);
+            const bus = getChartMetrics(rawData.bus, "bus", isMatch);
+            const parking = getChartMetrics(rawData.parking, "parking", isMatch);
+            const tenants = getChartMetrics(rawData.tenants, "tenants", isMatch);
+
+            chartPoints.push({
+              name: dayStart.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+              ticketsRevenue: tickets.revenue,
+              ticketsVolume: tickets.volume,
+              busRevenue: bus.revenue,
+              busVolume: bus.volume,
+              parkingRevenue: parking.revenue,
+              parkingVolume: parking.volume,
+              tenantsRevenue: tenants.revenue,
+              tenantsVolume: tenants.volume,
+            });
+          }
+        } else {
+          const monthCursor = new Date(customStart.getFullYear(), customStart.getMonth(), 1);
+          const monthEnd = new Date(customEnd.getFullYear(), customEnd.getMonth(), 1);
+
+          while (monthCursor <= monthEnd) {
+            const fullMonthStart = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1, 0, 0, 0, 0);
+            const fullMonthEnd = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0, 23, 59, 59, 999);
+            const scopedStart = fullMonthStart < customStart ? customStart : fullMonthStart;
+            const scopedEnd = fullMonthEnd > customEnd ? customEnd : fullMonthEnd;
+
+            const isMatch = (item) => {
+              const dVal = getItemDate(item);
+              if (!dVal) return false;
+              const d = parseFlexibleDate(dVal);
+              return Boolean(d) && d >= scopedStart && d <= scopedEnd;
+            };
+
+            const tickets = getChartMetrics(rawData.tickets, "tickets", isMatch);
+            const bus = getChartMetrics(rawData.bus, "bus", isMatch);
+            const parking = getChartMetrics(rawData.parking, "parking", isMatch);
+            const tenants = getChartMetrics(rawData.tenants, "tenants", isMatch);
+
+            chartPoints.push({
+              name: monthCursor.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+              ticketsRevenue: tickets.revenue,
+              ticketsVolume: tickets.volume,
+              busRevenue: bus.revenue,
+              busVolume: bus.volume,
+              parkingRevenue: parking.revenue,
+              parkingVolume: parking.volume,
+              tenantsRevenue: tenants.revenue,
+              tenantsVolume: tenants.volume,
+            });
+
+            monthCursor.setMonth(monthCursor.getMonth() + 1);
+          }
+        }
+      }
+    } else if (filterView === "week") {
       const startOfWeek = new Date(filterDate);
       startOfWeek.setDate(filterDate.getDate() - filterDate.getDay());
       for (let i = 0; i < 7; i++) {
@@ -511,7 +838,8 @@ const Dashboard = () => {
         const monthFilter = (item) => {
           const dVal = getItemDate(item);
           if (!dVal) return false;
-          const d = new Date(dVal);
+          const d = parseFlexibleDate(dVal);
+          if (!d) return false;
           return (
             d.getMonth() === idx && d.getFullYear() === filterDate.getFullYear()
           );
@@ -548,7 +876,16 @@ const Dashboard = () => {
       });
     }
     setAnalyticsData(chartPoints);
-  }, [rawData, filterDate, filterView, loading, targets]);
+  }, [
+    rawData,
+    filterDate,
+    filterView,
+    loading,
+    targets,
+    exportDateFrom,
+    exportDateTo,
+    isCustomExportRangeActive,
+  ]);
 
   const handleFilterChange = ({ date, view }) => {
     setFilterDate(date);
@@ -557,6 +894,11 @@ const Dashboard = () => {
 
   const exportToPDF = () => {
     try {
+      if (hasInvalidCustomExportRange()) {
+        showToast("error", "Invalid export date range. From date must be earlier than To date.");
+        return;
+      }
+
       const payload = getExportPayload();
       const doc = new jsPDF("p", "mm", "a4");
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -572,19 +914,16 @@ const Dashboard = () => {
       doc.setFont("helvetica", "normal");
 
       doc.text(`Generated: ${payload.meta.generatedAt}`, 15, 55);
+      if (payload.meta.dateRange) {
+        doc.text(`Export Range: ${payload.meta.dateRange}`, 15, 61);
+      }
 
       autoTable(doc, {
-        startY: 65,
+        startY: payload.meta.dateRange ? 69 : 65,
         head: [["Module", "Revenue", "Target", "Progress"]],
         body: payload.stats.map((s) => {
           const moduleKey = s.label.toLowerCase().split(" ")[0];
-          const baseMonthlyTarget = targets[moduleKey] || 0;
-
-          let targetVal = 0;
-          if (filterView === "day") targetVal = baseMonthlyTarget / 30;
-          else if (filterView === "week") targetVal = baseMonthlyTarget / 4;
-          else if (filterView === "month") targetVal = baseMonthlyTarget;
-          else if (filterView === "year") targetVal = baseMonthlyTarget * 12;
+          const targetVal = getTargetForExport(moduleKey);
 
           const percentReached =
             targetVal > 0 ? Math.round((s.rawValue / targetVal) * 100) : 0;
@@ -593,8 +932,8 @@ const Dashboard = () => {
 
           return [
             s.label,
-            `Php ${Number(s.rawValue).toLocaleString()}`,
-            `Php ${Math.round(targetVal).toLocaleString()}`,
+            `Php ${formatRevenueAmount(s.rawValue)}`,
+            `Php ${formatRevenueAmount(targetVal)}`,
             progressText,
           ];
         }),
@@ -613,7 +952,7 @@ const Dashboard = () => {
         head: [["Module", "Revenue"]],
         body: payload.donut.map((d) => [
           d.name,
-          `Php ${d.value.toLocaleString()}`,
+          `Php ${formatRevenueAmount(d.value)}`,
         ]),
         headStyles: { fillColor: [16, 185, 129] },
         styles: { fontSize: 9 },
@@ -633,6 +972,11 @@ const Dashboard = () => {
   // --- BRANDED EXPORT TO EXCEL (USING EXCELJS) ---
   const exportToExcel = async () => {
     try {
+      if (hasInvalidCustomExportRange()) {
+        showToast("error", "Invalid export date range. From date must be earlier than To date.");
+        return;
+      }
+
       const payload = getExportPayload();
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Dashboard Report");
@@ -649,6 +993,9 @@ const Dashboard = () => {
       titleCell.alignment = { horizontal: 'center' };
 
       worksheet.getCell('A7').value = `Generated: ${payload.meta.generatedAt}`;
+      if (payload.meta.dateRange) {
+        worksheet.getCell('A8').value = `Export Range: ${payload.meta.dateRange}`;
+      }
       worksheet.addRow([]); // Spacer
 
       // 3. Revenue Summary Section
@@ -663,21 +1010,15 @@ const Dashboard = () => {
 
       payload.stats.forEach((s) => {
         const moduleKey = s.label.toLowerCase().split(" ")[0];
-        const baseMonthlyTarget = targets[moduleKey] || 0;
-
-        let targetVal = 0;
-        if (filterView === "day") targetVal = baseMonthlyTarget / 30;
-        else if (filterView === "week") targetVal = baseMonthlyTarget / 4;
-        else if (filterView === "month") targetVal = baseMonthlyTarget;
-        else if (filterView === "year") targetVal = baseMonthlyTarget * 12;
+        const targetVal = getTargetForExport(moduleKey);
 
         const percentReached =
           targetVal > 0 ? Math.round((s.rawValue / targetVal) * 100) : 0;
 
         worksheet.addRow([
           s.label,
-          `Php ${Number(s.rawValue).toLocaleString()}`,
-          `Php ${Math.round(targetVal).toLocaleString()}`,
+          `Php ${formatRevenueAmount(s.rawValue)}`,
+          `Php ${formatRevenueAmount(targetVal)}`,
           `${percentReached}% of Target`,
         ]
         );
@@ -696,7 +1037,7 @@ const Dashboard = () => {
       });
 
       payload.donut.forEach((d) => {
-        worksheet.addRow([d.name, `Php ${d.value.toLocaleString()}`]);
+        worksheet.addRow([d.name, `Php ${formatRevenueAmount(d.value)}`]);
       });
 
       // 5. BRANDED FOOTER (-1/8 height adjustment)
@@ -729,14 +1070,59 @@ const Dashboard = () => {
   return (
     <Layout title="Dashboard">
       <div className="px-4 py-6 lg:px-8 space-y-10 bg-gray-50 min-h-screen">
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
-          <DashboardToolbar
-            onRefresh={fetchDashboardData}
-            onDownload={handleDownload}
-            onFilterChange={handleFilterChange}
-            loading={loading}
-            onSetTargets={() => setIsTargetModalOpen(true)}
-          />
+        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+          <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-3">
+            <DashboardToolbar
+              onRefresh={fetchDashboardData}
+              onDownload={handleDownload}
+              onFilterChange={handleFilterChange}
+              loading={loading}
+              onSetTargets={() => setIsTargetModalOpen(true)}
+            />
+
+            {isSuperAdmin && (
+              <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm">
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-700">From</label>
+                    <input
+                      type="date"
+                      value={exportDateFrom}
+                      onChange={(e) => setExportDateFrom(e.target.value)}
+                      className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-700">To</label>
+                    <input
+                      type="date"
+                      value={exportDateTo}
+                      onChange={(e) => setExportDateTo(e.target.value)}
+                      className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExportDateFrom("");
+                      setExportDateTo("");
+                    }}
+                    className="h-10 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                {hasInvalidCustomExportRange() && (
+                  <p className="mt-2 text-sm text-red-600">
+                    Invalid range: From date must be earlier than or equal to To date.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end">
             <button

@@ -2,6 +2,10 @@ import BusTrip from "../models/BusTrips.js";
 import Settings from "../models/Settings.js";
 import User from "../models/User.js";
 import sendPushNotification from "../utils/sendPushNotification.js"; 
+import {
+  normalizeBusTripForResponse,
+  resolveBusTypeId,
+} from "../utils/busTypeCompat.js";
 
 
 const formatTime = (timeStr) => {
@@ -30,10 +34,15 @@ const broadcastNotification = async (title, body, data) => {
   }
 };
 
+const BUS_TYPE_POPULATE = "busType";
+const BUS_TYPE_POPULATE_SELECT = "name";
+
 export const getBusTrips = async (req, res) => {
   try {
-    const trips = await BusTrip.find({ isArchived: { $ne: true } }).sort({ createdAt: -1 });
-    res.status(200).json(trips);
+    const trips = await BusTrip.find({ isArchived: { $ne: true } })
+      .populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT)
+      .sort({ createdAt: -1 });
+    res.status(200).json(trips.map(normalizeBusTripForResponse));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -51,9 +60,11 @@ export const getPredefinedTodayTrips = async (_req, res) => {
       isArchived: { $ne: true },
       status: "Scheduled",
       date: { $gte: startOfDay, $lte: endOfDay },
-    }).sort({ date: 1, scheduledTime: 1, createdAt: 1 });
+    })
+      .populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT)
+      .sort({ date: 1, scheduledTime: 1, createdAt: 1 });
 
-    res.status(200).json(trips);
+    res.status(200).json(trips.map(normalizeBusTripForResponse));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -64,9 +75,11 @@ export const getDispatchBoardTrips = async (_req, res) => {
     const trips = await BusTrip.find({
       isArchived: { $ne: true },
       status: { $in: ["Arrived", "On Fix", "Not Departed"] },
-    }).sort({ updatedAt: -1 });
+    })
+      .populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT)
+      .sort({ updatedAt: -1 });
 
-    res.status(200).json(trips);
+    res.status(200).json(trips.map(normalizeBusTripForResponse));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -101,6 +114,11 @@ export const createBusTrip = async (req, res) => {
       return res.status(400).json({ message: "Custom stop count is required for 'Other' stop type." });
     }
 
+    const resolvedBusTypeId = await resolveBusTypeId(busType);
+    if (!resolvedBusTypeId) {
+      return res.status(400).json({ message: "Invalid bus type." });
+    }
+
     const tripDate = new Date(date);
     const startOfDay = new Date(tripDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(tripDate.setHours(23, 59, 59, 999));
@@ -128,7 +146,7 @@ export const createBusTrip = async (req, res) => {
     const newTrip = new BusTrip({
       templateNo,
       route,
-      busType, 
+      busType: resolvedBusTypeId,
       stopType,
       customStopCount: stopType === "Other" ? Number(customStopCount) : null,
       time,
@@ -149,6 +167,10 @@ export const createBusTrip = async (req, res) => {
     });
 
     const savedTrip = await newTrip.save();
+    const populatedTrip = await BusTrip.findById(savedTrip._id).populate(
+      BUS_TYPE_POPULATE,
+      BUS_TYPE_POPULATE_SELECT,
+    );
 
     
     broadcastNotification(
@@ -157,7 +179,7 @@ export const createBusTrip = async (req, res) => {
       { route: 'routes' }
     );
 
-    res.status(201).json(savedTrip);
+    res.status(201).json(normalizeBusTripForResponse(populatedTrip));
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -201,8 +223,17 @@ export const updateBusTrip = async (req, res) => {
       }
     }
 
+    let resolvedBusTypeId;
+    if (Object.prototype.hasOwnProperty.call(req.body, "busType")) {
+      resolvedBusTypeId = await resolveBusTypeId(req.body.busType);
+      if (!resolvedBusTypeId) {
+        return res.status(400).json({ message: "Invalid bus type." });
+      }
+    }
+
     const updatePayload = {
       ...req.body,
+      ...(resolvedBusTypeId ? { busType: resolvedBusTypeId } : {}),
       ...(incomingTicketReferenceNo
         ? { ticketReferenceNo: incomingTicketReferenceNo }
         : {}),
@@ -225,7 +256,7 @@ export const updateBusTrip = async (req, res) => {
       id,
       updatePayload,
       { new: true }
-    );
+    ).populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT);
 
    
     if (oldTrip.status !== 'Arrived' && updatedTrip.status === 'Arrived') {
@@ -244,7 +275,7 @@ export const updateBusTrip = async (req, res) => {
       );
     }
 
-    res.status(200).json(updatedTrip);
+    res.status(200).json(normalizeBusTripForResponse(updatedTrip));
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -257,13 +288,16 @@ export const archiveBusTrip = async (req, res) => {
       id,
       { isArchived: true },
       { new: true }
-    );
+    ).populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT);
 
     if (!archivedTrip) {
       return res.status(404).json({ message: "Bus trip not found" });
     }
 
-    res.status(200).json({ message: "Bus trip archived successfully", trip: archivedTrip });
+    res.status(200).json({
+      message: "Bus trip archived successfully",
+      trip: normalizeBusTripForResponse(archivedTrip),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -276,13 +310,16 @@ export const restoreBusTrip = async (req, res) => {
       id,
       { isArchived: false },
       { new: true }
-    );
+    ).populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT);
 
     if (!restoredTrip) {
       return res.status(404).json({ message: "Bus trip not found" });
     }
 
-    res.status(200).json({ message: "Bus trip restored successfully", trip: restoredTrip });
+    res.status(200).json({
+      message: "Bus trip restored successfully",
+      trip: normalizeBusTripForResponse(restoredTrip),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -290,8 +327,10 @@ export const restoreBusTrip = async (req, res) => {
 
 export const getArchivedBusTrips = async (req, res) => {
   try {
-    const trips = await BusTrip.find({ isArchived: true }).sort({ updatedAt: -1 });
-    res.status(200).json(trips);
+    const trips = await BusTrip.find({ isArchived: true })
+      .populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT)
+      .sort({ updatedAt: -1 });
+    res.status(200).json(trips.map(normalizeBusTripForResponse));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -388,9 +427,9 @@ export const approveDeparture = async (req, res) => {
         departureLoggedAt: new Date(),
       },
       { new: true }
-    );
+    ).populate(BUS_TYPE_POPULATE, BUS_TYPE_POPULATE_SELECT);
 
-    res.status(200).json(updatedTrip);
+    res.status(200).json(normalizeBusTripForResponse(updatedTrip));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

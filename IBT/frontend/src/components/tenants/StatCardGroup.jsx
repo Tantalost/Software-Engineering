@@ -7,6 +7,7 @@ const StatCardGroup = ({ availableSlots, nonAvailableSlots, totalSlots, totalRev
     style: 'currency',
     currency: 'PHP',
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 
   return (

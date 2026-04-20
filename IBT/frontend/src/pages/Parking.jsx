@@ -214,19 +214,9 @@ const Parking = () => {
     setModalPrices({
       car: priceSettings.carRate,
       motorcycle: priceSettings.motorcycleRate,
+      jeep: priceSettings.jeepRate,
     });
     setShowPriceModal(false);
-    if (!collectorName || !collectorName.trim() || !collectorId) {
-      setNotificationState({
-        isOpen: true,
-        type: "error",
-        message: "Please select a Collector before submitting report.",
-        autoClose: true,
-        duration: 2000,
-      });
-      return;
-    }
-
   };
 
   const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
@@ -1348,6 +1338,17 @@ const handleSafeLogout = () => {
   };
 
   const handleSubmitReport = async () => {
+  if (records.length === 0) {
+    setNotificationState({
+      isOpen: true,
+      type: "error",
+      message: "No parking data found in the main table. You cannot submit a report yet.",
+      autoClose: true,
+      duration: 3000,
+    });
+    return;
+  }
+
   if (!collectorName || !collectorName.trim() || !collectorId) {
     setNotificationState({
       isOpen: true,
@@ -1534,10 +1535,10 @@ const handleSafeLogout = () => {
 
       // 1. BRANDED HEADER (-1/8 height adjustment)
       worksheet.getRow(1).height = 35;
-      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:E4");
+      await addImageToWorksheet(workbook, worksheet, headerImg, "A1:F4");
 
       // 2. Report Title & Metadata
-      worksheet.mergeCells("A6:E6");
+      worksheet.mergeCells("A6:F6");
       const titleCell = worksheet.getCell("A6");
       titleCell.value = "PARKING REPORTS";
       titleCell.font = { bold: true, size: 14, color: { argb: "FFDC2626" } };
@@ -1557,7 +1558,7 @@ const handleSafeLogout = () => {
         "",
         "",
         "",
-        `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        `Revenue: Php ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       ]);
       worksheet.addRow([]); 
 
@@ -1585,8 +1586,8 @@ const handleSafeLogout = () => {
           item.plateNo || "-",
           item.referenceNo || "-",
           item.type || "-",
-          `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-          `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+          `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         ]);
       });
 
@@ -1596,7 +1597,7 @@ const handleSafeLogout = () => {
         workbook,
         worksheet,
         footerImg,
-        `A${lastRowNumber}:E${lastRowNumber + 3}`,
+        `A${lastRowNumber}:F${lastRowNumber + 3}`,
       );
 
       worksheet.columns = [
@@ -1665,8 +1666,8 @@ const handleSafeLogout = () => {
         item.plateNo || "-",
         item.referenceNo || "-",
         item.type || "-",
-        `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
-        `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, // Use Php
+        `Php ${(item.baseRate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, // Use Php
+        `Php ${(item.finalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, // Use Php
       ]),
       headStyles: { fillColor: [16, 185, 129] }, 
       styles: { fontSize: 9, halign: "center" },
@@ -1728,6 +1729,37 @@ const handleSafeLogout = () => {
     });
   }, [records, role]);
 
+  const hasParkingMainTableData = useMemo(() => {
+    return records.length > 0;
+  }, [records]);
+
+  const parkingLogoutGuardMessage = useMemo(() => {
+    if (!hasParkingMainTableData) {
+      return "You cannot log out yet because there is no data in the Parking main table.";
+    }
+
+    if (hasPendingParkingShiftReport) {
+      return "Please submit your shift report before logging out. You still have unsubmitted Parking transactions in this shift.";
+    }
+
+    return "Please complete your required Parking shift actions before logging out.";
+  }, [hasParkingMainTableData, hasPendingParkingShiftReport]);
+
+  const handleOpenSubmitModal = () => {
+    if (records.length === 0) {
+      setNotificationState({
+        isOpen: true,
+        type: "error",
+        message: "No parking data found in the main table. Add records before submitting a report.",
+        autoClose: true,
+        duration: 3000,
+      });
+      return;
+    }
+
+    setShowSubmitModal(true);
+  };
+
   return (
     <Layout
       title="Parking Management"
@@ -1735,9 +1767,8 @@ const handleSafeLogout = () => {
         role !== "superadmin"
           ? {
               logoutGuard: {
-                canLogout: !hasPendingParkingShiftReport,
-                message:
-                  "Please submit your shift report before logging out. You still have unsubmitted Parking transactions in this shift.",
+                canLogout: hasParkingMainTableData && !hasPendingParkingShiftReport,
+                message: parkingLogoutGuardMessage,
               },
             }
           : undefined
@@ -1764,7 +1795,7 @@ const handleSafeLogout = () => {
         <div className="flex flex-wrap items-center justify-start lg:justify-end gap-3 w-full lg:w-auto">
           {role === "parking" && (
             <button
-              onClick={() => setShowSubmitModal(true)}
+              onClick={handleOpenSubmitModal}
               disabled={isReporting}
               className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all w-full sm:w-auto"
             >

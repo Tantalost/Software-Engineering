@@ -25,7 +25,10 @@ const OperationsAnalytics = ({ data }) => {
   ];
 
   const formatValue = (value) => {
-    return `₱${value.toLocaleString()}`;
+    return `₱${Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const renderCustomTooltip = ({ active, payload, label }) => {
@@ -93,7 +96,7 @@ const OperationsAnalytics = ({ data }) => {
             axisLine={false} tickLine={false} dy={10}
           />
           <YAxis 
-            tickFormatter={(val) => `₱${val/1000}k`}
+            tickFormatter={(val) => `₱${(Number(val || 0) / 1000).toFixed(2)}k`}
             tick={{ fontSize: 12, fill: "#6b7280", fontWeight: 500 }} 
             axisLine={false} tickLine={false} dx={-10}
           />

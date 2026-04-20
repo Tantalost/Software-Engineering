@@ -55,6 +55,52 @@ const getInitialBasePrices = () => {
     discounted: 10.0,
   };
 };
+
+const toLocalDateInput = (dateValue = new Date()) => {
+  const date = new Date(dateValue);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseRecordDate = (value) => {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === "string") {
+    const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+      const year = Number(dateOnlyMatch[1]);
+      const month = Number(dateOnlyMatch[2]);
+      const day = Number(dateOnlyMatch[3]);
+      const parsedDate = new Date(year, month - 1, day);
+      return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+    }
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getRecordSortTimestamp = (record) => {
+  const primary = parseRecordDate(record?.createdAt) || parseRecordDate(record?.updatedAt);
+  if (primary) return primary.getTime();
+  const fallback = parseRecordDate(record?.date);
+  return fallback ? fallback.getTime() : 0;
+};
+
+const toNumericAmount = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
+const formatPhpAmount = (value) => `Php ${toNumericAmount(value).toFixed(2)}`;
+const formatPesoAmount = (value) => `₱${toNumericAmount(value).toFixed(2)}`;
+
 const addImageToWorksheet = async (workbook, worksheet, imageSrc, range) => {
   if (!imageSrc) return;
   try {
@@ -212,7 +258,9 @@ const TerminalFees = () => {
       const res = await fetch(`${API_URL}/terminal-fees`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      setRecords(data);
+      const normalizedData = Array.isArray(data) ? data : [];
+      normalizedData.sort((a, b) => getRecordSortTimestamp(b) - getRecordSortTimestamp(a));
+      setRecords(normalizedData);
     } catch (err) {
       console.error("Error fetching fees:", err);
       showToastMessage("Error loading data from server");
@@ -384,7 +432,7 @@ const TerminalFees = () => {
         matchesType = pType.includes(aType);
       }
 
-     const feeDate = fee.date ? new Date(fee.date) : null;
+      const feeDate = parseRecordDate(fee.date);
       let matchesDateRange = false;
 
       if (dateFilterType === "All") {
@@ -410,7 +458,7 @@ const TerminalFees = () => {
         return type.includes("senior") || type.includes("pwd");
       }).length,
       total: filtered.length,
-      revenue: filtered.reduce((sum, f) => sum + (f.price || 0), 0),
+      revenue: filtered.reduce((sum, f) => sum + toNumericAmount(f.price), 0),
     }),
     [filtered],
   );
@@ -503,10 +551,7 @@ const TerminalFees = () => {
         } = item;
         return {
           ...rest,
-          price:
-            typeof rest.price === "number"
-              ? `Php ${rest.price.toFixed(2)}`
-              : rest.price,
+          price: formatPhpAmount(rest.price),
           date: rest.date ? new Date(rest.date).toLocaleDateString() : "-",
           time: to12HourFormat(rest.time),
         };
@@ -607,8 +652,9 @@ const TerminalFees = () => {
 
   const hasPendingTerminalShiftReport = useMemo(() => {
     if (role === "superadmin") return false;
-    return records.some((item) => !Boolean(item?.submitted));
-  }, [role, records]);
+    if (shiftRecords.length === 0) return false;
+    return shiftRecords.some((item) => !Boolean(item?.submitted));
+  }, [role, shiftRecords]);
 
   const handleCollectorSelection = (nextCollectorId, selectedCollector) => {
     setCollectorId(nextCollectorId);
@@ -856,7 +902,7 @@ const TerminalFees = () => {
       ticketNo: isAutoTicket ? "Loading..." : "", 
       passengerType: "Regular",
       price: basePrices.regular,
-      date: now.toISOString().split("T")[0],
+      date: toLocalDateInput(now),
       time: now.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -926,6 +972,7 @@ const TerminalFees = () => {
         const payload = {
           ...newTicket,
           ticketNo,
+          date: newTicket.date || toLocalDateInput(new Date()),
         };
 
         const res = await fetch(`${API_URL}/terminal-fees`, {
@@ -958,6 +1005,7 @@ const TerminalFees = () => {
           : "New ticket added successfully!",
         "success",
       );
+      setCurrentPage(1);
       setShowAddModal(false);
     } catch (error) {
       console.error("Error saving ticket:", error);
@@ -1058,7 +1106,7 @@ const TerminalFees = () => {
         "",
         `Student/Senior: ${stats.student + stats.senior}`,
         "",
-        `Total Revenue: Php ${stats.revenue.toFixed(2)}`,
+        `Total Revenue: ${formatPhpAmount(stats.revenue)}`,
       ]);
       worksheet.addRow([]); 
 
@@ -1085,7 +1133,7 @@ const TerminalFees = () => {
           item.passengerType || "-",
           item.time || "-",
           item.date ? new Date(item.date).toLocaleDateString() : "-",
-          `Php ${(item.price || 0).toFixed(2)}`,
+          formatPhpAmount(item.price),
         ]);
       });
 
@@ -1166,7 +1214,7 @@ const TerminalFees = () => {
     doc.text(`No. of Passengers: ${stats.total}`, tableRightEdge, 55, {
       align: "right",
     });
-    doc.text(`Revenue: Php ${stats.revenue.toFixed(2)}`, tableRightEdge, 61, {
+    doc.text(`Revenue: ${formatPhpAmount(stats.revenue)}`, tableRightEdge, 61, {
       align: "right",
     });
 
@@ -1177,7 +1225,7 @@ const TerminalFees = () => {
       body: filtered.map((item) => [
         item.ticketNo || "-",
         item.passengerType || "-",
-        `Php ${(item.price || 0).toFixed(2)}`,
+        formatPhpAmount(item.price),
         item.time || "-",
         item.date ? new Date(item.date).toLocaleDateString() : "-",
       ]),
@@ -1495,7 +1543,7 @@ const TerminalFees = () => {
                   ),
                   time: fee.time,
                   date: fee.date,
-                  price: `₱${fee.price.toFixed(2)}`,
+                  price: formatPesoAmount(fee.price),
                   __highlight: isDeleteHighlighted,
                   __highlightVariant: isDeleteRequested ? "amber" : "emerald",
                 };

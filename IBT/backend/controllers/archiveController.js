@@ -4,6 +4,7 @@ import Parking from "../models/Parking.js"
 import BusTrip from "../models/BusTrips.js"
 import LostFound from "../models/LostFound.js"
 import Report from "../models/Report.js"
+import { resolveBusTypeId } from "../utils/busTypeCompat.js";
  
 export const getArchives = async (req, res) => {
   try {
@@ -48,6 +49,10 @@ export const restoreArchive = async (req, res) => {
     if (type === "Bus Trip") {
        
         const { _id, ...restdata } = originalData; 
+        if (Object.prototype.hasOwnProperty.call(restdata, "busType")) {
+          const resolvedBusTypeId = await resolveBusTypeId(restdata.busType);
+          restdata.busType = resolvedBusTypeId;
+        }
         const restored = new BusTrip(restdata);
         await restored.save();
     }
