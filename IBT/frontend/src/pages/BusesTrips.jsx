@@ -3607,7 +3607,7 @@ const BusTrips = () => {
               {role === "superadmin" && (
                 <button
                   onClick={() => {
-                    setNewPrice(defaultPrice.toString());
+                    setNewPrice(Number(defaultPrice).toFixed(2));
                     setShowSetPriceModal(true);
                   }}
                   className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
