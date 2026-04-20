@@ -83,49 +83,47 @@ const StatCards = ({ statsData }) => {
             key={idx}
             className="group relative bg-white rounded-2xl p-6 sm:p-8 shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden hover:-translate-y-1 sm:hover:-translate-y-2 transform"
           >
-            {/* Decorative Circle */}
+           
             <div
               className={`absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-20 blur-3xl bg-gradient-to-br ${color.bgMedium} ${color.bgStrong} transition-transform duration-500 group-hover:scale-110`}
             ></div>
 
             <div className="relative z-10">
-              {/* Top Section */}
+             
               <div className="flex items-start justify-between mb-4">
-                <div className="w-full">
-                  <p className="text-gray-500 text-sm sm:text-base font-medium mb-2">
+                
+               
+                <div className="w-full min-w-0 pr-4">
+                  <p className="text-gray-500 text-sm sm:text-base font-medium mb-2 truncate" title={stat.label}>
                     {stat.label}
                   </p>
 
-                  {/* Revenue / Value */}
                   <p
-                    className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 truncate"
-                    style={{ minWidth: "10ch" }}
+                    className="text-2xl sm:text-3xl xl:text-4xl font-bold text-gray-900 mb-3 truncate"
+                    title={stat.value}
                   >
                     {stat.value}
                   </p>
 
-                  {/* Target Revenue (supports 10 digits) */}
                   <p
                     className="text-gray-400 text-xs sm:text-sm font-medium mb-3 truncate"
-                    style={{ minWidth: "10ch" }}
+                    title={stat.subtitle}
                   >
                     {stat.subtitle}
                   </p>
 
-                  {/* Percentage Badge */}
                   <span
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold ${badgeStyle}`}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold ${badgeStyle} shrink-0`}
                   >
-                    <Icon size={14} />
-                    <span className="tabular-nums leading-none">
+                    <Icon size={14} className="shrink-0" />
+                    <span className="tabular-nums leading-none truncate">
                       {cleanChange}
                     </span>
                   </span>
                 </div>
 
-                {/* Small Circle Indicator */}
                 <div
-                  className={`w-6 h-6 ${color.bgCircle} rounded-full shadow-lg`}
+                  className={`w-6 h-6 shrink-0 ${color.bgCircle} rounded-full shadow-lg`}
                 ></div>
               </div>
             </div>
