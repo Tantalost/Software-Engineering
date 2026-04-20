@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Settings, CheckCircle, X } from "lucide-react";
+import { getZeroAmountDisplay } from "../../utils/currencyDisplay";
 
 const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
   const [modalTargets, setModalTargets] = useState(currentTargets);
@@ -71,7 +72,7 @@ const TargetModal = ({ isOpen, onClose, currentTargets, onSave }) => {
                   value={modalTargets[field.id]}
                   onChange={(e) => handleChange(field.id, e.target.value)}
                   className="w-full bg-white border border-slate-200 pl-8 pr-3 py-2.5 rounded-lg font-bold text-slate-700 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all"
-                  placeholder="0.00"
+                  placeholder={getZeroAmountDisplay()}
                 />
               </div>
             </div>

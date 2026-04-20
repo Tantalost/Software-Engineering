@@ -36,6 +36,7 @@ import RequestDeletionModal from "../components/common/RequestDeletionModal";
 import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 import StatCardGroupTerminal from "../components/terminal/StatCardGroupTerminal";
 import TerminalFilter from "../components/terminal/TerminalFilter";
+import { getZeroAmountDisplay } from "../utils/currencyDisplay";
 import { logActivity } from "../utils/logger";
 import { submitPageReport } from "../utils/reportService";
 
@@ -1722,7 +1723,7 @@ const TerminalFees = () => {
                       handleModalPriceChange("regular", e.target.value)
                     }
                     className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    placeholder="0.00"
+                    placeholder={getZeroAmountDisplay()}
                   />
                 </div>
               </div>
@@ -1746,7 +1747,7 @@ const TerminalFees = () => {
                       handleModalPriceChange("discounted", e.target.value)
                     }
                     className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    placeholder="0.00"
+                    placeholder={getZeroAmountDisplay()}
                   />
                 </div>
               </div>

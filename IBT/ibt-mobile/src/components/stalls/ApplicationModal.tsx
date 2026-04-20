@@ -6,6 +6,7 @@ import styles from '@/src/styles/stallsStyle';
 import { colors } from '@/src/themes/stallsColors'; 
 import { FormData, FileState } from '@/src/types/StallTypes';
 import FileUploadButton from '@/src/components/FileUploadButton';
+import { getZeroAmountDisplay } from '@/src/utils/currency';
 
 interface ApplicationModalProps {
   visible: boolean;
@@ -35,6 +36,7 @@ export default function ApplicationModal({
   
  
   const fullName = [formData.firstName, formData.middleName, formData.lastName, formData.suffix].filter(Boolean).join(' ');
+  const pendingProratedNote = `*Prorated stays at ₱${getZeroAmountDisplay()} while application is pending. It starts only after approval and Start Operation is clicked by admin.`;
 
   return (
     <Portal>
@@ -105,7 +107,7 @@ export default function ApplicationModal({
                        <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold', textAlign: 'center'}}>
                           ₱{modalBilling.baseRent.toLocaleString()} (Advance) + ₱{modalBilling.proratedRent.toLocaleString()} (Prorated) {"\n"}
                           <Text style={{fontSize: 10, fontStyle: 'italic', color: 'grey'}}>
-                            *Prorated stays at ₱0.00 while application is pending. It starts only after approval and Start Operation is clicked by admin.
+                            {pendingProratedNote}
                           </Text>
                        </Text>
                     )}
@@ -141,7 +143,7 @@ export default function ApplicationModal({
                        <Text style={{fontSize: 12, color: colors.primary, marginBottom: 2, fontWeight: 'bold', textAlign: 'center'}}>
                           ₱{modalBilling.baseRent.toLocaleString()} (Advance) + ₱{modalBilling.proratedRent.toLocaleString()} (Prorated) {"\n"}
                           <Text style={{fontSize: 10, fontStyle: 'italic', color: 'grey'}}>
-                            *Prorated stays at ₱0.00 while application is pending. It starts only after approval and Start Operation is clicked by admin.
+                            {pendingProratedNote}
                           </Text>
                        </Text>
                     )}

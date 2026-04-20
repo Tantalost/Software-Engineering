@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; 
+import { formatTwoDecimalAmount } from "./currencyDisplay";
 
 export const generateStatementPDF = (tenant) => {
   const doc = new jsPDF();
@@ -15,8 +16,8 @@ export const generateStatementPDF = (tenant) => {
   const tableColumn = ["Description", "Due Date", "Amount"];
   const currentMonth = new Date().getMonth() + 1; 
   const tableRows = [
-    ["Monthly Rent", `01/${currentMonth}/2025`, "P 5,000.00"],
-    ["Utility Fee", `01/${currentMonth}/2025`, "P 500.00"],
+    ["Monthly Rent", `01/${currentMonth}/2025`, `P ${Number(5000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+    ["Utility Fee", `01/${currentMonth}/2025`, `P ${formatTwoDecimalAmount(500)}`],
   ];
 
   autoTable(doc, {

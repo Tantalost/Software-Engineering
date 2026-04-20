@@ -36,6 +36,7 @@ import ArchiveConfirmModal from "../components/tenants/modals/ArchiveConfirmModa
 import SharedSubmitReportModal from "../components/common/SharedSubmitReportModal.jsx";
 
 import { generateRentStatementPDF, calculateDueAmount } from "../utils/tenantUtils";
+import { getZeroAmountDisplay } from "../utils/currencyDisplay";
 import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
 import { submitPageReport } from "../utils/reportService.js";
@@ -2682,7 +2683,7 @@ const TenantLease = () => {
                     }
 
                     baseData.rent = t.rentAmount ? `₱${t.rentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-";
-                    baseData.util = t.utilityAmount ? `₱${t.utilityAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "₱0.00";
+                    baseData.util = t.utilityAmount ? `₱${t.utilityAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : `₱${getZeroAmountDisplay()}`;
                     baseData.totaldue = `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
                     baseData.__highlight = isDeleteHighlighted;
                     baseData.__highlightVariant = isDeleteRequested ? "amber" : "emerald";
@@ -3277,7 +3278,7 @@ const TenantLease = () => {
                                             }
                                         }}
                                         className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
-                                        placeholder="0.00"
+                                        placeholder={getZeroAmountDisplay()}
                                     />
                                 </div>
 
@@ -3295,7 +3296,7 @@ const TenantLease = () => {
                                                 value={newNightWeeklyRent}
                                                 onChange={(e) => setNewNightWeeklyRent(e.target.value.replace(/[^0-9.]/g, ""))}
                                                 className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all outline-none"
-                                                placeholder="0.00"
+                                                placeholder={getZeroAmountDisplay()}
                                             />
                                         </div>
                                         <p className="text-[10px] text-slate-500 mt-2 leading-tight">

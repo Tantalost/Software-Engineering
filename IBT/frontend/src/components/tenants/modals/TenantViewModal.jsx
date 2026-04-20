@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, FileText, Eye, Loader2 } from "lucide-react";
 import { calculateDueAmount } from "../../../utils/tenantUtils.js";
+import { getZeroAmountDisplay } from "../../../utils/currencyDisplay";
 import CryptoJS from "crypto-js";
 import Field from "../../common/Field"; 
 
@@ -207,9 +208,9 @@ const TenantViewModal = ({ viewRow, onClose }) => {
               Financial Breakdown
             </h4>
             <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
-              <Field label={isPermanentTenant ? "Monthly Rent" : "Rental Fee"} value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₱0.00"} />
+              <Field label={isPermanentTenant ? "Monthly Rent" : "Rental Fee"} value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₱${getZeroAmountDisplay()}`} />
               {isPermanentTenant && (
-                <Field label="Advance Balance" value={viewRow.advancePaymentBalance ? `₱${Number(viewRow.advancePaymentBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₱0.00"} />
+                <Field label="Advance Balance" value={viewRow.advancePaymentBalance ? `₱${Number(viewRow.advancePaymentBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₱${getZeroAmountDisplay()}`} />
               )}
               
               {isPermanentTenant && <Field label="Electricity" value={`₱${Number(feeBreakdown.electricity || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />}

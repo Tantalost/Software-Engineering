@@ -1,6 +1,9 @@
 import React from "react";
 import StatCard from "../tenants/StatCard";
 import {
+  formatTwoDecimalAmount,
+} from "../../utils/currencyDisplay";
+import {
   Bus,
   CalendarClock,
   CheckCircle,
@@ -49,7 +52,7 @@ const StatCardGroupBus = ({
       <div className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-start">
         <StatCard 
           title="Revenue" 
-          value={totalRevenue ? totalRevenue.toFixed(2) : "0.00"} 
+          value={formatTwoDecimalAmount(totalRevenue)} 
           icon={PhilippinePeso} 
           color="orange" 
         />

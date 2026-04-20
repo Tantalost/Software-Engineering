@@ -4,6 +4,7 @@ import { Card, Text, Button, Divider, TextInput } from 'react-native-paper';
 import Icon from '@expo/vector-icons/MaterialCommunityIcons';
 import styles from '@/src/styles/stallsStyle'; 
 import { colors } from '@/src/themes/stallsColors'; 
+import { getZeroAmountDisplay } from '@/src/utils/currency';
 
 import FileUploadButton from '@/src/components/FileUploadButton';
 import API_URL from '@/src/config';
@@ -758,7 +759,7 @@ export const TenantView = ({ currentApp, clearPaymentData, paymentData, setPayme
 
             <Text variant="bodyMedium" style={{ color: '#121213', fontWeight: 'bold', marginBottom: 10 }}>
             <Text style={{ fontWeight: 'normal', color: '#121213' }}>Amount Paid: </Text> 
-              ₱{payment.amount ? Number(payment.amount).toLocaleString(undefined, {minimumFractionDigits: 2}) : (currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : "0.00")}
+              ₱{payment.amount ? Number(payment.amount).toLocaleString(undefined, {minimumFractionDigits: 2}) : (currentApp.totalAmount ? Number(currentApp.totalAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) : getZeroAmountDisplay())}
             </Text>
 
             {specificReceiptUri ? (

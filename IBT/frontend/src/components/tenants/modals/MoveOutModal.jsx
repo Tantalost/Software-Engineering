@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, LogOut, AlertTriangle, PhilippinePeso, ClipboardList } from "lucide-react";
+import { getZeroAmountDisplay } from "../../../utils/currencyDisplay";
 
 const MoveOutModal = ({ isOpen, onClose, tenant, onConfirm }) => {
   const [damageCost, setDamageCost] = useState("");
@@ -67,7 +68,7 @@ const MoveOutModal = ({ isOpen, onClose, tenant, onConfirm }) => {
                   <div className="relative">
                      <span className="absolute left-3 top-2.5 text-slate-400 font-bold">₱</span>
                     
-                     <input type="number" min="0" placeholder="0.00" value={damageCost} onChange={(e) => setDamageCost(e.target.value)} className="pl-8 p-2 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 outline-none" />
+                     <input type="number" min="0" placeholder={getZeroAmountDisplay()} value={damageCost} onChange={(e) => setDamageCost(e.target.value)} className="pl-8 p-2 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 outline-none" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">

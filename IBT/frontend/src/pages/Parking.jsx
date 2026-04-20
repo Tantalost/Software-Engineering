@@ -19,6 +19,7 @@ import SharedSubmitReportModal from "../components/common/SharedSubmitReportModa
 import { submitPageReport } from "../utils/reportService.js";
 import { logActivity } from "../utils/logger";
 import { sendNotification } from "../utils/notificationService.js";
+import { getZeroAmountDisplay } from "../utils/currencyDisplay";
 import {
   Trash2,
   LogOut,
@@ -2230,7 +2231,7 @@ const handleSafeLogout = () => {
                       handleModalPriceChange("jeep", e.target.value)
                     }
                     className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    placeholder="0.00"
+                    placeholder={getZeroAmountDisplay()}
                   />
                 </div>
               </div>
@@ -2251,7 +2252,7 @@ const handleSafeLogout = () => {
                       handleModalPriceChange("car", e.target.value)
                     }
                     className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    placeholder="0.00"
+                    placeholder={getZeroAmountDisplay()}
                   />
                 </div>
               </div>
@@ -2273,7 +2274,7 @@ const handleSafeLogout = () => {
                       handleModalPriceChange("motorcycle", e.target.value)
                     }
                     className="w-full bg-white border border-slate-300 pl-8 pr-3 py-2.5 rounded-lg font-semibold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    placeholder="0.00"
+                    placeholder={getZeroAmountDisplay()}
                   />
                 </div>
               </div>
