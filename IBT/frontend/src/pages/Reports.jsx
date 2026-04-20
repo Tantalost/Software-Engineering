@@ -1795,12 +1795,6 @@ const Reports = () => {
           </div>
         </div>
 
-        {isSuperAdmin && hasInvalidCustomExportRange() && (
-          <p className="text-sm text-red-600 -mt-2">
-            Invalid range: From date must be earlier than or equal to To date.
-          </p>
-        )}
-
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
       
           <div className="relative w-full sm:w-64 shrink-0">
@@ -1921,6 +1915,12 @@ const Reports = () => {
                       </button>
                     </div>
                   </div>
+                )}
+
+                {isSuperAdmin && hasInvalidCustomExportRange() && (
+                  <p className="text-sm text-red-600 -mt-2">
+                    Invalid range: From date must be earlier than or equal to To date.
+                  </p>
                 )}
               </div>
             )}
