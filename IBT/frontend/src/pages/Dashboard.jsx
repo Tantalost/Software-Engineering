@@ -1049,82 +1049,84 @@ const Dashboard = () => {
     <Layout title="Dashboard">
       <div className="px-4 py-6 lg:px-8 space-y-10 bg-gray-50 min-h-screen">
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
-          <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-3">
-            <DashboardToolbar
-              onRefresh={fetchDashboardData}
-              onDownload={handleDownload}
-              onFilterChange={handleFilterChange}
-              loading={loading}
-              onSetTargets={() => setIsTargetModalOpen(true)}
-            />
+          <div className="flex flex-col gap-3">
+ 
+  <div className="flex flex-row flex-wrap items-center gap-3">
+    <DashboardToolbar
+      onRefresh={fetchDashboardData}
+      onDownload={handleDownload}
+      onFilterChange={handleFilterChange}
+      loading={loading}
+      onSetTargets={() => setIsTargetModalOpen(true)}
+    />
 
-            {isSuperAdmin && (
-              <div className="flex flex-col justify-start">
-                {!showCustomRange ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomRange(true)}
-                    className="h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-all flex items-center"
-                  >
-                    Customize
-                  </button>
-                ) : (
-                  <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm">
-                    <div className="flex flex-wrap items-end gap-2">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-gray-700">From</label>
-                        <input
-                          type="date"
-                          value={exportDateFrom}
-                          onChange={(e) => setExportDateFrom(e.target.value)}
-                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
-                        />
-                      </div>
+    {isSuperAdmin && !showCustomRange && (
+      <button
+        type="button"
+        onClick={() => setShowCustomRange(true)}
+        className="h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-all flex items-center w-fit"
+      >
+        Customize
+      </button>
+    )}
+  </div>
 
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-gray-700">To</label>
-                        <input
-                          type="date"
-                          value={exportDateTo}
-                          onChange={(e) => setExportDateTo(e.target.value)}
-                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
-                        />
-                      </div>
+  
+  {isSuperAdmin && showCustomRange && (
+    <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm w-fit">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-700">From</label>
+          <input
+            type="date"
+            value={exportDateFrom}
+            onChange={(e) => setExportDateFrom(e.target.value)}
+            className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
+          />
+        </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExportDateFrom("");
-                          setExportDateTo("");
-                        }}
-                        className="h-10 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all"
-                      >
-                        Clear
-                      </button>
-                      
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowCustomRange(false);
-                          setExportDateFrom("");
-                          setExportDateTo("");
-                        }}
-                        className="h-10 px-3 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-all"
-                      >
-                        Close
-                      </button>
-                    </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-700">To</label>
+          <input
+            type="date"
+            value={exportDateTo}
+            onChange={(e) => setExportDateTo(e.target.value)}
+            className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
+          />
+        </div>
 
-                    {hasInvalidCustomExportRange() && (
-                      <p className="mt-2 text-sm text-red-600">
-                        Invalid range: From date must be earlier than or equal to To date.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+        <button
+          type="button"
+          onClick={() => {
+            setExportDateFrom("");
+            setExportDateTo("");
+          }}
+          className="h-10 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all"
+        >
+          Clear
+        </button>
+        
+        <button
+          type="button"
+          onClick={() => {
+            setShowCustomRange(false);
+            setExportDateFrom("");
+            setExportDateTo("");
+          }}
+          className="h-10 px-3 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-all"
+        >
+          Close
+        </button>
+      </div>
+
+      {hasInvalidCustomExportRange() && (
+        <p className="mt-2 text-sm text-red-600">
+          Invalid range: From date must be earlier than or equal to To date.
+        </p>
+      )}
+    </div>
+  )}
+</div>
 
           <div className="flex justify-end">
             <button
