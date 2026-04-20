@@ -104,7 +104,7 @@ const Table = ({ columns = [], data = [], actions, variant = "default" }) => {
 
                      const isMono = ["ticket", "price"].some((k) =>
                         colName.toLowerCase().includes(k)
-                      ) || key === "rent" || key === "util" || key === "total-due" || key === "advance-bal";
+                      ) || key === "rent" || key === "util" || key === "total-due" || key === "advance-bal" || key === "fee/hr" || key === "total";
 
                       return (
                         <td
