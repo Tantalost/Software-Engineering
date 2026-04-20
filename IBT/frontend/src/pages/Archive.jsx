@@ -60,6 +60,7 @@ const Archive = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
 
   const [notificationState, setNotificationState] = useState({
@@ -243,15 +244,20 @@ const Archive = () => {
       });
     }
   };
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`Permanently delete ${selectedIds.length} items? This cannot be undone.`)) return;
+  const handleBulkDeleteConfirm = async () => {
     setIsLoading(true);
     try {
       await Promise.all(selectedIds.map(async (id) => {
         const item = allArchivedItems.find(i => (i._id === id || i.id === id));
         if (item?.isSoftDeleted) {
-        
-          const moduleMap = { "Bus Trip": "bustrips", "Terminal Fee": "terminal-fees", "Parking Ticket": "parking", "Lost & Found": "lostfound", "Report": "reports" };
+          const moduleMap = { 
+            "Bus Trip": "bustrips", 
+            "Terminal Fee": "terminal-fees", 
+            "Parking Ticket": "parking", 
+            "Lost & Found": "lostfound", 
+            "Report": "reports",
+            "Tenant": "tenants" 
+          };
           return fetch(`${API_URL}/${moduleMap[item.type]}/${id}`, { method: "DELETE" });
         }
         return fetch(`${API_URL}/archives/${id}`, { method: "DELETE" });
@@ -260,8 +266,23 @@ const Archive = () => {
       setSelectedIds([]);
       fetchArchives();
       setIsSelectionMode(false);
+      setShowBulkDeleteModal(false);
+      setNotificationState({
+        isOpen: true,
+        type: 'success',
+        message: `Successfully deleted selected items.`,
+        autoClose: true,
+        duration: 3000
+      });
     } catch (e) {
       console.error("Delete Error", e);
+      setNotificationState({
+        isOpen: true,
+        type: 'error',
+        message: "Failed to delete some items.",
+        autoClose: true,
+        duration: 3000
+      });
     } finally {
       setIsLoading(false);
     }
@@ -300,7 +321,7 @@ const Archive = () => {
           {isSelectionMode && selectedIds.length > 0 && (
             <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200">
               <span className="text-xs font-semibold text-slate-600 px-2">{selectedIds.length} Selected</span>
-              <button onClick={handleBulkDelete} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer"><Trash2 className="h-5 w-5" /></button>
+              <button onClick={() => setShowBulkDeleteModal(true)} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer"><Trash2 className="h-5 w-5" /></button>
             </div>
           )}
           <button onClick={() => { if (isSelectionMode) setSelectedIds([]); setIsSelectionMode(!isSelectionMode); }} className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode ? "bg-red-500 text-white shadow-md border-red-600" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`}>
@@ -365,6 +386,38 @@ const Archive = () => {
         message={notificationState.message}
         onClose={() => setNotificationState({ isOpen: false, type: '', message: '', autoClose: true, duration: 3000 })}
       />
+
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800">
+              Confirm Bulk Delete
+            </h3>
+            <p className="text-slate-600 mt-2 text-sm">
+              Are you sure you want to permanently delete {selectedIds.length} items? This action cannot be undone.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="flex-1 py-2.5 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDeleteConfirm}
+                disabled={isLoading}
+                className="flex-1 py-2.5 bg-red-600 rounded-lg text-white font-medium hover:bg-red-700 shadow-sm disabled:opacity-50 transition-colors cursor-pointer flex justify-center items-center"
+              >
+                {isLoading ? <Loader2 className="animate-spin" size={18} /> : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </Layout>
   );
 };
