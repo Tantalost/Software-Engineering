@@ -47,7 +47,7 @@ const LandingPage = () => {
     },
     {
       text: 'Unified Terminal Services',
-      positionClass: 'top-47 right-1 sm:-right-[30px] animate-float-delay',
+      positionClass: 'top-47 right-1 sm:-right-30 animate-float-delay',
       toneClass: 'border-white/30 bg-white/15 text-slate-50'
     }
   ];
@@ -70,10 +70,7 @@ const LandingPage = () => {
   }, []);
 
   return (
-    // Changed: Removed `h-screen` and `overflow-hidden`. Added `min-h-screen` and `overflow-x-hidden`
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#071823] text-slate-100 selection:bg-emerald-300/40">
-      
-      {/* Background Elements */}
       <div
         className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.2),transparent_38%),radial-gradient(circle_at_78%_18%,rgba(56,189,248,0.24),transparent_36%),linear-gradient(165deg,#071823_0%,#0B2535_48%,#0A1220_100%)]"
       />
