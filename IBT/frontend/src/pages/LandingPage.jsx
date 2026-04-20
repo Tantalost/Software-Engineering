@@ -58,12 +58,15 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-[#071823] text-slate-100 selection:bg-emerald-300/40">
+    // Changed: Removed `h-screen` and `overflow-hidden`. Added `min-h-screen` and `overflow-x-hidden`
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#071823] text-slate-100 selection:bg-emerald-300/40">
+      
+      {/* Background Elements */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.2),transparent_38%),radial-gradient(circle_at_78%_18%,rgba(56,189,248,0.24),transparent_36%),linear-gradient(165deg,#071823_0%,#0B2535_48%,#0A1220_100%)]"
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.2),transparent_38%),radial-gradient(circle_at_78%_18%,rgba(56,189,248,0.24),transparent_36%),linear-gradient(165deg,#071823_0%,#0B2535_48%,#0A1220_100%)]"
       />
       <div
-        className="pointer-events-none absolute inset-0 z-0 opacity-20 bg-cover bg-center bg-no-repeat"
+        className="pointer-events-none fixed inset-0 z-0 opacity-20 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${ibtBg})` }}
       />
       <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
@@ -92,35 +95,40 @@ const LandingPage = () => {
         </div>
       </header>
 
-      <main className="no-scrollbar relative z-20 mx-auto grid w-full max-w-7xl flex-1 min-h-0 grid-cols-1 gap-8 overflow-x-hidden overflow-y-hidden px-5 py-3 pb-4 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,372px)] lg:items-start lg:gap-8 lg:py-3 lg:pb-4">
-        <section className="min-w-0">
-          <span className="inline-flex rounded-full border border-emerald-200/35 bg-emerald-300/10 px-4 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.23em] text-emerald-100">
-            Terminal Operations, Simplified
-          </span>
+      {/* Changed: Removed `overflow-y-hidden` and `min-h-0`. Let it flow naturally. */}
+      <main className="relative z-20 mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-8 px-5 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,372px)] lg:items-start lg:gap-8 lg:py-12 pb-16">
+        
+        {/* Left Column (Text & Features) */}
+        <section className="min-w-0 flex flex-col justify-center">
+          <div>
+            <span className="inline-flex rounded-full border border-emerald-200/35 bg-emerald-300/10 px-4 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.23em] text-emerald-100">
+              Terminal Operations, Simplified
+            </span>
 
-          <h2
-            className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.03] text-white sm:text-4xl lg:text-[3.3rem]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            Real-time bus intelligence for passengers, tenants, and terminal staff.
-          </h2>
-
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-200/85 sm:text-base">
-            IBT centralizes trip tracking, stall applications, and service updates in one reliable platform so everyone can make faster, better decisions.
-          </p>
-
-          <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="group inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.15em] text-slate-900 shadow-[0_12px_35px_rgba(16,185,129,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-300/50 focus:ring-offset-2"
+            <h2
+              className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.03] text-white sm:text-4xl lg:text-[3.3rem]"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              <Download size={16} />
-              Download App
-              <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
-            </button>
+              Real-time bus intelligence for passengers, tenants, and terminal staff.
+            </h2>
+
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-200/85 sm:text-base">
+              IBT centralizes trip tracking, stall applications, and service updates in one reliable platform so everyone can make faster, better decisions.
+            </p>
+
+            <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="group inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.15em] text-slate-900 shadow-[0_12px_35px_rgba(16,185,129,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-300/50 focus:ring-offset-2"
+              >
+                <Download size={16} />
+                Download App
+                <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </div>
           </div>
 
-          <div className="mt-6 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mt-8 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
             {quickStats.map((item) => (
               <div
                 key={item.label}
@@ -166,27 +174,30 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section className="relative min-w-0 lg:mt-12 lg:self-start">
-          <div className="relative mx-auto w-full max-w-[352px]">
+        {/* Right Column (Phone Mockup & Alerts) */}
+        <section className="relative min-w-0 lg:self-center mt-8 lg:mt-0 flex flex-col items-center lg:items-end">
+          <div className="relative w-full max-w-[352px]">
+            
             <div className="animate-float absolute -top-3 left-3 z-20 rounded-2xl border border-white/30 bg-white/15 px-3.5 py-1.5 backdrop-blur-md">
               <p className="text-[0.62rem] uppercase tracking-[0.2em] text-emerald-100/90">Trip Alert</p>
               <p className="mt-0.5 text-xs font-semibold text-white">New Arrival at Platform 4</p>
             </div>
 
-            <div className="relative mx-auto w-full max-w-[352px] rounded-[2.1rem] border border-white/20 bg-gradient-to-b from-cyan-200/15 to-emerald-300/10 p-2.5 shadow-[0_30px_70px_rgba(8,47,73,0.45)] sm:p-2.5">
+            {/* Changed: Removed max-h constraint on the image container so it looks normal on mobile */}
+            <div className="relative w-full max-w-[352px] rounded-[2.1rem] border border-white/20 bg-gradient-to-b from-cyan-200/15 to-emerald-300/10 p-2.5 shadow-[0_30px_70px_rgba(8,47,73,0.45)] sm:p-2.5">
               <div className="rounded-[1.6rem] border border-white/15 bg-slate-950/45 p-1.5 backdrop-blur sm:p-1.5">
                 <img
                   src={adsPhone}
                   alt="IBT mobile app interface"
-                  className="mx-auto h-auto w-full max-h-[57vh] object-contain drop-shadow-[0_18px_45px_rgba(0,0,0,0.45)]"
+                  className="w-full h-auto object-contain drop-shadow-[0_18px_45px_rgba(0,0,0,0.45)]"
                 />
               </div>
             </div>
 
-            <div className="mt-3 mx-auto w-full max-w-[332px] rounded-xl border border-white/15 bg-white/5 p-2.5 backdrop-blur-sm">
-              <div className="flex items-start gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-300/20 text-emerald-100">
-                  <QrCode size={15} />
+            <div className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-300/20 text-emerald-100">
+                  <QrCode size={18} />
                 </div>
                 <div>
                   <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-emerald-100">Fast Onboarding</h3>
@@ -197,7 +208,7 @@ const LandingPage = () => {
               </div>
             </div>
 
-            <div className="mt-2.5 mx-auto w-full max-w-[332px] rounded-xl border border-cyan-200/20 bg-cyan-300/5 p-2.5 backdrop-blur-sm">
+            <div className="mt-3 w-full rounded-xl border border-cyan-200/20 bg-cyan-300/5 p-3 backdrop-blur-sm">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-cyan-100">Service Reminder</p>
               <p className="mt-1 text-[0.74rem] leading-relaxed text-slate-200/85 sm:text-[0.78rem]">
                 Enable notifications after login so schedule changes and terminal advisories appear instantly.
@@ -207,8 +218,8 @@ const LandingPage = () => {
         </section>
       </main>
 
-      <footer className="relative z-20 border-t border-white/10 bg-slate-950/40 py-1.5 text-center">
-        <p className="px-4 text-[0.58rem] uppercase tracking-[0.2em] text-slate-300/70">
+      <footer className="relative z-20 mt-auto border-t border-white/10 bg-slate-950/40 py-3 text-center">
+        <p className="px-4 text-[0.6rem] uppercase tracking-[0.2em] text-slate-300/70">
           © 2026 CYNERGYOPS. All rights reserved. Privacy Policy. Terms.
         </p>
       </footer>
