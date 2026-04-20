@@ -34,10 +34,22 @@ const LandingPage = () => {
     }
   ];
 
-  const quickStats = [
-    { label: 'Live Monitoring', value: '24/7' },
-    { label: 'Smart Alerts', value: 'Instant' },
-    { label: 'Terminal Services', value: 'Unified' }
+  const phoneFeatureCards = [
+    {
+      text: '24/7 Live Monitoring',
+      positionClass: 'top-20 left-1 sm:-left-14 animate-float-delay',
+      toneClass: 'border-emerald-200/35 bg-emerald-300/15 text-emerald-50'
+    },
+    {
+      text: 'Instant Smart Alerts',
+      positionClass: 'top-1/2 left-1 sm:-left-12 -translate-y-1/2 animate-float',
+      toneClass: 'border-cyan-200/35 bg-cyan-300/15 text-cyan-50'
+    },
+    {
+      text: 'Unified Terminal Services',
+      positionClass: 'top-32 right-1 sm:-right-24 animate-float-delay',
+      toneClass: 'border-white/30 bg-white/15 text-slate-50'
+    }
   ];
 
   useEffect(() => {
@@ -95,10 +107,7 @@ const LandingPage = () => {
         </div>
       </header>
 
-      {/* Changed: Removed `overflow-y-hidden` and `min-h-0`. Let it flow naturally. */}
-      <main className="relative z-20 mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-8 px-5 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,372px)] lg:items-start lg:gap-8 lg:py-12 pb-16">
-        
-        {/* Left Column (Text & Features) */}
+      <main className="relative z-20 mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-8 px-5 py-4 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,372px)] lg:items-start lg:gap-6 lg:py-6 pb-8">
         <section className="min-w-0 flex flex-col justify-center">
           <div>
             <span className="inline-flex rounded-full border border-emerald-200/35 bg-emerald-300/10 px-4 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.23em] text-emerald-100">
@@ -126,20 +135,6 @@ const LandingPage = () => {
                 <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
-          </div>
-
-          <div className="mt-8 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
-            {quickStats.map((item) => (
-              <div
-                key={item.label}
-                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-4 backdrop-blur-sm"
-              >
-                <p className="text-xl font-bold text-emerald-200" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  {item.value}
-                </p>
-                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-300/90">{item.label}</p>
-              </div>
-            ))}
           </div>
 
           <div className="mt-8 rounded-3xl border border-white/12 bg-slate-900/35 p-4 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-sm sm:p-5">
@@ -175,12 +170,25 @@ const LandingPage = () => {
         </section>
 
         {/* Right Column (Phone Mockup & Alerts) */}
-        <section className="relative min-w-0 lg:self-center mt-8 lg:mt-0 flex flex-col items-center lg:items-end">
+        <section className="relative min-w-0 lg:self-start mt-10 lg:mt-10 flex flex-col items-center lg:items-end">
           <div className="relative w-full max-w-[352px]">
             
             <div className="animate-float absolute -top-3 left-3 z-20 rounded-2xl border border-white/30 bg-white/15 px-3.5 py-1.5 backdrop-blur-md">
               <p className="text-[0.62rem] uppercase tracking-[0.2em] text-emerald-100/90">Trip Alert</p>
               <p className="mt-0.5 text-xs font-semibold text-white">New Arrival at Platform 4</p>
+            </div>
+
+            <div className="pointer-events-none absolute inset-0 z-20">
+              {phoneFeatureCards.map((item) => (
+                <div
+                  key={item.text}
+                  className={`absolute max-w-[150px] rounded-xl border px-3 py-2 shadow-[0_10px_28px_rgba(2,8,23,0.35)] backdrop-blur-md ${item.positionClass} ${item.toneClass}`}
+                >
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.12em]">
+                    {item.text}
+                  </p>
+                </div>
+              ))}
             </div>
 
             {/* Changed: Removed max-h constraint on the image container so it looks normal on mobile */}
@@ -194,26 +202,34 @@ const LandingPage = () => {
               </div>
             </div>
 
-            <div className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-300/20 text-emerald-100">
-                  <QrCode size={18} />
-                </div>
-                <div>
-                  <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-emerald-100">Fast Onboarding</h3>
-                  <p className="mt-1 text-[0.74rem] leading-relaxed text-slate-200/85 sm:text-[0.78rem]">
-                    Scan the QR code to install the app and start receiving live trip updates and terminal notices.
-                  </p>
-                </div>
-              </div>
-            </div>
+          </div>
+        </section>
 
-            <div className="mt-3 w-full rounded-xl border border-cyan-200/20 bg-cyan-300/5 p-3 backdrop-blur-sm">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-cyan-100">Service Reminder</p>
-              <p className="mt-1 text-[0.74rem] leading-relaxed text-slate-200/85 sm:text-[0.78rem]">
-                Enable notifications after login so schedule changes and terminal advisories appear instantly.
-              </p>
-            </div>
+        <section className="lg:col-span-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <article className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-emerald-100">
+                <Clock3 size={16} />
+                <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em]">24/7 Passenger Updates</p>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-200/80">Realtime boards stay synced for departures, arrivals, and gate-level notices.</p>
+            </article>
+
+            <article className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-cyan-100">
+                <QrCode size={16} />
+                <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em]">QR-Ready Access</p>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-200/80">Install quickly and move from scan to live terminal updates in seconds.</p>
+            </article>
+
+            <article className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-emerald-100">
+                <Download size={16} />
+                <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em]">Instant Service Advisories</p>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-200/80">Critical schedule changes and terminal advisories reach users without delay.</p>
+            </article>
           </div>
         </section>
       </main>
