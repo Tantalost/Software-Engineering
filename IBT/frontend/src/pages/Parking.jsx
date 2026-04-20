@@ -1516,8 +1516,8 @@ const handleSafeLogout = () => {
       "Ticket No": item.ticketNo || "-",
       "Plate No": item.plateNo || "-",
       Type: item.type,
-      "Fee/Hr": item.baseRate ? `₱${item.baseRate}` : "-",
-      Total: item.finalPrice ? `₱${item.finalPrice}` : "-",
+      "Fee/Hr": item.baseRate ? `₱${Number(item.baseRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-",
+      Total: item.finalPrice ? `₱${Number(item.finalPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-",
       "Time In": item.timeIn ? formatDateDisplay(item.timeIn) : "-",
       "Time Out": item.timeOut ? formatDateDisplay(item.timeOut) : "-",
       Duration: item.duration || "-",
@@ -2052,8 +2052,8 @@ const handleSafeLogout = () => {
                     Pending
                   </span>
                 ),
-                "fee/hr": ticket.baseRate ? `₱${ticket.baseRate}` : "---",
-                total: ticket.finalPrice ? `₱${ticket.finalPrice}` : "---",
+                "fee/hr": ticket.baseRate ? `₱${Number(ticket.baseRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "---",
+                total: ticket.finalPrice ? `₱${Number(ticket.finalPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "---",
                 timein: formatTimeOnly(ticket.timeIn),
                 timeout: ticket.timeOut
                   ? formatTimeOnly(ticket.timeOut)
