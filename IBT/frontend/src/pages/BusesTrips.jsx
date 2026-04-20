@@ -4394,6 +4394,7 @@ const BusTrips = () => {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
+
       `}</style>
 
       {viewRow && (
