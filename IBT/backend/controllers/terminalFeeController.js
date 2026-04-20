@@ -47,10 +47,10 @@ export const getTerminalFees = async (req, res) => {
 
 export const submitTerminalFeesForShift = async (req, res) => {
   try {
-    const { sessionStartedAt, reportId } = req.body;
+    const { sessionStartedAt, reportId, includeAllPending } = req.body;
     const shiftStart = sessionStartedAt ? new Date(sessionStartedAt) : null;
 
-    if (!shiftStart || Number.isNaN(shiftStart.getTime())) {
+    if (!includeAllPending && (!shiftStart || Number.isNaN(shiftStart.getTime()))) {
       return res.status(400).json({ error: "Valid sessionStartedAt is required." });
     }
 
@@ -65,12 +65,17 @@ export const submitTerminalFeesForShift = async (req, res) => {
       updatePayload.reportId = reportId;
     }
 
+    const query = {
+      isArchived: { $ne: true },
+      submitted: { $ne: true },
+    };
+
+    if (!includeAllPending) {
+      query.createdAt = { $gte: shiftStart, $lte: now };
+    }
+
     const result = await TerminalFee.updateMany(
-      {
-        isArchived: { $ne: true },
-        submitted: { $ne: true },
-        createdAt: { $gte: shiftStart, $lte: now },
-      },
+      query,
       { $set: updatePayload },
     );
 
