@@ -1649,7 +1649,7 @@ const BusTrips = () => {
       await logActivity(
         role,
         "SET_DEFAULT_PRICE",
-        `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
+        `Set default bus fee to ₱${priceValue.toFixed(2)} (Updated ${result.modifiedCount || 0} pending trips)`,
         "BusTrips",
       );
 
@@ -1659,10 +1659,11 @@ const BusTrips = () => {
       setNotificationState({
         isOpen: true,
         type: "success",
-        message: `Prices updated to ₱${priceValue}!`,
+        message: `Prices updated to ₱${priceValue.toFixed(2)}!`,
         autoClose: true,
         duration: 3000,
       });
+
     } catch (err) {
       console.error(err);
 
@@ -3606,7 +3607,7 @@ const BusTrips = () => {
               {role === "superadmin" && (
                 <button
                   onClick={() => {
-                    setNewPrice(defaultPrice.toString());
+                    setNewPrice(Number(defaultPrice).toFixed(2));
                     setShowSetPriceModal(true);
                   }}
                   className="flex items-center cursor-pointer justify-center space-x-2 border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition-all"
