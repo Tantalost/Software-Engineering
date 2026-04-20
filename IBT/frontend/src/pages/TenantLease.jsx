@@ -412,8 +412,8 @@ const TenantLease = () => {
                 role,
                 "SET_FEES_AND_PENALTIES",
                 isNightMarket
-                    ? `Updated Night Market base price to ₱${basePriceValue} and weekly rent to ₱${weeklyRentValue}.`
-                    : `Updated Permanent rent to ₱${basePriceValue} and adjusted overdue settings.`,
+                    ? `Updated Night Market base price to ₱${basePriceValue.toFixed(2)} and weekly rent to ₱${weeklyRentValue.toFixed(2)}.`
+                    : `Updated Permanent rent to ₱${basePriceValue.toFixed(2)} and adjusted overdue settings.`,
                 "Tenants",
             );
 
@@ -2457,18 +2457,20 @@ const TenantLease = () => {
                         <button
                             onClick={() => {
                                 if (activeTab === "night") {
-                                    setNewNightPrice(defaultNightPrice.toString());
-                                    setNewNightWeeklyRent(defaultNightWeeklyRent.toString());
+                                   
+                                    setNewNightPrice(Number(defaultNightPrice).toFixed(2));
+                                    setNewNightWeeklyRent(Number(defaultNightWeeklyRent).toFixed(2));
                                     setNewChargePct(nightChargePct.toString());
                                     setNewInterestPct(nightInterestPct.toString());
                                     setNewNightMaxTerminationDays(nightMaxTerminationDays.toString());
                                     setNewNightOperationStartDeadlineDays(nightOperationStartDeadlineDays.toString());
                                 } else {
-                                    setNewPermanentPrice(defaultPermanentPrice.toString());
+                                   
+                                    setNewPermanentPrice(Number(defaultPermanentPrice).toFixed(2));
                                     setNewChargePct(permChargePct.toString());
                                     setNewInterestPct(permInterestPct.toString());
                                     setNewDueDate(defaultDueDate.toString());
-                                    setNewDailyFee(defaultDailyFee.toString());
+                                    setNewDailyFee(Number(defaultDailyFee).toFixed(2));
                                 }
                                 setShowSetPriceModal(true);
                             }}

@@ -1649,7 +1649,7 @@ const BusTrips = () => {
       await logActivity(
         role,
         "SET_DEFAULT_PRICE",
-        `Set default bus fee to ₱${newPrice} (Updated ${result.modifiedCount || 0} pending trips)`,
+        `Set default bus fee to ₱${priceValue.toFixed(2)} (Updated ${result.modifiedCount || 0} pending trips)`,
         "BusTrips",
       );
 
@@ -1659,10 +1659,11 @@ const BusTrips = () => {
       setNotificationState({
         isOpen: true,
         type: "success",
-        message: `Prices updated to ₱${priceValue}!`,
+        message: `Prices updated to ₱${priceValue.toFixed(2)}!`,
         autoClose: true,
         duration: 3000,
       });
+
     } catch (err) {
       console.error(err);
 
