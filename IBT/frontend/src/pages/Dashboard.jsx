@@ -31,8 +31,11 @@ const Dashboard = () => {
 
   const [filterDate, setFilterDate] = useState(new Date());
   const [filterView, setFilterView] = useState("week");
+  
+  // Custom Date Range States
   const [exportDateFrom, setExportDateFrom] = useState("");
   const [exportDateTo, setExportDateTo] = useState("");
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [targets, setTargets] = useState(() => {
@@ -196,17 +199,13 @@ const Dashboard = () => {
       const second = Number(secondPart);
       const year = Number(yearText);
 
-      // Disambiguate safely and avoid JS month overflow (e.g. 19 as month).
-      // If one side cannot be a month, infer format from the valid side.
       if (first > 12 && second <= 12) {
-        return new Date(year, second - 1, first); // dd/mm/yyyy
+        return new Date(year, second - 1, first); 
       }
       if (second > 12 && first <= 12) {
-        return new Date(year, first - 1, second); // mm/dd/yyyy
+        return new Date(year, first - 1, second); 
       }
 
-      // Ambiguous values (both <= 12): prefer month/day for backend data,
-      // then fallback to day/month if month/day is invalid.
       const asMdy = new Date(year, first - 1, second);
       if (!Number.isNaN(asMdy.getTime())) return asMdy;
 
@@ -467,14 +466,6 @@ const Dashboard = () => {
       const parking = await parseResponse(parkingRes);
       const reports = await parseResponse(reportsRes);
 
-      console.log("DASHBOARD DATA:", {
-        tickets,
-        bus,
-        tenants,
-        parking,
-        reports,
-      });
-
       setRawData({ tickets, bus, tenants, parking, reports });
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -514,7 +505,6 @@ const Dashboard = () => {
     if (category === "bus") {
       return items.filter((i) => {
         const s = (i.status || "").toLowerCase();
-        // Matches Terminal Dispatch / Buses Trips: revenue when trip is Departed (or Paid).
         return ["departed", "paid"].includes(s);
       });
     }
@@ -543,7 +533,6 @@ const Dashboard = () => {
 
       let currentRev;
       if (moduleKey === "tenants") {
-        // For tenants, sum rentAmount + utilityAmount for all tenants, like in TenantLease
         currentRev = dateFiltered.reduce((sum, tenant) => {
           const rent = parseFloat(tenant.rentAmount) || 0;
           const util = parseFloat(tenant.utilityAmount) || 0;
@@ -610,7 +599,6 @@ const Dashboard = () => {
       isDashboardDateMatch(getItemDate(i)),
     );
 
-    // For tenants revenue, sum rent + utility for all tenants, not just paid
     const tenantsRevenue = filteredTenants.reduce((sum, tenant) => {
       const rent = parseFloat(tenant.rentAmount) || 0;
       const util = parseFloat(tenant.utilityAmount) || 0;
@@ -655,29 +643,28 @@ const Dashboard = () => {
     setRecentActivity(processedActivity);
 
     const getChartMetrics = (items, moduleKey, dateMatchFn) => {
-  const dateMatched = items.filter(dateMatchFn);
+      const dateMatched = items.filter(dateMatchFn);
 
-  // Special handling for Tenants revenue
-  if (moduleKey === "tenants") {
-    const revenue = dateMatched.reduce((sum, tenant) => {
-      const rent = parseFloat(tenant.rentAmount) || 0;
-      const util = parseFloat(tenant.utilityAmount) || 0;
-      return sum + rent + util;
-    }, 0);
+      if (moduleKey === "tenants") {
+        const revenue = dateMatched.reduce((sum, tenant) => {
+          const rent = parseFloat(tenant.rentAmount) || 0;
+          const util = parseFloat(tenant.utilityAmount) || 0;
+          return sum + rent + util;
+        }, 0);
 
-    return {
-      revenue,
-      volume: dateMatched.length,
+        return {
+          revenue,
+          volume: dateMatched.length,
+        };
+      }
+
+      const paidOnly = getPaidItems(dateMatched, moduleKey);
+
+      return {
+        revenue: calculateRevenue(paidOnly),
+        volume: paidOnly.length,
+      };
     };
-  }
-
-  const paidOnly = getPaidItems(dateMatched, moduleKey);
-
-  return {
-    revenue: calculateRevenue(paidOnly),
-    volume: paidOnly.length,
-  };
-};
 
     let chartPoints = [];
     if (isCustomExportRangeActive) {
@@ -968,8 +955,6 @@ const Dashboard = () => {
     }
   };
 
-  // --- EXPORT TO EXCEL (USING EXCELJS) ---
-  // --- BRANDED EXPORT TO EXCEL (USING EXCELJS) ---
   const exportToExcel = async () => {
     try {
       if (hasInvalidCustomExportRange()) {
@@ -981,11 +966,9 @@ const Dashboard = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Dashboard Report");
 
-      // 1. BRANDED HEADER (-1/8 height adjustment)
-      worksheet.getRow(1).height = 35; // Reduced from base points
+      worksheet.getRow(1).height = 35; 
       await addImageToWorksheet(workbook, worksheet, headerImg, 'A1:D4');
 
-      // 2. Report Title & Metadata (Positioned after header)
       worksheet.mergeCells('A6:D6');
       const titleCell = worksheet.getCell('A6');
       titleCell.value = 'DASHBOARD REPORT';
@@ -996,9 +979,8 @@ const Dashboard = () => {
       if (payload.meta.dateRange) {
         worksheet.getCell('A8').value = `Export Range: ${payload.meta.dateRange}`;
       }
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); 
 
-      // 3. Revenue Summary Section
       const summaryHeaderRow = worksheet.addRow(['REVENUE SUMMARY']);
       summaryHeaderRow.font = { bold: true };
 
@@ -1024,9 +1006,8 @@ const Dashboard = () => {
         );
       });
 
-      worksheet.addRow([]); // Spacer
+      worksheet.addRow([]); 
 
-      // 4. Revenue Breakdown Section
       const breakdownHeader = worksheet.addRow(['REVENUE BREAKDOWN']);
       breakdownHeader.font = { bold: true };
 
@@ -1040,18 +1021,15 @@ const Dashboard = () => {
         worksheet.addRow([d.name, `Php ${formatRevenueAmount(d.value)}`]);
       });
 
-      // 5. BRANDED FOOTER (-1/8 height adjustment)
       const lastRowNumber = worksheet.lastRow.number + 2;
-      worksheet.getRow(lastRowNumber).height = 52.5; // Reduced from base points
+      worksheet.getRow(lastRowNumber).height = 52.5; 
       await addImageToWorksheet(workbook, worksheet, footerImg, `A${lastRowNumber}:D${lastRowNumber + 3}`);
 
-      // 6. Column Widths for readability
       worksheet.getColumn(1).width = 35;
       worksheet.getColumn(2).width = 25;
       worksheet.getColumn(3).width = 25;
       worksheet.getColumn(4).width = 25;
 
-      // 7. Write and Save
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       saveAs(blob, `Dashboard_Branded_Report_${filterView}_${Date.now()}.xlsx`);
@@ -1081,44 +1059,68 @@ const Dashboard = () => {
             />
 
             {isSuperAdmin && (
-              <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm">
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-700">From</label>
-                    <input
-                      type="date"
-                      value={exportDateFrom}
-                      onChange={(e) => setExportDateFrom(e.target.value)}
-                      className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-700">To</label>
-                    <input
-                      type="date"
-                      value={exportDateTo}
-                      onChange={(e) => setExportDateTo(e.target.value)}
-                      className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
-                    />
-                  </div>
-
+              <div className="flex flex-col justify-start">
+                {!showCustomRange ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      setExportDateFrom("");
-                      setExportDateTo("");
-                    }}
-                    className="h-10 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    onClick={() => setShowCustomRange(true)}
+                    className="h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-all flex items-center"
                   >
-                    Clear
+                    Customize
                   </button>
-                </div>
+                ) : (
+                  <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm">
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-gray-700">From</label>
+                        <input
+                          type="date"
+                          value={exportDateFrom}
+                          onChange={(e) => setExportDateFrom(e.target.value)}
+                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
+                        />
+                      </div>
 
-                {hasInvalidCustomExportRange() && (
-                  <p className="mt-2 text-sm text-red-600">
-                    Invalid range: From date must be earlier than or equal to To date.
-                  </p>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-gray-700">To</label>
+                        <input
+                          type="date"
+                          value={exportDateTo}
+                          onChange={(e) => setExportDateTo(e.target.value)}
+                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExportDateFrom("");
+                          setExportDateTo("");
+                        }}
+                        className="h-10 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all"
+                      >
+                        Clear
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomRange(false);
+                          setExportDateFrom("");
+                          setExportDateTo("");
+                        }}
+                        className="h-10 px-3 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-all"
+                      >
+                        Close
+                      </button>
+                    </div>
+
+                    {hasInvalidCustomExportRange() && (
+                      <p className="mt-2 text-sm text-red-600">
+                        Invalid range: From date must be earlier than or equal to To date.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
