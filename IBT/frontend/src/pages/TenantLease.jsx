@@ -2046,9 +2046,9 @@ const TenantLease = () => {
             "Contact No": t.contactNo || "-",
             "Start Date": formatDate(t.StartDateTime),
             "Due Date": formatDate(t.DueDateTime || t.EndDateTime),
-            "Rent Amount": t.rentAmount ? `₱${t.rentAmount}` : "0",
-            "Utility Amount": t.utilityAmount ? `₱${t.utilityAmount}` : "0",
-            "Total Due": `₱${t.totalAmount || calculateDueAmount(t)}`,
+            "Rent Amount": `₱${(Number(t.rentAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+            "Utility Amount": `₱${(Number(t.utilityAmount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+            "Total Due": `₱${(Number(t.totalAmount) || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
             "Status": t.status,
         }));
     };
@@ -2624,13 +2624,12 @@ const TenantLease = () => {
                     };
 
                     if (activeTab === "permanent") {
-                        baseData.advancebal = t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString()}` : "-";
+                        baseData.advancebal = t.advancePaymentBalance ? `₱${Number(t.advancePaymentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-";
                     }
 
-                    baseData.rent = t.rentAmount ? `₱${t.rentAmount.toLocaleString()}` : "-";
-                    baseData.util = t.utilityAmount ? `₱${t.utilityAmount.toLocaleString()}` : "₱0";
+                    baseData.rent = t.rentAmount ? `₱${t.rentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "-";
+                    baseData.util = t.utilityAmount ? `₱${t.utilityAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "₱0.00";
                     baseData.totaldue = `₱${(t.totalAmount || calculateDueAmount(t)).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-                    baseData.status = t.status;
                     baseData.__highlight = isDeleteHighlighted;
                     baseData.__highlightVariant = isDeleteRequested ? "amber" : "emerald";
                     
