@@ -1924,8 +1924,8 @@ const Reports = () => {
 
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
       
+          {/* CATEGORY SELECTOR */}
           <div className="relative w-full sm:w-64 shrink-0">
-          
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
               <Tag size={16} />
             </div>
@@ -1946,6 +1946,7 @@ const Reports = () => {
               </div>
             </div>
           </div>
+
           <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
             
             <div className="flex items-center gap-2">
@@ -1985,6 +1986,67 @@ const Reports = () => {
               )}
             </div>
 
+            {isSuperAdmin && (
+              <div className="flex flex-col justify-start">
+                {!showCustomRange ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomRange(true)}
+                    className="h-[42px] px-4 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-xl shadow-sm hover:bg-slate-50 transition-all flex items-center cursor-pointer w-fit"
+                  >
+                    Customize
+                  </button>
+                ) : (
+                  <div className="bg-white border border-slate-200 rounded-xl p-1.5 shadow-sm h-[42px] flex items-center animate-in fade-in slide-in-from-left-2 w-fit">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase ml-1">From</label>
+                        <input
+                          type="date"
+                          value={exportDateFrom}
+                          onChange={(e) => setExportDateFrom(e.target.value)}
+                          className="h-8 rounded-lg border border-slate-300 px-2 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <label className="text-[10px] font-semibold text-slate-500 uppercase ml-1">To</label>
+                        <input
+                          type="date"
+                          value={exportDateTo}
+                          onChange={(e) => setExportDateTo(e.target.value)}
+                          className="h-8 rounded-lg border border-slate-300 px-2 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExportDateFrom("");
+                          setExportDateTo("");
+                        }}
+                        className="h-8 px-3 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+                      >
+                        Clear
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomRange(false);
+                          setExportDateFrom("");
+                          setExportDateTo("");
+                        }}
+                        className="h-8 px-3 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {isSelectionMode && selectedIds.length > 0 && (
               <div className="flex items-center gap-2 animate-in fade-in bg-slate-100 p-1.5 rounded-xl border border-slate-200 h-[42px]">
                 <span className="text-xs font-semibold text-slate-600 px-2 whitespace-nowrap">{selectedIds.length} Selected</span>
@@ -1997,7 +2059,7 @@ const Reports = () => {
             {role === "superadmin" && (
               <button
                 onClick={toggleSelectionMode}
-                className={`flex items-center justify-center h-[42px] px-3 rounded-xl transition-all border cursor-pointer ${
+                className={`flex items-center justify-center h-[42px] w-[42px] rounded-xl transition-all border cursor-pointer ${
                   isSelectionMode ? "bg-red-500 text-white border-red-600 shadow-md" : "bg-white border-slate-300 text-slate-500 hover:border-slate-400"
                 }`}
               >
