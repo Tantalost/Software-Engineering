@@ -178,6 +178,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
           otherSpecify: ""
         });
       setIsSubmitting(false);
+    }
   }, [isOpen, initialData]); 
 
   useEffect(() => {
