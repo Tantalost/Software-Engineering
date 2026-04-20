@@ -37,17 +37,17 @@ const LandingPage = () => {
   const phoneFeatureCards = [
     {
       text: '24/7 Live Monitoring',
-      positionClass: 'top-20 left-1 sm:-left-14 animate-float-delay',
+      positionClass: 'top-20 left-1 sm:-left-20 animate-float-delay',
       toneClass: 'border-emerald-200/35 bg-emerald-300/15 text-emerald-50'
     },
     {
       text: 'Instant Smart Alerts',
-      positionClass: 'top-1/2 left-1 sm:-left-12 -translate-y-1/2 animate-float',
+      positionClass: 'top-75 left-1 sm:-left-28 -translate-y-1/2 animate-float',
       toneClass: 'border-cyan-200/35 bg-cyan-300/15 text-cyan-50'
     },
     {
       text: 'Unified Terminal Services',
-      positionClass: 'top-32 right-1 sm:-right-24 animate-float-delay',
+      positionClass: 'top-47 right-1 sm:-right-30 animate-float-delay',
       toneClass: 'border-white/30 bg-white/15 text-slate-50'
     }
   ];
@@ -170,7 +170,7 @@ const LandingPage = () => {
         </section>
 
         {/* Right Column (Phone Mockup & Alerts) */}
-        <section className="relative min-w-0 lg:self-start mt-10 lg:mt-10 flex flex-col items-center lg:items-end">
+        <section className="relative min-w-0 lg:self-start mt-10 lg:mt-6 flex flex-col items-center lg:items-end">
           <div className="relative w-full max-w-[352px]">
             
             <div className="animate-float absolute -top-3 left-3 z-20 rounded-2xl border border-white/30 bg-white/15 px-3.5 py-1.5 backdrop-blur-md">
