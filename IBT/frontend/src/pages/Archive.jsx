@@ -339,7 +339,7 @@ const Archive = () => {
               <button onClick={() => setShowBulkDeleteModal(true)} className="rounded-lg p-2 bg-white text-slate-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-slate-200 cursor-pointer"><Trash2 className="h-5 w-5" /></button>
             </div>
           )}
-          <button onClick={() => { if (isSelectionMode) setSelectedIds([]); setIsSelectionMode(!isSelectionMode); }} className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode ? "bg-red-500 text-white shadow-md border-red-600" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+          <button onClick={() => { if (isSelectionMode) setSelectedIds([]); setIsSelectionMode(!isSelectionMode); }} className={`flex items-center justify-center cursor-pointer h-10 w-10 sm:w-auto sm:px-3 rounded-xl transition-all border ${isSelectionMode ? "bg-red-500 text-white shadow-md border-red-600" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`} title="Select Records">
             {isSelectionMode ? <X size={20} /> : <ListChecks size={20} />}
           </button>
         </div>
