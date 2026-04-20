@@ -207,14 +207,13 @@ const TenantViewModal = ({ viewRow, onClose }) => {
               Financial Breakdown
             </h4>
             <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
-              <Field label={isPermanentTenant ? "Monthly Rent" : "Rental Fee"} value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString()}` : "₱0.00"} />
+              <Field label={isPermanentTenant ? "Monthly Rent" : "Rental Fee"} value={viewRow.rentAmount ? `₱${Number(viewRow.rentAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₱0.00"} />
               {isPermanentTenant && (
-                <Field label="Advance Balance" value={viewRow.advancePaymentBalance ? `₱${Number(viewRow.advancePaymentBalance).toLocaleString()}` : "₱0.00"} />
+                <Field label="Advance Balance" value={viewRow.advancePaymentBalance ? `₱${Number(viewRow.advancePaymentBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₱0.00"} />
               )}
               
-              {isPermanentTenant && <Field label="Electricity" value={`₱${Number(feeBreakdown.electricity || 0).toLocaleString()}`} />}
-              <Field label="Others (Amount)" value={`₱${Number(feeBreakdown.otherAmount || 0).toLocaleString()}`} />
-      
+              {isPermanentTenant && <Field label="Electricity" value={`₱${Number(feeBreakdown.electricity || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />}
+              <Field label="Others (Amount)" value={`₱${Number(feeBreakdown.otherAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
               <div className="md:col-span-2">
                 <Field label="Others (Specify)" value={feeBreakdown.otherSpecify || "N/A"} />
               </div>
