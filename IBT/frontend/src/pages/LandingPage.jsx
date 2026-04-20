@@ -42,12 +42,12 @@ const LandingPage = () => {
     },
     {
       text: 'Instant Smart Alerts',
-      positionClass: 'top-75 left-1 sm:-left-28 -translate-y-1/2 animate-float',
+      positionClass: 'top-[75px] left-1 sm:-left-28 -translate-y-1/2 animate-float',
       toneClass: 'border-cyan-200/35 bg-cyan-300/15 text-cyan-50'
     },
     {
       text: 'Unified Terminal Services',
-      positionClass: 'top-47 right-1 sm:-right-30 animate-float-delay',
+      positionClass: 'top-[47px] right-1 sm:-right-[30px] animate-float-delay',
       toneClass: 'border-white/30 bg-white/15 text-slate-50'
     }
   ];
@@ -286,8 +286,7 @@ const LandingPage = () => {
       )}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
-
+        /* Fonts are loaded globally in index.html and applied via src/index.css */
         .no-scrollbar::-webkit-scrollbar {
           display: none;
         }
@@ -297,9 +296,7 @@ const LandingPage = () => {
           scrollbar-width: none;
         }
 
-        * {
-          font-family: 'Plus Jakarta Sans', sans-serif;
-        }
+        /* Global font-family moved to src/index.css for consistent production loading */
 
         @keyframes fadeIn {
           from { opacity: 0; }

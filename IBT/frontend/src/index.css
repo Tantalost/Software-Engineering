@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Ensure fonts load early and a consistent base font is applied globally */
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 .react-datepicker-wrapper {
   width: 100%;
 }
