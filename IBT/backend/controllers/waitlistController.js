@@ -135,7 +135,9 @@ export const updateWaitlistEntry = async (req, res) => {
     else if (status === "CONTRACT_PENDING") {
         subject = "Action Required: Upload Contract";
         pushTitle = "Action Required: Upload Contract 📄";
-        message = `Dear ${applicant.name},\n\nWe have verified your payment. Please upload your Signed Contract.`;
+        message = `Dear ${applicant.name},\n\nWe have verified your payment.
+                    Please come to the IBT Management office to process the signing of your contract. Office hours are Monday to Friday, 9:00 AM to 4:00 PM.
+                    After completing the signing, kindly upload your signed contract in the app. `;
     }
    
     if (status === "REJECTED") {
