@@ -41,14 +41,18 @@ const StatCard = ({ icon: Icon, title, value, color = "emerald" }) => {
 
   return (
     <div
-      className={`flex items-center gap-4 ${style.bg} ${style.border} rounded-2xl p-4 shadow-sm hover:shadow-md transition`}
+      className={`flex items-center gap-4 ${style.bg} ${style.border} rounded-2xl p-4 shadow-sm hover:shadow-md transition w-full`}
     >
-      <div className={`${style.iconBg} p-3 rounded-full`}>
+      
+      <div className={`${style.iconBg} p-3 rounded-full shrink-0`}>
         <Icon className={`${style.icon} w-6 h-6`} />
       </div>
-      <div>
-        <h3 className={`text-sm font-medium ${style.text}`}>{title}</h3>
-        <p className={`text-2xl font-bold ${style.value}`}>{value}</p>
+      
+      
+      <div className="min-w-0 flex-1 pr-1">
+       
+        <h3 className={`text-sm font-medium ${style.text} truncate`} title={title}>{title}</h3>
+        <p className={`text-2xl font-bold ${style.value} truncate`} title={value}>{value}</p>
       </div>
     </div>
   );
