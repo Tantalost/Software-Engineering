@@ -42,12 +42,12 @@ const LandingPage = () => {
     },
     {
       text: 'Instant Smart Alerts',
-      positionClass: 'top-[75px] left-1 sm:-left-28 -translate-y-1/2 animate-float',
+      positionClass: 'top-75 left-1 sm:-left-28 -translate-y-1/2 animate-float',
       toneClass: 'border-cyan-200/35 bg-cyan-300/15 text-cyan-50'
     },
     {
       text: 'Unified Terminal Services',
-      positionClass: 'top-[47px] right-1 sm:-right-[30px] animate-float-delay',
+      positionClass: 'top-47 right-1 sm:-right-[30px] animate-float-delay',
       toneClass: 'border-white/30 bg-white/15 text-slate-50'
     }
   ];
@@ -202,34 +202,6 @@ const LandingPage = () => {
               </div>
             </div>
 
-          </div>
-        </section>
-
-        <section className="lg:col-span-2">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <article className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm">
-              <div className="flex items-center gap-2 text-emerald-100">
-                <Clock3 size={16} />
-                <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em]">24/7 Passenger Updates</p>
-              </div>
-              <p className="mt-1.5 text-xs text-slate-200/80">Realtime boards stay synced for departures, arrivals, and gate-level notices.</p>
-            </article>
-
-            <article className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm">
-              <div className="flex items-center gap-2 text-cyan-100">
-                <QrCode size={16} />
-                <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em]">QR-Ready Access</p>
-              </div>
-              <p className="mt-1.5 text-xs text-slate-200/80">Install quickly and move from scan to live terminal updates in seconds.</p>
-            </article>
-
-            <article className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm">
-              <div className="flex items-center gap-2 text-emerald-100">
-                <Download size={16} />
-                <p className="text-[0.66rem] font-semibold uppercase tracking-[0.14em]">Instant Service Advisories</p>
-              </div>
-              <p className="mt-1.5 text-xs text-slate-200/80">Critical schedule changes and terminal advisories reach users without delay.</p>
-            </article>
           </div>
         </section>
       </main>
