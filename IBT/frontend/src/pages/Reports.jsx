@@ -1916,13 +1916,13 @@ const Reports = () => {
                     </div>
                   </div>
                 )}
-
-                {isSuperAdmin && hasInvalidCustomExportRange() && (
-                  <p className="text-sm text-red-600 -mt-2">
-                    Invalid range: From date must be earlier than or equal to To date.
-                  </p>
-                )}
               </div>
+            )}
+
+            {isSuperAdmin && hasInvalidCustomExportRange() && (
+              <p className="text-sm text-red-600 -mt-2">
+                Invalid range: From date must be earlier than or equal to To date.
+              </p>
             )}
 
             {isSelectionMode && selectedIds.length > 0 && (
