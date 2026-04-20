@@ -43,12 +43,19 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
   const [otherProductDetails, setOtherProductDetails] = useState(initialOther || "");
 
   const parseFeeBreakdown = (data) => {
-    if (!data) return { electricity: 0, otherAmount: 0, otherSpecify: "" };
-    if (typeof data === 'string') {
-        try { return JSON.parse(data); } 
-        catch (e) { return { electricity: 0, otherAmount: 0, otherSpecify: "" }; }
+    let parsed = { electricity: 0, otherAmount: 0, otherSpecify: "" };
+    if (data) {
+        if (typeof data === 'string') {
+            try { parsed = JSON.parse(data); } catch (e) {}
+        } else {
+            parsed = data;
+        }
     }
-    return data;
+    return {
+        electricity: Number(parsed.electricity || 0).toFixed(2),
+        otherAmount: Number(parsed.otherAmount || 0).toFixed(2),
+        otherSpecify: parsed.otherSpecify || ""
+    };
   };
 
   const [feeBreakdown, setFeeBreakdown] = useState(parseFeeBreakdown(row.feeBreakdown));
@@ -57,7 +64,7 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
     ...row,
     referenceNo: row.referenceNo || row.referenceno || (row.paymentHistory && row.paymentHistory.length > 0 ? row.paymentHistory[row.paymentHistory.length - 1].referenceNo : ""),
     rentAmount: row.rentAmount || 0,
-    advancePaymentBalance: row.advancePaymentBalance || 0,
+    advancePaymentBalance: Number(row.advancePaymentBalance || 0).toFixed(2),
     utilityFee: row.utilityFee || row.utilityAmount || 0,
     editStart: formatDateTimeForInput(row.StartDateTime || row.leaseStart),
     editDue: formatDateTimeForInput(row.DueDateTime || row.EndDateTime),
@@ -311,17 +318,33 @@ const EditTenantLease = ({ row, onClose, onSave, tenants = [], permChargePct, pe
              <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 grid gap-4 md:grid-cols-3">
                 <FormInput label={formData.tenantType === "Permanent" ? "Monthly Rent" : "Rental Fee"} type="text" name="rentAmount" value={Number(formData.rentAmount).toFixed(2)} readOnly={true} />
 
-                {formData.tenantType === "Permanent" && (
-                  <FormInput label="Advance Balance" type="number" name="advancePaymentBalance" value={formData.advancePaymentBalance} onChange={handleChange} />
+               {formData.tenantType === "Permanent" && (
+                  <FormInput 
+                    label="Advance Balance" 
+                    type="text" 
+                    name="advancePaymentBalance" 
+                    value={formData.advancePaymentBalance} 
+                    onChange={(e) => setFormData(prev => ({...prev, advancePaymentBalance: e.target.value.replace(/[^0-9.]/g, "")}))} 
+                  />
                 )}
                 
                 {formData.tenantType === "Permanent" && (
                   <>
-                    <FormInput label="Electricity" type="number" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} />
+                    <FormInput 
+                      label="Electricity" 
+                      type="text" 
+                      value={feeBreakdown.electricity} 
+                      onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value.replace(/[^0-9.]/g, "")})} 
+                    />
                   </>
                 )}
 
-                <FormInput label="Others (Amount)" type="number" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} />
+                <FormInput 
+                  label="Others (Amount)" 
+                  type="text" 
+                  value={feeBreakdown.otherAmount} 
+                  onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value.replace(/[^0-9.]/g, "")})} 
+                />
                 
                 <div className="md:col-span-2">
                     <FormInput label="Others (Please specify)" type="text" value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} placeholder="Specify what the other fee is for..." />

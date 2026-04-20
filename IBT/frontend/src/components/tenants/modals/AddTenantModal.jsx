@@ -173,10 +173,11 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
       setStartDate(formatDateTimeForInput(new Date()));
       setUtilityAmount(0);
         setFeeBreakdown({
-          electricity: 0, otherAmount: 0, otherSpecify: ""
+          electricity: Number(0).toFixed(2), 
+          otherAmount: Number(0).toFixed(2), 
+          otherSpecify: ""
         });
       setIsSubmitting(false);
-    }
   }, [isOpen, initialData]); 
 
   useEffect(() => {
@@ -227,7 +228,7 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
     }
 
     setRentAmount(calculatedRent);
-    setAdvancePayment(lockedAdvance);
+    setAdvancePayment(Number(lockedAdvance).toFixed(2));
     setDueDate(calculatedDueDate);
 
   }, [formData.tenantType, startDate, formData.slotNo, defaultNightPrice, defaultPermanentPrice, defaultDueDate, initialData]);
@@ -698,7 +699,15 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                 {formData.tenantType === "Permanent" && (
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-semibold text-slate-600">Advance Payment</label>
-                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} /></div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-slate-500">₱</span>
+                        <input 
+                          type="text" 
+                          className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                          value={advancePayment} 
+                          onChange={(e) => setAdvancePayment(e.target.value.replace(/[^0-9.]/g, ""))} 
+                        />
+                      </div>
                     </div>
                 )}
                 
@@ -706,19 +715,30 @@ const AddTenantModal = ({ isOpen, onClose, onSave, tenants = [], initialData = n
                   <>
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-semibold text-slate-600">Electricity</label>
-                      <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.electricity} onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value})} /></div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-slate-500">₱</span>
+                        <input 
+                          type="text" 
+                          className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                          value={feeBreakdown.electricity} 
+                          onChange={(e) => setFeeBreakdown({...feeBreakdown, electricity: e.target.value.replace(/[^0-9.]/g, "")})} 
+                        />
+                      </div>
                     </div>
                   </>
                 )}
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-600">Others (Amount)</label>
-                  <div className="relative"><span className="absolute left-3 top-2.5 text-slate-500">₱</span><input type="number" className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" value={feeBreakdown.otherAmount} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value})} /></div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-slate-500">₱</span>
+                    <input 
+                      type="text" 
+                      className="pl-8 p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" 
+                      value={feeBreakdown.otherAmount} 
+                      onChange={(e) => setFeeBreakdown({...feeBreakdown, otherAmount: e.target.value.replace(/[^0-9.]/g, "")})} 
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-600">Others (Please specify)</label>
-                  <input type="text" className="p-2.5 w-full rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Specify what the other fee is for..." value={feeBreakdown.otherSpecify} onChange={(e) => setFeeBreakdown({...feeBreakdown, otherSpecify: e.target.value})} />
-                </div>
-              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                 <div className="flex flex-col gap-1">
