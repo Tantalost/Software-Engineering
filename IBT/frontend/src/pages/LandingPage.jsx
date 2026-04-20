@@ -41,7 +41,7 @@ const LandingPage = () => {
   ];
 
   useEffect(() => {
-    const cardStep = 364;
+    const cardStep = 348;
     const autoScroll = setInterval(() => {
       if (scrollRef.current) {
         const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
@@ -70,7 +70,7 @@ const LandingPage = () => {
       <div className="pointer-events-none absolute -right-24 bottom-16 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
 
       <header className="relative z-30">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-8 sm:py-4">
           <div className="flex items-center gap-3">
             <div className="rounded-2xl border border-white/20 bg-white/10 p-2 backdrop-blur">
               <img src={LOGO} alt="IBT Logo" className="h-7 w-7 object-contain" />
@@ -92,24 +92,24 @@ const LandingPage = () => {
         </div>
       </header>
 
-      <main className="relative z-20 mx-auto grid w-full max-w-7xl flex-1 min-h-0 grid-cols-1 gap-8 overflow-hidden px-5 py-3 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-8 lg:py-4">
+      <main className="no-scrollbar relative z-20 mx-auto grid w-full max-w-7xl flex-1 min-h-0 grid-cols-1 gap-8 overflow-x-hidden overflow-y-hidden px-5 py-3 pb-4 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,372px)] lg:items-start lg:gap-8 lg:py-3 lg:pb-4">
         <section className="min-w-0">
-          <span className="inline-flex rounded-full border border-emerald-200/35 bg-emerald-300/10 px-4 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-emerald-100">
+          <span className="inline-flex rounded-full border border-emerald-200/35 bg-emerald-300/10 px-4 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.23em] text-emerald-100">
             Terminal Operations, Simplified
           </span>
 
           <h2
-            className="mt-6 max-w-2xl text-4xl font-semibold leading-[1.02] text-white sm:text-5xl lg:text-[3.45rem]"
+            className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.03] text-white sm:text-4xl lg:text-[3.3rem]"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             Real-time bus intelligence for passengers, tenants, and terminal staff.
           </h2>
 
-          <p className="mt-5 max-w-xl text-sm leading-relaxed text-slate-200/85 sm:text-base">
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-200/85 sm:text-base">
             IBT centralizes trip tracking, stall applications, and service updates in one reliable platform so everyone can make faster, better decisions.
           </p>
 
-          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <button
               onClick={() => setIsModalOpen(true)}
               className="group inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold uppercase tracking-[0.15em] text-slate-900 shadow-[0_12px_35px_rgba(16,185,129,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-300/50 focus:ring-offset-2"
@@ -120,7 +120,7 @@ const LandingPage = () => {
             </button>
           </div>
 
-          <div className="mt-8 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
             {quickStats.map((item) => (
               <div
                 key={item.label}
@@ -134,8 +134,8 @@ const LandingPage = () => {
             ))}
           </div>
 
-          <div className="mt-9 rounded-3xl border border-white/12 bg-slate-900/35 p-4 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-sm sm:p-5">
-            <div className="mb-4 flex items-center justify-between gap-2">
+          <div className="mt-8 rounded-3xl border border-white/12 bg-slate-900/35 p-4 shadow-[0_20px_60px_rgba(2,8,23,0.35)] backdrop-blur-sm sm:p-5">
+            <div className="mb-3 flex items-center justify-between gap-2">
               <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-cyan-100/85">What You Can Do Online</p>
             </div>
 
@@ -146,7 +146,7 @@ const LandingPage = () => {
               {bottomImages.map((img) => (
                 <article
                   key={img.title}
-                  className="group relative h-56 min-w-[348px] snap-start overflow-hidden rounded-2xl border border-white/20 bg-slate-900/35"
+                  className="group relative h-[216px] min-w-[336px] snap-start overflow-hidden rounded-2xl border border-white/20 bg-slate-900/35"
                 >
                   <img
                     src={img.src}
@@ -154,7 +154,7 @@ const LandingPage = () => {
                     className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-[1.03]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/35 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <div className="absolute bottom-0 left-0 right-0 p-3.5">
                     <h3 className="text-lg font-semibold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                       {img.title}
                     </h3>
@@ -166,40 +166,40 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section className="relative min-w-0 lg:mt-14 lg:self-start">
-          <div className="relative mx-auto w-full max-w-[360px]">
-            <div className="animate-float absolute -top-4 left-3 z-20 rounded-2xl border border-white/30 bg-white/15 px-4 py-2 backdrop-blur-md">
+        <section className="relative min-w-0 lg:mt-12 lg:self-start">
+          <div className="relative mx-auto w-full max-w-[352px]">
+            <div className="animate-float absolute -top-3 left-3 z-20 rounded-2xl border border-white/30 bg-white/15 px-3.5 py-1.5 backdrop-blur-md">
               <p className="text-[0.62rem] uppercase tracking-[0.2em] text-emerald-100/90">Trip Alert</p>
-              <p className="mt-1 text-sm font-semibold text-white">New Arrival at Platform 4</p>
+              <p className="mt-0.5 text-xs font-semibold text-white">New Arrival at Platform 4</p>
             </div>
 
-            <div className="relative mx-auto w-full max-w-[360px] rounded-[2.2rem] border border-white/20 bg-gradient-to-b from-cyan-200/15 to-emerald-300/10 p-3 shadow-[0_30px_70px_rgba(8,47,73,0.45)] sm:p-3">
-              <div className="rounded-[1.8rem] border border-white/15 bg-slate-950/45 p-2 backdrop-blur sm:p-2">
+            <div className="relative mx-auto w-full max-w-[352px] rounded-[2.1rem] border border-white/20 bg-gradient-to-b from-cyan-200/15 to-emerald-300/10 p-2.5 shadow-[0_30px_70px_rgba(8,47,73,0.45)] sm:p-2.5">
+              <div className="rounded-[1.6rem] border border-white/15 bg-slate-950/45 p-1.5 backdrop-blur sm:p-1.5">
                 <img
                   src={adsPhone}
                   alt="IBT mobile app interface"
-                  className="mx-auto h-auto w-full max-h-[62vh] object-contain drop-shadow-[0_18px_45px_rgba(0,0,0,0.45)]"
+                  className="mx-auto h-auto w-full max-h-[57vh] object-contain drop-shadow-[0_18px_45px_rgba(0,0,0,0.45)]"
                 />
               </div>
             </div>
 
-            <div className="mt-4 mx-auto w-full max-w-[360px] rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm">
+            <div className="mt-3 mx-auto w-full max-w-[332px] rounded-xl border border-white/15 bg-white/5 p-2.5 backdrop-blur-sm">
               <div className="flex items-start gap-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-300/20 text-emerald-100">
-                  <QrCode size={17} />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-300/20 text-emerald-100">
+                  <QrCode size={15} />
                 </div>
                 <div>
-                  <h3 className="text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-emerald-100">Fast Onboarding</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-200/85 sm:text-[0.82rem]">
+                  <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-emerald-100">Fast Onboarding</h3>
+                  <p className="mt-1 text-[0.74rem] leading-relaxed text-slate-200/85 sm:text-[0.78rem]">
                     Scan the QR code to install the app and start receiving live trip updates and terminal notices.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 mx-auto w-full max-w-[360px] rounded-xl border border-cyan-200/20 bg-cyan-300/5 p-3 backdrop-blur-sm">
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-cyan-100">Service Reminder</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-200/85 sm:text-[0.82rem]">
+            <div className="mt-2.5 mx-auto w-full max-w-[332px] rounded-xl border border-cyan-200/20 bg-cyan-300/5 p-2.5 backdrop-blur-sm">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-cyan-100">Service Reminder</p>
+              <p className="mt-1 text-[0.74rem] leading-relaxed text-slate-200/85 sm:text-[0.78rem]">
                 Enable notifications after login so schedule changes and terminal advisories appear instantly.
               </p>
             </div>
@@ -207,8 +207,8 @@ const LandingPage = () => {
         </section>
       </main>
 
-      <footer className="relative z-20 border-t border-white/10 bg-slate-950/40 py-2 text-center">
-        <p className="px-4 text-[0.62rem] uppercase tracking-[0.25em] text-slate-300/70">
+      <footer className="relative z-20 border-t border-white/10 bg-slate-950/40 py-1.5 text-center">
+        <p className="px-4 text-[0.58rem] uppercase tracking-[0.2em] text-slate-300/70">
           © 2026 CYNERGYOPS. All rights reserved. Privacy Policy. Terms.
         </p>
       </footer>
