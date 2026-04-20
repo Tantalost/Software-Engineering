@@ -38,12 +38,13 @@ const Pagination = ({
 
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const visibleEntries = totalItems === 0 ? 0 : endItem - startItem + 1;
 
   return (
     <div className="w-fit flex flex-col sm:flex-row items-center gap-4 mt-4 px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm">
       <div className="flex items-center gap-2 text-sm text-gray-600">
         <span>Showing</span>
-        <span className="font-semibold text-gray-800">25</span>
+        <span className="font-semibold text-gray-800">{visibleEntries}</span>
         <span>entries</span>
         <span className="text-gray-400">|</span>
         <span>
