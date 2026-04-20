@@ -722,14 +722,66 @@ const Reports = () => {
   const ARCHIVE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:10000"}/api/archives`;
 
   const parseDateStart = (value) => {
-    if (!value) return null;
-    const parsed = new Date(`${value}T00:00:00`);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+    const parsed = parseFlexibleDate(value);
+    if (!parsed) return null;
+
+    const scoped = new Date(parsed);
+    scoped.setHours(0, 0, 0, 0);
+    return scoped;
   };
 
   const parseDateEnd = (value) => {
-    if (!value) return null;
-    const parsed = new Date(`${value}T23:59:59.999`);
+    const parsed = parseFlexibleDate(value);
+    if (!parsed) return null;
+
+    const scoped = new Date(parsed);
+    scoped.setHours(23, 59, 59, 999);
+    return scoped;
+  };
+
+  const parseFlexibleDate = (value) => {
+    if (value === null || value === undefined || value === "") return null;
+
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : new Date(value);
+    }
+
+    if (typeof value === "number") {
+      const parsedFromNumber = new Date(value);
+      return Number.isNaN(parsedFromNumber.getTime()) ? null : parsedFromNumber;
+    }
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const ymdMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymdMatch) {
+      const [, year, month, day] = ymdMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    const dmyMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmyMatch) {
+      const [, firstPart, secondPart, yearText] = dmyMatch;
+      const first = Number(firstPart);
+      const second = Number(secondPart);
+      const year = Number(yearText);
+
+      if (first > 12 && second <= 12) {
+        return new Date(year, second - 1, first);
+      }
+      if (second > 12 && first <= 12) {
+        return new Date(year, first - 1, second);
+      }
+
+      const asMdy = new Date(year, first - 1, second);
+      if (!Number.isNaN(asMdy.getTime())) return asMdy;
+
+      const asDmy = new Date(year, second - 1, first);
+      return Number.isNaN(asDmy.getTime()) ? null : asDmy;
+    }
+
+    const parsed = new Date(raw);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
@@ -746,8 +798,8 @@ const Reports = () => {
   const isInCustomExportRange = (dateValue) => {
     if (!isCustomExportRangeActive) return true;
 
-    const candidate = new Date(dateValue);
-    if (Number.isNaN(candidate.getTime())) return false;
+    const candidate = parseFlexibleDate(dateValue);
+    if (!candidate) return false;
 
     const start = parseDateStart(exportDateFrom);
     const end = parseDateEnd(exportDateTo);
@@ -888,8 +940,12 @@ const Reports = () => {
   };
 
   const filtered = useMemo(() => {
+    if (hasInvalidCustomExportRange()) {
+      return [];
+    }
+
     return records.filter((report) => {
-      const reportDate = new Date(report.createdAt || report.date);
+      const reportDate = parseFlexibleDate(report.createdAt || report.date);
 
       const matchesSearch =
         report.id?.toString().includes(searchQuery) ||
@@ -902,17 +958,19 @@ const Reports = () => {
       let matchesDateRange = false;
       if (dateFilterType === "All") {
         matchesDateRange = true;
-      } else if (reportDate && !Number.isNaN(reportDate.getTime())) {
+      } else if (reportDate) {
         matchesDateRange = reportDate >= filterStart && reportDate <= filterEnd;
       }
 
-      return matchesSearch && matchesCategory && matchesDateRange;
+      const matchesCustomRange = isInCustomExportRange(report.createdAt || report.date);
+
+      return matchesSearch && matchesCategory && matchesDateRange && matchesCustomRange;
     });
-  }, [records, searchQuery, selectedCategory, filterStart, filterEnd, dateFilterType]);
+  }, [records, searchQuery, selectedCategory, filterStart, filterEnd, dateFilterType, exportDateFrom, exportDateTo, isCustomExportRangeActive]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, dateFilterType, currentDateRange, selectedCategory]);
+  }, [searchQuery, dateFilterType, currentDateRange, selectedCategory, exportDateFrom, exportDateTo]);
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
