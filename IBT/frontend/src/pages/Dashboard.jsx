@@ -1134,7 +1134,7 @@ const Dashboard = () => {
       <button
         type="button"
         onClick={() => setShowCustomRange(true)}
-        className="h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-all flex items-center w-fit"
+        className="h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-all flex items-center w-fit cursor-pointer"
       >
         Customize
       </button>
