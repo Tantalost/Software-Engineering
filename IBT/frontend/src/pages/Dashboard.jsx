@@ -15,6 +15,7 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import DashboardToolbar from "../components/dashboard/DashboardToolbar";
 import TargetModal from "../components/dashboard/TargetModal";
 import NotificationToast from "../components/common/NotificationToast";
+import DatePickerInput from "../components/common/DatePickerInput";
 
 const DEFAULT_DASHBOARD_TARGETS = {
   tickets: 5000,
@@ -1136,34 +1137,44 @@ const Dashboard = () => {
         onClick={() => setShowCustomRange(true)}
         className="h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-all flex items-center w-fit cursor-pointer"
       >
-        Customize
+        Date Range
       </button>
     )}
   </div>
 
   
   {isSuperAdmin && showCustomRange && (
-    <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-sm w-fit">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-700">From</label>
-          <input
-            type="date"
-            value={exportDateFrom}
-            onChange={(e) => setExportDateFrom(e.target.value)}
-            className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
-          />
-        </div>
+    <div className="dashboard-custom-range-wrap animate-in fade-in slide-in-from-top-1 duration-200">
+    <div className="relative z-40 bg-white border border-gray-200 rounded-xl p-3 shadow-sm w-fit">
+      <div className="flex flex-wrap items-end gap-2.5">
+        <DatePickerInput
+          label="From"
+          value={exportDateFrom}
+          onChange={(e) => setExportDateFrom(e.target.value)}
+          placeholder="dd/mm/yyyy"
+          className="min-w-[180px]"
+          inputClassName="h-10 rounded-xl border-gray-200 bg-gray-50/80 px-3.5 font-medium text-gray-700 focus:bg-white focus:border-teal-300 focus:ring-teal-300/30"
+          calendarClassName="dashboard-range-calendar"
+          popperClassName="dashboard-range-popper"
+          popperStrategy="fixed"
+          popperPlacement="bottom-start"
+          portalId="dashboard-datepicker-portal"
+        />
 
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-700">To</label>
-          <input
-            type="date"
-            value={exportDateTo}
-            onChange={(e) => setExportDateTo(e.target.value)}
-            className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700"
-          />
-        </div>
+        <DatePickerInput
+          label="To"
+          value={exportDateTo}
+          onChange={(e) => setExportDateTo(e.target.value)}
+          placeholder="dd/mm/yyyy"
+          className="min-w-[180px]"
+          inputClassName="h-10 rounded-xl border-gray-200 bg-gray-50/80 px-3.5 font-medium text-gray-700 focus:bg-white focus:border-teal-300 focus:ring-teal-300/30"
+          calendarClassName="dashboard-range-calendar"
+          popperClassName="dashboard-range-popper"
+          popperStrategy="fixed"
+          popperPlacement="bottom-start"
+          portalId="dashboard-datepicker-portal"
+          minDate={parseDateStart(exportDateFrom) || undefined}
+        />
 
         <button
           type="button"
@@ -1183,7 +1194,7 @@ const Dashboard = () => {
             setExportDateFrom("");
             setExportDateTo("");
           }}
-          className="h-10 px-3 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-all"
+          className="h-10 px-3 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-all cursor-pointer"
         >
           Close
         </button>
@@ -1194,6 +1205,7 @@ const Dashboard = () => {
           Invalid range: From date must be earlier than or equal to To date.
         </p>
       )}
+    </div>
     </div>
   )}
 </div>

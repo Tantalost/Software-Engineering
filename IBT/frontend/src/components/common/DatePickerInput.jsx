@@ -2,7 +2,22 @@ import React from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const DatePickerInput = ({ label, value, onChange, placeholder = "Select date", className = "" }) => {
+const DatePickerInput = ({
+    label,
+    value,
+    onChange,
+    placeholder = "Select date",
+    className = "",
+    inputClassName = "",
+    calendarClassName = "",
+    popperClassName = "",
+    popperStrategy = "absolute",
+    popperPlacement = "bottom-start",
+    portalId,
+    maxDate = new Date(),
+    minDate,
+    isClearable = true,
+}) => {
     const handleDateChange = (date) => {
         if (date) {
             const formattedDate = date.toISOString().split('T')[0];
@@ -24,11 +39,17 @@ const DatePickerInput = ({ label, value, onChange, placeholder = "Select date", 
                 onChange={handleDateChange}
                 dateFormat="yyyy-MM-dd"
                 placeholderText={placeholder}
-                isClearable
-                maxDate={new Date()}
+                isClearable={isClearable}
+                maxDate={maxDate}
+                minDate={minDate}
                 onKeyDown={(e) => e.preventDefault()}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-colors"
+                className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-colors ${inputClassName}`}
                 wrapperClassName="w-full"
+                calendarClassName={calendarClassName}
+                popperClassName={popperClassName}
+                popperProps={{ strategy: popperStrategy }}
+                popperPlacement={popperPlacement}
+                portalId={portalId}
             />
         </div>
     );

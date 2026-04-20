@@ -10,6 +10,7 @@ import Table from "../components/common/Table";
 import TableActions from "../components/common/TableActions";
 import Pagination from "../components/common/Pagination";
 import Field from "../components/common/Field";
+import DatePickerInput from "../components/common/DatePickerInput";
 import DeleteModal from "../components/common/DeleteModal";
 import LogModal from "../components/common/LogModal";
 import { logActivity } from "../utils/logger";
@@ -1866,30 +1867,39 @@ const Reports = () => {
                     onClick={() => setShowCustomRange(true)}
                     className="h-[42px] px-4 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-xl shadow-sm hover:bg-slate-50 transition-all flex items-center cursor-pointer w-fit"
                   >
-                    Customize
+                    Date Range
                   </button>
                 ) : (
-                  <div className="bg-white border border-slate-200 rounded-xl p-1.5 shadow-sm h-[42px] flex items-center animate-in fade-in slide-in-from-left-2 w-fit">
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <label className="text-[10px] font-semibold text-slate-500 uppercase ml-1">From</label>
-                        <input
-                          type="date"
-                          value={exportDateFrom}
-                          onChange={(e) => setExportDateFrom(e.target.value)}
-                          className="h-8 rounded-lg border border-slate-300 px-2 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
+                  <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm animate-in fade-in slide-in-from-left-2 w-fit">
+                    <div className="flex flex-wrap items-end gap-2.5">
+                      <DatePickerInput
+                        label="From"
+                        value={exportDateFrom}
+                        onChange={(e) => setExportDateFrom(e.target.value)}
+                        placeholder="dd/mm/yyyy"
+                        className="min-w-[180px]"
+                        inputClassName="h-10 rounded-xl border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        calendarClassName="dashboard-range-calendar"
+                        popperClassName="dashboard-range-popper"
+                        popperStrategy="fixed"
+                        popperPlacement="bottom-start"
+                        portalId="reports-datepicker-portal"
+                      />
 
-                      <div className="flex items-center gap-1">
-                        <label className="text-[10px] font-semibold text-slate-500 uppercase ml-1">To</label>
-                        <input
-                          type="date"
-                          value={exportDateTo}
-                          onChange={(e) => setExportDateTo(e.target.value)}
-                          className="h-8 rounded-lg border border-slate-300 px-2 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </div>
+                      <DatePickerInput
+                        label="To"
+                        value={exportDateTo}
+                        onChange={(e) => setExportDateTo(e.target.value)}
+                        placeholder="dd/mm/yyyy"
+                        className="min-w-[180px]"
+                        inputClassName="h-10 rounded-xl border border-slate-300 px-3 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        calendarClassName="dashboard-range-calendar"
+                        popperClassName="dashboard-range-popper"
+                        popperStrategy="fixed"
+                        popperPlacement="bottom-start"
+                        portalId="reports-datepicker-portal"
+                        minDate={parseDateStart(exportDateFrom) || undefined}
+                      />
 
                       <button
                         type="button"
@@ -1897,7 +1907,7 @@ const Reports = () => {
                           setExportDateFrom("");
                           setExportDateTo("");
                         }}
-                        className="h-8 px-3 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+                        className="h-10 px-3 rounded-lg border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
                       >
                         Clear
                       </button>
@@ -1909,7 +1919,7 @@ const Reports = () => {
                           setExportDateFrom("");
                           setExportDateTo("");
                         }}
-                        className="h-8 px-3 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                        className="h-10 px-3 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 transition-all cursor-pointer"
                       >
                         Close
                       </button>
