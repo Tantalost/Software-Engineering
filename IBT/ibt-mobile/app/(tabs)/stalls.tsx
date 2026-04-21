@@ -48,6 +48,7 @@ import {
   RejectedView,
   MovedOutView
 } from '@/src/components/stalls/StatusViews';
+import { white } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 
 const SECRET_KEY = process.env.EXPO_PUBLIC_ENCRYPTION_KEY || " ";
 
@@ -84,11 +85,10 @@ const hasAllowedApplicationImageExtension = (fileNameOrUri: string) => {
 };
 
 const isAllowedApplicationImage = (asset: DocumentPicker.DocumentPickerAsset) => {
-  const mimeType = String(asset?.mimeType || asset?.type || '').toLowerCase();
+  const mimeType = String(asset?.mimeType || '').toLowerCase();
   if (APPLICATION_ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
     return true;
   }
-
   return hasAllowedApplicationImageExtension(asset?.name || asset?.uri || '');
 };
 
@@ -992,10 +992,30 @@ setSelectedStall(null);
   if (showLogin) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
-        <View style={{ padding: 10, alignItems: 'flex-start' }}>
-          <Button mode="text" icon="arrow-left" onPress={() => setShowLogin(false)} textColor='black'>
-            Back to Stalls
-          </Button>
+        <View style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: '#E8ECF0',
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.white,
+        }}>
+          <TouchableOpacity
+            onPress={() => setShowLogin(false)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              borderRadius: 8,
+              backgroundColor: '#F3F6FA',
+              gap: 6,
+            }}
+          >
+            <Icon name="arrow-left" size={18} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>Back to Stalls</Text>
+          </TouchableOpacity>
         </View>
         <AuthScreen onLoginSuccess={handleLoginSuccess} />
       </SafeAreaView>
@@ -1006,16 +1026,70 @@ setSelectedStall(null);
     if (viewIndex === -1) {
       return (
         <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: 125 }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
-          <Card style={styles.floorCard} mode="elevated"><Card.Content><Text variant="titleMedium" style={styles.sectionTitle}>Select Location</Text><SegmentedButtons value={selectedFloor} onValueChange={(val) => { setSelectedFloor(val); setSelectedStall(null); }} theme={{ colors: { secondaryContainer: colors.black, onSecondaryContainer: colors.white } }} buttons={[{ value: 'Permanent', label: 'Permanent', uncheckedColor: colors.black }, { value: 'Night Market', label: 'Night Market', uncheckedColor: colors.black }]} /></Card.Content></Card>
+          <Card style={[styles.floorCard, {
+            marginHorizontal: 16,
+            marginTop: 16,
+            borderRadius: 12,
+            elevation: 2,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 6,
+          }]} mode="elevated">
+            <Card.Content style={{ paddingBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <Icon name="map-marker-outline" size={16} color={colors.primary} />
+                <Text variant="titleSmall" style={[styles.sectionTitle, { marginBottom: 0, fontWeight: '700', letterSpacing: 0.3 }]}>
+                  Select Location
+                </Text>
+              </View>
+              <SegmentedButtons
+                value={selectedFloor}
+                onValueChange={(val) => { setSelectedFloor(val); setSelectedStall(null); }}
+                theme={{ colors: { secondaryContainer: colors.black, onSecondaryContainer: colors.white } }}
+                buttons={[
+                  { value: 'Permanent', label: 'Permanent', uncheckedColor: colors.black },
+                  { value: 'Night Market', label: 'Night Market', uncheckedColor: colors.black }
+                ]}
+              />
+            </Card.Content>
+          </Card>
           {loading ? <ActivityIndicator animating={true} color={colors.primary} style={{ marginTop: 20 }} /> : (
             <View>
-              <View style={styles.summaryContainer}><View style={styles.summaryItem}><View style={[styles.legendDot, { backgroundColor: colors.white, borderWidth: 1, borderStyle: 'dashed' }]} /><Text style={{ color: colors.textMedium }}> Available ({availableCount})</Text></View><View style={styles.summaryItem}><View style={[styles.legendDot, { backgroundColor: colors.occupied }]} /><Text style={{ color: colors.textMedium }}>Occupied</Text>
-                <View style={styles.summaryItem}>
-                  <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
-                  <Text style={{ color: colors.textMedium }}>Under Review</Text>
+              <View style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                gap: 14,
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: colors.white, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AAB4C0' }} />
+                  <Text style={{ fontSize: 12, color: '#6B7A8D', fontWeight: '500' }}>Available ({availableCount})</Text>
                 </View>
-              </View><View style={styles.summaryItem}><View style={[styles.legendDot, { backgroundColor: colors.primaryLight }]} /><Text style={{ color: colors.textMedium }}>Selected</Text></View></View>
-              <Card style={[styles.layoutCard]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: colors.occupied }} />
+                  <Text style={{ fontSize: 12, color: '#6B7A8D', fontWeight: '500' }}>Occupied</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: colors.warning }} />
+                  <Text style={{ fontSize: 12, color: '#6B7A8D', fontWeight: '500' }}>Under Review</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: colors.primaryLight }} />
+                  <Text style={{ fontSize: 12, color: '#6B7A8D', fontWeight: '500' }}>Selected</Text>
+                </View>
+              </View>
+              <Card style={[styles.layoutCard, {
+                marginHorizontal: 16,
+                borderRadius: 12,
+                elevation: 2,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
+              }]}>
                 <Card.Content>
                   <StallGrid
                     selectedFloor={selectedFloor}
@@ -1026,26 +1100,66 @@ setSelectedStall(null);
                   />
                 </Card.Content>
               </Card>
-              {selectedStall && (<Card style={styles.infoCard}><Card.Content><Text style={{ color: colors.black }} variant="titleMedium">Slot Selected: {selectedStall}</Text>
-
-                <Button
-                  mode="contained"
-                  onPress={() => {
-                    if (!user || !user.id) {
-                      Alert.alert("Login Required", "You must log in to apply for a stall.",
-                        [{ text: "Cancel", style: "cancel" }, { text: "Log In", onPress: () => { setModalVisible(false); setShowLogin(true); } }]
-                      );
-                      return;
-                    }
-                    setModalStep('form');
-                    setModalVisible(true);
-                  }}
-                  style={{ marginTop: 15, backgroundColor: colors.primary }}
-                >
-                  <Text> Apply for {selectedStall}</Text>
-                </Button>
-
-              </Card.Content></Card>)}
+              {selectedStall && (
+                <Card style={[styles.infoCard, {
+                  marginHorizontal: 16,
+                  marginTop: 14,
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: colors.primary + '33',
+                  elevation: 3,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.12,
+                  shadowRadius: 8,
+                  backgroundColor: colors.white,
+                }]}>
+                  <Card.Content style={{ paddingVertical: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                      <View style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        backgroundColor: colors.primary + '15',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <Icon name="store-outline" size={20} color={colors.primary} />
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 11, color: '#8A95A3', fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                          Slot Selected
+                        </Text>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: '#1A2332' }}>
+                            {selectedStall} 
+                          </Text>
+                      </View>
+                    </View>
+                    <Button
+                      mode="contained"
+                      icon="file-document-edit-outline"
+                      onPress={() => {
+                        if (!user || !user.id) {
+                          Alert.alert("Login Required", "You must log in to apply for a stall.",
+                            [{ text: "Cancel", style: "cancel" }, { text: "Log In", onPress: () => { setModalVisible(false); setShowLogin(true); } }]
+                          );
+                          return;
+                        }
+                        setModalStep('form');
+                        setModalVisible(true);
+                      }}
+                      style={{
+                        backgroundColor: colors.primary,
+                        borderRadius: 10,
+                      }}
+                      contentStyle={{ paddingVertical: 4 }}
+                      labelStyle={{ fontWeight: '700', fontSize: 14, letterSpacing: 0.3, color: '#FFFFFF' }}
+                    >
+                      Apply for {selectedStall}
+                    </Button>
+                  </Card.Content>
+                </Card>
+              )}
             </View>
           )}
         </ScrollView>
@@ -1134,52 +1248,107 @@ setSelectedStall(null);
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
 
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text variant="headlineMedium" style={styles.headerTitle}>Stall Management</Text>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        backgroundColor: colors.white,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E8ECF0',
+      }}>
+        <View style={{ gap: 2 }}>
+          <Text variant="headlineSmall" style={[styles.headerTitle, { fontSize: 20, letterSpacing: 0.3 }]}>
+            Stall Management
+          </Text>
+         
         </View>
-        <TouchableOpacity onPress={() => setGuidelinesVisible(true)}>
-          <Icon name="information-outline" size={28} color={colors.primary} />
+        <TouchableOpacity
+          onPress={() => setGuidelinesVisible(true)}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            backgroundColor: '#F3F6FA',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+          }}
+        >
+          <Icon name="information-outline" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
       {user && myApplications.length > 0 && (
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 5, backgroundColor: '#f0f0f0' }}>
+        <View style={{
+          paddingHorizontal: 16,
+          paddingTop: 10,
+          paddingBottom: 10,
+          backgroundColor: '#F7F9FC',
+          borderBottomWidth: 1,
+          borderBottomColor: '#E8ECF0',
+        }}>
+          <Text style={{ fontSize: 10, fontWeight: '700', color: '#8A95A3', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
+            My Slots
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-            <TouchableOpacity onPress={() => setViewIndex(-1)} style={{ paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: viewIndex === -1 ? colors.primary : colors.white, borderWidth: 1, borderColor: colors.primary, marginRight: 10, flexDirection: 'row', alignItems: 'center' }}>
-              <Icon name="plus" size={16} color={viewIndex === -1 ? colors.white : colors.primary} style={{ marginRight: 5 }} />
-              <Text style={{ color: viewIndex === -1 ? colors.white : colors.primary, fontWeight: 'bold' }}>New Slot</Text>
+            <TouchableOpacity
+              onPress={() => setViewIndex(-1)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderRadius: 8,
+                backgroundColor: viewIndex === -1 ? colors.primary : colors.white,
+                borderWidth: 1.5,
+                borderColor: viewIndex === -1 ? colors.primary : '#D0D8E4',
+                marginRight: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: viewIndex === -1 ? 0.15 : 0.05,
+                shadowRadius: 3,
+                elevation: viewIndex === -1 ? 3 : 1,
+              }}
+            >
+              <Icon name="plus-circle-outline" size={15} color={viewIndex === -1 ? colors.white : colors.primary} />
+              <Text style={{ color: viewIndex === -1 ? colors.white : colors.primary, fontWeight: '700', fontSize: 13 }}>New Slot</Text>
             </TouchableOpacity>
             {myApplications.map((app, index) => {
-
               if (!app.targetSlot) return null;
-
               const isActive = viewIndex === index;
               const isTenant = app.status === 'TENANT';
-
               return (
                 <TouchableOpacity
                   key={index}
                   onPress={() => setViewIndex(index)}
                   style={{
-                    paddingHorizontal: 15,
-                    paddingVertical: 8,
-                    borderRadius: 20,
+                    paddingHorizontal: 14,
+                    paddingVertical: 7,
+                    borderRadius: 8,
                     backgroundColor: isActive ? colors.primary : colors.white,
-                    borderWidth: 1,
-                    borderColor: colors.primary,
-                    marginRight: 10,
+                    borderWidth: 1.5,
+                    borderColor: isActive ? colors.primary : '#D0D8E4',
+                    marginRight: 8,
                     flexDirection: 'row',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    gap: 6,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: isActive ? 0.15 : 0.05,
+                    shadowRadius: 3,
+                    elevation: isActive ? 3 : 1,
                   }}
                 >
                   <Icon
-                    name={isTenant ? "store" : "clock-outline"}
-                    size={16}
+                    name={isTenant ? "store-check" : "clock-time-four-outline"}
+                    size={15}
                     color={isActive ? colors.white : colors.primary}
-                    style={{ marginRight: 5 }}
                   />
-                  <Text style={{ color: isActive ? colors.white : colors.primary, fontWeight: 'bold' }}>
+                  <Text style={{ color: isActive ? colors.white : colors.primary, fontWeight: '700', fontSize: 13 }}>
                     {app.targetSlot}
                   </Text>
                 </TouchableOpacity>

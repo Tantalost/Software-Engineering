@@ -13,6 +13,10 @@ import { Text, Card, Searchbar, Avatar, Divider, Menu } from 'react-native-paper
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { useColorScheme } from '@/src/hooks/use-color-scheme';
+import { Colors } from '@/src/themes/theme';
+
 import API_URL from '../../src/config';
 import { fetchTerminalBoardFromLegacyApi } from '../../src/services/terminalBoardFromLegacyApi';
 import type { PredefinedEntry, DispatchTrip, PredefinedStatus } from '../../src/types/terminalBoard.types';
@@ -21,26 +25,24 @@ const POLL_MS = 45000;
 
 type BoardRow = PredefinedEntry | DispatchTrip;
 
-const PREDEFINED_BADGE: Record<PredefinedStatus, { emoji: string; label: string; bg: string; fg: string }> = {
-  scheduled: { emoji: '🟡', label: 'Scheduled', bg: '#FFF8E1', fg: '#F57F17' },
-  arrived: { emoji: '🟢', label: 'Arrived', bg: '#E8F5E9', fg: '#1B5E20' },
-  not_arrived: { emoji: '🔴', label: 'Not Arrived', bg: '#FFEBEE', fg: '#C62828' },
+const PREDEFINED_BADGE: Record<PredefinedStatus, { label: string; dot: string; bg: string; fg: string; border: string }> = {
+  scheduled: { label: 'Scheduled',   dot: '#F59E0B', bg: '#FFFBEB', fg: '#92400E', border: '#FDE68A' },
+  arrived:   { label: 'Arrived',     dot: '#10B981', bg: '#ECFDF5', fg: '#065F46', border: '#A7F3D0' },
+  not_arrived: { label: 'Not Arrived', dot: '#EF4444', bg: '#FEF2F2', fg: '#991B1B', border: '#FECACA' },
 };
 
 function dispatchBadge(displayStatus: string) {
   const s = (displayStatus || '').trim();
-  if (s === 'Departed') return { emoji: '🟢', bg: '#E8F5E9', fg: '#1B5E20' };
-  if (s === 'Not Departed') return { emoji: '🔴', bg: '#FFEBEE', fg: '#C62828' };
-  if (s === 'Under Maintenance') return { emoji: '🔧', bg: '#FFF3E0', fg: '#E65100' };
-  if (s === 'Arrived') return { emoji: '🟢', bg: '#E3F2FD', fg: '#1565C0' };
-  return { emoji: '⚪', bg: '#F5F5F5', fg: '#424242' };
+  if (s === 'Departed')         return { dot: '#10B981', bg: '#ECFDF5', fg: '#065F46', border: '#A7F3D0' };
+  if (s === 'Not Departed')     return { dot: '#EF4444', bg: '#FEF2F2', fg: '#991B1B', border: '#FECACA' };
+  if (s === 'Under Maintenance')return { dot: '#F97316', bg: '#FFF7ED', fg: '#9A3412', border: '#FDBA74' };
+  if (s === 'Arrived')          return { dot: '#3B82F6', bg: '#EFF6FF', fg: '#1E40AF', border: '#BFDBFE' };
+  return { dot: '#9CA3AF', bg: '#F9FAFB', fg: '#374151', border: '#E5E7EB' };
 }
 
 function getStopsLabel(item: DispatchTrip) {
   if (item.stopsLabel && item.stopsLabel.trim()) return item.stopsLabel;
-  if (item.stopType === 'Other' && (item.customStopCount ?? 0) > 0) {
-    return `${item.customStopCount}-stop`;
-  }
+  if (item.stopType === 'Other' && (item.customStopCount ?? 0) > 0) return `${item.customStopCount}-stop`;
   return item.stopType || 'Regular Trip';
 }
 
@@ -62,146 +64,162 @@ const formatTime = (timeStr: string) => {
 async function parseJsonSafe(res: Response): Promise<unknown> {
   const text = await res.text();
   if (!text.trim()) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(text) as unknown; }
+  catch { return null; }
 }
 
-const PredefinedCard = React.memo(({ item }: { item: PredefinedEntry }) => {
+const StatusBadge = ({ label, dot, bg, fg, border }: { label: string; dot: string; bg: string; fg: string; border: string }) => (
+  <View style={[styles.statusBadge, { backgroundColor: bg, borderColor: border }]}>
+    <View style={[styles.statusDot, { backgroundColor: dot }]} />
+    <Text style={[styles.statusBadgeText, { color: fg }]}>{label}</Text>
+  </View>
+);
+
+
+const InfoRow = ({ icon, label, value, valueColor }: { icon: string; label: string; value: string; valueColor?: string }) => (
+  <View style={styles.infoRow}>
+    <MaterialCommunityIcons name={icon as any} size={14} color="#9CA3AF" style={{ marginTop: 1 }} />
+    <View style={{ flex: 1 }}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={[styles.infoValue, valueColor ? { color: valueColor } : {}]}>{value}</Text>
+    </View>
+  </View>
+);
+
+
+const PredefinedCard = React.memo(({ item, primaryColor }: { item: PredefinedEntry; primaryColor: string }) => {
   const badge = PREDEFINED_BADGE[item.status] || PREDEFINED_BADGE.scheduled;
   return (
     <Card style={styles.card} mode="elevated">
-      <Card.Content>
+      <Card.Content style={styles.cardContent}>
+
+        
         <View style={styles.cardHeader}>
-          <View style={styles.companyContainer}>
-            <Avatar.Icon size={40} icon="calendar-clock" style={{ backgroundColor: '#E3F2FD' }} color="#1565C0" />
-            <View>
-              <Text style={styles.companyName}>{item.company}</Text>
-              <Text style={styles.busType}>{item.plateNumber} • {item.busType || 'Regular'}</Text>
+          <View style={styles.avatarWrapper}>
+            <Avatar.Icon size={42} icon="calendar-clock" style={styles.avatarScheduled} color={primaryColor} />
+          </View>
+          <View style={styles.cardTitleBlock}>
+            <Text style={styles.companyName} numberOfLines={1}>{item.company}</Text>
+            <View style={styles.metaRow}>
+              <MaterialCommunityIcons name="bus" size={12} color="#6B7280" />
+              <Text style={styles.metaText}>{item.plateNumber}</Text>
+              <View style={styles.metaDot} />
+              <Text style={styles.metaText}>{item.busType || 'Regular'}</Text>
             </View>
           </View>
-          <View style={[styles.statusChip, { backgroundColor: badge.bg }]}>
-            <Text style={{ color: badge.fg, fontSize: 12, fontWeight: 'bold', paddingHorizontal: 10 }}>
-              {badge.emoji} {badge.label}
-            </Text>
-          </View>
+          <StatusBadge {...badge} />
         </View>
-        <Divider style={styles.divider} />
-        <View style={styles.routeRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Route</Text>
-            <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
-            <Text style={[styles.label, { marginTop: 12 }]}>Expected Scheduled Time</Text>
-            <Text variant="bodyMedium" style={styles.value}>{item.scheduleTime} ({item.timeWindowLabel})</Text>
-            
-            {item.notArrivalRemark ? (
-              <>
-                <Text style={[styles.label, { marginTop: 12 }]}>Remark</Text>
-                <Text variant="bodyMedium" style={[styles.value, { color: '#546E7A' }]}>
-                  {item.notArrivalRemark}
-                </Text>
-              </>
-            ) : null}
-          </View>
+
+        <View style={styles.cardDivider} />
+
+       
+        <View style={styles.detailsGrid}>
+          <InfoRow icon="map-marker-path" label="Route" value={item.route} />
+          <InfoRow icon="clock-outline" label="Scheduled Time" value={`${item.scheduleTime}  (${item.timeWindowLabel})`} />
+          {item.notArrivalRemark ? (
+            <InfoRow icon="note-text-outline" label="Remark" value={item.notArrivalRemark} valueColor="#6B7280" />
+          ) : null}
         </View>
+
       </Card.Content>
     </Card>
   );
 });
+
 
 const DispatchCard = React.memo(({ item }: { item: DispatchTrip }) => {
   const label = (item.displayStatus ?? item.status ?? '').trim();
   const b = dispatchBadge(label);
-  
-  // 🚀 ADJUSTMENT: Determine if the bus has departed
   const isDeparted = label === 'Departed';
+
+  const timeLabel    = isDeparted ? 'Departed At' : 'Arrived At';
+  const timeValue    = isDeparted
+    ? (item.departureTime ? formatTime(item.departureTime) : formatTime(item.time))
+    : formatTime(item.time);
 
   return (
     <Card style={styles.card} mode="elevated">
-      <Card.Content>
+      <Card.Content style={styles.cardContent}>
+
         <View style={styles.cardHeader}>
-          <View style={styles.companyContainer}>
-            <Avatar.Icon size={40} icon="bus" style={{ backgroundColor: '#E8F5E9' }} color="#1B5E20" />
-            <View>
-              <Text style={styles.companyName}>{item.company}</Text>
-              <Text style={styles.busType}>{item.templateNo} • {item.busType || 'Regular'}</Text>
+          <View style={styles.avatarWrapper}>
+            <Avatar.Icon size={42} icon="bus" style={styles.avatarDispatch} color="#065F46" />
+          </View>
+          <View style={styles.cardTitleBlock}>
+            <Text style={styles.companyName} numberOfLines={1}>{item.company}</Text>
+            <View style={styles.metaRow}>
+              <MaterialCommunityIcons name="identifier" size={12} color="#6B7280" />
+              <Text style={styles.metaText}>{item.templateNo}</Text>
+              <View style={styles.metaDot} />
+              <Text style={styles.metaText}>{item.busType || 'Regular'}</Text>
             </View>
           </View>
-          <View style={[styles.statusChip, { backgroundColor: b.bg }]}>
-            <Text style={{ color: b.fg, fontSize: 12, fontWeight: 'bold', paddingHorizontal: 10 }}>
-              {b.emoji} {label || item.status || '—'}
-            </Text>
+          <StatusBadge label={label || item.status || '—'} {...b} />
+        </View>
+
+        <View style={styles.cardDivider} />
+
+        <View style={styles.detailsGrid}>
+          <View style={styles.detailsRow}>
+            <View style={{ flex: 1 }}>
+              <InfoRow icon="map-marker-path" label="Route" value={item.route} />
+              <InfoRow icon="map-marker-multiple" label="Stops" value={getStopsLabel(item)} />
+            </View>
+            <View style={styles.timePill}>
+              <Text style={styles.timePillLabel}>{timeLabel}</Text>
+              <Text style={styles.timePillValue}>{timeValue}</Text>
+              {!isDeparted && item.expectedDeparture && (
+                <>
+                  <Text style={[styles.timePillLabel, { marginTop: 8 }]}>Exp. Departure</Text>
+                  <Text style={[styles.timePillValue, { color: '#D97706' }]}>
+                    {formatTime(item.expectedDeparture)}
+                  </Text>
+                </>
+              )}
+            </View>
           </View>
         </View>
-        <Divider style={styles.divider} />
-        <View style={styles.routeRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Route</Text>
-            <Text variant="titleMedium" style={styles.value}>{item.route}</Text>
-            <Text style={[styles.label, { marginTop: 10 }]}>Stops</Text>
-            <Text style={styles.value}>{getStopsLabel(item)}</Text>
-          </View>
-          
-          <View style={{ alignItems: 'flex-end', minWidth: 120 }}>
-            {/* 🚀 ADJUSTMENT: Dynamically change time label and value based on status */}
-            <Text style={[styles.label, { color: '#1B5E20', fontWeight: 'bold' }]}>
-              {isDeparted ? 'Time (departed)' : 'Time (arrived)'}
-            </Text>
-            <Text variant="titleLarge" style={[styles.timeValue, { color: '#1B5E20' }]}>
-              {isDeparted ? (item.departureTime ? formatTime(item.departureTime) : formatTime(item.time)) : formatTime(item.time)}
-            </Text>
-            
-            {/* 🚀 ADJUSTMENT: Hide Expected Departure if the bus has already departed */}
-            {!isDeparted && item.expectedDeparture && (
-              <>
-                <Text style={[styles.label, { marginTop: 12 }]}>Exp. dep.</Text>
-                <Text variant="titleMedium" style={[styles.timeValue, { color: '#D35400' }]}>{formatTime(item.expectedDeparture)}</Text>
-              </>
-            )}
-          </View>
-        </View>
+
       </Card.Content>
     </Card>
   );
 });
 
-
 export default function RoutesPage() {
   const router = useRouter();
   const params = useLocalSearchParams<{ tripId?: string; search?: string }>();
-  const todayDate = new Date().toLocaleDateString();
+  
+  const colorScheme = useColorScheme();
+  const activeTheme = Colors[colorScheme ?? 'dark'];
+  const primaryColor = activeTheme.tint;
+
+  const todayDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const [predefinedEntries, setPredefinedEntries] = useState<PredefinedEntry[]>([]);
-  const [dispatchTrips, setDispatchTrips] = useState<DispatchTrip[]>([]);
+  const [dispatchTrips, setDispatchTrips]         = useState<DispatchTrip[]>([]);
+  const [loading, setLoading]                     = useState(true);
+  const [refreshing, setRefreshing]               = useState(false);
+  const [fetchError, setFetchError]               = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilterId, setActiveFilterId] = useState<string | null>(null);
-  const [selectedCompany, setSelectedCompany] = useState('All');
-  const [selectedBusType, setSelectedBusType] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState('All');
-  
+  const [searchQuery, setSearchQuery]             = useState('');
+  const [activeFilterId, setActiveFilterId]       = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany]     = useState('All');
+  const [selectedBusType, setSelectedBusType]     = useState('All');
+  const [selectedStatus, setSelectedStatus]       = useState('All');
   const [filterMenuVisible, setFilterMenuVisible] = useState(false);
 
-  const tripIdParam = typeof params.tripId === 'string' ? params.tripId : undefined;
-  const searchParam = typeof params.search === 'string' ? params.search : undefined;
+  const tripIdParam  = typeof params.tripId  === 'string' ? params.tripId  : undefined;
+  const searchParam  = typeof params.search  === 'string' ? params.search  : undefined;
 
   const fetchBoardData = useCallback(async () => {
-    const preUrl = `${API_URL}/predefined-schedule/today`;
+    const preUrl  = `${API_URL}/predefined-schedule/today`;
     const dispUrl = `${API_URL}/dispatch-board/today`;
     try {
       const [preRes, dispRes] = await Promise.all([fetch(preUrl), fetch(dispUrl)]);
 
       const shouldUseLegacyFallback =
-        preRes.status === 404 ||
-        dispRes.status === 404 ||
-        preRes.status >= 500 ||
-        dispRes.status >= 500;
+        preRes.status === 404 || dispRes.status === 404 ||
+        preRes.status >= 500  || dispRes.status >= 500;
 
       if (shouldUseLegacyFallback) {
         try {
@@ -209,17 +227,13 @@ export default function RoutesPage() {
           setPredefinedEntries(entries);
           setDispatchTrips(trips);
           setFetchError(null);
-        } catch (legacyErr) {
+        } catch {
           setPredefinedEntries([]);
           setDispatchTrips([]);
           const errors: string[] = [];
-          if (!preRes.ok) errors.push(`Schedule (${preRes.status})`);
+          if (!preRes.ok)  errors.push(`Schedule (${preRes.status})`);
           if (!dispRes.ok) errors.push(`Dispatch (${dispRes.status})`);
-          setFetchError(
-            errors.length > 0
-              ? `Could not load: ${errors.join(', ')}. Fallback failed.`
-              : 'Could not load routes. Fallback failed.'
-          );
+          setFetchError(errors.length > 0 ? `Could not load: ${errors.join(', ')}. Fallback failed.` : 'Could not load routes. Fallback failed.');
         }
         return;
       }
@@ -244,8 +258,8 @@ export default function RoutesPage() {
       }
 
       setFetchError(errors.length > 0 ? `Could not load: ${errors.join(', ')}` : null);
-    } catch (error) {
-      setFetchError('Network error. Check connection.');
+    } catch {
+      setFetchError('Network error. Please check your connection.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -262,73 +276,49 @@ export default function RoutesPage() {
     }, [fetchBoardData, tripIdParam, searchParam])
   );
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchBoardData();
-  };
+  const onRefresh = () => { setRefreshing(true); fetchBoardData(); };
 
-  const companies = useMemo(() => {
-    const fromPre = predefinedEntries.map((e) => e.company);
+  const companies    = useMemo(() => {
+    const fromPre  = predefinedEntries.map((e) => e.company);
     const fromDisp = dispatchTrips.map((t) => t.company);
     return ['All', ...Array.from(new Set([...fromPre, ...fromDisp]))];
   }, [predefinedEntries, dispatchTrips]);
 
-  const busTypes = ['All', 'Aircon', 'Regular'];
+  const busTypes     = ['All', 'Aircon', 'Regular'];
   const statusFilters = ['All', 'Scheduled', 'Arrived', 'Not Arrived', 'Departed', 'Under Maintenance'];
 
   const filteredPredefined = useMemo(() => {
     if (['Arrived', 'Under Maintenance', 'Departed'].includes(selectedStatus)) return [];
-    
-    let data = [...predefinedEntries];
-    
-    // 🚀 ADJUSTMENT: Always hide predefined buses that have already arrived to prevent duplicates
-    data = data.filter((item) => item.status !== 'arrived');
-    
-    if (selectedStatus === 'Scheduled') {
-      data = data.filter((item) => item.status === 'scheduled');
-    } else if (selectedStatus === 'Not Arrived') {
-      data = data.filter((item) => item.status === 'not_arrived');
-    }
-
-    if (activeFilterId && searchQuery === '') data = data.filter((item) => item.rowKey === activeFilterId);
-    if (selectedCompany !== 'All') data = data.filter((item) => item.company === selectedCompany);
-    if (selectedBusType !== 'All') data = data.filter((item) => (item.busType || 'Regular') === selectedBusType);
+    let data = predefinedEntries.filter((item) => item.status !== 'arrived');
+    if (selectedStatus === 'Scheduled')   data = data.filter((i) => i.status === 'scheduled');
+    else if (selectedStatus === 'Not Arrived') data = data.filter((i) => i.status === 'not_arrived');
+    if (activeFilterId && searchQuery === '') data = data.filter((i) => i.rowKey === activeFilterId);
+    if (selectedCompany !== 'All') data = data.filter((i) => i.company === selectedCompany);
+    if (selectedBusType !== 'All') data = data.filter((i) => (i.busType || 'Regular') === selectedBusType);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      data = data.filter(item => item.route.toLowerCase().includes(q) || item.company.toLowerCase().includes(q) || String(item.plateNumber).toLowerCase().includes(q));
+      data = data.filter(i => i.route.toLowerCase().includes(q) || i.company.toLowerCase().includes(q) || String(i.plateNumber).toLowerCase().includes(q));
     }
     return data;
   }, [predefinedEntries, searchQuery, activeFilterId, selectedCompany, selectedBusType, selectedStatus]);
 
   const filteredDispatch = useMemo(() => {
-    if (['Scheduled', 'Not Arrived'].includes(selectedStatus)) return []; 
-    
+    if (['Scheduled', 'Not Arrived'].includes(selectedStatus)) return [];
     let data = [...dispatchTrips];
-
-    if (selectedStatus === 'Arrived') {
-      data = data.filter((item) => (item.displayStatus ?? item.status ?? '').trim() === 'Arrived');
-    } else if (selectedStatus === 'Departed') {
-      data = data.filter((item) => (item.displayStatus ?? item.status ?? '').trim() === 'Departed');
-    } else if (selectedStatus === 'Under Maintenance') {
-      data = data.filter((item) => {
-        const s = (item.displayStatus ?? item.status ?? '').trim();
-        return s === 'Under Maintenance';
-      });
-    }
-
-    if (activeFilterId && searchQuery === '') data = data.filter((item) => item._id === activeFilterId);
-    if (selectedCompany !== 'All') data = data.filter((item) => item.company === selectedCompany);
-    if (selectedBusType !== 'All') data = data.filter((item) => (item.busType || 'Regular') === selectedBusType);
+    if (selectedStatus === 'Arrived')          data = data.filter((i) => (i.displayStatus ?? i.status ?? '').trim() === 'Arrived');
+    else if (selectedStatus === 'Departed')    data = data.filter((i) => (i.displayStatus ?? i.status ?? '').trim() === 'Departed');
+    else if (selectedStatus === 'Under Maintenance') data = data.filter((i) => (i.displayStatus ?? i.status ?? '').trim() === 'Under Maintenance');
+    if (activeFilterId && searchQuery === '') data = data.filter((i) => i._id === activeFilterId);
+    if (selectedCompany !== 'All') data = data.filter((i) => i.company === selectedCompany);
+    if (selectedBusType !== 'All') data = data.filter((i) => (i.busType || 'Regular') === selectedBusType);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      data = data.filter(item => item.route.toLowerCase().includes(q) || item.company.toLowerCase().includes(q) || String(item.templateNo).toLowerCase().includes(q));
+      data = data.filter(i => i.route.toLowerCase().includes(q) || i.company.toLowerCase().includes(q) || String(i.templateNo).toLowerCase().includes(q));
     }
     return data;
   }, [dispatchTrips, searchQuery, activeFilterId, selectedCompany, selectedBusType, selectedStatus]);
 
-  const combinedBoardData = useMemo(() => {
-    return [...filteredPredefined, ...filteredDispatch];
-  }, [filteredPredefined, filteredDispatch]);
+  const combinedBoardData = useMemo(() => [...filteredPredefined, ...filteredDispatch], [filteredPredefined, filteredDispatch]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -342,27 +332,41 @@ export default function RoutesPage() {
   const hasActiveDropdownFilters = selectedStatus !== 'All' || selectedBusType !== 'All';
 
   const renderBoardItem = useCallback(({ item }: ListRenderItemInfo<BoardRow>) => {
-    if (isPredefinedRow(item)) return <PredefinedCard item={item} />;
+    if (isPredefinedRow(item)) return <PredefinedCard item={item} primaryColor={primaryColor} />;
     return <DispatchCard item={item as DispatchTrip} />;
-  }, []);
+  }, [primaryColor]);
 
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#1B5E20" />
+        <View style={styles.loadingCard}>
+          <ActivityIndicator size="large" color={primaryColor} />
+          <Text style={styles.loadingText}>Loading bus trips…</Text>
+        </View>
       </View>
     );
   }
 
+ 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+
       <View style={styles.headerContainer}>
-        <Text variant="headlineMedium" style={styles.headerTitle}>Bus terminal</Text>
-        <Text style={styles.dateHeader}>Today: {todayDate}</Text>
-        
+
+        <View style={styles.titleBar}>
+          <View>
+            <Text style={styles.headerTitle}>Bus Schedules</Text>
+            <Text style={styles.headerSubtitle}>{todayDate}</Text>
+          </View>
+          <View style={[styles.totalBadge, { borderColor: primaryColor, backgroundColor: 'transparent' }]}>
+            <Text style={[styles.totalBadgeText, { color: primaryColor }]}>{combinedBoardData.length}</Text>
+            <Text style={[styles.totalBadgeLabel, { color: primaryColor }]}>trips</Text>
+          </View>
+        </View>
+
         {fetchError && (
           <View style={styles.errorBanner}>
-            <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B71C1C" />
+            <MaterialCommunityIcons name="alert-circle" size={16} color="#991B1B" />
             <Text style={styles.errorBannerText}>{fetchError}</Text>
           </View>
         )}
@@ -370,33 +374,34 @@ export default function RoutesPage() {
         <View style={styles.searchRow}>
           <Searchbar
             placeholder="Search route, company, bus no…"
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              if (activeFilterId) setActiveFilterId(null);
-            }}
+            onChangeText={(text) => { setSearchQuery(text); if (activeFilterId) setActiveFilterId(null); }}
             value={searchQuery}
             style={styles.searchBar}
             inputStyle={styles.searchInput}
-            iconColor="#1B5E20"
+            iconColor="#6B7280"
+            clearIcon="close-circle"
+            theme={{ colors: { primary: '#4B5563' } }}
+            cursorColor="#4B5563"
+            selectionColor="#4B5563"
           />
-
           <Menu
             visible={filterMenuVisible}
             onDismiss={() => setFilterMenuVisible(false)}
             anchorPosition="bottom"
             anchor={
-              <TouchableOpacity 
-                onPress={() => setFilterMenuVisible(true)} 
+              <TouchableOpacity
+                onPress={() => setFilterMenuVisible(true)}
                 style={[
                   styles.filterButton, 
-                  hasActiveDropdownFilters && styles.filterButtonActive
+                  hasActiveDropdownFilters && [styles.filterButtonActive, { backgroundColor: primaryColor, borderColor: primaryColor }]
                 ]}
               >
-                <MaterialCommunityIcons 
-                  name="filter-variant" 
-                  size={24} 
-                  color={hasActiveDropdownFilters ? '#FFFFFF' : '#1B5E20'} 
+                <MaterialCommunityIcons
+                  name={hasActiveDropdownFilters ? 'filter' : 'filter-variant'}
+                  size={20}
+                  color={hasActiveDropdownFilters ? '#FFFFFF' : '#374151'}
                 />
+                {hasActiveDropdownFilters && <View style={styles.filterDot} />}
               </TouchableOpacity>
             }
           >
@@ -404,48 +409,45 @@ export default function RoutesPage() {
             {statusFilters.map(status => (
               <Menu.Item
                 key={`status-${status}`}
-                onPress={() => {
-                  setSelectedStatus(status);
-                  setFilterMenuVisible(false);
-                }}
+                onPress={() => { setSelectedStatus(status); setFilterMenuVisible(false); }}
                 title={status}
-                leadingIcon={selectedStatus === status ? "check" : "circle-outline"}
+                leadingIcon={selectedStatus === status ? 'check-circle' : 'circle-outline'}
               />
             ))}
-            
-            <Divider style={{ marginVertical: 8 }} />
-            
+            <Divider style={{ marginVertical: 6 }} />
             <Text style={styles.menuSectionTitle}>Bus Type</Text>
             {busTypes.map(type => (
               <Menu.Item
                 key={`type-${type}`}
-                onPress={() => {
-                  setSelectedBusType(type);
-                  setFilterMenuVisible(false);
-                }}
+                onPress={() => { setSelectedBusType(type); setFilterMenuVisible(false); }}
                 title={type}
-                leadingIcon={selectedBusType === type ? "check" : "circle-outline"}
+                leadingIcon={selectedBusType === type ? 'check-circle' : 'circle-outline'}
               />
             ))}
           </Menu>
         </View>
 
-        <View style={styles.filtersContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-            {companies.map((c) => (
-              <TouchableOpacity key={c} onPress={() => setSelectedCompany(c)} style={[styles.filterChip, selectedCompany === c && styles.activeFilterChip]}>
-                <Text style={[styles.filterChipText, selectedCompany === c && styles.activeFilterChipText]}>{c}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={{ paddingRight: 8 }}>
+          {companies.map((c) => (
+            <TouchableOpacity
+              key={c}
+              onPress={() => setSelectedCompany(c)}
+              style={[
+                styles.chip, 
+                selectedCompany === c && [styles.chipActive, { backgroundColor: primaryColor, borderColor: primaryColor }]
+              ]}
+            >
+              <Text style={[styles.chipText, selectedCompany === c && styles.chipTextActive]}>{c}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {activeFilterId && (
           <View style={styles.filterBanner}>
-            <MaterialCommunityIcons name="filter" size={16} color="#155724" />
-            <Text style={styles.filterText}>Showing selected item</Text>
-            <TouchableOpacity onPress={clearFilters}>
-              <Text style={styles.clearFilterText}>Show all</Text>
+            <MaterialCommunityIcons name="filter-check" size={15} color={primaryColor} />
+            <Text style={[styles.filterBannerText, { color: primaryColor }]}>Showing a specific trip</Text>
+            <TouchableOpacity onPress={clearFilters} style={[styles.clearBtn, { backgroundColor: primaryColor }]}>
+              <Text style={styles.clearBtnText}>Clear</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -453,61 +455,102 @@ export default function RoutesPage() {
 
       <FlatList<BoardRow>
         data={combinedBoardData}
-        keyExtractor={(item, index) => isPredefinedRow(item) ? `pre-${item.rowKey}` : `disp-${String((item as DispatchTrip)._id ?? index)}`}
+        keyExtractor={(item, index) =>
+          isPredefinedRow(item) ? `pre-${item.rowKey}` : `disp-${String((item as DispatchTrip)._id ?? index)}`
+        }
         renderItem={renderBoardItem}
         initialNumToRender={8}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={true}
+        removeClippedSubviews
         ListEmptyComponent={
-          <View style={styles.listEmpty}>
-            <Text style={styles.listEmptyText}>
-              No buses match the current filters.
-            </Text>
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="bus-stop" size={48} color="#D1D5DB" />
+            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptyBody}>No buses match the current filters. Try adjusting your search or filter options.</Text>
+            <TouchableOpacity onPress={clearFilters} style={[styles.emptyBtn, { backgroundColor: primaryColor }]}>
+              <Text style={styles.emptyBtnText}>Reset Filters</Text>
+            </TouchableOpacity>
           </View>
         }
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1B5E20']} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[primaryColor]} tintColor={primaryColor} />
+        }
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
-  centerContent: { justifyContent: 'center', alignItems: 'center' },
-  headerContainer: { backgroundColor: '#FFFFFF', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E0E0E0', zIndex: 1 },
-  headerTitle: { fontWeight: 'bold', color: '#1A1A1A', marginBottom: 8 },
-  dateHeader: { fontSize: 16, color: '#1B5E20', marginBottom: 12, fontWeight: '800' },
-  errorBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#FFEBEE', borderRadius: 10, padding: 10, marginBottom: 12 },
-  errorBannerText: { flex: 1, fontSize: 12, color: '#B71C1C' },
-  listEmpty: { paddingVertical: 32, alignItems: 'center' },
-  listEmptyText: { fontSize: 14, color: '#9E9E9E', fontStyle: 'italic' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  searchBar: { flex: 1, backgroundColor: '#F0F4F8', elevation: 0, borderRadius: 12, height: 48 },
-  searchInput: { fontSize: 14, alignSelf: 'center', color: 'black' },
-  filterButton: { height: 48, width: 48, borderRadius: 12, backgroundColor: '#F0F4F8', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E0E0E0' },
-  filterButtonActive: { backgroundColor: '#1B5E20', borderColor: '#1B5E20' },
-  menuSectionTitle: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, fontSize: 12, fontWeight: 'bold', color: '#888', textTransform: 'uppercase' },
-  filtersContainer: { marginTop: 12 },
-  filterScroll: { flexGrow: 0 },
-  filterChip: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F0F4F8', marginRight: 8, borderWidth: 1, borderColor: '#E0E0E0' },
-  activeFilterChip: { backgroundColor: '#1B5E20', borderColor: '#1B5E20' },
-  filterChipText: { fontSize: 12, color: '#666', fontWeight: '600' },
-  activeFilterChipText: { color: '#FFFFFF' },
-  filterBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#D4EDDA', padding: 8, borderRadius: 8, marginTop: 10, gap: 8 },
-  filterText: { flex: 1, color: '#155724', fontSize: 12, fontWeight: '600' },
-  clearFilterText: { color: '#1B5E20', fontWeight: 'bold', fontSize: 12, textDecorationLine: 'underline' },
-  listContent: { padding: 16, paddingBottom: 140 },
-  card: { backgroundColor: 'white', marginBottom: 16, borderRadius: 16 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  companyContainer: { flexDirection: 'row', gap: 12, alignItems: 'center', flex: 1 },
-  companyName: { fontWeight: 'bold', color: '#1A1A1A' },
-  busType: { color: '#666', fontSize: 12 },
-  statusChip: { maxWidth: '48%', minHeight: 30, justifyContent: 'center', alignItems: 'center', borderRadius: 15 },
-  divider: { marginVertical: 12, backgroundColor: '#F0F0F0' },
-  routeRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  label: { fontSize: 11, color: '#888', textTransform: 'uppercase', marginBottom: 2, fontWeight: '600' },
-  value: { color: '#333', fontWeight: '700' },
-  timeValue: { color: '#1B5E20', fontWeight: 'bold', textAlign: 'right' }
+  container:       { flex: 1, backgroundColor: '#F3F4F6' },
+  centerContent:   { justifyContent: 'center', alignItems: 'center' },
+
+  loadingCard:     { alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', padding: 32, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
+  loadingText:     { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+
+  headerContainer: { backgroundColor: '#FFFFFF', paddingTop: 16, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', zIndex: 10 },
+  titleBar:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+  headerTitle:     { fontSize: 22, fontWeight: '800', color: '#111827', letterSpacing: -0.3 },
+  headerSubtitle:  { fontSize: 12, color: '#6B7280', marginTop: 2, fontWeight: '500' },
+  totalBadge:      { alignItems: 'center', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  totalBadgeText:  { fontSize: 20, fontWeight: '800' }, 
+  totalBadgeLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  errorBanner:     { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: '#FECACA' },
+  errorBannerText: { flex: 1, fontSize: 13, color: '#991B1B', fontWeight: '500' },
+
+  searchRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  searchBar:       { flex: 1, backgroundColor: '#F9FAFB', elevation: 0, borderRadius: 12, height: 46, borderWidth: 1, borderColor: '#E5E7EB' },
+  searchInput:     { fontSize: 14, color: '#111827', alignSelf: 'center' },
+  filterButton:    { height: 46, width: 46, borderRadius: 12, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  filterButtonActive: { }, 
+  filterDot:       { position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 1, borderColor: '#fff' },
+  menuSectionTitle:{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 3, fontSize: 11, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.8 },
+
+  chipScroll:      { flexGrow: 0, marginBottom: 2 },
+  chip:            { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#F9FAFB', marginRight: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  chipActive:      { }, 
+  chipText:        { fontSize: 13, color: '#374151', fontWeight: '600' },
+  chipTextActive:  { color: '#FFFFFF' },
+
+  filterBanner:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', padding: 9, borderRadius: 9, marginTop: 10, gap: 8, borderWidth: 1, borderColor: '#BFDBFE' },
+  filterBannerText:{ flex: 1, fontSize: 13, fontWeight: '600' },
+  clearBtn:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }, 
+  clearBtnText:    { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+
+  listContent:     { padding: 14, paddingBottom: 140 },
+
+  emptyState:      { paddingVertical: 52, alignItems: 'center', paddingHorizontal: 32 },
+  emptyTitle:      { fontSize: 16, fontWeight: '700', color: '#374151', marginTop: 14, marginBottom: 6 },
+  emptyBody:       { fontSize: 13, color: '#9CA3AF', textAlign: 'center', lineHeight: 20 },
+  emptyBtn:        { marginTop: 18, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }, 
+  emptyBtnText:    { fontSize: 13, color: '#FFFFFF', fontWeight: '700' },
+
+  card:            { backgroundColor: '#FFFFFF', marginBottom: 12, borderRadius: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  cardContent:     { paddingTop: 14, paddingBottom: 14 },
+  cardHeader:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatarWrapper:   { flexShrink: 0 },
+  avatarScheduled: { backgroundColor: '#EFF6FF' },
+  avatarDispatch:  { backgroundColor: '#ECFDF5' },
+  cardTitleBlock:  { flex: 1 },
+  companyName:     { fontSize: 15, fontWeight: '700', color: '#111827' },
+  metaRow:         { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  metaText:        { fontSize: 12, color: '#6B7280' },
+  metaDot:         { width: 3, height: 3, borderRadius: 2, backgroundColor: '#D1D5DB' },
+  cardDivider:     { height: 1, backgroundColor: '#F3F4F6', marginVertical: 12 },
+
+  statusBadge:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, flexShrink: 0, maxWidth: 140 },
+  statusDot:       { width: 7, height: 7, borderRadius: 4 },
+  statusBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
+
+  detailsGrid:     { gap: 8 },
+  detailsRow:      { flexDirection: 'row', gap: 8 },
+  infoRow:         { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  infoLabel:       { fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '700', marginBottom: 1 },
+  infoValue:       { fontSize: 14, color: '#111827', fontWeight: '600', lineHeight: 20 },
+
+  timePill:        { alignItems: 'flex-end', justifyContent: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#E5E7EB', minWidth: 110 },
+  timePillLabel:   { fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '700' },
+  timePillValue:   { fontSize: 20, fontWeight: '800', color: '#065F46', marginTop: 2 },
 });

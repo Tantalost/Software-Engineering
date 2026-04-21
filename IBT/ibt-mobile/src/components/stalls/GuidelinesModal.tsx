@@ -120,121 +120,221 @@ const nightMarketHTML = `
 `;
 
 
+const REQUIREMENTS = [
+  { id: 1, label: 'Detailed list of products to be sold', icon: 'format-list-bulleted' },
+  { id: 2, label: 'Business Permit', icon: 'briefcase-outline' },
+  { id: 3, label: 'Government Issued Valid ID', icon: 'card-account-details-outline' },
+  { id: 4, label: 'Barangay Clearance', icon: 'file-certificate-outline' },
+  { id: 5, label: 'Signed Contract (Permanent Slot Application Only)', icon: 'pen' },
+];
+
+const CONTACT_ITEMS = [
+  { icon: 'map-marker-outline', label: 'Address', value: '2nd Floor, Departure Building, ZC-IBT, Divisoria' },
+  { icon: 'phone-outline', label: 'Phone', value: '(062) 955-7806 / (062) 975-2320' },
+  { icon: 'email-outline', label: 'Email', value: 'zambocityibt@gmail.com' },
+];
+
 export default function GuidelinesModal({ visible, onDismiss }: Props) {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<'contractual' | 'nightMarket' | null>(null);
 
-  // Styles injected into the HTML renderer to make it match the app
-  const baseStyle = { color: '#444', fontSize: 13, lineHeight: 20 };
+  const baseStyle = { color: '#4A5568', fontSize: 13, lineHeight: 21 };
   const tagsStyles = {
-    h3: { color: colors.primary, fontSize: 16, marginTop: 15, marginBottom: 5 },
-    p: { marginVertical: 5 },
-    ul: { marginTop: 5, marginBottom: 10, paddingLeft: 20 },
-    li: { marginBottom: 5 },
-    table: { marginTop: 10, fontSize: 12 },
+    h3: { color: colors.primary, fontSize: 15, fontWeight: '700' as const, marginTop: 16, marginBottom: 6 },
+    p: { marginVertical: 4, color: '#4A5568' },
+    ul: { marginTop: 4, marginBottom: 10, paddingLeft: 18 },
+    li: { marginBottom: 6, color: '#4A5568' },
+    strong: { color: '#1A2332' },
   };
 
   return (
     <Portal>
       <Modal visible={visible} onDismiss={onDismiss} contentContainerStyle={styles.container}>
+
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text variant="titleLarge" style={[styles.headerTitle, { color: colors.black }]}>Application Guidelines</Text>
-          <TouchableOpacity onPress={onDismiss}>
-            <Icon name="close" size={24} color={colors.black} />
+          <View style={styles.headerIconWrap}>
+            <Icon name="book-open-variant" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.headerTitle}>Application Guidelines</Text>
+            <Text style={styles.headerSubtitle}>ZC-IBT Stall Management</Text>
+          </View>
+          <TouchableOpacity onPress={onDismiss} style={styles.closeIconBtn}>
+            <Icon name="close" size={18} color="#5A6472" />
           </TouchableOpacity>
         </View>
-        
-        <ScrollView contentContainerStyle={styles.content}>
-          
-          <Text variant="titleMedium" style={styles.sectionTitle}>Operations & Management Policies</Text>
-          <Text style={[styles.subText, { color: colors.primaryLight }]}>Select a policy below to view details:</Text>
 
-          <View style={styles.tabContainer}>
-            <TouchableOpacity 
-              style={[styles.tabButton, activeTab === 'contractual' && styles.activeTab]} 
-              onPress={() => setActiveTab(activeTab === 'contractual' ? null : 'contractual')}
-            >
-              <Icon name="file-document-outline" size={20} color={activeTab === 'contractual' ? 'white' : colors.primary} />
-              <Text style={[styles.tabText, activeTab === 'contractual' && {color: 'white'}]}>Contractual Concessionaires</Text>
-            </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Policy Accordion ── */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionLabel}>OPERATIONS & MANAGEMENT POLICIES</Text>
+            <Text style={styles.sectionHint}>Tap a policy card to expand its details</Text>
 
-            <TouchableOpacity 
-              style={[styles.tabButton, activeTab === 'nightMarket' && styles.activeTab]} 
-              onPress={() => setActiveTab(activeTab === 'nightMarket' ? null : 'nightMarket')}
-            >
-              <Icon name="file-document-outline" size={20} color={activeTab === 'nightMarket' ? 'white' : colors.primary} />
-              <Text style={[styles.tabText, activeTab === 'nightMarket' && {color: 'white'}]}>Night Market Operations</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.accordionGroup}>
+              {/* Contractual */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.accordionBtn,
+                  activeTab === 'contractual' && styles.accordionBtnActive,
+                ]}
+                onPress={() => setActiveTab(activeTab === 'contractual' ? null : 'contractual')}
+              >
+                <View style={[
+                  styles.accordionIconWrap,
+                  activeTab === 'contractual' && { backgroundColor: 'rgba(255,255,255,0.2)' },
+                ]}>
+                  <Icon
+                    name="file-sign"
+                    size={18}
+                    color={activeTab === 'contractual' ? '#fff' : colors.primary}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.accordionTitle, activeTab === 'contractual' && { color: '#fff' }]}>
+                    Contractual Concessionaires
+                  </Text>
+                  <Text style={[styles.accordionSub, activeTab === 'contractual' && { color: 'rgba(255,255,255,0.75)' }]}>
+                    Lease terms, payments & penalties
+                  </Text>
+                </View>
+                <Icon
+                  name={activeTab === 'contractual' ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={activeTab === 'contractual' ? '#fff' : '#8A95A3'}
+                />
+              </TouchableOpacity>
 
-          {activeTab && (
-            <View style={styles.htmlContainer}>
-              <RenderHtml
-                contentWidth={width - 80}
-                source={{ html: activeTab === 'contractual' ? contractualHTML : nightMarketHTML }}
-                baseStyle={baseStyle}
-                tagsStyles={tagsStyles}
-              />
+              {activeTab === 'contractual' && (
+                <View style={styles.htmlContainer}>
+                  <RenderHtml
+                    contentWidth={width - 80}
+                    source={{ html: contractualHTML }}
+                    baseStyle={baseStyle}
+                    tagsStyles={tagsStyles}
+                  />
+                </View>
+              )}
+
+              {/* Night Market */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.accordionBtn,
+                  activeTab === 'nightMarket' && styles.accordionBtnActive,
+                ]}
+                onPress={() => setActiveTab(activeTab === 'nightMarket' ? null : 'nightMarket')}
+              >
+                <View style={[
+                  styles.accordionIconWrap,
+                  activeTab === 'nightMarket' && { backgroundColor: 'rgba(255,255,255,0.2)' },
+                ]}>
+                  <Icon
+                    name="weather-night"
+                    size={18}
+                    color={activeTab === 'nightMarket' ? '#fff' : colors.primary}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.accordionTitle, activeTab === 'nightMarket' && { color: '#fff' }]}>
+                    Night Market Operations
+                  </Text>
+                  <Text style={[styles.accordionSub, activeTab === 'nightMarket' && { color: 'rgba(255,255,255,0.75)' }]}>
+                    Vendor rules, safety & conduct
+                  </Text>
+                </View>
+                <Icon
+                  name={activeTab === 'nightMarket' ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={activeTab === 'nightMarket' ? '#fff' : '#8A95A3'}
+                />
+              </TouchableOpacity>
+
+              {activeTab === 'nightMarket' && (
+                <View style={styles.htmlContainer}>
+                  <RenderHtml
+                    contentWidth={width - 80}
+                    source={{ html: nightMarketHTML }}
+                    baseStyle={baseStyle}
+                    tagsStyles={tagsStyles}
+                  />
+                </View>
+              )}
             </View>
-          )}
-          
+          </View>
+
           <Divider style={styles.divider} />
 
-          <Text variant="titleMedium" style={styles.sectionTitle}>Requirements Checklist</Text>
-          <Text style={[styles.subText, { color: colors.primaryLight }]}>To be accomplished by the registered owner:</Text>
-          
-          <View style={styles.listItem}>
-            <Text style={[styles.bullet, {color: colors.black }]}>1.</Text>
-            <Text style={[styles.listText, {color: colors.black}]}>Detailed list of products to be sold. </Text>
+          {/* ── Requirements Checklist ── */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionLabel}>REQUIREMENTS CHECKLIST</Text>
+            <Text style={styles.sectionHint}>To be accomplished by the registered owner</Text>
+
+            <View style={styles.checklistGroup}>
+              {REQUIREMENTS.map((req) => (
+                <View key={req.id} style={styles.checklistItem}>
+                  <View style={styles.checklistBadge}>
+                    <Icon name={req.icon as any} size={15} color={colors.primary} />
+                  </View>
+                  <Text style={styles.checklistText}>{req.label}</Text>
+                </View>
+              ))}
+            </View>
           </View>
 
-          <View style={styles.listItem}>
-            <Text style={[styles.bullet, {color: colors.black }]}>2.</Text>
-            <Text style={[styles.listText, {color: colors.black}]}>Business Permit </Text>
-          </View>
-          <View style={styles.listItem}>
-            <Text style={[styles.bullet, {color: colors.black }]}>3.</Text>
-            <Text style={[styles.listText, {color: colors.black}]}>Government Issued Valid ID</Text>
-          </View>
-          
-          <View style={styles.listItem}>
-            <Text style={[styles.bullet, {color: colors.black }]}>4.</Text>
-            <Text style={[styles.listText, {color: colors.black}]}>Barangay Clearance </Text>
-          </View>
-
-          <View style={styles.listItem}>
-            <Text style={[styles.bullet, {color: colors.black }]}>5.</Text>
-            <Text style={[styles.listText, {color: colors.black}]}>Signed Contract (Permanent Slot Application Only) </Text>
-          </View>
-          
           <Divider style={styles.divider} />
 
+          {/* ── Warning Box ── */}
           <View style={styles.warningBox}>
-            <Icon name="alert-circle" size={20} color={colors.error} style={{marginBottom: 5}}/>
-            <Text style={[styles.warningText, {fontWeight: 'bold'}]}>IMPORTANT NOTICE:</Text>
-            <Text style={styles.warningText}>
+            <View style={styles.warningHeader}>
+              <Icon name="alert-circle" size={18} color="#B91C1C" />
+              <Text style={styles.warningTitle}>IMPORTANT NOTICE</Text>
+            </View>
+            <Text style={styles.warningBody}>
               NO CERTIFICATION FROM ZC-IBT, NO PROCESSING OF MAYOR'S / BUSINESS PERMIT.
             </Text>
-            <Text style={[styles.warningText, {marginTop: 5, fontSize: 11}]}>
+            <Text style={styles.warningNote}>
               Please process your request at ZC-IBT before going to the Business Process and Licensing Office at City Hall.
             </Text>
           </View>
 
           <Divider style={styles.divider} />
 
-          <Text variant="titleMedium" style={styles.sectionTitle}>Contact & Inquiries</Text>
-          <Text style={styles.contactText}>
-            <Text style={[{fontWeight: 'bold'}, {color: colors.black}]}>Address:</Text> 2nd Floor, Departure Building, ZC-IBT, Divisoria.
-          </Text>
-          <Text style={styles.contactText}>
-             <Text style={[{fontWeight: 'bold'}, {color: colors.black}]}>Phone:</Text> (062) 955-7806 / (062) 975-2320.
-          </Text>
-           <Text style={styles.contactText}>
-             <Text style={[{fontWeight: 'bold'}, {color: colors.black}]}>Email:</Text> zambocityibt@gmail.com.
-          </Text>
+          {/* ── Contact Section ── */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionLabel}>CONTACT & INQUIRIES</Text>
 
-          <Button mode="contained" onPress={onDismiss} style={styles.closeBtn} buttonColor={colors.primary} textColor='white'>
-            Close Guidelines
+            <View style={styles.contactGroup}>
+              {CONTACT_ITEMS.map((item) => (
+                <View key={item.label} style={styles.contactRow}>
+                  <View style={styles.contactIconWrap}>
+                    <Icon name={item.icon as any} size={16} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.contactLabel}>{item.label}</Text>
+                    <Text style={styles.contactValue}>{item.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ── Close Button ── */}
+          <Button
+            mode="contained"
+            onPress={onDismiss}
+            style={styles.closeBtn}
+            buttonColor={colors.primary}
+            textColor="white"
+            icon="check-circle-outline"
+            contentStyle={{ paddingVertical: 4 }}
+            labelStyle={{ fontWeight: '700', letterSpacing: 0.4, fontSize: 14 }}
+          >
+            Done
           </Button>
         </ScrollView>
       </Modal>
@@ -244,103 +344,243 @@ export default function GuidelinesModal({ visible, onDismiss }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 10,
-    maxHeight: '85%', 
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginVertical: 24,
+    borderRadius: 16,
+    maxHeight: '88%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 12,
   },
+
+  /* Header */
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#EDF0F5',
+    backgroundColor: '#FAFBFD',
+  },
+  headerIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontWeight: 'bold',
-    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A2332',
+    letterSpacing: 0.2,
   },
+  headerSubtitle: {
+    fontSize: 11,
+    color: '#8A95A3',
+    marginTop: 1,
+    letterSpacing: 0.2,
+  },
+  closeIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F0F3F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* Scroll content */
   content: {
-    padding: 20,
+    padding: 18,
+    paddingBottom: 28,
   },
-  tabContainer: {
-    flexDirection: 'column',
+
+  /* Section blocks */
+  sectionBlock: {
+    marginBottom: 4,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#8A95A3',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  sectionHint: {
+    fontSize: 12,
+    color: '#A0AABA',
+    marginBottom: 14,
+    fontStyle: 'italic',
+  },
+
+  /* Accordion */
+  accordionGroup: {
     gap: 10,
-    marginBottom: 5,
   },
-  tabButton: {
+  accordionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: '#F4F7FB',
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
   },
-  activeTab: {
+  accordionBtnActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  tabText: {
-    marginLeft: 10,
-    color: '#333',
-    fontWeight: '500',
+  accordionIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accordionTitle: {
     fontSize: 14,
-    flexShrink: 1,
+    fontWeight: '700',
+    color: '#1A2332',
+  },
+  accordionSub: {
+    fontSize: 11,
+    color: '#8A95A3',
+    marginTop: 2,
   },
   htmlContainer: {
-    backgroundColor: '#fafafa',
-    padding: 15,
-    marginTop: 10,
-    borderRadius: 8,
+    backgroundColor: '#F9FAFC',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#E2E8F0',
+    marginTop: 2,
   },
-  sectionTitle: {
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
+
+  /* Checklist */
+  checklistGroup: {
+    gap: 8,
   },
-  subText: {
-    marginBottom: 10,
-    fontStyle: 'italic',
-    color: '#666',
-  },
-  listItem: {
+  checklistItem: {
     flexDirection: 'row',
-    marginBottom: 8,
-    paddingRight: 10,
-  },
-  bullet: {
-    fontWeight: '500', 
-    marginRight: 8,
-    color: colors.primary,
-  },
-  listText: {
-    flex: 1,
-    color: '#444',
-  },
-  divider: {
-    marginVertical: 15,
-  },
-  warningBox: {
-    backgroundColor: '#ffebee',
-    padding: 15,
-    borderRadius: 8,
     alignItems: 'center',
+    backgroundColor: '#F4F7FB',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8EDF5',
+    gap: 12,
   },
-  warningText: {
-    color: '#c62828',
-    textAlign: 'center',
-    fontSize: 12,
+  checklistBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  contactText: {
-    marginBottom: 5,
-    color: '#444',
+  checklistText: {
+    flex: 1,
     fontSize: 13,
+    color: '#2D3748',
+    fontWeight: '500',
+    lineHeight: 18,
   },
+
+  /* Warning */
+  warningBox: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#FECACA',
+    padding: 16,
+    marginBottom: 4,
+  },
+  warningHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  warningTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#B91C1C',
+    letterSpacing: 0.5,
+  },
+  warningBody: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#991B1B',
+    lineHeight: 19,
+    marginBottom: 6,
+  },
+  warningNote: {
+    fontSize: 11,
+    color: '#B91C1C',
+    lineHeight: 17,
+    opacity: 0.85,
+  },
+
+  /* Contact */
+  contactGroup: {
+    gap: 8,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F4F7FB',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8EDF5',
+    gap: 12,
+  },
+  contactIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  contactLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8A95A3',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  contactValue: {
+    fontSize: 13,
+    color: '#2D3748',
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+
+  divider: {
+    marginVertical: 18,
+    backgroundColor: '#EDF0F5',
+    height: 1,
+  },
+
+  /* Close button */
   closeBtn: {
-    marginTop: 20,
-  }
+    marginTop: 8,
+    borderRadius: 12,
+  },
 });
