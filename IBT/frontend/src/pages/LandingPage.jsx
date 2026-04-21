@@ -7,7 +7,7 @@ import newAppImg from "../assets/New_application.png";
 import busTripsImg from "../assets/bus_trips.png";
 import lostFoundImg from "../assets/lost_found.png";
 import ibtBg from "../assets/ibt_bg.png";
-import scanImage from '../assets/Scan.png';
+import scanImage from '../assets/FinalScan.png';
 
 const LandingPage = () => {
   const scrollRef = useRef(null);
